@@ -574,11 +574,11 @@ static IO_ERR writeVectorMetaValue(const CompressionFactory::Header &header, Buf
 	memcpy(buf + sizeof(header.elementCount), &(header.colCount), sizeof(header.colCount));
 	int actualLength = sizeof(header.elementCount) + sizeof(header.colCount);
 	DATA_TYPE type = (DATA_TYPE)header.dataType;
-	
-	if (Util::getCategory((DATA_TYPE)header.dataType) == DENARY || type == DT_DECIMAL32_ARRAY || type == DT_DECIMAL64_ARRAY) {
+
+	if (Util::getCategory(type) == DENARY || type == DT_DECIMAL32_ARRAY || type == DT_DECIMAL64_ARRAY || type == DT_DECIMAL128_ARRAY) {
 		int scale = header.reserved;
-		memcpy(buf + actualLength, &(header.extra), sizeof(header.extra));
-		actualLength += sizeof(header.extra);
+		memcpy(buf + actualLength, &(scale), sizeof(scale));
+		actualLength += sizeof(scale);
 	}
 	return out.start(buf, actualLength);
 }

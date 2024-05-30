@@ -52,6 +52,7 @@ DT_BLOB = 32
 DT_DECIMAL = 33
 DT_DECIMAL32 = 37
 DT_DECIMAL64 = 38
+DT_DECIMAL128 = 39
 DT_OBJECT = 40
 
 DT_VOID_ARRAY = 64
@@ -92,6 +93,7 @@ DT_INT128_ARRAY = 95
 DT_BLOB_ARRAY = 96
 DT_DECIMAL32_ARRAY = 101
 DT_DECIMAL64_ARRAY = 102
+DT_DECIMAL128_ARRAY = 103
 
 # Data type size
 DATA_SIZE = dict()
@@ -213,7 +215,7 @@ def getCategory(data_type):
         return DATA_CATEGORY.MIXED
     elif data_type in [DT_VOID]:
         return DATA_CATEGORY.NOTHING
-    elif data_type in [DT_DECIMAL32, DT_DECIMAL64]:
+    elif data_type in [DT_DECIMAL32, DT_DECIMAL64, DT_DECIMAL128]:
         return DATA_CATEGORY.DENARY
     elif data_type >= ARRAY_TYPE_BASE:
         return DATA_CATEGORY.ARRAY

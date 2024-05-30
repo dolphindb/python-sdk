@@ -76,6 +76,12 @@ message(STATUS "[pybind11 ${pybind11_VERSION}]")
 
 # add src to pybind11 module
 aux_source_directory(core/src SRC)
+
+# add thirdpartys to src
+aux_source_directory(core/thirdparty/abseil/src ABSL_SRC)
+list(APPEND SRC ${ABSL_SRC})
+
+message("SRC: ${SRC}")
 pybind11_add_module(${MODULE_NAME} ${SRC})
 
 # definitions
@@ -89,6 +95,7 @@ target_compile_definitions(${MODULE_NAME}
 # include-dirs
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/core/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/thirdparty/abseil/include
     ${OPENSSL_INCLUDE_DIR}
     ${Python_INCLUDE_DIRS}
 )

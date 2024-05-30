@@ -1,0 +1,5 @@
+!**/*LZ4*.h
+!**/*LZ4*.cpp
+!**/*test/*/
+!**build/
+!**/abseil/*/

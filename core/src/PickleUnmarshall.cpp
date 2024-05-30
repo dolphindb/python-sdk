@@ -18,34 +18,22 @@ void PYERR_SETSTRING(PyObject *pyObject,const string &text){
     dolphindb::DLogger::Error(text);
 }
 
-PyObject *WcharToChar(PyObject *psrc){
-    enum PyUnicode_Kind kind=(PyUnicode_Kind)PyUnicode_KIND(psrc);
-    if(kind == PyUnicode_2BYTE_KIND){
-        wchar_t *pwchar=(wchar_t*)PyUnicode_DATA(psrc);
-        Py_ssize_t len=PyUnicode_GetLength(psrc);
-        PyObject *pdest=PyUnicode_New(len, 127);
-        char *pchar=(char*)PyUnicode_DATA(psrc);
-        bool failed=false;
-        for(int i=0;i<len;i++){
-            if(pwchar[i]<128)
-                pchar[i]=(char)pwchar[i];
-            else{
-                dolphindb::DLogger::Error(PyObject2String(psrc),"convert to char failed at",i);
-                failed=true;
-                break;
-            }
-        }
-        if(failed){
-            Py_DECREF(pdest);
-            return psrc;
-        }
-        dolphindb::DLogger::Info(PyObject2String(psrc),"convert to char",PyObject2String(pdest));
-        Py_DECREF(psrc);
-        return pdest;
-    }else{
-        return psrc;
-    }
+inline static void DDB_Py_Size(PyVarObject *o, Py_ssize_t size) {
+#if PY_MINOR_VERSION >= 9
+	Py_SET_SIZE(o, size);
+#else
+	Py_SIZE(o) = size;
+#endif
 }
+
+inline static double DDB_PyFloat_Unpack8(const char *p, int le) {
+#if PY_MINOR_VERSION >= 11
+	return PyFloat_Unpack8(p, le);
+#else
+	return _PyFloat_Unpack8((const unsigned char *)p, le);
+#endif
+}
+
 
 std::string PyObject2String(PyObject *obj){
     if(obj!=NULL){
@@ -91,14 +79,15 @@ int Ddb_PyArg_UnpackStackOrTuple(
     PyObject **pmodule_name,
     PyObject **pglobal_name);
 
-#ifndef PyDict_GET_SIZE //Python3.6 doesn't define PyDict_GET_SIZE, define it now
+// Python3.6 doesn't define PyDict_GET_SIZE, define it now
+#ifndef PyDict_GET_SIZE
     #define PyDict_GET_SIZE(obj) PyDict_Size(obj)
 #endif
 
 PyObject *_pickle_Unpickler_find_class_impl(UnpicklerObject *self,
                                   PyObject *module_name,
                                   PyObject *global_name);
-#define PyBytesObject_SIZE (offsetof(PyBytesObject, ob_sval) + 1)
+
 /* Bump this when new opcodes are added to the pickle protocol. */
 namespace Pickle
 {
@@ -270,7 +259,6 @@ static PyObject *
 _Pickle_FastCall(PyObject *func, PyObject *obj)
 {
     PyObject *result;
-
     result = PyObject_CallFunctionObjArgs(func, obj, NULL);
     Py_DECREF(obj);
     return result;
@@ -287,13 +275,25 @@ init_method_ref(PyObject *self, _Py_Identifier *name,
 
     /* *method_func and *method_self should be consistent.  All refcount decrements
        should be occurred after setting *method_self and *method_func. */
-    ret = Ddb_PyObject_LookupAttrId(self, name, &func);
-    if (func == NULL)
-    {
+#if PY_MINOR_VERSION == 6
+    func = _PyObject_GetAttrId(self, name);
+    if (func == NULL) {
+        *method_self = NULL;
+        Py_CLEAR(*method_func);
+        if (!PyErr_ExceptionMatches(PyExc_AttributeError)) {
+            return -1;
+        }
+        PyErr_Clear();
+        return 0;
+    }
+#else
+    ret = _PyObject_LookupAttrId(self, name, &func);
+    if (func == NULL) {
         *method_self = NULL;
         Py_CLEAR(*method_func);
         return ret;
     }
+#endif
 
     if (PyMethod_Check(func) && PyMethod_GET_SELF(func) == self)
     {
@@ -345,7 +345,7 @@ call_method(PyObject *func, PyObject *self, PyObject *obj)
 typedef struct
 {
     PyObject_VAR_HEAD
-        PyObject **data;
+    PyObject **data;
     int mark_set;         /* is MARK set? */
     Py_ssize_t fence;     /* position of top MARK or 0 */
     Py_ssize_t allocated; /* number of slots in data allocated */
@@ -377,7 +377,7 @@ Pdata_New(void)
 
     if (!(self = PyObject_New(Pdata, &Pdata_Type)))
         return NULL;
-    Py_SIZE(self) = 0;
+    DDB_Py_Size((PyVarObject*)self, 0);
     self->mark_set = 0;
     self->fence = 0;
     self->allocated = 8;
@@ -404,7 +404,7 @@ Pdata_clear(Pdata *self, Py_ssize_t clearto)
     {
         Py_CLEAR(self->data[i]);
     }
-    Py_SIZE(self) = clearto;
+    DDB_Py_Size((PyVarObject*)self, clearto);
     return 0;
 }
 
@@ -464,7 +464,8 @@ Pdata_pop(Pdata *self)
         Pdata_stack_underflow(self);
         return NULL;
     }
-    return self->data[--Py_SIZE(self)];
+    DDB_Py_Size((PyVarObject*)self, Py_SIZE(self)-1);
+    return self->data[Py_SIZE(self)];
 }
 #define PDATA_POP(D, V)       \
     do                        \
@@ -479,7 +480,8 @@ Pdata_push(Pdata *self, PyObject *obj)
     {
         return -1;
     }
-    self->data[Py_SIZE(self)++] = obj;
+    self->data[Py_SIZE(self)] = obj;
+    DDB_Py_Size((PyVarObject*)self, Py_SIZE(self) + 1);
     return 0;
 }
 
@@ -515,11 +517,10 @@ Pdata_poptuple(Pdata *self, Py_ssize_t start)
     tuple = PyTuple_New(len);
     if (tuple == NULL)
         return NULL;
-    DLOG2("tuple size",len);
     for (i = start, j = 0; j < len; i++, j++)
         PyTuple_SET_ITEM(tuple, j, self->data[i]);
 
-    Py_SIZE(self) = start;
+    DDB_Py_Size((PyVarObject*)self, start);
     return tuple;
 }
 
@@ -536,7 +537,7 @@ Pdata_poplist(Pdata *self, Py_ssize_t start)
     for (i = start, j = 0; j < len; i++, j++)
         PyList_SET_ITEM(list, j, self->data[i]);
 
-    Py_SIZE(self) = start;
+    DDB_Py_Size((PyVarObject*)self, start);
     return list;
 }
 
@@ -598,7 +599,7 @@ typedef struct UnpicklerObject
 typedef struct
 {
     PyObject_HEAD
-        UnpicklerObject *unpickler;
+    UnpicklerObject *unpickler;
 } UnpicklerMemoProxyObject;
 
 PyDoc_STRVAR(_pickle_Unpickler_find_class__doc__,
@@ -885,25 +886,41 @@ _Unpickler_SetInputStream(UnpicklerObject *self, PyObject *file)
     _Py_IDENTIFIER(read);
     _Py_IDENTIFIER(readline);
 
-    if (Ddb_PyObject_LookupAttrId(file, &PyId_peek, &self->peek) < 0)
-    {
-        return -1;
-    }
-    Ddb_PyObject_LookupAttrId(file, &PyId_read, &self->read);
-    Ddb_PyObject_LookupAttrId(file, &PyId_readline, &self->readline);
-    if (self->readline == NULL || self->read == NULL)
-    {
-        if (!PyErr_Occurred())
-        {
-            PYERR_SETSTRING(PyExc_TypeError,
-                            "file must have 'read' and 'readline' attributes");
+    #if PY_MINOR_VERSION >= 6
+        self->peek = _PyObject_GetAttrId(file, &PyId_peek);
+        if (self->peek == NULL) {
+            if (PyErr_ExceptionMatches(PyExc_AttributeError))
+                PyErr_Clear();
+            else
+                return -1;
         }
-        Py_CLEAR(self->read);
-        Py_CLEAR(self->readline);
-        Py_CLEAR(self->peek);
-        return -1;
-    }
-    return 0;
+        self->read = _PyObject_GetAttrId(file, &PyId_read);
+        self->readline = _PyObject_GetAttrId(file, &PyId_readline);
+    #else
+        if (_PyObject_LookupAttrId(file, &PyId_peek, &self->peek) < 0) {
+            return -1;
+        }
+        (void)_PyObject_LookupAttrId(file, &PyId_read, &self->read);
+        (void)_PyObject_LookupAttrId(file, &PyId_readline, &self->readline);
+    #endif
+
+        if (self->readline == NULL || self->read == NULL)
+        {
+    #if PY_MINOR_VERSION == 6
+            if (PyErr_ExceptionMatches(PyExc_AttributeError))
+    #else
+            if (!PyErr_Occurred())
+    #endif
+            {
+                PYERR_SETSTRING(PyExc_TypeError,
+                                "file must have 'read' and 'readline' attributes");
+            }
+            Py_CLEAR(self->read);
+            Py_CLEAR(self->readline);
+            Py_CLEAR(self->peek);
+            return -1;
+        }
+        return 0;
 }
 
 /* Returns -1 (with an exception set) on failure, 0 on success. This may
@@ -1698,13 +1715,30 @@ static PyTypeObject Unpickler_Type = {
 static UnpicklerObject *
 _Unpickler_New(void)
 {
+    const int MEMO_SIZE = 32;
+    PyObject **memo = _Unpickler_NewMemo(MEMO_SIZE);
+    if (memo == NULL) {
+        return NULL;
+    }
+
+    PyObject *stack = Pdata_New();
     UnpicklerObject *self;
+    if (stack == NULL) {
+        goto error;
+    }
 
     self = PyObject_GC_New(UnpicklerObject, &Unpickler_Type);
-    if (self == NULL)
-        return NULL;
+    if (self == NULL) {
+        goto error;
+    }
 
+    self->stack = (Pdata *)stack;
+    self->memo = memo;
+    self->memo_size = MEMO_SIZE;
+    self->memo_len = 0;
     self->pers_func = NULL;
+    self->pers_func_self = NULL;
+    memset(&self->buffer, 0, sizeof(Py_buffer));
     self->input_buffer = NULL;
     self->input_line = NULL;
     self->input_len = 0;
@@ -1720,20 +1754,14 @@ _Unpickler_New(void)
     self->marks_size = 0;
     self->proto = 0;
     self->fix_imports = 0;
-    memset(&self->buffer, 0, sizeof(Py_buffer));
-    self->memo_size = 32;
-    self->memo_len = 0;
-    self->memo = _Unpickler_NewMemo(self->memo_size);
-    self->stack = (Pdata *)Pdata_New();
-
-    if (self->memo == NULL || self->stack == NULL)
-    {
-        Py_DECREF(self);
-        return NULL;
-    }
 
     PyObject_GC_Track(self);
     return self;
+
+error:
+    PyMem_Free(memo);
+    Py_XDECREF(stack);
+    return NULL;
 }
 
 static Py_ssize_t
@@ -2055,7 +2083,7 @@ namespace dolphindb
             *(&s) = frame_ + frameIdx_;
             frameIdx_ += 8;
         }
-        x = _PyFloat_Unpack8((unsigned char *)s, 0);
+        x = DDB_PyFloat_Unpack8(s, 0);
         if (x == -1.0 && PyErr_Occurred())
             return -1;
         if ((value = PyFloat_FromDouble(x)) == NULL)
@@ -2182,48 +2210,6 @@ namespace dolphindb
         PDATA_PUSH(unpickler_->stack, obj, -1);
         return 0;
     }
-    static PyBytesObject *nullstring;
-    static PyObject *
-    _PyBytes_FromSize(Py_ssize_t size, int use_calloc)
-    {
-        PyBytesObject *op;
-        assert(size >= 0);
-
-        if (size == 0 && (op = nullstring) != NULL)
-        {
-#ifdef COUNT_ALLOCS
-            null_strings++;
-#endif
-            Py_INCREF(op);
-            return (PyObject *)op;
-        }
-
-        if ((size_t)size > (size_t)PY_SSIZE_T_MAX - PyBytesObject_SIZE)
-        {
-            PYERR_SETSTRING(PyExc_OverflowError,
-                            "byte string is too large");
-            return NULL;
-        }
-
-        /* Inline PyObject_NewVar */
-        if (use_calloc)
-            op = (PyBytesObject *)PyObject_Calloc(1, PyBytesObject_SIZE + size);
-        else
-            op = (PyBytesObject *)PyObject_Malloc(PyBytesObject_SIZE + size);
-        if (op == NULL)
-            return PyErr_NoMemory();
-        (void)PyObject_INIT_VAR(op, &PyBytes_Type, size);
-        op->ob_shash = -1;
-        if (!use_calloc)
-            op->ob_sval[size] = '\0';
-        /* empty byte string singleton */
-        if (size == 0)
-        {
-            nullstring = op;
-            Py_INCREF(op);
-        }
-        return (PyObject *)op;
-    }
 
     int PickleUnmarshall::load_counted_binbytes(size_t nbytes, IO_ERR &ret)
     {
@@ -2256,8 +2242,8 @@ namespace dolphindb
 
         if (frameLen_ - frameIdx_ < size)
         {
-            PyBytesObject *op = (PyBytesObject *)_PyBytes_FromSize(size, 0);
-            if (op == NULL){
+            bytes = PyBytes_FromStringAndSize(NULL, size);
+            if (bytes == NULL) {
                 ddb::DLogger::Error("load_counted_binbytes invalid size",size);
                 return -1;
             }
@@ -2266,13 +2252,13 @@ namespace dolphindb
             while (begIdx < (size_t)size)
             {
                 actualSize = std::min(size - begIdx, BUFFSIZE);
-                if ((ret = in_->readBytes(op->ob_sval + begIdx, actualSize, actualSize)) != OK){
+                if ((ret = in_->readBytes(PyBytes_AS_STRING(bytes) + begIdx, actualSize, actualSize)) != OK){
                     ddb::DLogger::Error("load_counted_binbytes read bytes in failed",ret);
                     return -1;
                 }
                 begIdx += actualSize;
             }
-            PDATA_PUSH(unpickler_->stack, (PyObject *)op, -1);
+            PDATA_PUSH(unpickler_->stack, bytes, -1);
             return 0;
         }
         else
@@ -2475,29 +2461,74 @@ namespace dolphindb
         return 0;
     }
 
-    inline static PyObject *instantiate(PyObject *cls, PyObject *args)
+#if PY_MINOR_VERSION == 6
+    inline static PyObject *
+    instantiate(PyObject *cls, PyObject *args)
     {
         /* Caller must assure args are a tuple.  Normally, args come from
-           Pdata_poptuple which packs objects from the top of the stack
-           into a newly created tuple. */
+        Pdata_poptuple which packs objects from the top of the stack
+        into a newly created tuple. */
         assert(PyTuple_Check(args));
-        if (!PyTuple_GET_SIZE(args) && PyType_Check(cls))
-        {
+        if (!PyTuple_GET_SIZE(args) && PyType_Check(cls)) {
             _Py_IDENTIFIER(__getinitargs__);
             _Py_IDENTIFIER(__new__);
-            PyObject *func;
-            if (Ddb_PyObject_LookupAttrId(cls, &PyId___getinitargs__, &func) < 0)
-            {
-                return NULL;
-            }
-            if (func == NULL)
-            {
+            PyObject *func = _PyObject_GetAttrId(cls, &PyId___getinitargs__);
+            if (func == NULL) {
+                if (!PyErr_ExceptionMatches(PyExc_AttributeError)) {
+                    return NULL;
+                }
+                PyErr_Clear();
                 return _PyObject_CallMethodIdObjArgs(cls, &PyId___new__, cls, NULL);
             }
             Py_DECREF(func);
         }
         return PyObject_CallObject(cls, args);
     }
+#elif (PY_MINOR_VERSION == 7) || (PY_MINOR_VERSION == 8)
+    inline static PyObject *
+    instantiate(PyObject *cls, PyObject *args)
+    {
+        /* Caller must assure args are a tuple.  Normally, args come from
+        Pdata_poptuple which packs objects from the top of the stack
+        into a newly created tuple. */
+        assert(PyTuple_Check(args));
+        if (!PyTuple_GET_SIZE(args) && PyType_Check(cls)) {
+            _Py_IDENTIFIER(__getinitargs__);
+            _Py_IDENTIFIER(__new__);
+            PyObject *func;
+            if (_PyObject_LookupAttrId(cls, &PyId___getinitargs__, &func) < 0) {
+                return NULL;
+            }
+            if (func == NULL) {
+                return _PyObject_CallMethodIdObjArgs(cls, &PyId___new__, cls, NULL);
+            }
+            Py_DECREF(func);
+        }
+        return PyObject_CallObject(cls, args);
+    }
+#elif PY_MINOR_VERSION >= 9
+    inline static PyObject *
+    instantiate(PyObject *cls, PyObject *args)
+    {
+        /* Caller must assure args are a tuple.  Normally, args come from
+        Pdata_poptuple which packs objects from the top of the stack
+        into a newly created tuple. */
+        assert(PyTuple_Check(args));
+        if (!PyTuple_GET_SIZE(args) && PyType_Check(cls)) {
+            _Py_IDENTIFIER(__getinitargs__);
+            _Py_IDENTIFIER(__new__);
+            PyObject *func;
+            if (_PyObject_LookupAttrId(cls, &PyId___getinitargs__, &func) < 0) {
+                return NULL;
+            }
+            if (func == NULL) {
+                return _PyObject_CallMethodIdOneArg(cls, &PyId___new__, cls);
+            }
+            Py_DECREF(func);
+        }
+        return PyObject_CallObject(cls, args);
+    }
+#endif
 
     int PickleUnmarshall::load_obj()
     {
@@ -2749,9 +2780,16 @@ namespace dolphindb
         PyObject *module_name;
         PyObject *global_name;
         PDATA_POP(unpickler_->stack, global_name);
+        if (global_name == NULL) {
+            return -1;
+        }
         PDATA_POP(unpickler_->stack, module_name);
-        if (module_name == NULL || !PyUnicode_CheckExact(module_name) ||
-            global_name == NULL || !PyUnicode_CheckExact(global_name))
+        if (module_name == NULL) {
+            Py_DECREF(global_name);
+            return -1;
+        }
+        if (!PyUnicode_CheckExact(module_name) ||
+            !PyUnicode_CheckExact(global_name))
         {
             PickleState *st = _Pickle_GetGlobalState();
             if(st != NULL)
@@ -2761,10 +2799,6 @@ namespace dolphindb
             Py_XDECREF(module_name);
             return -1;
         }
-/*#ifdef WINDOWS
-        module_name=WcharToChar(module_name);
-        global_name=WcharToChar(global_name);
-#endif*/
         global = find_class(unpickler_, module_name, global_name);
         Py_DECREF(global_name);
         Py_DECREF(module_name);
@@ -2869,7 +2903,7 @@ namespace dolphindb
         {
             len--;
             Py_DECREF(unpickler_->stack->data[len]);
-            Py_SIZE(unpickler_->stack) = len;
+            DDB_Py_Size((PyVarObject *)(unpickler_->stack), len);
         }
         return 0;
     }
@@ -2951,7 +2985,7 @@ namespace dolphindb
             PyObject *key = PyLong_FromSsize_t(idx);
             if (key != NULL)
             {
-                PyErr_SetObject(PyExc_KeyError, key);
+                PyErr_SetObject(PyExc_KeyError, key);   // refer to CPython https://github.com/python/cpython/issues/83057.
                 Py_DECREF(key);
             }
             return -1;
@@ -3184,23 +3218,24 @@ namespace dolphindb
         return _Unpickler_MemoPut(unpickler_, unpickler_->memo_len, value);
     }
 
-    static int do_append(UnpicklerObject *self, Py_ssize_t x)
+#if PY_MINOR_VERSION == 6
+    static int
+    do_append(UnpicklerObject *self, Py_ssize_t x)
     {
-
         PyObject *value;
-        PyObject *slice;
         PyObject *list;
-        PyObject *result;
         Py_ssize_t len, i;
+
         len = Py_SIZE(self->stack);
         if (x > len || x <= self->stack->fence)
             return Pdata_stack_underflow(self->stack);
-        if (len == x) /* nothing to do */
+        if (len == x)  /* nothing to do */
             return 0;
+
         list = self->stack->data[x - 1];
-        if (PyList_CheckExact(list))
-        {
-            DLOG2("list prev size", PyList_GET_SIZE(list));
+
+        if (PyList_Check(list)) {
+            PyObject *slice;
             Py_ssize_t list_len;
             int ret;
 
@@ -3210,19 +3245,79 @@ namespace dolphindb
             list_len = PyList_GET_SIZE(list);
             ret = PyList_SetSlice(list, list_len, list_len, slice);
             Py_DECREF(slice);
-            DLOG2("list size after appends.", PyList_GET_SIZE(list));
             return ret;
         }
-        else
-        {
+        else {
+            PyObject *append_func;
+            _Py_IDENTIFIER(append);
+
+            append_func = _PyObject_GetAttrId(list, &PyId_append);
+            if (append_func == NULL)
+                return -1;
+            for (i = x; i < len; i++) {
+                PyObject *result;
+
+                value = self->stack->data[i];
+                result = _Pickle_FastCall(append_func, value);
+                if (result == NULL) {
+                    Pdata_clear(self->stack, i + 1);
+                    Py_SIZE(self->stack) = x;
+                    Py_DECREF(append_func);
+                    return -1;
+                }
+                Py_DECREF(result);
+            }
+            Py_SIZE(self->stack) = x;
+            Py_DECREF(append_func);
+        }
+
+        return 0;
+    }
+#else
+    static int
+    do_append(UnpicklerObject *self, Py_ssize_t x)
+    {
+        PyObject *value;
+        PyObject *slice;
+        PyObject *list;
+        PyObject *result;
+        Py_ssize_t len, i;
+
+        len = Py_SIZE(self->stack);
+        if (x > len || x <= self->stack->fence)
+            return Pdata_stack_underflow(self->stack);
+        if (len == x)  /* nothing to do */
+            return 0;
+
+        list = self->stack->data[x - 1];
+
+        if (PyList_CheckExact(list)) {
+            Py_ssize_t list_len;
+            int ret;
+
+            slice = Pdata_poplist(self->stack, x);
+            if (!slice)
+                return -1;
+            list_len = PyList_GET_SIZE(list);
+            ret = PyList_SetSlice(list, list_len, list_len, slice);
+            Py_DECREF(slice);
+            return ret;
+        }
+        else {
             PyObject *extend_func;
+
+#if PY_MINOR_VERSION == 7
             _Py_IDENTIFIER(extend);
             extend_func = _PyObject_GetAttrId(list, &PyId_extend);
-            if (extend_func != NULL)
-            {
+#elif PY_MINOR_VERSION <= 11
+            _Py_IDENTIFIER(extend);
+#endif
+            if (_PyObject_LookupAttrId(list, &PyId_extend, &extend_func) < 0) {
+                return -1;
+            }
+            if (extend_func != NULL) {
                 slice = Pdata_poplist(self->stack, x);
-                if (!slice)
-                {
+                if (!slice) {
                     Py_DECREF(extend_func);
                     return -1;
                 }
@@ -3232,37 +3327,39 @@ namespace dolphindb
                     return -1;
                 Py_DECREF(result);
             }
-            else
-            {
+            else {
                 PyObject *append_func;
                 _Py_IDENTIFIER(append);
+
                 /* Even if the PEP 307 requires extend() and append() methods,
-                   fall back on append() if the object has no extend() method
-                   for backward compatibility. */
+                fall back on append() if the object has no extend() method
+                for backward compatibility. */
+
+#if PY_MINOR_VERSION == 7
                 PyErr_Clear();
+#endif
                 append_func = _PyObject_GetAttrId(list, &PyId_append);
                 if (append_func == NULL)
                     return -1;
-                for (i = x; i < len; i++)
-                {
+                for (i = x; i < len; i++) {
                     value = self->stack->data[i];
                     result = _Pickle_FastCall(append_func, value);
-                    if (result == NULL)
-                    {
+                    if (result == NULL) {
                         Pdata_clear(self->stack, i + 1);
-                        Py_SIZE(self->stack) = x;
+                        DDB_Py_Size((PyVarObject*)(self->stack), x);
                         Py_DECREF(append_func);
                         return -1;
                     }
                     Py_DECREF(result);
                 }
-                Py_SIZE(self->stack) = x;
+                DDB_Py_Size((PyVarObject*)(self->stack), x);
                 Py_DECREF(append_func);
             }
         }
-        //DLOG2("list size after appends.", PyList_GET_SIZE(list));
+
         return 0;
     }
+#endif
 
     int PickleUnmarshall::load_append()
     {
@@ -3286,7 +3383,7 @@ namespace dolphindb
         Py_ssize_t len, i;
         int status = 0;
         len = Py_SIZE(self->stack);
-        if (x <= self->stack->fence)
+        if (x > len || x <= self->stack->fence)
             return Pdata_stack_underflow(self->stack);
         if (len == x) /* nothing to do */
             return 0;
@@ -3369,12 +3466,12 @@ namespace dolphindb
                 if (result == NULL)
                 {
                     Pdata_clear(unpickler_->stack, i + 1);
-                    Py_SIZE(unpickler_->stack) = mark;
+                    DDB_Py_Size((PyVarObject*)(unpickler_->stack), mark);
                     return -1;
                 }
                 Py_DECREF(result);
             }
-            Py_SIZE(unpickler_->stack) = mark;
+            DDB_Py_Size((PyVarObject*)(unpickler_->stack), mark);
         }
         return 0;
     }
@@ -3390,31 +3487,56 @@ namespace dolphindb
          */
         if (Py_SIZE(unpickler_->stack) - 2 < unpickler_->stack->fence)
             return Pdata_stack_underflow(unpickler_->stack);
+
         PDATA_POP(unpickler_->stack, state);
         if (state == NULL)
             return -1;
+
         inst = unpickler_->stack->data[Py_SIZE(unpickler_->stack) - 1];
         DLOGOBJ("build on", inst);
         DLOGOBJ("state", state);
-        if (Ddb_PyObject_LookupAttrId(inst, &PyId___setstate__, &setstate) < 0)
-        {
+
+#if PY_MINOR_VERSION == 6
+        setstate = _PyObject_GetAttrId(inst, &PyId___setstate__);
+        if (setstate == NULL) {
+            if (PyErr_ExceptionMatches(PyExc_AttributeError))
+                PyErr_Clear();
+            else {
+                DLogger::Error("load_build _PyObject_GetAttrId failed");
+                Py_DECREF(state);
+                return -1;
+            }
+        }
+        else {
+            PyObject *result;
+
+            /* The explicit __setstate__ is responsible for everything. */
+            result = _Pickle_FastCall(setstate, state);
+            Py_DECREF(setstate);
+            if (result == NULL)
+                return -1;
+            Py_DECREF(result);
+            return 0;
+        }
+#else
+        if (_PyObject_LookupAttrId(inst, &PyId___setstate__, &setstate) < 0) {
             DLogger::Error("load_build _PyObject_LookupAttrId failed");
             Py_DECREF(state);
             return -1;
         }
-        if (setstate != NULL)
-        {
+        if (setstate != NULL) {
             PyObject *result;
+
             /* The explicit __setstate__ is responsible for everything. */
             result = _Pickle_FastCall(setstate, state);
             Py_DECREF(setstate);
-            if (result == NULL){
-                DLogger::Error("load_build _Pickle_FastCall failed");
+            if (result == NULL)
                 return -1;
-            }
             Py_DECREF(result);
             return 0;
         }
+#endif
+
         /* A default __setstate__.  First see whether state embeds a
          * slot state dict too (a proto 2 addition).
          */
@@ -3429,6 +3551,7 @@ namespace dolphindb
         }
         else
             slotstate = NULL;
+
         /* Set inst.__dict__ from the state dict (if any). */
         if (state != Py_None)
         {
@@ -3467,6 +3590,7 @@ namespace dolphindb
             }
             Py_DECREF(dict);
         }
+
         /* Also set instance attributes from the slotstate dict (if any). */
         if (slotstate != NULL)
         {
@@ -3501,6 +3625,27 @@ namespace dolphindb
         return status;
     }
 
+#if PY_MINOR_VERSION >= 8
+    int PickleUnmarshall::load_mark()
+    {
+        if (unpickler_->num_marks >= unpickler_->marks_size)
+        {
+            size_t alloc = ((size_t)unpickler_->num_marks << 1) + 20;
+            Py_ssize_t *marks_new = unpickler_->marks;
+            PyMem_RESIZE(marks_new, Py_ssize_t, alloc);
+            if (marks_new == NULL)
+            {
+                PyErr_NoMemory();
+                return -1;
+            }
+            unpickler_->marks = marks_new;
+            unpickler_->marks_size = (Py_ssize_t)alloc;
+        }
+        unpickler_->stack->mark_set = 1;
+        unpickler_->marks[unpickler_->num_marks++] = unpickler_->stack->fence = Py_SIZE(unpickler_->stack);
+        return 0;
+    }
+#else
     int PickleUnmarshall::load_mark()
     {
         if ((unpickler_->num_marks + 1) >= unpickler_->marks_size)
@@ -3530,6 +3675,7 @@ namespace dolphindb
         unpickler_->marks[unpickler_->num_marks++] = unpickler_->stack->fence = Py_SIZE(unpickler_->stack);
         return 0;
     }
+#endif
 
     int PickleUnmarshall::load_reduce()
     {
@@ -3606,54 +3752,6 @@ namespace dolphindb
         return 0;
     }
 
-    // static int
-    // list_resize(PyListObject *self, Py_ssize_t newsize)
-    // {
-    //     PyObject **items;
-    //     size_t new_allocated, num_allocated_bytes;
-    //     Py_ssize_t allocated = self->allocated;
-
-    //     /* Bypass realloc() when a previous overallocation is large enough
-    //        to accommodate the newsize.  If the newsize falls lower than half
-    //        the allocated size, then proceed with the realloc() to shrink the list.
-    //     */
-    //     if (allocated >= newsize && newsize >= (allocated >> 1))
-    //     {
-    //         assert(self->ob_item != NULL || newsize == 0);
-    //         Py_SIZE(self) = newsize;
-    //         return 0;
-    //     }
-
-    //     /* This over-allocates proportional to the list size, making room
-    //      * for additional growth.  The over-allocation is mild, but is
-    //      * enough to give linear-time amortized behavior over a long
-    //      * sequence of appends() in the presence of a poorly-performing
-    //      * system realloc().
-    //      * The growth pattern is:  0, 4, 8, 16, 25, 35, 46, 58, 72, 88, ...
-    //      * Note: new_allocated won't overflow because the largest possible value
-    //      *       is PY_SSIZE_T_MAX * (9 / 8) + 6 which always fits in a size_t.
-    //      */
-    //     new_allocated = (size_t)newsize + (newsize >> 3) + (newsize < 9 ? 3 : 6);
-    //     if (new_allocated > (size_t)PY_SSIZE_T_MAX / sizeof(PyObject *))
-    //     {
-    //         PyErr_NoMemory();
-    //         return -1;
-    //     }
-
-    //     if (newsize == 0)
-    //         new_allocated = 0;
-    //     num_allocated_bytes = new_allocated * sizeof(PyObject *);
-    //     items = (PyObject **)PyMem_Realloc(self->ob_item, num_allocated_bytes);
-    //     if (items == NULL)
-    //     {
-    //         PyErr_NoMemory();
-    //         return -1;
-    //     }
-    //     self->ob_item = items;
-    //     Py_SIZE(self) = newsize;
-    //     self->allocated = new_allocated;
-    //     return 0;
-    // }
     void clearObjects(std::vector<PyObject*> &symbolStringArray){
         if(symbolStringArray.empty())
             return;
@@ -3663,6 +3761,7 @@ namespace dolphindb
         }
         symbolStringArray.clear();
     }
+
     int PickleUnmarshall::load_symbol(IO_ERR &ret, char &lastDoOp)
     {
         DLOG("enter load_symbol");

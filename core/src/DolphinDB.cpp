@@ -2047,7 +2047,7 @@ void AsynWorker::run() {
                 }
                 break;
             }
-            catch(IOException & ex){
+            catch(std::exception & ex){
 				errorFlag = true;
                 std::cerr<<"Async task worker come across exception : "<<ex.what()<<std::endl;
                 taskStatus_.setResult(task.identity, TaskStatusMgmt::Result(TaskStatusMgmt::ERRORED, Constant::void_, py::none(), ex.what()));
@@ -2595,6 +2595,9 @@ int SymbolBase::serialize(char* buf, int bufSize, INDEX indexStart, int offset, 
     int index = indexStart;
     int initSize = bufSize;
     while(index < (int)syms_.size() && bufSize > 0){
+        if (syms_[index].size() >= 65536) {
+            throw RuntimeException("String too long, Serialization failed, length must be less than 64K bytes.");
+        }
         int size = std::min(bufSize, (int)syms_[index].size() + 1 - offset);
         memcpy(buf, syms_[index].data() + offset,  size);
         buf += size;

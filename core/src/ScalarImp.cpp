@@ -15,7 +15,7 @@
 
 #include "ScalarImp.h"
 #include "Format.h"
-
+#include "ConstantImp.h"
 namespace dolphindb {
 
 static TemporalFormat* monthFormat_;
@@ -186,6 +186,11 @@ string** Void::getStringConst(INDEX start, int len, string** buf) const {
 	return buf;
 }
 
+bool Void::getBinary(INDEX start, int len, int unitLength, unsigned char* buf) const {
+	memset(buf, 0, unitLength * len);
+	return true;
+}
+
 long long Void::getAllocatedMemory() const {return sizeof(Void);}
 
 
@@ -207,6 +212,9 @@ IO_ERR Void::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumE
 
 int String::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int& numElement, int& partial) const {
     int len = val_.size();
+    if (len >= 65536) {
+        throw RuntimeException("String too long, Serialization failed, length must be less than 64K bytes.");
+    }
     if (!blob_) {
         if (offset > len)
             return -1;
@@ -970,7 +978,7 @@ string Month::toString(int val){
 }
 
 string Time::toString(int val){
-	if(val == INT_MIN)
+	if(val < 0 || val >= 86400000)
 		return "";
 	else
 		return timeFormat_->format(val, DT_TIME);
@@ -982,7 +990,7 @@ void Time::validate(){
 }
 
 string Minute::toString(int val){
-	if(val == INT_MIN)
+	if(val < 0 || val >= 1440)
 		return "";
 	else
 		return minuteFormat_->format(val, DT_MINUTE);
@@ -994,7 +1002,7 @@ void Minute::validate(){
 }
 
 string Second::toString(int val){
-	if(val == INT_MIN)
+	if(val < 0 || val >= 86400 )
 		return "";
 	else
 		return secondFormat_->format(val, DT_SECOND);
@@ -1028,7 +1036,7 @@ string NanoTimestamp::toString(long long val){
 }
 
 string NanoTime::toString(long long val){
-	if(val == LLONG_MIN)
+	if(val < 0 || val >= 86400000000000ll)
 		return "";
 	else
 		return nanotimeFormat_->format(val, DT_NANOTIME);
@@ -1073,7 +1081,8 @@ Time* Time::parseTime(const string& str){
 		p->setNull();
 		return p;
 	}
-
+	else if(str.size() != 12)
+		return p;
 	int hour,minute,second,milliSecond=0;
 	hour=atoi(str.substr(0,2).c_str());
 	if(hour>=24 || str[2]!=':')
@@ -1165,6 +1174,17 @@ Second* Second::parseSecond(const string& str){
 	return p;
 }
 
+template <class T>
+template <typename R>
+bool AbstractScalar<T>::getDecimal(INDEX /*start*/, int len, int scale, R *buf) const {
+	R value{};
+	decimal_util::valueToDecimalraw(val_, scale, &value);
+	for (int i = 0; i < len; ++i) {
+		buf[i] = value;
+	}
+	return true;
+}
+
 DateTime* DateTime::parseDateTime(const string& str){
 	DateTime* p=0;
 
@@ -1207,6 +1227,10 @@ Timestamp* Timestamp::parseTimestamp(const string& str){
 		return p;
 	}
 
+	int len = str.size();
+	if(len < 19)
+		return p;
+
 	int year,month,day,hour,minute,second,millisecond=0;
 	year=atoi(str.substr(0,4).c_str());
 	if(year==0 ||str[4]!='.')
@@ -1227,8 +1251,12 @@ Timestamp* Timestamp::parseTimestamp(const string& str){
 	second=atoi(str.substr(17,2).c_str());
 	if(second>=60)
 		return p;
-	if(str[19]=='.')
-		millisecond=atoi(str.substr(20,str.length()-20).c_str());
+	if(len > 19 && str[19]=='.'){
+		if(len > 22)
+			millisecond=atoi(str.substr(20, 3).c_str());
+		else
+			return p;
+	}
 	p=new Timestamp(year,month,day,hour,minute,second,millisecond);
 	return p;
 }
@@ -1591,7 +1619,7 @@ ConstantSP Timestamp::castTemporal(DATA_TYPE expectType) {
 	if (expectType == DT_DATEHOUR) {
 		int result;
 
-		int tail = (val_ < 0) && (val_ % 3600);
+		int tail = (val_ < 0) && (val_ % 3600000);
 		val_ == LLONG_MIN ? result = INT_MIN : result = val_ / 3600000LL - tail;
 		return Util::createObject(expectType, result);
 	}
@@ -1700,5 +1728,18 @@ ConstantSP NanoTimestamp::castTemporal(DATA_TYPE expectType) {
 		return Util::createObject(expectType, result);
 	}
 }
+
+#define INSTANTIATE(class_type_t)                                                                           \
+    template class AbstractScalar<class_type_t>;                                                            \
+    template bool AbstractScalar<class_type_t>::getDecimal(INDEX, int, int, Decimal32::raw_data_t *) const; \
+    template bool AbstractScalar<class_type_t>::getDecimal(INDEX, int, int, Decimal64::raw_data_t *) const; \
+	template bool AbstractScalar<class_type_t>::getDecimal(INDEX, int, int, Decimal128::raw_data_t *) const;
+
+INSTANTIATE(char);
+INSTANTIATE(short);
+INSTANTIATE(int);
+INSTANTIATE(long long)
+INSTANTIATE(float);
+INSTANTIATE(double);
 
 };

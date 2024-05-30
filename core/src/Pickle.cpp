@@ -1,6 +1,6 @@
 #include "Python.h"
 
-#if (PY_MINOR_VERSION >=7) && (PY_MINOR_VERSION <= 10)
+#if (PY_MINOR_VERSION >=7) && (PY_MINOR_VERSION <= 11)
 
 int Ddb_PyArg_UnpackStackOrTuple(
     PyObject *const *args,

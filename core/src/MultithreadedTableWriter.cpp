@@ -216,6 +216,7 @@ MultithreadedTableWriter::~MultithreadedTableWriter(){
 		while (unusedQueue_.pop(pitem)) {
 			delete pitem;
 		}
+        delete pytoDdb_;
 	}
 }
 
@@ -382,14 +383,15 @@ bool MultithreadedTableWriter::SendExecutor::writeAllData(){
 	DLOG("writeAllData", writeThread_.writeQueue.size());
     SemLock idleLock(writeThread_.idleSem);
     idleLock.acquire();
+    long blockSize = (tableWriter_.batchSize_ > 65535) ? tableWriter_.batchSize_ : 65535;
     std::vector<std::vector<ConstantSP>*> items;
     {
         long size = writeThread_.writeQueue.size();
         if (size < 1){
             return false;
         }
-        if(size > 65535)
-            size = 65535;
+        if(size > blockSize)
+            size = blockSize;
         items.reserve(size);
         writeThread_.writeQueue.pop(items, size);
     }

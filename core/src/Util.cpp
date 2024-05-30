@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <WideInteger.h>
 #ifdef _MSC_VER
 	#include <time.h>
 #else
@@ -316,7 +317,7 @@ Constant * Util::createDateHour(int year, int month, int day, int hour) {
 }
 
 Constant* Util::createDecimal32(int scale, double value) {
-	Decimal32 *decimal=new Decimal32(scale);
+	Decimal32 *decimal = new Decimal32(scale);
 	decimal->setDouble(value);
 	return decimal;
 }
@@ -327,13 +328,24 @@ Constant* Util::createDecimal32(int scale, int value) {
 }
 
 Constant* Util::createDecimal64(int scale, double value) {
-	Decimal64 *decimal=new Decimal64(scale);
+	Decimal64 *decimal = new Decimal64(scale);
 	decimal->setDouble(value);
 	return decimal;
 }
 
 Constant* Util::createDecimal64(int scale, long long value) {
 	Decimal64 *decimal = new Decimal64(scale, (int64_t)value);
+	return decimal;
+}
+
+Constant* Util::createDecimal128(int scale, double value) {
+	Decimal128 *decimal = new Decimal128(scale);
+	decimal->setDouble(value);
+	return decimal;
+}
+
+Constant* Util::createDecimal128(int scale, wide_integer::int128 value) {
+	Decimal128 *decimal = new Decimal128(scale, value);
 	return decimal;
 }
 
@@ -1015,9 +1027,9 @@ string Util::toMicroTimestampStr(std::chrono::system_clock::time_point& tp, bool
 		localtime_r(&now_c, &lt);
 	#endif
 	int microsecond= (tp.time_since_epoch()/std::chrono::microseconds(1)) % 1000000;
-	char buf[30];
+	char buf[100]{};
 	if(printDate)
-		sprintf(buf, "%d-%02d-%02d %02d:%02d:%02d.%06d", lt.tm_year+1900, lt.tm_mon+1, lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec, microsecond);
+		sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d.%06d", lt.tm_year+1900, lt.tm_mon+1, lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec, microsecond);
 	else
 		sprintf(buf, "%02d:%02d:%02d.%06d",lt.tm_hour, lt.tm_min, lt.tm_sec, microsecond);
 	return string(buf);
@@ -1052,6 +1064,9 @@ int Util::getDataTypeSize(DATA_TYPE type){
 	}
 	else if (type == DT_DECIMAL64) {
 		return sizeof(int64_t);
+	}
+	else if (type == DT_DECIMAL128){
+		return sizeof(wide_integer::int128);
 	}
 	else if(type == DT_INT128||type== DT_IP||type==DT_UUID)
 		return sizeof(Guid);
@@ -1359,8 +1374,11 @@ ConstantSP Util::createObject(DATA_TYPE dataType, bool val, ErrorCodeInfo *error
 	}
 }
 
-inline ConstantSP Util::createValue(DATA_TYPE dataType, long long val, const char *pTypeName, ErrorCodeInfo *errorCodeInfo, int extraParam) {
+ConstantSP Util::createValue(DATA_TYPE dataType, long long val, const char *pTypeName, ErrorCodeInfo *errorCodeInfo, int extraParam) {
 	switch (dataType) {
+	case DATA_TYPE::DT_DECIMAL128:
+		return createDecimal128(extraParam, (wide_integer::int128)val);
+		break;
 	case DATA_TYPE::DT_DECIMAL64:
 		return createDecimal64(extraParam, val);
 		break;
@@ -1579,6 +1597,9 @@ ConstantSP Util::createObject(DATA_TYPE dataType, float val, ErrorCodeInfo *erro
 	case DATA_TYPE::DT_DECIMAL64:
 		return createDecimal64(extraParam, val);
 		break;
+	case DATA_TYPE::DT_DECIMAL128:
+		return createDecimal128(extraParam, val);
+		break;
 	case DATA_TYPE::DT_FLOAT:
 		return createFloat(val);
 		break;
@@ -1605,6 +1626,9 @@ ConstantSP Util::createObject(DATA_TYPE dataType, double val, ErrorCodeInfo *err
 		break;
 	case DATA_TYPE::DT_DECIMAL64:
 		return createDecimal64(extraParam, val);
+		break;
+	case DATA_TYPE::DT_DECIMAL128:
+		return createDecimal128(extraParam, val);
 		break;
 	case DATA_TYPE::DT_DOUBLE:
 		return createDouble(val);

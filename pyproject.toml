@@ -11,7 +11,7 @@ environment = {}
 environment-pass = []
 build-verbosity = "3"
 
-skip = ["*-win32", "*-manylinux_i686", "pp*", "*-musllinux*", "cp312*", "cp311*"]
+skip = ["*-win32", "*-manylinux_i686", "pp*", "*-musllinux*", "cp312*"]
 
 before-all = ""
 before-build = [

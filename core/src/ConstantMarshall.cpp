@@ -124,7 +124,7 @@ bool VectorMarshall::writeMetaValues(BufferWriter<DataOutputStreamSP> &output, c
 		offset += sizeof(int);
 
 		DATA_TYPE rawType = target->getRawType();
-		if(rawType == DT_DECIMAL32 || rawType == DT_DECIMAL64) {
+		if(rawType == DT_DECIMAL32 || rawType == DT_DECIMAL64 || rawType == DT_DECIMAL128) {
 			int scale = target->getExtraParamForType();
 			memcpy(buf_ + offset, &scale, 4);
 			offset += 4;
@@ -203,7 +203,7 @@ bool VectorMarshall::start(const char* requestHeader, size_t headerSize, const C
 	//flag
 	out_.start(buf_, offset);
 	offset = 0;
-	
+
 	int unitLen = Util::getDataTypeSize(target->getType());
 	CompressionFactory::Header header;
 	header.colCount = 1;
@@ -677,6 +677,7 @@ bool VectorUnmarshall::start(short flag, bool blocking, IO_ERR& ret){
 		type = (DATA_TYPE)compressHeader.dataType;
 		valueSize = compressHeader.extra;
 	}
+	//If following part modified, remember to modify Compress.writeVectorMetaValue function
 	rows_ = -1;
 	columns_ = -1;
 	if((ret = input->readInt(rows_)) != OK)
@@ -703,7 +704,7 @@ bool VectorUnmarshall::start(short flag, bool blocking, IO_ERR& ret){
 	else if(actualType == DT_SYMBOL){
 		actualType = DT_STRING;
 	}
-	if (Util::getCategory(actualType) == DENARY || actualType == DT_DECIMAL32_ARRAY || actualType == DT_DECIMAL64_ARRAY) {
+	if (Util::getCategory(actualType) == DENARY || actualType == DT_DECIMAL32_ARRAY || actualType == DT_DECIMAL64_ARRAY || actualType == DT_DECIMAL128_ARRAY) {
 		ret = input->readInt(scale_);
 		if (ret != OK) {
 			return false;
@@ -713,6 +714,8 @@ bool VectorUnmarshall::start(short flag, bool blocking, IO_ERR& ret){
 			return false;
 		}
 	}
+
+	//If above part modified, remember to modify Compress.writeVectorMetaValue function
 	if(form == DF_PAIR)
 		obj_ = Util::createPair(actualType, scale_);
 	else if(form == DF_VECTOR){

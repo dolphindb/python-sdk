@@ -1121,35 +1121,32 @@ class Table(object):
         delTable = TableDelete(t=tmp)
         return delTable
 
-    def drop(self, cols: List[str]) -> Type["Table"]:
+    def drop(self, cols: Union[List[str], str]) -> Type["Table"]:
         """Delete columns.
 
         Args:
-            cols : list of columns to be deleted. If an empty list is passed in, all columns of the current Table will be deleted.
+            cols : list of columns to be deleted.
 
         Returns:
             a Table object.
         """
-        if cols is not None and len(cols) and isinstance(cols, list):
+        if isinstance(cols, str):
+            cols = [cols]
+        if not isinstance(cols, list):
+            raise TypeError("cols must be a str or a list of str.")
+        if len(cols) == 1:
+            query = f'{self.tableName()}.drop!("{str(cols[0])}")'
+        if len(cols) > 1:
             runstr = '{table}.drop!([{cols}])'
             fmtDict = dict()
             fmtDict['table'] = self.tableName()
             fmtDict['cols'] = '"' + '","'.join(cols) + '"'
             query = re.sub(' +', ' ', runstr.format(**fmtDict).strip())
+        if cols:
             for col in cols:
                 for colName in self.__select:
                     if col.lower() == colName.lower():
                         self.__select.remove(colName)
-            self.__session.run(query)
-        else:
-            runstr = '{table}.drop!([{cols}])'
-            fmtDict = dict()
-            fmtDict['table'] = self.tableName()
-            fmtDict['cols'] = "'" + cols + "'"
-            query = re.sub(' +', ' ', runstr.format(**fmtDict).strip())
-            for colName in self.__select:
-                if cols.lower() == colName.lower():
-                    self.__select.remove(colName)
             self.__session.run(query)
         return self
 

@@ -283,6 +283,55 @@ private:
 	unordered_map<int,ConstantSP> dict_;
 };
 
+class FloatAnyDictionary: public AbstractDictionary{
+public:
+    FloatAnyDictionary(DATA_TYPE keyType = DT_FLOAT):AbstractDictionary(keyType,DT_ANY){}
+    FloatAnyDictionary(const unordered_map<float,ConstantSP>& dict, DATA_TYPE keyType = DT_FLOAT):AbstractDictionary(keyType,DT_ANY), dict_(dict){}
+    unordered_map<float, ConstantSP>& getInternalDict() { return dict_;}
+    virtual ~FloatAnyDictionary(){};
+    void clear() override{dict_.clear();}
+    INDEX size() const override {return (INDEX)dict_.size();}
+    INDEX count() const override {return (INDEX)dict_.size();}
+    ConstantSP getInstance() const override { return new FloatAnyDictionary(keyType_);}
+    ConstantSP getValue() const override {return new FloatAnyDictionary(dict_, keyType_);}
+    bool set(const ConstantSP& key, const ConstantSP& value) override;
+    bool remove(const ConstantSP& key) override;
+    ConstantSP getMember(const ConstantSP& key) const override;
+    ConstantSP keys() const override;
+    ConstantSP values() const override;
+    void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+    string getString() const override;
+    long long getAllocatedMemory() const override;
+    bool containNotMarshallableObject() const override;
+private:
+    unordered_map<float, ConstantSP> dict_;
+};
+
+
+class DoubleAnyDictionary: public AbstractDictionary{
+public:
+    DoubleAnyDictionary(DATA_TYPE keyType = DT_DOUBLE):AbstractDictionary(keyType,DT_ANY){}
+    DoubleAnyDictionary(const unordered_map<double,ConstantSP>& dict, DATA_TYPE keyType = DT_DOUBLE):AbstractDictionary(keyType,DT_ANY), dict_(dict){}
+    unordered_map<double, ConstantSP>& getInternalDict() { return dict_;}
+    virtual ~DoubleAnyDictionary(){};
+    void clear() override{dict_.clear();}
+    INDEX size() const override {return (INDEX)dict_.size();}
+    INDEX count() const override {return (INDEX)dict_.size();}
+    ConstantSP getInstance() const override { return new DoubleAnyDictionary(keyType_);}
+    ConstantSP getValue() const override {return new DoubleAnyDictionary(dict_, keyType_);}
+    bool set(const ConstantSP& key, const ConstantSP& value) override;
+    bool remove(const ConstantSP& key) override;
+    ConstantSP getMember(const ConstantSP& key) const override;
+    ConstantSP keys() const override;
+    ConstantSP values() const override;
+    void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+    string getString() const override;
+    long long getAllocatedMemory() const override;
+    bool containNotMarshallableObject() const override;
+private:
+    unordered_map<double, ConstantSP> dict_;
+};
+
 
 class LongAnyDictionary: public AbstractDictionary{
 public:

@@ -25,6 +25,7 @@
 #include "Exceptions.h"
 #include "SysIO.h"
 #include "pybind11/pybind11.h"
+#include "WideInteger.h"
 
 namespace py = pybind11;
 
@@ -205,6 +206,10 @@ struct GuidHash {
 	uint64_t operator()(const Guid& guid) const;
 };
 
+#define NOT_IMPLEMENT \
+    throw RuntimeException("Data type [" + std::to_string(static_cast<int>(getType())) + "] form [" + \
+            std::to_string(static_cast<int>(getForm())) + "] does not implement `" + __func__ + "`");
+
 class EXPORT_DECL Constant {
 public:
 	static string EMPTY;
@@ -290,6 +295,10 @@ public:
 	virtual const string& getStringRef(INDEX index) const {return EMPTY;}
 	virtual bool isNull(INDEX index) const {return isNull();}
 
+	virtual int32_t getDecimal32(INDEX index, int scale) const { NOT_IMPLEMENT; }
+	virtual int64_t getDecimal64(INDEX index, int scale) const { NOT_IMPLEMENT; }
+	virtual wide_integer::int128 getDecimal128(INDEX index, int scale) const { NOT_IMPLEMENT; }
+
 	virtual ConstantSP get(INDEX index) const {return getValue();}
 	virtual ConstantSP get(INDEX column, INDEX row) const {return get(row);}
 	virtual ConstantSP get(const ConstantSP& index) const {return getValue();}
@@ -315,6 +324,9 @@ public:
 	virtual bool getString(INDEX start, int len, char** buf) const {return false;}
 	virtual bool getBinary(INDEX start, int len, int unitLength, unsigned char* buf) const {return false;}
 	virtual bool getHash(INDEX start, int len, int buckets, int* buf) const {return false;}
+	virtual bool getDecimal32(INDEX start, int len, int scale, int32_t *buf) const { NOT_IMPLEMENT; }
+	virtual bool getDecimal64(INDEX start, int len, int scale, int64_t *buf) const { NOT_IMPLEMENT; }
+	virtual bool getDecimal128(INDEX start, int len, int scale, wide_integer::int128 *buf) const { NOT_IMPLEMENT; }
 
 	virtual const char* getBoolConst(INDEX start, int len, char* buf) const {throw RuntimeException("getBoolConst method not supported");}
 	virtual const char* getCharConst(INDEX start, int len,char* buf) const {throw RuntimeException("getCharConst method not supported");}
@@ -1114,7 +1126,7 @@ private:
 		return std::to_string(value);
 	}
 };
-};
+}
 
 namespace std {
 template<>
@@ -1122,7 +1134,7 @@ struct hash<dolphindb::Guid> {
 	size_t operator()(const dolphindb::Guid& val) const;
 };
 
-};
+}
 
 
 #endif /* DOLPHINDB_H_ */

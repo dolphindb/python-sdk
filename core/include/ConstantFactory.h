@@ -129,7 +129,7 @@ public:
 
 	Dictionary* createDictionary(DATA_TYPE keyInternalType, DATA_TYPE keyType, DATA_TYPE valueType){
 		if (valueType > DT_STRING
-			&& (valueType != DT_UUID && valueType != DT_IP && valueType != DT_INT128 && valueType!= DT_BLOB && valueType != DT_DATEHOUR && valueType != DT_DATEMINUTE)) {
+			&& (valueType != DT_DATEHOUR && valueType != DT_DATEMINUTE && valueType!= DT_BLOB)) {
 			valueType = DT_ANY;
 		}
 		if(valueType != DT_ANY){
@@ -140,12 +140,10 @@ public:
 				case DT_LONG : return new LongDictionary(keyType,valueType);
 				case DT_FLOAT : return new FloatDictionary(valueType);
 				case DT_DOUBLE : return new DoubleDictionary(valueType);
-				case DT_INT128 :
-					if (valueType == DT_INT128)
-						return NULL;
-					return new Int128Dictionary(keyType,valueType);
-				case DT_STRING : return new StringDictionary(keyType,valueType);
-				default : return NULL;
+				case DT_INT128 : return new Int128Dictionary(keyType,valueType);
+				case DT_STRING :
+				case DT_BLOB : return new StringDictionary(keyType,valueType);
+				default : throw RuntimeException("Not allowed to create Dictionary for the key type " + Util::getDataTypeString(keyType));
 			}
 		}
 		else{
@@ -153,10 +151,13 @@ public:
 				case DT_CHAR :
 				case DT_SHORT :
 				case DT_INT : return new IntAnyDictionary(keyType);
+				case DT_FLOAT: return new FloatAnyDictionary(keyType);
+				case DT_DOUBLE: return new DoubleAnyDictionary(keyType);
 				case DT_LONG : return new LongAnyDictionary(keyType);
 				case DT_INT128 : return new Int128AnyDictionary(keyType);
-				case DT_STRING : return new AnyDictionary();
-				default : return NULL;
+				case DT_STRING :
+				case DT_BLOB : return new AnyDictionary();
+				default : throw RuntimeException("Not allowed to create Dictionary for this key type " + Util::getDataTypeString(keyType));
 			}
 		}
 	}
@@ -271,6 +272,7 @@ private:
 	Constant* createIPAddr(int extraParam){return new IPAddr();}
 	Constant* createDecima32(int extraParam) { return new Decimal32(extraParam); }
 	Constant* createDecima64(int extraParam) { return new Decimal64(extraParam); }
+	Constant* createDecima128(int extraParam) { return new Decimal128(extraParam); }
 
 	Vector* createVoidVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		throw RuntimeException("Not allowed to create void vector");
@@ -497,6 +499,16 @@ private:
 			return NULL;
 	}
 
+	Vector* createDecimal128Vector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull) {
+		if (data == NULL && dataSegment == NULL) {
+			allocate<wide_integer::int128>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		}
+		if (data != NULL)
+			return new FastDecimalVector<wide_integer::int128>(extraParam, size, capacity, (wide_integer::int128*)data, containNull);
+		else
+			return NULL;
+	}
+
 	Vector* createBoolArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
 		// if(data == NULL && dataSegment == NULL){
 		// 	allocate<char>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
@@ -627,7 +639,10 @@ private:
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DECIMAL64 + ARRAY_TYPE_BASE), (INDEX *)pindex, extraParam);
 	}
 
-	
+	Vector* createDecimal128ArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
+		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DECIMAL128 + ARRAY_TYPE_BASE), (INDEX *)pindex, extraParam);
+	}
+
 	Vector* createVoidMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		throw RuntimeException("Not allowed to create a void matrix");
 	}
@@ -808,6 +823,8 @@ private:
 		arrConstFactory[DT_IP]=&ConstantFactory::createIPAddr;
 		arrConstFactory[DT_DECIMAL32] = &ConstantFactory::createDecima32;
 		arrConstFactory[DT_DECIMAL64] = &ConstantFactory::createDecima64;
+		arrConstFactory[DT_DECIMAL128] = &ConstantFactory::createDecima128;
+
 		arrConstFactory[DT_DICTIONARY]=NULL;
 
 		arrConstVectorFactory[DT_VOID]=&ConstantFactory::createVoidVector;
@@ -836,6 +853,8 @@ private:
 		arrConstVectorFactory[DT_IP]=&ConstantFactory::createIPAddrVector;
 		arrConstVectorFactory[DT_DECIMAL32] = &ConstantFactory::createDecimal32Vector;
 		arrConstVectorFactory[DT_DECIMAL64] = &ConstantFactory::createDecimal64Vector;
+		arrConstVectorFactory[DT_DECIMAL128] = &ConstantFactory::createDecimal128Vector;
+
 		arrConstVectorFactory[DT_FUNCTIONDEF]=&ConstantFactory::createAnyVector;
 		arrConstVectorFactory[DT_HANDLE]=&ConstantFactory::createAnyVector;
 		arrConstVectorFactory[DT_ANY]=&ConstantFactory::createAnyVector;
@@ -867,6 +886,7 @@ private:
 		arrConstArrayVectorFactory[DT_IP] = &ConstantFactory::createIpArrayVector;
 		arrConstArrayVectorFactory[DT_DECIMAL32] = &ConstantFactory::createDecimal32ArrayVector;
 		arrConstArrayVectorFactory[DT_DECIMAL64] = &ConstantFactory::createDecimal64ArrayVector;
+		arrConstArrayVectorFactory[DT_DECIMAL128] = &ConstantFactory::createDecimal128ArrayVector;
 
 		arrConstMatrixFactory[DT_VOID]=&ConstantFactory::createVoidMatrix;
 		arrConstMatrixFactory[DT_BOOL]=&ConstantFactory::createBoolMatrix;
@@ -1047,7 +1067,6 @@ private:
 	ConstantVectorFunc arrConstVectorFactory[TYPE_COUNT];
 	ConstantArrayVectorFunc arrConstArrayVectorFactory[TYPE_COUNT];
 	ConstantMatrixFunc arrConstMatrixFactory[TYPE_COUNT];
-	ConstantRptVectorFunc arrConstRptVectorFactory[TYPE_COUNT];
 	unordered_map<string,DATA_TYPE> typeMap_;
 	unordered_map<string,DATA_FORM> formMap_;
 	char arrTypeSymbol[TYPE_COUNT];

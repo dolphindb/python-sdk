@@ -8,6 +8,7 @@
 #include "Pickle.h"
 #include "MultithreadedTableWriter.h"
 #include "Wrappers.h"
+#include "WideInteger.h"
 
 namespace ddb = dolphindb;
 using namespace pybind11::literals;
@@ -283,7 +284,7 @@ T getPyDecimalData(PyObject* obj, bool &hasNull) {
     T dec_data = 0;
     for(int ti=0;ti<dec_len;ti++) {
         dec_data *= 10;
-        dec_data += py::cast<T>(PyTuple_GET_ITEM(dataTuple, ti));
+        dec_data += (T)py::cast<int>(PyTuple_GET_ITEM(dataTuple, ti));
         if(dec_data < 0) {
             Py_DECREF(DecTuple);
             Py_DECREF(dataExp);
@@ -359,7 +360,7 @@ bool addBoolVector(const py::array &pyVec, size_t size, size_t offset, char null
     char* buf = bufsp.get();
     auto buffer = pyVec.request();
     int8_t *it = reinterpret_cast<int8_t *>(buffer.ptr);
-    int startIndex = 0, len, i = 0;
+    int startIndex = offset, len, i = 0;
     bool hasNull = false;
     int stride = buffer.strides[0];
     it += stride * offset;
@@ -395,7 +396,7 @@ bool addCharVector(const py::array &pyVec, size_t size, size_t offset, char null
     char* buf = bufsp.get();
     auto buffer = pyVec.request();
     int8_t *it = reinterpret_cast<int8_t *>(buffer.ptr);
-    int startIndex = 0, len, i = 0;
+    int startIndex = offset, len, i = 0;
     bool hasNull = false;
     int stride = buffer.strides[0];
     it += stride * offset;
@@ -432,7 +433,7 @@ bool addNullVector(const py::array &pyVec, size_t size, size_t offset, T nullVal
     T* buf = bufsp.get();
     auto buffer = pyVec.request();
     int8_t *it = reinterpret_cast<int8_t *>(buffer.ptr);
-    int startIndex = 0, len, i = 0;
+    int startIndex = offset, len, i = 0;
     bool hasNull = false;
     int stride = buffer.strides[0];
     it += stride * offset;
@@ -469,7 +470,7 @@ bool addDecimalVector(const py::array &pyVec, size_t size, size_t offset, T null
     T* buf = bufsp.get();
     auto buffer = pyVec.request();
     int8_t *it = reinterpret_cast<int8_t *>(buffer.ptr);
-    int startIndex = 0, len, i = 0;
+    int startIndex = offset, len, i = 0;
     bool hasNull = false;
     int stride = buffer.strides[0];
     it += stride * offset;
@@ -561,6 +562,29 @@ void addStringVector(VectorSP &ddbVec, const py::array &pyVec, size_t size, ssiz
             throwExceptionAboutNumpyVersion(row_index, py::str(*errit).cast<std::string>(), Util::getDataTypeString(type), info);
         }
     }
+}
+
+void setBlobVector(VectorSP &ddbVec, const py::array &pyVec, size_t size, ssize_t offset, const TableVectorInfo &info) {
+    int ni = 0;
+    py::object tmpObj;
+    DATA_TYPE type = ddbVec->getType();
+    try {
+        for (auto &obj : pyVec) {
+            if (ni < offset) {++ni;continue;}
+            tmpObj = py::reinterpret_borrow<py::object>(obj);
+            if (isNULL(tmpObj)) {
+                ddbVec->setString(ni, "");
+            }
+            else {
+                ddbVec->setString(ni, py::cast<std::string>(obj));
+            }
+            ++ni;
+        }
+    }
+    catch (...) {
+        throwExceptionAboutNumpyVersion(ni, py2str(tmpObj), Util::getDataTypeString(type), info);
+    }
+    
 }
 
 inline bool isArrayLike(const py::object &obj) {
@@ -688,7 +712,9 @@ Scalar2DolphinDBType(const py::object       &obj,
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->decimal_)) {
         DLOG("is decimal.");
-        return {DT_DECIMAL64, getPyDecimalScale(obj.ptr())};
+        int scale = getPyDecimalScale(obj.ptr());
+        if (scale > 17) return {DT_DECIMAL128, scale};
+        return {DT_DECIMAL64, scale};
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pdtimestamp_)) {
         return {DT_TIMESTAMP, -1};
@@ -874,8 +900,10 @@ Type InferDataTypeFromArrowType(const py::object &pyarrow_dtype) {
         return {DT_INT128, -1};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->palarge_binary_))
         return {DT_BLOB, -1};
-    else if (py::isinstance(pyarrow_dtype, DdbPythonUtil::preserved_->padecimal128_))
-        return {DT_DECIMAL64, py::cast<int>(pyarrow_dtype.attr("scale"))};
+    else if (py::isinstance(pyarrow_dtype, DdbPythonUtil::preserved_->padecimal128_)) {
+        int scale = py::cast<int>(pyarrow_dtype.attr("scale"));
+        return {DT_DECIMAL128, scale};
+    }
     else {
         throw RuntimeException("unsupport pyarrow_dtype '" + py2str(pyarrow_dtype) + "'.");
     }
@@ -1054,6 +1082,15 @@ toDolphinDB_Dictionary(py::object obj) {
         for (int i = 0; i < size; ++i) {
             if (_ddbValVec[i]->isNull()) continue;
             scale = ((Decimal64SP)_ddbValVec[i])->getScale();
+            break;
+        }
+        ddbValVec = Util::createVector(valType, 0, size, true, scale);
+    }
+    else if (valType == DT_DECIMAL128) {
+        int scale = 0;
+        for (int i = 0; i < size; ++i) {
+            if (_ddbValVec[i]->isNull()) continue;
+            scale = ((Decimal128SP)_ddbValVec[i])->getScale();
             break;
         }
         ddbValVec = Util::createVector(valType, 0, size, true, scale);
@@ -1254,18 +1291,7 @@ ConstantSP toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VE
                     py::array series_array = py::cast<py::array>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(DT_BLOB, size, size);
-                    py::object tmpObj;
-                    int ni = 0;
-                    for (auto &it : series_array) {
-                        tmpObj = py::cast<py::object>(it);
-                        if (isNULL(tmpObj)) {
-                            ddbVec->setString(ni, "");
-                        }
-                        else {
-                            ddbVec->setString(ni, py::cast<std::string>(tmpObj));
-                        }
-                        ++ni;
-                    }
+                    setBlobVector(ddbVec, series_array, size, 0, info);
                     break;
                 }
                 case DT_DECIMAL32:
@@ -1402,22 +1428,12 @@ inferobjectdtype:
             }
             case DT_BLOB: {
                 ddbVec = Util::createVector(DT_BLOB, size, size);
-                py::object tmpObj;
-                int ni = 0;
-                for (auto &it : series_array) {
-                    tmpObj = py::cast<py::object>(it);
-                    if (isNULL(tmpObj)) {
-                        ddbVec->setString(ni, "");
-                    }
-                    else {
-                        ddbVec->setString(ni, py::cast<std::string>(tmpObj));
-                    }
-                    ++ni;
-                }
+                setBlobVector(ddbVec, series_array, size, 0, info);
                 break;
             }
             case DT_DECIMAL32:
-            case DT_DECIMAL64: {
+            case DT_DECIMAL64:
+            case DT_DECIMAL128: {
                 size_t index = 0;
                 int exparam = -1;
                 if (typeIndicator.second == -1) {
@@ -1453,19 +1469,34 @@ inferobjectdtype:
                     break;
                 }
                 if (exparam != -1) {    // Infer exparam
-                    ddbVec = Util::createVector(typeInfer, 0, size, true, exparam);
+                    ddbVec = Util::createVector(typeInfer, index, size, true, exparam);
                 }
                 else {
-                    ddbVec = Util::createVector(typeInfer, 0, size, true, typeIndicator.second);
+                    ddbVec = Util::createVector(typeInfer, index, size, true, typeIndicator.second);
+                }
+                if (index != 0) {
+                    ddbVec->fill(0, index, Constant::void_);
                 }
                 if (typeInfer == DT_DECIMAL32) {
-                    ddbVec->setNullFlag(addDecimalVector<int>(series_array, size, index, INT32_MIN, typeIndicator, [&](int *buf, int size) {
+                    ddbVec->setNullFlag(addDecimalVector<int>(
+                        series_array, size, index, INT32_MIN, typeIndicator,
+                        [&](int *buf, int size) {
                         ((FastDecimal32VectorSP)ddbVec)->appendInt(buf, size);
                     }, info));
                     break;
                 }
+                else if (typeInfer == DT_DECIMAL128) {
+                    ddbVec->setNullFlag(addDecimalVector<wide_integer::int128>(
+                        series_array, size, index, std::numeric_limits<wide_integer::int128>::min(), typeIndicator,
+                        [&](wide_integer::int128 *buf, int size) {
+                        ((FastDecimal128VectorSP)ddbVec)->appendInt128(buf, size);
+                    }, info));
+                    break;
+                }
                 else {
-                    ddbVec->setNullFlag(addDecimalVector<long long>(series_array, size, index, INT64_MIN, typeIndicator, [&](long long *buf, int size) {
+                    ddbVec->setNullFlag(addDecimalVector<long long>(
+                        series_array, size, index, INT64_MIN, typeIndicator,
+                        [&](long long *buf, int size) {
                         ((FastDecimal64VectorSP)ddbVec)->appendLong(buf, size);
                     }, info));
                     break;
@@ -1777,7 +1808,8 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                     break;
                 }
                 case DT_DECIMAL32:
-                case DT_DECIMAL64: {
+                case DT_DECIMAL64:
+                case DT_DECIMAL128: {
                     if (elemType.second == -1) {
                         elemType.second = py::cast<int>(dtype.attr("pyarrow_dtype").attr("value_type").attr("scale"));
                     }
@@ -1787,12 +1819,23 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                     size_t size = values.size();
                     VectorSP valVec = Util::createVector(elemType.first, 0, size, true, elemType.second);
                     if (elemType.first == DT_DECIMAL32) {
-                        valVec->setNullFlag(addDecimalVector<int>(values, size, 0, INT32_MIN, elemType, [&](int *buf, int size) {
+                        valVec->setNullFlag(addDecimalVector<int>(
+                            values, size, 0, INT32_MIN, elemType,
+                            [&](int *buf, int size) {
                             ((FastDecimal32VectorSP)valVec)->appendInt(buf, size);
                         }, info));
                     }
+                    else if (elemType.first == DT_DECIMAL128) {
+                        valVec->setNullFlag(addDecimalVector<wide_integer::int128>(
+                            values, size, 0, std::numeric_limits<wide_integer::int128>::min(), elemType,
+                            [&](wide_integer::int128 *buf, int size) {
+                            ((FastDecimal128VectorSP)valVec)->appendInt128(buf, size);
+                        }, info));
+                    }
                     else {
-                        valVec->setNullFlag(addDecimalVector<long long>(values, size, 0, INT64_MIN, elemType, [&](long long *buf, int size) {
+                        valVec->setNullFlag(addDecimalVector<long long>(
+                            values, size, 0, INT64_MIN, elemType,
+                            [&](long long *buf, int size) {
                             ((FastDecimal64VectorSP)valVec)->appendLong(buf, size);
                         }, info));
                     }
@@ -1984,7 +2027,8 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                 //     break;
                 // }
                 case DT_DECIMAL32:
-                case DT_DECIMAL64: {
+                case DT_DECIMAL64:
+                case DT_DECIMAL128: {
                     if (typeIndicator.second == -1) {
                         typeIndicator.second = py::cast<int>(dtype.attr("pyarrow_dtype").attr("scale"));
                     }
@@ -1992,12 +2036,23 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size, true, typeIndicator.second);
                     if (typeInfer == DT_DECIMAL32) {
-                        ddbVec->setNullFlag(addDecimalVector<int>(series_array, size, 0, INT32_MIN, typeIndicator, [&](int *buf, int size) {
+                        ddbVec->setNullFlag(addDecimalVector<int>(
+                            series_array, size, 0, INT32_MIN, typeIndicator,
+                            [&](int *buf, int size) {
                             ((FastDecimal32VectorSP)ddbVec)->appendInt(buf, size);
                         }, info));
                     }
+                    else if (typeInfer == DT_DECIMAL128) {
+                        ddbVec->setNullFlag(addDecimalVector<wide_integer::int128>(
+                            series_array, size, 0, std::numeric_limits<wide_integer::int128>::min(), typeIndicator,
+                            [&](wide_integer::int128 *buf, int size) {
+                            ((FastDecimal128VectorSP)ddbVec)->appendInt128(buf, size);
+                        }, info));
+                    }
                     else {
-                        ddbVec->setNullFlag(addDecimalVector<long long>(series_array, size, 0, INT64_MIN, typeIndicator, [&](long long *buf, int size) {
+                        ddbVec->setNullFlag(addDecimalVector<long long>(
+                            series_array, size, 0, INT64_MIN, typeIndicator,
+                            [&](long long *buf, int size) {
                             ((FastDecimal64VectorSP)ddbVec)->appendLong(buf, size);
                         }, info));
                     }
@@ -2085,8 +2140,8 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                                 if (buf[i] != LLONG_MIN) {
                                     buf[i] *= 1000;
                                 }
-                                ddbVec->appendLong(buf, _size);
                             }
+                            ddbVec->appendLong(buf, _size);
                         });
                         if (typeInfer != DT_NANOTIMESTAMP)
                             ddbVec = ddbVec->castTemporal(typeInfer);
@@ -2154,18 +2209,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                     py::array series_array = py::cast<py::array>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(DT_BLOB, size, size);
-                    py::object tmpObj;
-                    int ni = 0;
-                    for (auto &it : series_array) {
-                        tmpObj = py::cast<py::object>(it);
-                        if (isNULL(tmpObj)) {
-                            ddbVec->setString(ni, "");
-                        }
-                        else {
-                            ddbVec->setString(ni, py::cast<std::string>(tmpObj));
-                        }
-                        ++ni;
-                    }
+                    setBlobVector(ddbVec, series_array, size, 0, info);
                     break;
                 }
                 case DT_DECIMAL32:
@@ -2384,22 +2428,12 @@ indicatetype:
             }
             case DT_BLOB: {
                 ddbVec = Util::createVector(DT_BLOB, size, size);
-                py::object tmpObj;
-                int ni = 0;
-                for (auto &obj : series_array) {
-                    tmpObj = py::cast<py::object>(obj);
-                    if (isNULL(tmpObj)) {
-                        ddbVec->setString(ni, "");
-                    }
-                    else {
-                        ddbVec->setString(ni, py::cast<std::string>(obj));
-                    }
-                    ++ni;
-                }
+                setBlobVector(ddbVec, series_array, size, 0, info);
                 break;
             }
             case DT_DECIMAL32:
-            case DT_DECIMAL64: {
+            case DT_DECIMAL64:
+            case DT_DECIMAL128: {
                 size_t index = 0;
                 int exparam = -1;
                 if (typeIndicator.second == -1) {
@@ -2435,10 +2469,13 @@ indicatetype:
                     break;
                 }
                 if (exparam != -1) {    // Infer exparam
-                    ddbVec = Util::createVector(typeInfer, 0, size, true, exparam);
+                    ddbVec = Util::createVector(typeInfer, index, size, true, exparam);
                 }
                 else {
-                    ddbVec = Util::createVector(typeInfer, 0, size, true, typeIndicator.second);
+                    ddbVec = Util::createVector(typeInfer, index, size, true, typeIndicator.second);
+                }
+                if (index != 0) {
+                    ddbVec->fill(0, index, Constant::void_);
                 }
                 if (typeInfer == DT_DECIMAL32) {
                     ddbVec->setNullFlag(addDecimalVector<int>(series_array, size, index, INT32_MIN, typeIndicator, [&](int *buf, int size) {
@@ -2446,8 +2483,18 @@ indicatetype:
                     }, info));
                     break;
                 }
+                else if (typeInfer == DT_DECIMAL128) {
+                    ddbVec->setNullFlag(addDecimalVector<wide_integer::int128>(
+                        series_array, size, index, std::numeric_limits<wide_integer::int128>::min(), typeIndicator,
+                        [&](wide_integer::int128 *buf, int size) {
+                        ((FastDecimal128VectorSP)ddbVec)->appendInt128(buf, size);
+                    }, info));
+                    break;
+                }
                 else {
-                    ddbVec->setNullFlag(addDecimalVector<long long>(series_array, size, index, INT64_MIN, typeIndicator, [&](long long *buf, int size) {
+                    ddbVec->setNullFlag(addDecimalVector<long long>(
+                        series_array, size, index, INT64_MIN, typeIndicator,
+                        [&](long long *buf, int size) {
                         ((FastDecimal64VectorSP)ddbVec)->appendLong(buf, size);
                     }, info));
                     break;
@@ -2666,22 +2713,12 @@ inferobjecttype:
         }
         case DT_BLOB: {
             ddbVec = Util::createVector(DT_BLOB, size, size);
-            py::object tmpObj;
-            int ni = 0;
-            for (auto &obj : series_array) {
-                tmpObj = py::cast<py::object>(obj);
-                if (isNULL(tmpObj)) {
-                    ddbVec->setString(ni, "");
-                }
-                else {
-                    ddbVec->setString(ni, py::cast<std::string>(obj));
-                }
-                ++ni;
-            }
+            setBlobVector(ddbVec, series_array, size, 0, info);
             break;
         }
         case DT_DECIMAL32:
-        case DT_DECIMAL64: {
+        case DT_DECIMAL64:
+        case DT_DECIMAL128: {
             size_t index = 0;
             int exparam = -1;
             if (typeIndicator.second == -1) {
@@ -2723,14 +2760,26 @@ inferobjecttype:
                 ddbVec = Util::createVector(typeInfer, 0, size, true, typeIndicator.second);
             }
             if (typeInfer == DT_DECIMAL32) {
-                ddbVec->setNullFlag(addDecimalVector<int>(series_array, size, index, INT32_MIN, typeIndicator, [&](int *buf, int size) {
+                ddbVec->setNullFlag(addDecimalVector<int>(
+                    series_array, size, index, INT32_MIN, typeIndicator,
+                    [&](int *buf, int size) {
                     ((FastDecimal32VectorSP)ddbVec)->appendInt(buf, size);
                 }, info));
                 break;
             }
-            else {
-                ddbVec->setNullFlag(addDecimalVector<long long>(series_array, size, index, INT64_MIN, typeIndicator, [&](long long *buf, int size) {
+            else if (typeInfer == DT_DECIMAL64) {
+                ddbVec->setNullFlag(addDecimalVector<long long>(
+                    series_array, size, index, INT64_MIN, typeIndicator,
+                    [&](long long *buf, int size) {
                     ((FastDecimal64VectorSP)ddbVec)->appendLong(buf, size);
+                }, info));
+                break;
+            }
+            else {
+                ddbVec->setNullFlag(addDecimalVector<wide_integer::int128>(
+                    series_array, size, index, std::numeric_limits<wide_integer::int128>::min(), typeIndicator,
+                    [&](wide_integer::int128 *buf, int size) {
+                    ((FastDecimal128VectorSP)ddbVec)->appendInt128(buf, size);
                 }, info));
                 break;
             }
@@ -2849,7 +2898,10 @@ ConstantSP toDolphinDB_Scalar(py::object obj, Type typeIndicator) {
             return Util::createNullConstant(type);
         }
         if (type == DT_DECIMAL32) {
-            return Util::createObject(type, getPyDecimalData<int32_t>(obj.ptr(), hasNull), nullptr, scale);
+            return new Decimal32(scale, getPyDecimalData<int32_t>(obj.ptr(), hasNull));
+        }
+        else if (type == DT_DECIMAL128) {
+            return new Decimal128(scale, getPyDecimalData<wide_integer::int128>(obj.ptr(), hasNull));
         }
         else {
             return Util::createObject(type, getPyDecimalData<int64_t>(obj.ptr(), hasNull), nullptr, scale);
@@ -2932,7 +2984,7 @@ ConstantSP toDolphinDB_Scalar(py::object obj, Type typeIndicator) {
     }
     py::object dtype;
     dtype = getDType(obj);
-    if(bool(type)==false){
+    if (bool(dtype) == false) {
         throw RuntimeException("unsupported type ["+ py2str(obj.get_type())+"].");
     }
     if (dtype.equal(DdbPythonUtil::preserved_->npbool_)){
@@ -3484,7 +3536,6 @@ void DdbPythonUtil::createPyVector(const ConstantSP &obj,py::object &pyObject,bo
             py::array pyVec(py::dtype("object"), {size}, {});
             PyObject **pyArray = (PyObject **)pyVec.mutable_data();
             int c_scale = ((FastDecimal32VectorSP)ddbVec)->getScale();
-            auto scale = DdbPythonUtil::preserved_->decimal_(decimal_util::exp10_i32(c_scale));
             Util::enumDecimal32Vector(ddbVec,[&](const int *pbuf, INDEX startIndex, INDEX size){
                 for (INDEX i = 0, index=startIndex; i < size; i++, index++) {
                     if (UNLIKELY(pbuf[i] == INT32_MIN)) {
@@ -3510,7 +3561,6 @@ void DdbPythonUtil::createPyVector(const ConstantSP &obj,py::object &pyObject,bo
             py::array pyVec(py::dtype("object"), {size}, {});
             PyObject **pyArray = (PyObject **)pyVec.mutable_data();
             int c_scale = ((FastDecimal64VectorSP)ddbVec)->getScale();
-            auto scale = DdbPythonUtil::preserved_->decimal_(decimal_util::exp10_i64(c_scale));
             Util::enumDecimal64Vector(ddbVec,[&](const int64_t *pbuf, INDEX startIndex, INDEX size){
                 for (INDEX i = 0, index=startIndex; i < size; i++, index++) {
                     if (UNLIKELY(pbuf[i] == INT64_MIN)) {
@@ -3521,6 +3571,31 @@ void DdbPythonUtil::createPyVector(const ConstantSP &obj,py::object &pyObject,bo
                     bool sign = pbuf[i]>=0 ? 0 : 1;
                     vector<int> digits;
                     getDecimalDigits<int64_t>(sign ? -pbuf[i] : pbuf[i], digits);
+                    py::object tuple = DdbPythonUtil::preserved_->m_decimal_.attr("DecimalTuple")(sign, digits, -1*c_scale);
+                    auto decimaldata = std::move(DdbPythonUtil::preserved_->decimal_(tuple));
+                    // auto decimaldata = (DdbPythonUtil::preserved_->decimal_(pbuf[i]) / scale);
+                    pyArray[index] = decimaldata.ptr();
+                    Py_INCREF(pyArray[index]);
+                }
+                return true;
+            });
+            pyObject=std::move(pyVec);
+            break;
+        }
+        case DT_DECIMAL128: {
+            py::array pyVec(py::dtype("object"), {size}, {});
+            PyObject **pyArray = (PyObject **)pyVec.mutable_data();
+            int c_scale = ((FastDecimal128VectorSP)ddbVec)->getScale();
+            Util::enumDecimal128Vector(ddbVec,[&](const wide_integer::int128 *pbuf, INDEX startIndex, INDEX size){
+                for (INDEX i = 0, index=startIndex; i < size; i++, index++) {
+                    if (UNLIKELY(pbuf[i] == std::numeric_limits<wide_integer::int128>::min())) {
+                        pyArray[index] = py::none().ptr();
+                        Py_INCREF(pyArray[index]);
+                        continue;
+                    }
+                    bool sign = pbuf[i]>=0 ? 0 : 1;
+                    vector<int> digits;
+                    getDecimalDigits<wide_integer::int128>(sign ? -pbuf[i] : pbuf[i], digits);
                     py::object tuple = DdbPythonUtil::preserved_->m_decimal_.attr("DecimalTuple")(sign, digits, -1*c_scale);
                     auto decimaldata = std::move(DdbPythonUtil::preserved_->decimal_(tuple));
                     // auto decimaldata = (DdbPythonUtil::preserved_->decimal_(pbuf[i]) / scale);
@@ -3715,6 +3790,16 @@ py::object DdbPythonUtil::toPython(ConstantSP obj,bool tableFlag,ToPythonOption 
                 bool sign = raw_data>=0 ? 0 : 1;
                 vector<int> digits;
                 getDecimalDigits<int64_t>(sign ? -raw_data : raw_data, digits);
+                py::object tuple = DdbPythonUtil::preserved_->m_decimal_.attr("DecimalTuple")(sign, digits, -scale);
+                pyObject = std::move(DdbPythonUtil::preserved_->decimal_(tuple));
+                break;
+            }
+            case DT_DECIMAL128: {
+                auto raw_data = ((Decimal128SP)obj)->getRawData();
+                auto scale = ((Decimal128SP)obj)->getScale();
+                bool sign = raw_data>=0 ? 0 : 1;
+                vector<int> digits;
+                getDecimalDigits<wide_integer::int128>(sign ? -raw_data : raw_data, digits);
                 py::object tuple = DdbPythonUtil::preserved_->m_decimal_.attr("DecimalTuple")(sign, digits, -scale);
                 pyObject = std::move(DdbPythonUtil::preserved_->decimal_(tuple));
                 break;
@@ -3928,6 +4013,14 @@ void PytoDdbRowPool::convertLoop(){
                 }
             }catch (RuntimeException &e){
                 writer_.setError(ErrorCodeInfo::EC_InvalidObject, std::string("Data conversion error: ") + e.what());
+                delete pDdbRow;
+            }
+            catch (std::exception &e) {
+                writer_.setError(ErrorCodeInfo::EC_InvalidObject, std::string("Data conversion error: ") + e.what());
+                delete pDdbRow;
+            }
+            catch (...) {
+                writer_.setError(ErrorCodeInfo::EC_InvalidObject, std::string("Data conversion unknown error."));
                 delete pDdbRow;
             }
             if(!insertRows.empty()){
