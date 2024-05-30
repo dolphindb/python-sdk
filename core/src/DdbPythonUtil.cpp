@@ -347,6 +347,11 @@ void throwExceptionAboutNumpyVersion(int row_index, const string &value, const s
     }
 }
 
+static inline void createAllNullVector(VectorSP &ddbVec, DATA_TYPE type, INDEX size, int exparam=0) {
+    ddbVec = Util::createVector(type, size, size, true, exparam);
+    ddbVec->fill(0, size, Constant::void_);
+}
+
 bool addBoolVector(const py::array &pyVec, size_t size, size_t offset, char nullValue, const Type &type,
     std::function<void(char *, int)> f, const TableVectorInfo &info) {
     int bufsize = std::min(65535, (int)size);
@@ -1145,35 +1150,35 @@ ConstantSP toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VE
             switch (typeInfer) {
                 case DT_BOOL:
                 case DT_CHAR: {
-                    py::array_t<int8_t> series_array = py::cast<py::array_t<int8_t>>(obj);
+                    py::array_t<int8_t> series_array = py::cast<py::array_t<int8_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     ddbVec->appendChar(reinterpret_cast<char*>(const_cast<int8_t*>(series_array.data())), size);
                     break;
                 }
                 case DT_SHORT: {
-                    py::array_t<int16_t> series_array = py::cast<py::array_t<int16_t>>(obj);
+                    py::array_t<int16_t> series_array = py::cast<py::array_t<int16_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     ddbVec->appendShort(reinterpret_cast<short*>(const_cast<int16_t*>(series_array.data())), size);
                     break;
                 }
                 case DT_INT: {
-                    py::array_t<int32_t> series_array = py::cast<py::array_t<int32_t>>(obj);
+                    py::array_t<int32_t> series_array = py::cast<py::array_t<int32_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     ddbVec->appendInt(reinterpret_cast<int*>(const_cast<int32_t*>(series_array.data())), size);
                     break;
                 }
                 case DT_LONG: {
-                    py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t>>(obj);
+                    py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     ddbVec->appendLong(reinterpret_cast<long long*>(const_cast<int64_t*>(series_array.data())), size);
                     break;
                 }
                 case DT_MONTH: {
-                    py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t>>(obj);
+                    py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     int64_t* buf = series_array.mutable_data();
                     for (int i = 0; i < size; ++i) {
@@ -1194,14 +1199,14 @@ ConstantSP toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VE
                 case DT_TIMESTAMP:
                 case DT_NANOTIME:
                 case DT_NANOTIMESTAMP: {
-                    py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t>>(obj);
+                    py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     ddbVec->appendLong(reinterpret_cast<long long*>(const_cast<int64_t*>(series_array.data())), size);
                     break;
                 }
                 case DT_FLOAT: {
-                    py::array_t<float_t> series_array = py::cast<py::array_t<float_t>>(obj);
+                    py::array_t<float_t> series_array = py::cast<py::array_t<float_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     bool hasNull = false;
@@ -1218,7 +1223,7 @@ ConstantSP toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VE
                     break;
                 }
                 case DT_DOUBLE: {
-                    py::array_t<double_t> series_array = py::cast<py::array_t<double_t>>(obj);
+                    py::array_t<double_t> series_array = py::cast<py::array_t<double_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     bool hasNull = false;
@@ -1304,8 +1309,8 @@ inferobjectdtype:
         }
         if (all_Null) {
             DLOG("nullType: ", Util::getDataTypeString(nullType.first), nullType.second);
-            ddbVec = Util::createVector(typeInfer == DT_UNK || typeInfer == DT_OBJECT ? DT_DOUBLE : typeInfer, size, size);
-            ddbVec->fill(0, size, Constant::void_);
+            DATA_TYPE finalType = typeInfer == DT_UNK || typeInfer == DT_OBJECT ? DT_DOUBLE : typeInfer;
+            createAllNullVector(ddbVec, finalType, size);
             return ddbVec;
         }
         py::array &series_array = obj;
@@ -1444,8 +1449,7 @@ inferobjectdtype:
                     }
                 }
                 if (index == size) { // All None
-                    ddbVec = Util::createVector(typeInfer, size, size, true, 0);
-                    ddbVec->fill(0, size, Constant::void_);
+                    createAllNullVector(ddbVec, typeInfer, size, 0);
                     break;
                 }
                 if (exparam != -1) {    // Infer exparam
@@ -1535,8 +1539,8 @@ toDolphinDB_Vector_TupleOrList(T obj,
         typeIndicator = nullType;
     }
     if (all_Null) {
-        ddbVec = Util::createVector(typeInfer == DT_UNK ? DT_DOUBLE : typeInfer, size, size);
-        ddbVec->fill(0, size, Constant::void_);
+        DATA_TYPE finalType = typeInfer == DT_UNK ? DT_DOUBLE : typeInfer;
+        createAllNullVector(ddbVec, finalType, size);
         return ddbVec;
     }
     DLOG("typeInfer: ", typeInfer);
@@ -2009,28 +2013,28 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
             switch (typeInfer) {
                 case DT_BOOL:
                 case DT_CHAR: {
-                    py::array_t<int8_t> series_array = py::cast<py::array_t<int8_t>>(obj);
+                    py::array_t<int8_t> series_array = py::cast<py::array_t<int8_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     ddbVec->appendChar(reinterpret_cast<char*>(const_cast<int8_t*>(series_array.data())), size);
                     break;
                 }
                 case DT_SHORT: {
-                    py::array_t<int16_t> series_array = py::cast<py::array_t<int16_t>>(obj);
+                    py::array_t<int16_t> series_array = py::cast<py::array_t<int16_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     ddbVec->appendShort(reinterpret_cast<short*>(const_cast<int16_t*>(series_array.data())), size);
                     break;
                 }
                 case DT_INT: {
-                    py::array_t<int32_t> series_array = py::cast<py::array_t<int32_t>>(obj);
+                    py::array_t<int32_t> series_array = py::cast<py::array_t<int32_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     ddbVec->appendInt(reinterpret_cast<int*>(const_cast<int32_t*>(series_array.data())), size);
                     break;
                 }
                 case DT_LONG: {
-                    py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t>>(obj);
+                    py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     ddbVec->appendLong(reinterpret_cast<long long*>(const_cast<int64_t*>(series_array.data())), size);
@@ -2049,7 +2053,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                     // dtype = datetime64[ns] | datetime64[s] | datetime64[ms]
                     // In Pandas2.0 : s -> int32 | ms -> int64, need special case
                     if (!DdbPythonUtil::preserved_->pd_above_2_00_ || dtype.equal(DdbPythonUtil::preserved_->npdatetime64ns_())) {
-                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t>>(obj);
+                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                         size_t size = series_array.size();
                         ddbVec = Util::createVector(DT_NANOTIMESTAMP, 0, size);
                         ddbVec->appendLong(reinterpret_cast<long long*>(const_cast<int64_t*>(series_array.data())), size);
@@ -2057,7 +2061,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                             ddbVec = ddbVec->castTemporal(typeInfer);
                     }
                     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64ms_())) {
-                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t>>(obj);
+                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                         size_t size = series_array.size();
                         ddbVec = Util::createVector(DT_TIMESTAMP, 0, size);
                         ddbVec->appendLong(reinterpret_cast<long long*>(const_cast<int64_t*>(series_array.data())), size);
@@ -2065,7 +2069,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                             ddbVec = ddbVec->castTemporal(typeInfer);
                     }
                     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64s_())) {
-                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t>>(obj);
+                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                         size_t size = series_array.size();
                         ddbVec = Util::createVector(DT_DATETIME, 0, size);
                         ddbVec->appendLong(reinterpret_cast<long long*>(const_cast<int64_t*>(series_array.data())), size);
@@ -2073,7 +2077,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                             ddbVec = ddbVec->castTemporal(typeInfer);
                     }
                     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64us_())) {
-                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t>>(obj);
+                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                         size_t size = series_array.size();
                         ddbVec = Util::createVector(DT_NANOTIMESTAMP, 0, size);
                         processData<long long>((long long*)series_array.data(), size, [&](long long *buf, int _size) {
@@ -2088,7 +2092,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                             ddbVec = ddbVec->castTemporal(typeInfer);
                     }
                     else if (dtype.equal(DdbPythonUtil::preserved_->npint64_)) {
-                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t>>(obj);
+                        py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                         size_t size = series_array.size();
                         ddbVec = Util::createVector(DT_NANOTIMESTAMP, 0, size);
                         ddbVec->appendLong(reinterpret_cast<long long*>(const_cast<int64_t*>(series_array.data())), size);
@@ -2102,7 +2106,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                     break;
                 }
                 case DT_FLOAT: {
-                    py::array_t<float_t> series_array = py::cast<py::array_t<float_t>>(obj);
+                    py::array_t<float_t> series_array = py::cast<py::array_t<float_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     bool hasNull = false;
@@ -2119,7 +2123,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                     break;
                 }
                 case DT_DOUBLE: {
-                    py::array_t<double_t> series_array = py::cast<py::array_t<double_t>>(obj);
+                    py::array_t<double_t> series_array = py::cast<py::array_t<double_t, py::array::f_style | py::array::forcecast>>(obj);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, 0, size);
                     bool hasNull = false;
@@ -2233,10 +2237,7 @@ indicatetype:
                         
                     if (noneCounts.size() > 0) {
                         for (auto count : noneCounts) {
-                            pChildVector = Util::createVector(elemType.first, 0, count);
-                            for (int i = 0; i < count; ++i) {
-                                pChildVector->append(Constant::void_);
-                            }
+                            createAllNullVector(pChildVector, elemType.first, count);
                             ddbVec->append(pChildVector);
                         }
                         noneCounts.clear();
@@ -2262,8 +2263,7 @@ indicatetype:
                 }
                 if (noneCounts.size() > 0) {
                     for (auto count : noneCounts) {
-                        pChildVector = Util::createVector(elemType.first, 0, count);
-                        pChildVector->fill(0, count, Constant::void_);
+                        createAllNullVector(pChildVector, elemType.first, count);
                         ddbVec->append(pChildVector);
                     }
                     noneCounts.clear();
@@ -2431,8 +2431,7 @@ indicatetype:
                     }
                 }
                 if (index == size) { // All None
-                    ddbVec = Util::createVector(typeInfer, size, size, true, 0);
-                    ddbVec->fill(0, size, Constant::void_);
+                    createAllNullVector(ddbVec, typeInfer, size, 0);
                     break;
                 }
                 if (exparam != -1) {    // Infer exparam
@@ -2499,8 +2498,7 @@ inferobjecttype:
         if (typeInfer == DT_UNK || typeInfer == DT_OBJECT) {
             typeInfer = DT_DOUBLE;
         }
-        ddbVec = Util::createVector(typeInfer, size, size);
-        ddbVec->fill(0, size, Constant::void_);
+        createAllNullVector(ddbVec, typeInfer, size);
         return ddbVec;
     }
     if (typeInfer == DT_ANY && options == CHILD_VECTOR_OPTION::ARRAY_VECTOR) {
@@ -2547,8 +2545,7 @@ inferobjecttype:
                 ddbVec = Util::createArrayVector((DATA_TYPE)(typeInfer + 64), 0, size, true, typeIndicator.second == -1 ? 0 : typeIndicator.second);
             if (noneCounts.size() > 0) {
                 for (auto count : noneCounts) {
-                    pChildVector = Util::createVector(typeInfer, 0, count);
-                    pChildVector->fill(0, count, Constant::void_);
+                    createAllNullVector(pChildVector, typeInfer, count);
                     ddbVec->append(pChildVector);
                 }
                 noneCounts.clear();
@@ -2573,8 +2570,7 @@ inferobjecttype:
         }
         if (noneCounts.size() > 0) {
             for (auto count : noneCounts) {
-                pChildVector = Util::createVector(typeInfer, 0, count);
-                pChildVector->fill(0, count, Constant::void_);
+                createAllNullVector(pChildVector, typeInfer, count);
                 ddbVec->append(pChildVector);
             }
             noneCounts.clear();
@@ -2717,8 +2713,7 @@ inferobjecttype:
                 }
             }
             if (index == size) { // All None
-                ddbVec = Util::createVector(typeInfer, size, size, true, 0);
-                ddbVec->fill(0, size, Constant::void_);
+                createAllNullVector(ddbVec, typeInfer, size, 0);
                 break;
             }
             if (exparam != -1) {    // Infer exparam

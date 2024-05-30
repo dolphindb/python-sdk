@@ -2245,13 +2245,24 @@ void PartitionedTableAppender::init(string dbUrl, string tableName, string parti
         cols_ = colDefs->rows();
         typeInts = colDefs->getColumn("typeInt");
         colNames = colDefs->getColumn("name");
-        exparams = colDefs->getColumn("extra");
+        bool hasExtra = false;
+        for (int i = 0; i < colDefs->columns(); ++i) {
+            if (colDefs->getColumnName(i) == "extra") {
+                hasExtra = true;
+                break;
+            }
+        }
+        if (hasExtra)
+            exparams = colDefs->getColumn("extra");
         columnCategories_.resize(cols_);
         columnTypes_.resize(cols_);
         columnNames_.resize(cols_);
         for (int i = 0; i < cols_; ++i) {
             DATA_TYPE type = (DATA_TYPE)typeInts->getInt(i);
-            columnTypes_[i] = {type, exparams->getInt(i)};
+            if (hasExtra)
+                columnTypes_[i] = {type, exparams->getInt(i)};
+            else
+                columnTypes_[i] = {type, 0};
             columnCategories_[i] = Util::getCategory(type);
             columnNames_[i] = colNames->getString(i);
         }
@@ -2352,13 +2363,24 @@ AutoFitTableAppender::AutoFitTableAppender(string dbUrl, string tableName, DBCon
         cols_ = colDefs->rows();
         typeInts = colDefs->getColumn("typeInt");
         colNames = colDefs->getColumn("name");
-        exparams = colDefs->getColumn("extra");
+        bool hasExtra = false;
+        for (int i = 0; i < colDefs->columns(); ++i) {
+            if (colDefs->getColumnName(i) == "extra") {
+                hasExtra = true;
+                break;
+            }
+        }
+        if (hasExtra)
+            exparams = colDefs->getColumn("extra");
         columnCategories_.resize(cols_);
         columnTypes_.resize(cols_);
         columnNames_.resize(cols_);
         for (int i = 0; i < cols_; ++i) {
             DATA_TYPE type = (DATA_TYPE)typeInts->getInt(i);
-            columnTypes_[i] = {type, exparams->getInt(i)};
+            if (hasExtra)
+                columnTypes_[i] = {type, exparams->getInt(i)};
+            else
+                columnTypes_[i] = {type, 0};
             columnCategories_[i] = Util::getCategory(type);
             columnNames_[i] = colNames->getString(i);
         }
@@ -2462,13 +2484,24 @@ AutoFitTableUpsert::AutoFitTableUpsert(string dbUrl, string tableName, DBConnect
         cols_ = colDefs->rows();
         typeInts = colDefs->getColumn("typeInt");
         colNames = colDefs->getColumn("name");
-        exparams = colDefs->getColumn("extra");
+        bool hasExtra = false;
+        for (int i = 0; i < colDefs->columns(); ++i) {
+            if (colDefs->getColumnName(i) == "extra") {
+                hasExtra = true;
+                break;
+            }
+        }
+        if (hasExtra)
+            exparams = colDefs->getColumn("extra");
         columnCategories_.resize(cols_);
         columnTypes_.resize(cols_);
         columnNames_.resize(cols_);
         for (int i = 0; i < cols_; ++i) {
             DATA_TYPE type = (DATA_TYPE)typeInts->getInt(i);
-            columnTypes_[i] = {type, exparams->getInt(i)};
+            if (hasExtra)
+                columnTypes_[i] = {type, exparams->getInt(i)};
+            else
+                columnTypes_[i] = {type, 0};
             columnCategories_[i] = Util::getCategory(type);
             columnNames_[i] = colNames->getString(i);
         }
