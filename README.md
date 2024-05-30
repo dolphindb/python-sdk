@@ -10,7 +10,7 @@ To use DolphinDB Python SDK, you'll need:
   - CPython: version 3.6 and newer
 - DolphinDB Server
 - Packages:
-  - NumPy: version 1.18 to 1.24.4
+  - NumPy: version 1.18 and newer
   - pandas: version 1.0.0 and newer, but not version 1.3.0
   - future
 - Extension Packages:

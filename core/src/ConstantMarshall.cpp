@@ -22,7 +22,7 @@ short ConstantMarshallImp::encodeFlag(const ConstantSP& target, bool compress){
 		if (target->isTable()) {
 			flag += ((Table*)target.get())->getTableType();
 		}else
-			flag += (target->isVector() && target->getType() == DT_SYMBOL) ? DT_SYMBOL + 128 : target->getType();
+			flag += (target->isVector() && target->getType() == DT_SYMBOL && target->size() != 0) ? DT_SYMBOL + 128 : target->getType();
 	}
 	else {
 		if (target->isTable())

@@ -1783,9 +1783,11 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                 }
                 case DT_UUID:
                 case DT_INT128: {
+                    char tmp[16] = {0};
+                    py::bytes na_value = py::bytes(tmp, 16);
                     py::array values = DdbPythonUtil::preserved_->pdseries_(obj.attr("values"),
                                         "dtype"_a=DdbPythonUtil::preserved_->pdarrowdtype_(DdbPythonUtil::preserved_->pafixed_size_binary_16_))
-                                        .attr("to_numpy")("dtype"_a="object", "na_value"_a="");
+                                        .attr("to_numpy")("dtype"_a="object", "na_value"_a=na_value);
                     size_t size = values.size();
                     VectorSP valVec = Util::createVector(elemType.first, size, size);
                     int index = 0;
@@ -1993,7 +1995,9 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                 }
                 case DT_UUID:
                 case DT_INT128: {
-                    py::array series_array = obj.attr("to_numpy")("dtype"_a="object", "na_value"_a="");
+                    char tmp[16] = {0};
+                    py::bytes na_value = py::bytes(tmp, 16);
+                    py::array series_array = obj.attr("to_numpy")("dtype"_a="object", "na_value"_a=na_value);
                     size_t size = series_array.size();
                     ddbVec = Util::createVector(typeInfer, size, size);
                     int index = 0;

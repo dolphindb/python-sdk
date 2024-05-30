@@ -2595,8 +2595,8 @@ int SymbolBase::serialize(char* buf, int bufSize, INDEX indexStart, int offset, 
     int index = indexStart;
     int initSize = bufSize;
     while(index < (int)syms_.size() && bufSize > 0){
-        if (syms_[index].size() >= 65536) {
-            throw RuntimeException("String too long, Serialization failed, length must be less than 64K bytes.");
+        if (syms_[index].size() >= 262144) {
+            throw RuntimeException("String too long, Serialization failed, length must be less than 256K bytes.");
         }
         int size = std::min(bufSize, (int)syms_[index].size() + 1 - offset);
         memcpy(buf, syms_[index].data() + offset,  size);

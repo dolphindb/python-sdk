@@ -266,7 +266,7 @@ class DBConnectionPool(object):
         self.loop = None
         self.thread = None
 
-    def getSessionId(self) -> List[int]:
+    def getSessionId(self) -> List[str]:
         """Obtain Session ID of all sessions.
 
         Returns:
@@ -525,7 +525,7 @@ class Session(object):
             script = fp.read()
             return self.run(script, *args, **kwargs)
 
-    def getSessionId(self) -> int:
+    def getSessionId(self) -> str:
         """Get the Session ID of the current Session.
 
         Returns:
@@ -551,7 +551,7 @@ class Session(object):
         self, host: str, port: int, handler: Callable, tableName: str, actionName: str = None,
         offset: int = -1, resub: bool = False, filter=None,
         msgAsTable: bool = False, batchSize: int = 0, throttle: float = 1.0,
-        userName: str = None, password: str = None, streamDeserializer: Optional[Type["streamDeserializer"]] = None
+        userName: str = None, password: str = None, streamDeserializer: Optional["streamDeserializer"] = None
     ) -> None:
         """Subscribe to stream tables in DolphinDB.
 
@@ -666,7 +666,7 @@ class Session(object):
         self.run(s2)
         return True
 
-    def loadText(self,  remoteFilePath: str, delimiter: str = ",") -> Type["Table"]:
+    def loadText(self,  remoteFilePath: str, delimiter: str = ",") -> "Table":
         """Import text files into DolphinDB as an in-memory table.
 
         Args:
@@ -685,9 +685,9 @@ class Session(object):
         return Table(data=tableName, s=self, isMaterialized=True)
 
     def loadTextEx(
-        self, dbPath: str, tableName: str,  partitionColumns: Optional[List[str]] = None,
-        remoteFilePath: str = None, delimiter: str = ","
-    ) -> Type["Table"]:
+        self, dbPath: str, tableName: str, partitionColumns: Optional[List[str]] = None,
+        remoteFilePath: str = None, delimiter: str = ",", sortColumns: Optional[List[str]] = None,
+    ) -> "Table":
         """Import a partitioned in-memory table.
 
         Args:
@@ -696,27 +696,35 @@ class Session(object):
             partitionColumns : list of strings indicating the partitioning columns. Defaults to None.
             remoteFilePath : remote file path. Defaults to None.
             delimiter : delimiter of each column. Defaults to ",".
+            sortColumns : list of strings indicating the sort columns. Defaults to None.
 
         Returns:
             a DolphinDB Table object.
         """
         if partitionColumns is None:
             partitionColumns = []
+        if sortColumns is None:
+            sortColumns = []
         isDBPath = True
         if "/" in dbPath or "\\" in dbPath or "dfs://" in dbPath:
-            dbstr ='db=database("' + dbPath + '")'
+            dbstr = 'db=database("' + dbPath + '")'
             self.run(dbstr)
-            tbl_str = '{tableNameNEW} = loadTextEx(db, "{tableName}", {partitionColumns}, "{remoteFilePath}", {delimiter})'
+            tbl_str = '{tableNameNEW} = loadTextEx(db, "{tableName}", {partitionColumns}, "{remoteFilePath}", {delimiter} {extraParams})'
         else:
             isDBPath = False
-            tbl_str = '{tableNameNEW} = loadTextEx('+dbPath+', "{tableName}", {partitionColumns}, "{remoteFilePath}", {delimiter})'
+            tbl_str = '{tableNameNEW} = loadTextEx("{dbPath}", "{tableName}", {partitionColumns}, "{remoteFilePath}", {delimiter} {extraParams})'
         fmtDict = dict()
         fmtDict['tableNameNEW'] = _generate_tablename()
+        fmtDict['dbPath'] = dbPath
         fmtDict['tableName'] = tableName
-        fmtDict['partitionColumns'] = str(partitionColumns)
+        fmtDict['partitionColumns'] = '[' + ','.join([f'"{_}"' for _ in partitionColumns]) + ']'
         fmtDict['remoteFilePath'] = remoteFilePath if remoteFilePath is not None else ""
         fmtDict['delimiter'] = delimiter
-        # tbl_str = tableName+'=loadTextEx(db,"' + tableName + '",'+ str(partitionColumns) +',"'+ remoteFilePath+"\",'"+delimiter+"')"
+        if sortColumns:
+            extraParams = ", sortColumns=" + '[' + ','.join([f'"{_}"' for _ in sortColumns]) + ']'
+        else:
+            extraParams = ""
+        fmtDict['extraParams'] = extraParams
         tbl_str = re.sub(' +', ' ', tbl_str.format(**fmtDict).strip())
         self.run(tbl_str)
         if isDBPath:
@@ -724,7 +732,7 @@ class Session(object):
         else:
             return Table(data=fmtDict['tableNameNEW'], s=self)
 
-    def ploadText(self, remoteFilePath: str, delimiter: str = ",") -> Type["Table"]:
+    def ploadText(self, remoteFilePath: str, delimiter: str = ",") -> "Table":
         """Import text files in parallel into DolphinDB as a partitioned in-memory table, which is faster than method loadText.
 
         Args:
@@ -742,7 +750,7 @@ class Session(object):
     def table(
         self, dbPath: str = None, data=None,  tableAliasName: str = None,
         inMem: bool = False, partitions: Optional[List[str]] = None
-    ) -> Type["Table"]:
+    ) -> "Table":
         """Create a DolphinDB table object and upload it to the server.
 
         Deprecated:
@@ -762,7 +770,7 @@ class Session(object):
             partitions = []
         return Table(dbPath=dbPath, data=data,  tableAliasName=tableAliasName, inMem=inMem, partitions=partitions, s=self, isMaterialized=True)
 
-    def loadTable(self, tableName: str,  dbPath: Optional[str] = None, partitions=None, memoryMode: bool = False) -> Type["Table"]:
+    def loadTable(self, tableName: str,  dbPath: Optional[str] = None, partitions=None, memoryMode: bool = False) -> "Table":
         """Load a DolphinDB table.
 
         Args:
@@ -828,7 +836,7 @@ class Session(object):
         else:
             return Table(data=tableName, s=self, needGC=False, isMaterialized=True)
 
-    def loadTableBySQL(self, tableName: str, dbPath: str, sql: str) -> Type["Table"]:
+    def loadTableBySQL(self, tableName: str, dbPath: str, sql: str) -> "Table":
         """Load records that satisfy the filtering conditions in a SQL query as a partitioned in-memory table.
 
         Args:
@@ -850,7 +858,7 @@ class Session(object):
     def database(
         self, dbName: str = None, partitionType: int = None, partitions=None,
         dbPath: str = None, engine: str = None, atomic: str = None, chunkGranularity: str = None
-    ) -> Type["Database"]:
+    ) -> "Database":
         """Create database.
 
         Args:

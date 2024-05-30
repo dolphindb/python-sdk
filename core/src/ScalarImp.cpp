@@ -212,10 +212,10 @@ IO_ERR Void::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumE
 
 int String::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int& numElement, int& partial) const {
     int len = val_.size();
-    if (len >= 65536) {
-        throw RuntimeException("String too long, Serialization failed, length must be less than 64K bytes.");
-    }
     if (!blob_) {
+        if (len >= 262144) {
+            throw RuntimeException("String too long, Serialization failed, length must be less than 256K bytes.");
+        }
         if (offset > len)
             return -1;
         if (bufSize >= len - offset + 1) {
@@ -266,6 +266,10 @@ IO_ERR String::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNu
 		size_t acLen = 0;
         if ((ret = in->readInt(len)) != OK)
             return ret;
+		if (len == 0) {
+			val_.clear();
+			return OK;
+		}
         std::unique_ptr<char[]> buf(new char[len]);
 		if ((ret = in->readBytes(buf.get(), len, acLen)) != OK)
 			return ret;

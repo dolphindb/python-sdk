@@ -19,7 +19,7 @@ from .vector import Vector, FilterCond
 from .database import Database
 from .utils import month
 
-__version__ = "1.30.22.6"
+__version__ = "2.0.11.0"
 
 name = "dolphindb"
 

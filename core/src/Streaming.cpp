@@ -289,19 +289,27 @@ bool StreamDeserializer::parseBlob(const ConstantSP &src, vector<VectorSP> &rows
 	INDEX rowSize = symbolVec->rows();
 	rows.resize(rowSize);
 	symbols.resize(rowSize);
-	unordered_map<string, vector<DATA_TYPE>>::iterator iter;
+	unordered_map<string, vector<DATA_TYPE>>::iterator colTypeIter;
+	unordered_map<string, vector<int>>::iterator colScaleIter;
 	for (INDEX rowIndex = 0; rowIndex < rowSize; rowIndex++) {
 		string symbol = symbolVec->getString(rowIndex);
 		{
 			LockGuard<Mutex> lock(&mutex_);
-			iter = symbol2col_.find(symbol);
-			if (iter == symbol2col_.end()) {
-				errorInfo.set(ErrorCodeInfo::EC_InvalidParameter, string("Unknow symbol ") + symbol);
+			colTypeIter = symbol2col_.find(symbol);
+			colScaleIter = symbol2scale_.find(symbol);
+			if (colTypeIter == symbol2col_.end()) {
+				errorInfo.set(ErrorCodeInfo::EC_InvalidParameter, string("Unknown symbol ") + symbol);
 				return false;
 			}
 		}
 		symbols[rowIndex] = std::move(symbol);
-		vector<DATA_TYPE> &cols = iter->second;
+		
+		vector<DATA_TYPE> &cols = colTypeIter->second;
+        vector<int> scales;
+        if (colScaleIter != symbol2scale_.end()) {
+            scales = colScaleIter->second;
+        }
+
 		const string &blob = blobVec->getStringRef(rowIndex);
 		DataInputStreamSP dis = new DataInputStream(blob.data(), blob.size(), false);
 		INDEX num;
@@ -309,10 +317,24 @@ bool StreamDeserializer::parseBlob(const ConstantSP &src, vector<VectorSP> &rows
 		ConstantSP value;
 		int colIndex = 0;
 		VectorSP rowVec = Util::createVector(DT_ANY, cols.size());
-		for (auto &colOne : cols) {
+		for (auto i = 0; i < (int)cols.size(); ++i) {
+			auto &colOne = cols[i];
 			num = 0;
+			auto scale = 0;
+			if (Util::getCategory(colOne) == DENARY || colOne == DT_DECIMAL32_ARRAY ||
+				colOne == DT_DECIMAL64_ARRAY || colOne == DT_DECIMAL128_ARRAY) {
+				if (scales.empty()) {
+					errorInfo.set(
+						ErrorCodeInfo::EC_InvalidParameter, 
+						string("Unknown scale for decimal. StreamDeserializer should be initialized with sym2schema")
+					);
+                    return false;
+				}
+				scale = scales[i];
+			}
+
 			if (colOne < ARRAY_TYPE_BASE) {
-				value = Util::createConstant(colOne);
+				value = Util::createConstant(colOne, scale);
 				ioError = value->deserialize(dis.get(), 0, 1, num);
 				if (ioError != OK) {
 					errorInfo.set(ErrorCodeInfo::EC_InvalidObject, "Deserialize blob error " + std::to_string(ioError));
@@ -321,7 +343,7 @@ bool StreamDeserializer::parseBlob(const ConstantSP &src, vector<VectorSP> &rows
 				rowVec->set(colIndex, value);
 			}
 			else {
-				value = Util::createArrayVector(colOne, 1);
+				value = Util::createArrayVector(colOne, 1, 1, true, scale);
 				ioError = value->deserialize(dis.get(), 0, 1, num);
 				if (ioError != OK) {
 					errorInfo.set(ErrorCodeInfo::EC_InvalidObject, "Deserialize blob error " + std::to_string(ioError));
@@ -336,22 +358,29 @@ bool StreamDeserializer::parseBlob(const ConstantSP &src, vector<VectorSP> &rows
 	return true;
 }
 void StreamDeserializer::parseSchema(const unordered_map<string, DictionarySP> &sym2schema) {
+	LockGuard<Mutex> lock(&mutex_);
 	for (auto &one : sym2schema) {
 		const DictionarySP &schema = one.second;
 		TableSP colDefs = schema->getMember("colDefs");
-		ConstantSP colDefsTypeInt = colDefs->getColumn("typeInt");
-		ConstantSP colDefsTypeString = colDefs->getColumn("typeString");
 		size_t columnSize = colDefs->size();
 			
-		vector<DATA_TYPE> colTypes;
-		//tableInfo.colNames.resize(columnSize);
-		colTypes.resize(columnSize);
-		for (size_t i = 0; i < columnSize; i++) {
-			colTypes[i] = (DATA_TYPE)colDefsTypeInt->getInt(i);
-			//tableInfo.colNames[i] = colDefsTypeString->getString(i);
-		}
-		LockGuard<Mutex> lock(&mutex_);
-		symbol2col_[one.first] = colTypes;
+		// types
+        ConstantSP colDefsTypeInt = colDefs->getColumn("typeInt");
+        vector<DATA_TYPE> colTypes(columnSize);
+        for (auto i = 0; i < (int)columnSize; i++) {
+            colTypes[i] = (DATA_TYPE)colDefsTypeInt->getInt(i);
+        }
+        symbol2col_[one.first] = colTypes;
+
+        // scales for decimals (server 130 doesn't have this column)
+        if (colDefs->contain("extra")) {
+            ConstantSP colDefsScales = colDefs->getColumn("extra");
+            vector<int> colScales(columnSize);
+            for (auto i = 0; i < (int)columnSize; i++) {
+                colScales[i] = colDefsScales->getInt(i);
+            }
+            symbol2scale_[one.first] = colScales;
+        }
 	}
 }
 

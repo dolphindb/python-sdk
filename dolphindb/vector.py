@@ -129,7 +129,7 @@ class Vector(object):
 
 class FilterCond(object):
     """Filtering conditions."""
-    def __init__(self, lhs: Union[str, Type["FilterCond"]], op: str, rhs: Union[str, Type["FilterCond"]]):
+    def __init__(self, lhs: Union[str, "FilterCond"], op: str, rhs: Union[str, "FilterCond"]):
         self.__lhs = lhs
         self.__op = op
         self.__rhs = rhs

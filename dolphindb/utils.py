@@ -19,6 +19,19 @@ def _getFuncName(f):
         return f.__name__
 
 
+def _isVariableCandidate(word: str) -> bool:
+    if len(word) < 1:
+        raise RuntimeError("The column name cannot be empty.")
+    cur = word[0]
+    if not cur.isalpha():
+        return False
+    for cur in word:
+        cur: str
+        if not cur.isalpha() and not cur.isdigit() and cur != '_':
+            return False
+    return True
+
+
 class month(object):
     """Temporal type - Month
 

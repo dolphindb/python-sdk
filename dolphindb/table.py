@@ -6,7 +6,7 @@ from typing import Any, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from dolphindb.settings import get_verbose
-from dolphindb.utils import _generate_tablename, _getFuncName
+from dolphindb.utils import _generate_tablename, _getFuncName, _isVariableCandidate
 from dolphindb.vector import FilterCond, Vector
 from pandas import DataFrame
 
@@ -115,7 +115,9 @@ class Table(object):
                 self.vecs[colName] = Vector(
                     name=colName, tableName=self.__tableName, s=self.__session
                 )
-            self._setSelect(list(self.vecs.keys()))
+            select_list = list(self.vecs.keys())
+            select_list = [colName if _isVariableCandidate(colName) else f'_"{colName}"' for colName in select_list]
+            self._setSelect(select_list)
         elif isinstance(data, str):
             if dbPath:
                 if tableAliasName:
@@ -367,7 +369,7 @@ class Table(object):
     def _setRightTable(self, tableName):
         self.__rightTable = tableName
 
-    def getLeftTable(self) -> Type["Table"]:
+    def getLeftTable(self) -> "Table":
         """Get the left table of the join.
 
         Returns:
@@ -375,7 +377,7 @@ class Table(object):
         """
         return self.__leftTable
 
-    def getRightTable(self) -> Type["Table"]:
+    def getRightTable(self) -> "Table":
         """Get the right table of the join.
 
         Returns:
@@ -440,7 +442,7 @@ class Table(object):
     def _setWhere(self, where):
         self.__where = where
 
-    def select(self, cols: Union[str, Tuple[str, ...], List[str]]) -> Type["Table"]:
+    def select(self, cols: Union[str, Tuple[str, ...], List[str]]) -> "Table":
         """Extract the specified columns and return them in a table.
 
         Args:
@@ -457,7 +459,7 @@ class Table(object):
         selectTable.isMaterialized = False
         return selectTable
 
-    def exec(self, cols: Union[str, Tuple[str, ...], List[str]]) -> Type["Table"]:
+    def exec(self, cols: Union[str, Tuple[str, ...], List[str]]) -> "Table":
         """Generate a Table object containing the specified columns. The execution result is a scalar or vector.
 
         Args:
@@ -474,7 +476,7 @@ class Table(object):
         selectTable.isMaterialized = False
         return selectTable
 
-    def where(self, conds) -> Type["Table"]:
+    def where(self, conds) -> "Table":
         """Add query conditions.
 
         Args:
@@ -505,7 +507,7 @@ class Table(object):
     def _setHaving(self, having):
         self.__having = having
 
-    def groupby(self, cols: Union[str, Tuple[str, ...], List[str]]) -> Type["TableGroupby"]:
+    def groupby(self, cols: Union[str, Tuple[str, ...], List[str]]) -> "TableGroupby":
         """Apply group by on Table with specified columns.
 
         Args:
@@ -519,7 +521,7 @@ class Table(object):
         groupbyTable._setGroupby(groupby)
         return groupby
 
-    def sort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending=True) -> Type["Table"]:
+    def sort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending=True) -> "Table":
         """Specify parameter for sorting.
 
         Args:
@@ -533,7 +535,7 @@ class Table(object):
         sortTable._setSort(bys, ascending)
         return sortTable
 
-    def top(self, num: int) -> Type["Table"]:
+    def top(self, num: int) -> "Table":
         """Retrieve the top n records from table.
 
         Args:
@@ -546,7 +548,7 @@ class Table(object):
         topTable._setTop(num)
         return topTable
 
-    def csort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: Union[bool, Tuple[bool, ...], List[bool]] = True) -> Type["Table"]:
+    def csort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: Union[bool, Tuple[bool, ...], List[bool]] = True) -> "Table":
         """Specify sorting column(s) for contextby.
 
         Args:
@@ -560,7 +562,7 @@ class Table(object):
         csortTable._setCsort(bys, ascending)
         return csortTable
 
-    def limit(self, num: Union[int, Tuple[int, ...], List[int]]) -> Type["Table"]:
+    def limit(self, num: Union[int, Tuple[int, ...], List[int]]) -> "Table":
         """Specify parameters for limit.
 
         Args:
@@ -614,6 +616,7 @@ class Table(object):
         if not self.__columns:
             schema = self.__session.run("schema(%s)" % self.__tableName)  # type: dict
             columns = schema["colDefs"]["name"].tolist()
+            columns = [colName if _isVariableCandidate(colName) else f'_"{colName}"' for colName in columns]
             self.__columns = columns
 
     @property
@@ -629,7 +632,7 @@ class Table(object):
         return len(self.__columns)
 
     @property
-    def colNames(self) -> str:
+    def colNames(self) -> List[str]:
         """read-only property.
 
         Get all column names of the Table.
@@ -638,7 +641,10 @@ class Table(object):
             all column names of the Table.
         """
         self._init_columns()
-        return self.__columns
+        return [
+            col[2:-1] if len(col) >= 3 and col[0:2] == '_"' and col[-1] == '"' else col
+            for col in self.__columns
+        ]
 
     @property
     def schema(self) -> DataFrame:
@@ -686,7 +692,7 @@ class Table(object):
     def _setExec(self, isExec):
         self.__exec = isExec
 
-    def pivotby(self, index: str, column: str, value=None, aggFunc=None) -> Type["TablePivotBy"]:
+    def pivotby(self, index: str, column: str, value=None, aggFunc=None) -> "TablePivotBy":
         """Add pivot by clause to rearrange a column (or multiple columns) of a table on two dimensions.
 
         Args:
@@ -706,7 +712,7 @@ class Table(object):
             left_on: Union[str, Tuple[str, ...], List[str]] = None,
             right_on: Union[str, Tuple[str, ...], List[str]] = None,
             sort: bool = False, merge_for_update: bool = False
-    ) -> Type["Table"]:
+    ) -> "Table":
         """Join two table objects with ANSI SQL.
 
         Args:
@@ -805,7 +811,7 @@ class Table(object):
         self, right, on: Union[str, Tuple[str, ...], List[str]] = None,
         left_on: Union[str, Tuple[str, ...], List[str]] = None,
         right_on: Union[str, Tuple[str, ...], List[str]] = None
-    ) -> Type["Table"]:
+    ) -> "Table":
         """Use asof join to join two Table objects.
 
         Refer to https://dolphindb.com/help/SQLStatements/TableJoiners/asofjoin.html.
@@ -877,7 +883,7 @@ class Table(object):
         left_on: Union[str, Tuple[str, ...], List[str]] = None,
         right_on: Union[str, Tuple[str, ...], List[str]] = None,
         prevailing: bool = False
-    ) -> Type["Table"]:
+    ) -> "Table":
         """Use window join to join two Table objects.
 
         Args:
@@ -951,7 +957,7 @@ class Table(object):
         joinTable._setSelect('*')
         return joinTable
 
-    def merge_cross(self, right) -> Type["Table"]:
+    def merge_cross(self, right) -> "Table":
         """Perform a cross join with another table and return their Cartesian product.
 
         Args:
@@ -1063,7 +1069,7 @@ class Table(object):
             print(query)
         return query
 
-    def append(self, table: Type["Table"]) -> Type["Table"]:
+    def append(self, table: "Table") -> "Table":
         """Append data to Table and execute at once.
 
         Args:
@@ -1082,7 +1088,7 @@ class Table(object):
         self.__session.run(runstr)
         return self
 
-    def update(self, cols: List[str], vals: List[str]) -> Type["TableUpdate"]:
+    def update(self, cols: List[str], vals: List[str]) -> "TableUpdate":
         """Update in-memory table. Must be called to be executed.
 
         Args:
@@ -1111,7 +1117,7 @@ class Table(object):
         self.__session.run(newName + '=' + self.tableName())
         self.__tableName = newName
 
-    def delete(self) -> Type["TableDelete"]:
+    def delete(self) -> "TableDelete":
         """Delete table.
 
         Returns:
@@ -1121,7 +1127,7 @@ class Table(object):
         delTable = TableDelete(t=tmp)
         return delTable
 
-    def drop(self, cols: Union[List[str], str]) -> Type["Table"]:
+    def drop(self, cols: Union[List[str], str]) -> "Table":
         """Delete columns.
 
         Args:
@@ -1134,6 +1140,10 @@ class Table(object):
             cols = [cols]
         if not isinstance(cols, list):
             raise TypeError("cols must be a str or a list of str.")
+        cols = [
+            col[2:-1] if len(col) >= 3 and col[0:2] == '_"' and col[-1] == '"' else col
+            for col in cols
+        ]
         if len(cols) == 1:
             query = f'{self.tableName()}.drop!("{str(cols[0])}")'
         if len(cols) > 1:
@@ -1143,14 +1153,18 @@ class Table(object):
             fmtDict['cols'] = '"' + '","'.join(cols) + '"'
             query = re.sub(' +', ' ', runstr.format(**fmtDict).strip())
         if cols:
+            remove_list = []
             for col in cols:
                 for colName in self.__select:
-                    if col.lower() == colName.lower():
-                        self.__select.remove(colName)
+                    col_o = colName[2:-1] if len(colName) >= 3 and colName[0:2] == '_"' and colName[-1] == '"' else colName
+                    if col.lower() == col_o.lower():
+                        remove_list.append(colName)
+            for colName in remove_list:
+                self.__select.remove(colName)
             self.__session.run(query)
         return self
 
-    def executeAs(self, newTableName: str) -> Type["Table"]:
+    def executeAs(self, newTableName: str) -> "Table":
         """Save execution result as an in-memory table with a specified name.
 
         Args:
@@ -1164,7 +1178,7 @@ class Table(object):
         self.__session.run(st)
         return Table(data=newTableName, s=self.__session)
 
-    def contextby(self, cols: Union[str, List[str]]) -> Type["TableContextby"]:
+    def contextby(self, cols: Union[str, List[str]]) -> "TableContextby":
         """Group by specified columns.
 
         Args:
@@ -1292,7 +1306,7 @@ class TableDelete(object):
         else:
             self.__where.append(str(conds))
 
-    def where(self, conds) -> Type["TableDelete"]:
+    def where(self, conds) -> "TableDelete":
         """Add query conditions.
 
         Args:
@@ -1326,7 +1340,7 @@ class TableDelete(object):
         query = re.sub(' +', ' ', queryFmt.format(**fmtDict).strip())
         return query
 
-    def execute(self) -> Type["Table"]:
+    def execute(self) -> "Table":
         """Execute the SQL query.
 
         Returns:
@@ -1359,7 +1373,7 @@ class TableUpdate(object):
         contextby : whether SQL query contains a contextby clause. True means there is. Defaults to None.
         having : the content contained in a having clause. Defaults to None.
     """
-    def __init__(self, t:Type["Table"], cols: List[str], vals: List[str], contextby=None, having: str = None):
+    def __init__(self, t: "Table", cols: List[str], vals: List[str], contextby=None, having: str = None):
         """Constructor of TableUpdate."""
         self.__t = t
         self.__cols = cols
@@ -1398,7 +1412,7 @@ class TableUpdate(object):
         else:
             self.__where.append(str(conds))
 
-    def where(self, conds) -> Type["TableUpdate"]:
+    def where(self, conds) -> "TableUpdate":
         """Add query conditions.
 
         Args:
@@ -1466,7 +1480,7 @@ class TableUpdate(object):
                 print(query)
             return query
 
-    def execute(self) -> Type["Table"]:
+    def execute(self) -> "Table":
         """Execute the SQL query.
 
         Returns:
@@ -1502,7 +1516,7 @@ class TablePivotBy(object):
         value : the parameters of the aggregate function. Defaults to None.
         agg : the specified aggregate function. Defaults to lambda x: x.
     """
-    def __init__(self, t: Type["Table"], index: str, column: str, value=None, agg=None):
+    def __init__(self, t: "Table", index: str, column: str, value=None, agg=None):
         """Constructor of TablePivotBy."""
         self.__row = index
         self.__column = column
@@ -1540,7 +1554,7 @@ class TablePivotBy(object):
     def _assemblePivotBy(self):
         return 'pivot by ' + self.__row + ',' + self.__column
 
-    def executeAs(self, newTableName: str) -> Type["Table"]:
+    def executeAs(self, newTableName: str) -> "Table":
         """Save execution result as an in-memory table with a specified name.
 
         Args:
@@ -1597,7 +1611,7 @@ class TableGroupby(object):
         groupBys : grouping column(s).
         having : the content contained in a having clause. Defaults to None.
     """
-    def __init__(self, t: Type["Table"], groupBys: Union[str, List[str]], having: str = None):
+    def __init__(self, t: "Table", groupBys: Union[str, List[str]], having: str = None):
         """Constructor of TableGroupby."""
         if isinstance(groupBys, list):
             self.__groupBys = groupBys
@@ -1607,7 +1621,7 @@ class TableGroupby(object):
         self.__t = t  # type: Table
         # print("constructor of ", __class__, self.__t.__dict__["_Table__tableName"])
 
-    def sort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: bool = True) -> Type["TableGroupby"]:
+    def sort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: bool = True) -> "TableGroupby":
         """Specify parameter for sorting.
 
         Args:
@@ -1621,7 +1635,7 @@ class TableGroupby(object):
         sortTable._setSort(bys, ascending)
         return TableGroupby(sortTable, self.__groupBys, self.__having)
 
-    def csort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: Union[bool, Tuple[bool, ...], List[bool]] = True) -> Type["TableGroupby"]:
+    def csort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: Union[bool, Tuple[bool, ...], List[bool]] = True) -> "TableGroupby":
         """Specify sorting parameters for context by.
 
         Args:
@@ -1635,7 +1649,7 @@ class TableGroupby(object):
         csortTable._setCsort(bys, ascending)
         return TableGroupby(csortTable, self.__groupBys, self.__having)
 
-    def executeAs(self, newTableName: str) -> Type["Table"]:
+    def executeAs(self, newTableName: str) -> "Table":
         """Save execution result as an in-memory table with a specified name.
 
         Args:
@@ -1673,7 +1687,7 @@ class TableGroupby(object):
     def __next__(self):
         return self.next()
 
-    def having(self, expr: str) -> Type["Table"]:
+    def having(self, expr: str) -> "Table":
         """Add having clause.
 
         Args:
@@ -1725,7 +1739,7 @@ class TableGroupby(object):
         """
         return self.__t.showSQL()
 
-    def agg(self, func) -> Type["Table"]:
+    def agg(self, func) -> "Table":
         """Apply group by on all columns.
 
         Args:
@@ -1755,7 +1769,7 @@ class TableGroupby(object):
         aggTable.isMaterialized = False
         return aggTable
 
-    def sum(self) -> Type["Table"]:
+    def sum(self) -> "Table":
         """Execute the aggregate function sum.
 
         Returns:
@@ -1763,7 +1777,7 @@ class TableGroupby(object):
         """
         return self.agg('sum')
 
-    def avg(self) -> Type["Table"]:
+    def avg(self) -> "Table":
         """Execute the aggregate function avg.
 
         Returns:
@@ -1771,7 +1785,7 @@ class TableGroupby(object):
         """
         return self.agg('avg')
 
-    def count(self) -> Type["Table"]:
+    def count(self) -> "Table":
         """Execute the aggregate function count.
 
         Returns:
@@ -1779,7 +1793,7 @@ class TableGroupby(object):
         """
         return self.agg('count')
 
-    def max(self) -> Type["Table"]:
+    def max(self) -> "Table":
         """Execute the aggregate function max.
 
         Returns:
@@ -1787,7 +1801,7 @@ class TableGroupby(object):
         """
         return self.agg('max')
 
-    def min(self) -> Type["Table"]:
+    def min(self) -> "Table":
         """Execute the aggregate function min.
 
         Returns:
@@ -1795,7 +1809,7 @@ class TableGroupby(object):
         """
         return self.agg('min')
 
-    def first(self) -> Type["Table"]:
+    def first(self) -> "Table":
         """Execute the aggregate function first.
 
         Returns:
@@ -1803,7 +1817,7 @@ class TableGroupby(object):
         """
         return self.agg('first')
 
-    def last(self) -> Type["Table"]:
+    def last(self) -> "Table":
         """Execute the aggregate function last.
 
         Returns:
@@ -1811,7 +1825,7 @@ class TableGroupby(object):
         """
         return self.agg('last')
 
-    def size(self) -> Type["Table"]:
+    def size(self) -> "Table":
         """Execute aggregate function size.
 
         Returns:
@@ -1819,7 +1833,7 @@ class TableGroupby(object):
         """
         return self.agg('size')
 
-    def sum2(self) -> Type["Table"]:
+    def sum2(self) -> "Table":
         """Execute the aggregate function sum2.
 
         Returns:
@@ -1827,7 +1841,7 @@ class TableGroupby(object):
         """
         return self.agg('sum2')
 
-    def std(self) -> Type["Table"]:
+    def std(self) -> "Table":
         """Execute aggregate function std.
 
         Returns:
@@ -1835,7 +1849,7 @@ class TableGroupby(object):
         """
         return self.agg('std')
 
-    def var(self) -> Type["Table"]:
+    def var(self) -> "Table":
         """Execute aggregate function var.
 
         Returns:
@@ -1843,7 +1857,7 @@ class TableGroupby(object):
         """
         return self.agg('var')
 
-    def prod(self) -> Type["Table"]:
+    def prod(self) -> "Table":
         """Execute the aggregate function prod.
 
         Returns:
@@ -1851,7 +1865,7 @@ class TableGroupby(object):
         """
         return self.agg('prod')
 
-    def agg2(self, func, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def agg2(self, func, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Perform aggregate function(s) on specified column(s).
 
         Args:
@@ -1874,7 +1888,7 @@ class TableGroupby(object):
         agg2Table.isMaterialized = False
         return agg2Table
 
-    def wavg(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def wavg(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Perform aggregate function wavg on specified column(s).
 
         Args:
@@ -1885,7 +1899,7 @@ class TableGroupby(object):
         """
         return self.agg2('wavg', cols)
 
-    def wsum(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def wsum(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Perform aggregate function wsum on specified column(s).
 
         Args:
@@ -1896,7 +1910,7 @@ class TableGroupby(object):
         """
         return self.agg2('wsum', cols)
 
-    def covar(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def covar(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Perform aggregate function covar on specified column(s).
 
         Args:
@@ -1907,7 +1921,7 @@ class TableGroupby(object):
         """
         return self.agg2('covar', cols)
 
-    def corr(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def corr(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Perform aggregate function corr on specified column(s).
 
         Args:
@@ -1938,7 +1952,7 @@ class TableContextby(object):
         contextBys : names of columns to be grouped for aggregation.
         having : the content contained in a having clause. Defaults to None.
     """
-    def __init__(self, t: Type["Table"], contextBys: Union[str, List[str]], having: str = None):
+    def __init__(self, t: "Table", contextBys: Union[str, List[str]], having: str = None):
         """Constructor of TableContextby."""
         if isinstance(contextBys, list):
             self.__contextBys = contextBys
@@ -1948,7 +1962,7 @@ class TableContextby(object):
         self.__having = having
         # print("constructor of ", __class__, self.__t.__dict__["_Table__tableName"])
 
-    def sort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: bool = True) -> Type["TableContextby"]:
+    def sort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: bool = True) -> "TableContextby":
         """Specify parameter for sorting.
 
         Args:
@@ -1962,7 +1976,7 @@ class TableContextby(object):
         sortTable._setSort(bys, ascending)
         return TableContextby(sortTable, self.__contextBys)
 
-    def csort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: Union[bool, Tuple[bool, ...], List[bool]] = True) -> Type["TableContextby"]:
+    def csort(self, bys: Union[str, Tuple[str, ...], List[str]], ascending: Union[bool, Tuple[bool, ...], List[bool]] = True) -> "TableContextby":
         """Specify sorting column(s) for contextby.
 
         Args:
@@ -1976,7 +1990,7 @@ class TableContextby(object):
         csortTable._setCsort(bys, ascending)
         return TableContextby(csortTable, self.__contextBys)
 
-    def having(self, expr: str) -> Type["Table"]:
+    def having(self, expr: str) -> "Table":
         """Set having clause.
 
         Args:
@@ -2029,7 +2043,7 @@ class TableContextby(object):
         query = pattern.sub('exec', self.showSQL())
         return self.__t.session().run(query)
 
-    def top(self, num: int) -> Type["Table"]:
+    def top(self, num: int) -> "Table":
         """Set the top clause to retrieve the first n records from a Table.
 
         Args:
@@ -2040,7 +2054,7 @@ class TableContextby(object):
         """
         return self.__t.top(num=num)
 
-    def limit(self, num: Union[int, Tuple[int, ...], List[int]]) -> Type["Table"]:
+    def limit(self, num: Union[int, Tuple[int, ...], List[int]]) -> "Table":
         """Specify parameters for limit.
 
         Args:
@@ -2053,7 +2067,7 @@ class TableContextby(object):
         """
         return self.__t.limit(num=num)
 
-    def executeAs(self, newTableName: str) -> Type["Table"]:
+    def executeAs(self, newTableName: str) -> "Table":
         """Save execution result as an in-memory table with a specified name.
 
         Args:
@@ -2075,7 +2089,7 @@ class TableContextby(object):
         """
         return self.__t.showSQL()
 
-    def agg(self, func) -> Type["Table"]:
+    def agg(self, func) -> "Table":
         """Apply context by on all columns except the grouping columns.
 
         Args:
@@ -2107,7 +2121,7 @@ class TableContextby(object):
         aggTable.isMaterialized = False
         return aggTable
 
-    def agg2(self, func, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def agg2(self, func, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Perform aggregate function(s) on specified column(s).
 
         Args:
@@ -2132,7 +2146,7 @@ class TableContextby(object):
         agg2Table.isMaterialized = False
         return agg2Table
 
-    def update(self, cols: List[str], vals: List[str]) -> Type["TableUpdate"]:
+    def update(self, cols: List[str], vals: List[str]) -> "TableUpdate":
         """Update in-memory table. Must be called to be executed.
 
         Args:
@@ -2145,7 +2159,7 @@ class TableContextby(object):
         updateTable = TableUpdate(t=self.__t, cols=cols, vals=vals, contextby=self.__contextBys, having=self.__having)
         return updateTable
 
-    def sum(self) -> Type["Table"]:
+    def sum(self) -> "Table":
         """Execute the aggregate function sum.
 
         Returns:
@@ -2153,7 +2167,7 @@ class TableContextby(object):
         """
         return self.agg('sum')
 
-    def avg(self) -> Type["Table"]:
+    def avg(self) -> "Table":
         """Execute the aggregate function avg.
 
         Returns:
@@ -2161,7 +2175,7 @@ class TableContextby(object):
         """
         return self.agg('avg')
 
-    def count(self) -> Type["Table"]:
+    def count(self) -> "Table":
         """Execute the aggregate function count.
 
         Returns:
@@ -2169,7 +2183,7 @@ class TableContextby(object):
         """
         return self.agg('count')
 
-    def max(self) -> Type["Table"]:
+    def max(self) -> "Table":
         """Execute the aggregate function max.
 
         Returns:
@@ -2177,7 +2191,7 @@ class TableContextby(object):
         """
         return self.agg('max')
 
-    def min(self) -> Type["Table"]:
+    def min(self) -> "Table":
         """Execute the aggregate function min.
 
         Returns:
@@ -2185,7 +2199,7 @@ class TableContextby(object):
         """
         return self.agg('min')
 
-    def first(self) -> Type["Table"]:
+    def first(self) -> "Table":
         """Execute the aggregate function first.
 
         Returns:
@@ -2193,7 +2207,7 @@ class TableContextby(object):
         """
         return self.agg('first')
 
-    def last(self) -> Type["Table"]:
+    def last(self) -> "Table":
         """Execute the aggregate function last.
 
         Returns:
@@ -2201,7 +2215,7 @@ class TableContextby(object):
         """
         return self.agg('last')
 
-    def size(self) -> Type["Table"]:
+    def size(self) -> "Table":
         """Execute aggregate function size.
 
         Returns:
@@ -2209,7 +2223,7 @@ class TableContextby(object):
         """
         return self.agg('size')
 
-    def sum2(self) -> Type["Table"]:
+    def sum2(self) -> "Table":
         """Execute the aggregate function sum2.
 
         Returns:
@@ -2217,7 +2231,7 @@ class TableContextby(object):
         """
         return self.agg('sum2')
 
-    def std(self) -> Type["Table"]:
+    def std(self) -> "Table":
         """Execute aggregate function std.
 
         Returns:
@@ -2225,7 +2239,7 @@ class TableContextby(object):
         """
         return self.agg('std')
 
-    def var(self) -> Type["Table"]:
+    def var(self) -> "Table":
         """Execute aggregate function var.
 
         Returns:
@@ -2233,7 +2247,7 @@ class TableContextby(object):
         """
         return self.agg('var')
 
-    def prod(self) -> Type["Table"]:
+    def prod(self) -> "Table":
         """Execute the aggregate function prod.
 
         Returns:
@@ -2241,7 +2255,7 @@ class TableContextby(object):
         """
         return self.agg('prod')
 
-    def cumsum(self) -> Type["Table"]:
+    def cumsum(self) -> "Table":
         """Execute the aggregate function cumsum.
 
         Returns:
@@ -2249,7 +2263,7 @@ class TableContextby(object):
         """
         return self.agg('cumsum')
 
-    def cummax(self) -> Type["Table"]:
+    def cummax(self) -> "Table":
         """Execute the aggregate function cummax.
 
         Returns:
@@ -2257,7 +2271,7 @@ class TableContextby(object):
         """
         return self.agg('cummax')
 
-    def cumprod(self) -> Type["Table"]:
+    def cumprod(self) -> "Table":
         """Execute the aggregate function cumprod.
 
         Returns:
@@ -2265,7 +2279,7 @@ class TableContextby(object):
         """
         return self.agg('cumprod')
 
-    def cummin(self) -> Type["Table"]:
+    def cummin(self) -> "Table":
         """Execute the aggregate function cummin.
 
         Returns:
@@ -2273,7 +2287,7 @@ class TableContextby(object):
         """
         return self.agg('cummin')
 
-    def wavg(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def wavg(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Execute aggregate function wavg.
 
         Args:
@@ -2284,7 +2298,7 @@ class TableContextby(object):
         """
         return self.agg2('wavg', cols)
 
-    def wsum(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def wsum(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Execute the aggregate function wsum.
 
         Args:
@@ -2295,7 +2309,7 @@ class TableContextby(object):
         """
         return self.agg2('wsum', cols)
 
-    def covar(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def covar(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Execute the aggregate function covar.
 
         Args:
@@ -2306,7 +2320,7 @@ class TableContextby(object):
         """
         return self.agg2('covar', cols)
 
-    def corr(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def corr(self, cols: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Execute the aggregate function corr.
 
         Args:
@@ -2317,7 +2331,7 @@ class TableContextby(object):
         """
         return self.agg2('corr', cols)
 
-    def eachPre(self, args: Union[Tuple[str, str], List[Tuple[str, str]]]) -> Type["Table"]:
+    def eachPre(self, args: Union[Tuple[str, str], List[Tuple[str, str]]]) -> "Table":
         """Execute the aggregate function eachPre.
 
         Reference link: https://dolphindb.com/help/Functionalprogramming/TemplateFunctions/eachPre.html.

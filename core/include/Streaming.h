@@ -86,6 +86,7 @@ public:
 	//symbol->[dbPath,tableName], dbPath can be empty for table in memory.
 	StreamDeserializer(const unordered_map<string, pair<string, string>> &sym2tableName, DBConnection *pconn = nullptr);
 	StreamDeserializer(const unordered_map<string, DictionarySP> &sym2schema);
+	// do not use this constructor if there are decimal or decimal-array columns (need schema to get decimal scale)
 	StreamDeserializer(const unordered_map<string, vector<DATA_TYPE>> &symbol2col);
 	bool parseBlob(const ConstantSP &src, vector<VectorSP> &rows, vector<string> &symbols, ErrorCodeInfo &errorInfo);
 private:
@@ -93,6 +94,7 @@ private:
 	void parseSchema(const unordered_map<string, DictionarySP> &sym2schema);
 	unordered_map<string, pair<string, string>> sym2tableName_;
 	unordered_map<string, vector<DATA_TYPE>> symbol2col_;
+	unordered_map<string, vector<int>> symbol2scale_;
 	Mutex mutex_;
 	friend class StreamingClientImpl;
 };
