@@ -192,14 +192,14 @@ private:
 
 class HIDEVISIBILITY ProtectGil{
 public:
-    ProtectGil(bool release = false, const string &name = "");
+	ProtectGil(bool release = false, const string &name = "");
 	void acquire();
 	~ProtectGil();
 private:
 	string name_;
 	SmartPointer<py::gil_scoped_release> pgilRelease_;
 	bool acquired_;
-    PyGILState_STATE gstate_;
+	PyGILState_STATE gstate_;
 };
 
 struct GuidHash {

@@ -1845,7 +1845,7 @@ namespace dolphindb
         string tem;
         if ((ret = in_->readLine(tem)) != OK)
             return -1;
-        len = tem.size();
+        len = tem.size() + 1;
         if (len < 2)
             return bad_readline();
 
@@ -1953,7 +1953,7 @@ namespace dolphindb
         string tem;
         if ((ret = in_->readLine(tem)) != OK)
             return -1;
-        len = tem.size();
+        len = tem.size() + 1;
         if (len < 2)
             return bad_readline();
 
@@ -2048,7 +2048,7 @@ namespace dolphindb
         string tem;
         if ((ret = in_->readLine(tem)) != OK)
             return -1;
-        len = tem.size();
+        len = tem.size() + 1;
         if (len < 2)
             return bad_readline();
         errno = 0;
@@ -2102,8 +2102,6 @@ namespace dolphindb
         if ((ret = in_->readLine(tem)) != OK)
             return -1;
         len = tem.size();
-        /* Strip the newline */
-        len--;
         /* Strip outermost quotes */
         if (len >= 2 && tem[0] == tem[len - 1] && (tem[0] == '\'' || tem[0] == '"'))
         {
@@ -2282,7 +2280,7 @@ namespace dolphindb
         string tem;
         if ((ret = in_->readLine(tem)) != OK)
             return -1;
-        len = tem.size();
+        len = tem.size() + 1;
         if (len < 1)
             return bad_readline();
         str = PyUnicode_DecodeRawUnicodeEscape(tem.c_str(), len - 1, NULL);
@@ -2568,7 +2566,7 @@ namespace dolphindb
         string tem;
         if ((ret = in_->readLine(tem)) != OK)
             return -1;
-        len = tem.size();
+        len = tem.size() + 1;
         if (len < 2)
             return bad_readline();
 
@@ -2582,7 +2580,7 @@ namespace dolphindb
         string tem2;
         if ((ret = in_->readLine(tem2)) == OK)
         {
-            len = tem2.size();
+            len = tem2.size() + 1;
             if (len < 2)
             {
                 Py_DECREF(module_name);
@@ -2745,7 +2743,7 @@ namespace dolphindb
         string tem;
         if ((ret = in_->readLine(tem)) != OK)
             return -1;
-        len = tem.size();
+        len = tem.size() + 1;
         if (len < 2)
             return bad_readline();
         module_name = PyUnicode_DecodeUTF8(tem.c_str(), len - 1, "strict");
@@ -2754,7 +2752,7 @@ namespace dolphindb
         string tem2;
         if ((ret = in_->readLine(tem2)) == OK)
         {
-            len = tem2.size();
+            len = tem2.size() + 1;
             if (len < 2)
             {
                 Py_DECREF(module_name);
@@ -2937,7 +2935,7 @@ namespace dolphindb
         string tem;
         if ((ret = in_->readLine(tem)) != OK)
             return -1;
-        len = tem.size();
+        len = tem.size() + 1;
         if (len < 2)
             return bad_readline();
         key = PyLong_FromString(tem.c_str(), NULL, 10);
@@ -3135,7 +3133,7 @@ namespace dolphindb
         string tem;
         if ((ret = in_->readLine(tem)) != OK)
             return -1;
-        len = tem.size();
+        len = tem.size() + 1;
         if (len < 2)
             return bad_readline();
 

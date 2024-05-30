@@ -1156,8 +1156,6 @@ IO_ERR DataInputStream::prepareBytes(size_t length){
 		return END_OF_STREAM;
 
 	if(capacity_ < length){
-		if(length > MAX_CAPACITY)
-			return TOO_LARGE_DATA;
 		char* tmp = new char[length];
 		memcpy(tmp, buf_+cursor_, size_);
 		capacity_ = length;

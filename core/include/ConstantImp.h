@@ -2469,6 +2469,7 @@ protected:
 	int getSegmentCount(INDEX size, int segmentSizeInBit) const;
 	//start is inclusive, but end is exclusive
 	virtual bool hasNullInRange(const unsigned char* buf, INDEX start, INDEX end) const { return true;}
+	void* getDataArray() const override {return (void*)data_;}
 
 
 protected:

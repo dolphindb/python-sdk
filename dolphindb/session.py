@@ -5,17 +5,16 @@ Package: session package.
 
 
 import asyncio
-import os
 import platform
 import re
-import sys
 import warnings
 from concurrent.futures import Future
 from datetime import date, datetime
 from threading import Lock, Thread
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from dolphindb._core import DolphinDBRuntime
 from dolphindb.database import Database
 from dolphindb.settings import (DDB_EPSILON, PROTOCOL_ARROW, PROTOCOL_DDB,
                                 PROTOCOL_DEFAULT, PROTOCOL_PICKLE)
@@ -23,9 +22,7 @@ from dolphindb.table import Table
 from dolphindb.utils import _generate_dbname, _generate_tablename, month
 from pandas import DataFrame
 
-sys.path.append(os.path.dirname(__file__))
-ddbcpp = __import__("_dolphindbcpp")
-ddbcpp.init()
+ddbcpp = DolphinDBRuntime()._ddbcpp
 
 
 class DBConnectionPool(object):
@@ -551,7 +548,10 @@ class Session(object):
         self, host: str, port: int, handler: Callable, tableName: str, actionName: str = None,
         offset: int = -1, resub: bool = False, filter=None,
         msgAsTable: bool = False, batchSize: int = 0, throttle: float = 1.0,
-        userName: str = None, password: str = None, streamDeserializer: Optional["streamDeserializer"] = None
+        userName: str = None, password: str = None, streamDeserializer: Optional["streamDeserializer"] = None,
+        backupSites: List[str] = None,
+        resubTimeout: int = 100,
+        subOnce: bool = False,
     ) -> None:
         """Subscribe to stream tables in DolphinDB.
 
@@ -574,7 +574,10 @@ class Session(object):
             throttle : a float indicating the maximum waiting time (in seconds) before the handler processes the incoming messages. Defaults to 1. This optional parameter has no effect if batchSize is not specified.
             userName : username. Defaults to None, indicating no login.
             password : password. Defaults to None, indicating no login.
-            streamDeserializer : A deserializer of heterogeneous stream table. Defaults to None.
+            streamDeserializer : a deserializer of heterogeneous stream table. Defaults to None.
+            backupSites : a list of strings indicating the host:port for each backup node, e.g. ["192.168.0.1:8848", "192.168.0.2:8849"]. If specified, the failover mechanism is automatically activated. Defaults to None.
+            resubTimeout : an integer representing the timeout for resubscribing (in milliseconds). Defaults to 100.
+            subOnce : a boolean, indicating whether to attempt reconnecting to disconnected nodes after each node switch occurs. Defaults to False.
         """
         if not isinstance(msgAsTable, bool):
             raise TypeError("msgAsTable must be a bool.")
@@ -597,21 +600,32 @@ class Session(object):
             sd = ddbcpp.streamDeserializer({})
         else:
             sd = streamDeserializer.cpp
+        if backupSites is None:
+            backupSites = []
+        if not isinstance(backupSites, list):
+            raise TypeError("backupSites must be a list of str.")
+        for site in backupSites:
+            if not isinstance(site, str):
+                raise TypeError("backupSites must be a list of str.")
+        if not isinstance(resubTimeout, int):
+            raise TypeError("resubTimeout must be an int.")
+        if not isinstance(subOnce, bool):
+            raise TypeError("subOnce must be a bool.")
         if batchSize > 0:
             self.cpp.subscribeBatch(
                 host, port, handler, tableName, actionName,
                 offset, resub, filter, msgAsTable, batchSize, throttle,
-                userName, password, sd
+                userName, password, sd, backupSites, resubTimeout, subOnce
             )
         else:
             if msgAsTable:
                 raise ValueError("msgAsTable must be False when batchSize is 0")
             self.cpp.subscribe(
                 host, port, handler, tableName, actionName,
-                offset, resub, filter, userName, password, sd
+                offset, resub, filter, userName, password, sd, backupSites, resubTimeout, subOnce
             )
 
-    def unsubscribe(self, host: str, port: str, tableName: str, actionName: str = None) -> None:
+    def unsubscribe(self, host: str, port: int, tableName: str, actionName: str = None) -> None:
         """Unsubscribe.
 
         Args:

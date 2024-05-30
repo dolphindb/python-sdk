@@ -22,21 +22,22 @@ namespace dolphindb {
 
 
 Type Scalar2DolphinDBType(const py::object &obj, bool &isNull, int &nullpri, CHILD_VECTOR_OPTION option = CHILD_VECTOR_OPTION::DISABLE);
-ConstantSP toDolphinDB_Scalar(py::object obj, Type typeIndicator);
-ConstantSP toDolphinDB_Scalar(py::object obj);
-ConstantSP toDolphinDB_Vector(py::object obj, Type typeIndicator, CHILD_VECTOR_OPTION option = CHILD_VECTOR_OPTION::DISABLE, TableVectorInfo info = {true, ""});
-ConstantSP toDolphinDB_Matrix(py::object obj, Type typeIndicator);
-ConstantSP toDolphinDB_Set(py::object obj);
-ConstantSP toDolphinDB_Dictionary(py::object obj);
-ConstantSP toDolphinDB_Table(py::object obj, TableChecker &checker);
-ConstantSP toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VECTOR_OPTION &option);
-ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, const CHILD_VECTOR_OPTION &options, const TableVectorInfo &info);
+ConstantSP _toDolphinDB_Scalar(py::object obj, Type typeIndicator);
+ConstantSP _toDolphinDB_Scalar(py::object obj);
+ConstantSP _toDolphinDB_Vector(py::object obj, Type typeIndicator, CHILD_VECTOR_OPTION option = CHILD_VECTOR_OPTION::DISABLE, TableVectorInfo info = {true, ""});
+// ConstantSP toDolphinDB_Matrix(py::object obj, Type typeIndicator);
+ConstantSP _toDolphinDB_Set(py::object obj);
+ConstantSP _toDolphinDB_Dictionary(py::object obj);
+ConstantSP _toDolphinDB_Table(py::object obj, TableChecker &checker);
+ConstantSP _toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VECTOR_OPTION &option);
+ConstantSP _toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, const CHILD_VECTOR_OPTION &options, const TableVectorInfo &info);
 template <typename T>
 ConstantSP
-toDolphinDB_Vector_TupleOrList(T obj,
-                         Type typeIndicator,
-                         const CHILD_VECTOR_OPTION &option,
-                         typename std::enable_if<std::is_same<T, py::list>::value || std::is_same<T, py::tuple>::value, T>::type* = nullptr);
+_toDolphinDB_Vector_TupleOrList(
+    T                           obj,
+    Type                        typeIndicator,
+    const CHILD_VECTOR_OPTION   &option,
+    typename std::enable_if<std::is_same<T, py::list>::value || std::is_same<T, py::tuple>::value, T>::type* = nullptr);
 
 
 static inline std::string py2str(const py::handle &obj) {
@@ -77,10 +78,26 @@ Preserved::Preserved(){
     pandas_ = py::module::import("pandas");
     getVersionVector(pandas_, version);
     if (version.size() >= 1) {
-        pd_above_2_00_ = version[0] >= 2;
+        pd_above_2_0_ = version[0] >= 2;
     }
     else {
-        pd_above_2_00_ = false;
+        pd_above_2_0_ = false;
+    }
+    if (version.size() >= 1) {
+        if (version[0] >= 2) {
+            pd_above_1_2_ = true;
+        }
+        else if (version[0] == 1) {
+            if (version.size() >= 2) {
+                pd_above_1_2_ = version[1] >= 2;
+            }
+            else {
+                pd_above_1_2_ = false;
+            }
+        }
+        else {
+            pd_above_1_2_ = false;
+        }
     }
 
     py::module_ importUtil = py::module::import("importlib.util");
@@ -112,7 +129,7 @@ Preserved::Preserved(){
         padecimal128_ = pyarrow_.attr("Decimal128Type");
         palist_ = pyarrow_.attr("ListType");
         pachunkedarray_ = pyarrow_.attr("ChunkedArray");
-        if (pd_above_2_00_) {
+        if (pd_above_2_0_) {
             pdarrowdtype_ = pandas_.attr("ArrowDtype");
         }
     }
@@ -121,6 +138,16 @@ Preserved::Preserved(){
     nan_ = getType(numpy_.attr("nan"));
     pddataframe_ = getType(pandas_.attr("DataFrame")());
     pdextensiondtype_ = pandas_.attr("core").attr("dtypes").attr("dtypes").attr("ExtensionDtype");
+    pdBooleanDtype_ = pandas_.attr("BooleanDtype")();
+    if (pd_above_1_2_) {
+        pdFloat32Dtype_ = pandas_.attr("Float32Dtype")();
+        pdFloat64Dtype_ = pandas_.attr("Float64Dtype")();
+    }
+    pdInt8Dtype_ = pandas_.attr("Int8Dtype")();
+    pdInt16Dtype_ = pandas_.attr("Int16Dtype")();
+    pdInt32Dtype_ = pandas_.attr("Int32Dtype")();
+    pdInt64Dtype_ = pandas_.attr("Int64Dtype")();
+    pdStringDtype_ = pandas_.attr("StringDtype");
     pdNaT_ = getType(pandas_.attr("NaT"));
     pdNA_ = getType(pandas_.attr("NA"));
     pdseries_ = pandas_.attr("Series");
@@ -174,7 +201,7 @@ TableChecker::TableChecker(const py::dict &pydict) {
         py::object value = py::reinterpret_borrow<py::object>((*iter).second);
         Type type;
         if (py::isinstance(value, DdbPythonUtil::preserved_->pyint_)) {
-            type = std::make_pair(static_cast<DATA_TYPE>(py::cast<int>(value)), -1);
+            type = std::make_pair(static_cast<DATA_TYPE>(py::cast<int>(value)), EXPARAM_DEFAULT);
         }
         else if (py::isinstance(value, DdbPythonUtil::preserved_->pylist_)) {
             py::list tmplist = py::reinterpret_borrow<py::list>(value);
@@ -204,11 +231,11 @@ static inline bool isValueNumpyNull(long long value) {
 }
 
 static inline bool isValueNumpyNull(double value) {
-    return memcmp(&value, &npDoubleNull_, 8) == 0;
+    return std::isnan(value);
 }
 
 static inline bool isValueNumpyNull(float value) {
-    return memcmp(&value, &npFloatNull_, 4) == 0;
+    return std::isnan(value);
 }
 
 static inline bool isNULL(PyObject *pobj) {
@@ -258,7 +285,7 @@ static inline py::object getDType(const py::object &obj){
 static inline int getPyDecimalScale(PyObject* obj) {
     PyObject* DecTuple = PyObject_CallMethod(obj, "as_tuple", NULL);
     PyObject* dataExp = PyObject_GetAttrString(DecTuple, "exponent");
-    int res = -1;
+    int res = EXPARAM_DEFAULT;
     if(!PyObject_IsInstance(dataExp, DdbPythonUtil::preserved_->pystr_.ptr())) {
         res = (-1)*py::cast<int>(dataExp);
     }
@@ -484,6 +511,9 @@ bool addDecimalVector(const py::array &pyVec, size_t size, size_t offset, T null
                     buf[i] = nullValue;
                     hasNull = true;
                 } else {
+                    if (!PyObject_IsInstance(*ptr, DdbPythonUtil::preserved_->decimal_.ptr())) {
+                        throw RuntimeException("");
+                    }
                     buf[i] = getPyDecimalData<T>(*ptr, hasNull);
                 }
                 it += stride;
@@ -624,10 +654,10 @@ checkElemType(const py::object              &obj,
     DLOG("is_Null: ", is_Null);
     DLOG("curNullpri: ", curNullpri);
     if (Util::getCategory(curType.first) == DATA_CATEGORY::DENARY) {
-        if (curType.second == -1) {
+        if (curType.second == EXPARAM_DEFAULT) {
             is_Null = true;
             curNullpri = 4;
-            curType = {DT_DECIMAL64, -1};
+            curType = {DT_DECIMAL64, EXPARAM_DEFAULT};
         }
     }
     if (is_Null) {
@@ -659,8 +689,8 @@ getChildrenType(const py::object            &children,
                 bool                        &isArrayVector,
                 bool                        &allNULL) {
     int nullpri = 0;
-    Type nullType = {DT_UNK, -1};
-    Type type = {DT_UNK, -1};
+    Type nullType = {DT_UNK, EXPARAM_DEFAULT};
+    Type type = {DT_UNK, EXPARAM_DEFAULT};
     bool isNull;
     bool canCheck = false;
     py::object one;
@@ -689,26 +719,26 @@ Scalar2DolphinDBType(const py::object       &obj,
     DATA_TYPE nullType;
     if (isNULL(obj, nullpri, nullType)) {
         isNull = true;
-        return {nullType, -1};
+        return {nullType, EXPARAM_DEFAULT};
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pybool_)) {
-        return {DT_BOOL, -1};
+        return {DT_BOOL, EXPARAM_DEFAULT};
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pyint_)) {
         auto result = obj.cast<long long>();
         isNull = isValueNumpyNull(result);
-        return {DT_LONG, -1};
+        return {DT_LONG, EXPARAM_DEFAULT};
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pyfloat_)) {
         auto result = obj.cast<double>();
         isNull = isValueNumpyNull(result);
-        return {DT_DOUBLE, -1};
+        return {DT_DOUBLE, EXPARAM_DEFAULT};
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pystr_)) {
-        return {DT_STRING, -1};
+        return {DT_STRING, EXPARAM_DEFAULT};
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pybytes_)) {
-        return {DT_BLOB, -1};
+        return {DT_BLOB, EXPARAM_DEFAULT};
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->decimal_)) {
         DLOG("is decimal.");
@@ -717,7 +747,7 @@ Scalar2DolphinDBType(const py::object       &obj,
         return {DT_DECIMAL64, scale};
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pdtimestamp_)) {
-        return {DT_TIMESTAMP, -1};
+        return {DT_TIMESTAMP, EXPARAM_DEFAULT};
     }
     // else {
     //     py::dtype dtype = py::cast<py::dtype>(getDType(obj));
@@ -738,31 +768,31 @@ Scalar2DolphinDBType(const py::object       &obj,
             nullpri = 3;
         }
         if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64ns_())) {
-            return {DT_NANOTIMESTAMP, -1};
+            return {DT_NANOTIMESTAMP, EXPARAM_DEFAULT};
         }
         else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64D_())) {
-            return {DT_DATE, -1};
+            return {DT_DATE, EXPARAM_DEFAULT};
         }
         else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64M_())) {
-            return {DT_MONTH, -1};
+            return {DT_MONTH, EXPARAM_DEFAULT};
         }
         else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64m_())) {
-            return {DT_DATETIME, -1};
+            return {DT_DATETIME, EXPARAM_DEFAULT};
         }
         else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64s_())) {
-            return {DT_DATETIME, -1};
+            return {DT_DATETIME, EXPARAM_DEFAULT};
         }
         else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64h_())) {
-            return {DT_DATEHOUR, -1};
+            return {DT_DATEHOUR, EXPARAM_DEFAULT};
         }
         else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64ms_())) {
-            return {DT_TIMESTAMP, -1};
+            return {DT_TIMESTAMP, EXPARAM_DEFAULT};
         }
         else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64us_())) {
-            return {DT_NANOTIMESTAMP, -1};
+            return {DT_NANOTIMESTAMP, EXPARAM_DEFAULT};
         }
         else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64_())) {
-            return {DT_NANOTIMESTAMP, -1};
+            return {DT_NANOTIMESTAMP, EXPARAM_DEFAULT};
         }
         else {
             throw RuntimeException(string("unsupported datetime type '") + py2str(dtype) + "', DolphinDB supports ns/D/M/m/s/h/ms/us.");
@@ -771,42 +801,42 @@ Scalar2DolphinDBType(const py::object       &obj,
     py::object dtype = getDType(obj);
     if (!bool(dtype)) {
         if (option == CHILD_VECTOR_OPTION::ANY_VECTOR) {
-            return {DT_ANY, -1};
+            return {DT_ANY, EXPARAM_DEFAULT};
         }
         throw RuntimeException("unsupported type ["+ py2str(obj.get_type())+"].");
     }
     if (dtype.equal(DdbPythonUtil::preserved_->npbool_)) {
-        return {DT_BOOL, -1};
+        return {DT_BOOL, EXPARAM_DEFAULT};
     }
     else if (dtype.equal(DdbPythonUtil::preserved_->npint8_)) {
-        return {DT_CHAR, -1};
+        return {DT_CHAR, EXPARAM_DEFAULT};
     }
     else if (dtype.equal(DdbPythonUtil::preserved_->npint16_)) {
-        return {DT_SHORT, -1};
+        return {DT_SHORT, EXPARAM_DEFAULT};
     }
     else if (dtype.equal(DdbPythonUtil::preserved_->npint32_)) {
-        return {DT_INT, -1};
+        return {DT_INT, EXPARAM_DEFAULT};
     }
     else if (dtype.equal(DdbPythonUtil::preserved_->npint64_)) {
-        return {DT_LONG, -1};
+        return {DT_LONG, EXPARAM_DEFAULT};
     }
     else if (dtype.equal(DdbPythonUtil::preserved_->npfloat32_)) {
-        return {DT_FLOAT, -1};
+        return {DT_FLOAT, EXPARAM_DEFAULT};
     }
     else if (dtype.equal(DdbPythonUtil::preserved_->npfloat64_)) {
-        return {DT_DOUBLE, -1};
+        return {DT_DOUBLE, EXPARAM_DEFAULT};
     }
     else if (DdbPythonUtil::preserved_->np_above_1_20_ && dtype.get_type().equal(DdbPythonUtil::preserved_->npstrType_)) {
-        return {DT_STRING, -1};
+        return {DT_STRING, EXPARAM_DEFAULT};
     }
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64_())) {
-        return {DT_NANOTIMESTAMP, -1};
+        return {DT_NANOTIMESTAMP, EXPARAM_DEFAULT};
     }
     else {
         // str dtype will not be detected if numpy version < 1.20,
         // so just return DT_OBJECT.
         if(!DdbPythonUtil::preserved_->np_above_1_20_)
-            return {DT_OBJECT, -1};
+            return {DT_OBJECT, EXPARAM_DEFAULT};
         throw RuntimeException(string("unsupported type '") + py2str(dtype) + "'.");
     }
 }
@@ -820,42 +850,56 @@ DdbPythonUtil::toDolphinDB(py::object       obj,
                            TableChecker     checker) {
     if (py::isinstance(obj, DdbPythonUtil::preserved_->pddataframe_)) {
         // Indicate as DF_TABLE
-        return toDolphinDB_Table(obj, checker);
+        return _toDolphinDB_Table(obj, checker);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pytuple_)) {
         // Indicate as DF_VECTOR
-        return toDolphinDB_Vector_TupleOrList(py::reinterpret_borrow<py::tuple>(obj), typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR);
+        return _toDolphinDB_Vector_TupleOrList(py::reinterpret_borrow<py::tuple>(obj), typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pylist_)) {
         // Indicate as DF_VECTOR
-        return toDolphinDB_Vector_TupleOrList(py::reinterpret_borrow<py::list>(obj), typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR);
+        return _toDolphinDB_Vector_TupleOrList(py::reinterpret_borrow<py::list>(obj), typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->nparray_)) {
         // Indicate as DF_VECTOR or DF_MATRIX
-        return toDolphinDB_NDArray(py::reinterpret_borrow<py::array>(obj), typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR);
+        return _toDolphinDB_NDArray(py::reinterpret_borrow<py::array>(obj), typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pdseries_)) {
         // Indicate as DF_VECTOR
         TableVectorInfo info = {true, ""};
-        return toDolphinDB_Vector_SeriesOrIndex(obj, typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR, info);
+        return _toDolphinDB_Vector_SeriesOrIndex(obj, typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR, info);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pdindex_)) {
         // Indicate as DF_VECTOR
         TableVectorInfo info = {true, ""};
-        return toDolphinDB_Vector_SeriesOrIndex(obj, typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR, info);
+        return _toDolphinDB_Vector_SeriesOrIndex(obj, typeIndicator, CHILD_VECTOR_OPTION::ANY_VECTOR, info);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pyset_)) {
         // Indicate as DF_SET
-        return toDolphinDB_Set(obj);
+        return _toDolphinDB_Set(obj);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pydict_)) {
         // Indicate as DF_DICTIONARY
-        return toDolphinDB_Dictionary(obj);
+        return _toDolphinDB_Dictionary(obj);
     }
     else {
         // Indicate as DF_SCALAR
-        return toDolphinDB_Scalar(obj, typeIndicator);
+        return _toDolphinDB_Scalar(obj, typeIndicator);
     }
+}
+
+ConstantSP
+DdbPythonUtil::toDolphinDB_Scalar(py::object    obj,
+                                  Type          typeIndicator) {
+    return _toDolphinDB_Scalar(obj, typeIndicator);
+}
+
+
+ConstantSP
+DdbPythonUtil::toDolphinDB_Vector(py::object            obj,
+                                  Type                  typeIndicator,
+                                  CHILD_VECTOR_OPTION   option) {
+    return _toDolphinDB_Vector(obj, typeIndicator, option);
 }
 
 Type InferDataTypeFromArrowType(const py::object &pyarrow_dtype) {
@@ -865,41 +909,41 @@ Type InferDataTypeFromArrowType(const py::object &pyarrow_dtype) {
         return {(DATA_TYPE)(elemType.first + ARRAY_TYPE_BASE), elemType.second};
     }
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->paboolean_))
-        return {DT_BOOL, -1};
+        return {DT_BOOL, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->paint8_))
-        return {DT_CHAR, -1};
+        return {DT_CHAR, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->paint16_))
-        return {DT_SHORT, -1};
+        return {DT_SHORT, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->paint32_))
-        return {DT_INT, -1};
+        return {DT_INT, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->paint64_))
-        return {DT_LONG, -1};
+        return {DT_LONG, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->pafloat32_))
-        return {DT_FLOAT, -1};
+        return {DT_FLOAT, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->pafloat64_))
-        return {DT_DOUBLE, -1};
+        return {DT_DOUBLE, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->padate32_))
-        return {DT_DATE, -1};
+        return {DT_DATE, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->patime32_s_))
-        return {DT_SECOND, -1};
+        return {DT_SECOND, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->patime32_ms_))
-        return {DT_TIME, -1};
+        return {DT_TIME, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->patime64_ns_))
-        return {DT_NANOTIME, -1};
+        return {DT_NANOTIME, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->patimestamp_s_))
-        return {DT_DATETIME, -1};
+        return {DT_DATETIME, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->patimestamp_ms_))
-        return {DT_TIMESTAMP, -1};
+        return {DT_TIMESTAMP, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->patimestamp_ns_))
-        return {DT_NANOTIMESTAMP, -1};
+        return {DT_NANOTIMESTAMP, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->padictionary_int32_utf8_))
-        return {DT_SYMBOL, -1};
+        return {DT_SYMBOL, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->pautf8_))
-        return {DT_STRING, -1};
+        return {DT_STRING, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->pafixed_size_binary_16_))
-        return {DT_INT128, -1};
+        return {DT_INT128, EXPARAM_DEFAULT};
     else if (pyarrow_dtype.equal(DdbPythonUtil::preserved_->palarge_binary_))
-        return {DT_BLOB, -1};
+        return {DT_BLOB, EXPARAM_DEFAULT};
     else if (py::isinstance(pyarrow_dtype, DdbPythonUtil::preserved_->padecimal128_)) {
         int scale = py::cast<int>(pyarrow_dtype.attr("scale"));
         return {DT_DECIMAL128, scale};
@@ -919,49 +963,49 @@ Type InferDataTypeFromDType(py::dtype &dtype, bool &Is_ArrowDType, bool needArro
     }
     // NumpyDType or PandasDType
     if (dtype.equal(DdbPythonUtil::preserved_->npbool_))
-        return std::make_pair(DT_BOOL, -1);
+        return std::make_pair(DT_BOOL, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npint8_))
-        return std::make_pair(DT_CHAR, -1);
+        return std::make_pair(DT_CHAR, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npint16_))
-        return std::make_pair(DT_SHORT, -1);
+        return std::make_pair(DT_SHORT, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npint32_))
-        return std::make_pair(DT_INT, -1);
+        return std::make_pair(DT_INT, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npint64_))
-        return std::make_pair(DT_LONG, -1);
+        return std::make_pair(DT_LONG, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npfloat32_))
-        return std::make_pair(DT_FLOAT, -1);
+        return std::make_pair(DT_FLOAT, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npfloat64_))
-        return std::make_pair(DT_DOUBLE, -1);
+        return std::make_pair(DT_DOUBLE, EXPARAM_DEFAULT);
     else if (DdbPythonUtil::preserved_->np_above_1_20_ && dtype.get_type().equal(DdbPythonUtil::preserved_->npstrType_)) {
         DLOG("Here!");
-        return std::make_pair(DT_STRING, -1);
+        return std::make_pair(DT_STRING, EXPARAM_DEFAULT);
     }
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64D_()))
-        return std::make_pair(DT_DATE, -1);
+        return std::make_pair(DT_DATE, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64M_()))
-        return std::make_pair(DT_MONTH, -1);
+        return std::make_pair(DT_MONTH, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64m_()))
-        return std::make_pair(DT_DATETIME, -1);
+        return std::make_pair(DT_DATETIME, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64s_()))
-        return std::make_pair(DT_DATETIME, -1);
+        return std::make_pair(DT_DATETIME, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64h_()))
-        return std::make_pair(DT_DATEHOUR, -1);
+        return std::make_pair(DT_DATEHOUR, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64ms_()))
-        return std::make_pair(DT_TIMESTAMP, -1);
+        return std::make_pair(DT_TIMESTAMP, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64us_()))
-        return std::make_pair(DT_NANOTIMESTAMP, -1);
+        return std::make_pair(DT_NANOTIMESTAMP, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64ns_()))
-        return std::make_pair(DT_NANOTIMESTAMP, -1);
+        return std::make_pair(DT_NANOTIMESTAMP, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npdatetime64_()))
-        return std::make_pair(DT_NANOTIMESTAMP, -1);
+        return std::make_pair(DT_NANOTIMESTAMP, EXPARAM_DEFAULT);
     else if (dtype.equal(DdbPythonUtil::preserved_->npobject_)) {
-        return std::make_pair(DT_OBJECT, -1);
+        return std::make_pair(DT_OBJECT, EXPARAM_DEFAULT);
     }
     else if (py::isinstance(dtype, DdbPythonUtil::preserved_->pdextensiondtype_))
-        return std::make_pair(DT_EXTENSION, -1);
+        return std::make_pair(DT_EXTENSION, EXPARAM_DEFAULT);
     else {
         if (!DdbPythonUtil::preserved_->np_above_1_20_) {
-            return std::make_pair(DT_OBJECT, -1);
+            return std::make_pair(DT_OBJECT, EXPARAM_DEFAULT);
         }
         // str dtype will not be detected if numpy version < 1.20,
         // so just return DT_OBJECT. 
@@ -969,9 +1013,40 @@ Type InferDataTypeFromDType(py::dtype &dtype, bool &Is_ArrowDType, bool needArro
     }
 }
 
+Type InferDataTypeFromExtensionDType(py::dtype &dtype) {
+    if (dtype.equal(DdbPythonUtil::preserved_->pdBooleanDtype_)) {
+        return std::make_pair(DT_BOOL, EXPARAM_DEFAULT);
+    }
+    else if (dtype.equal(DdbPythonUtil::preserved_->pdInt8Dtype_)) {
+        return std::make_pair(DT_CHAR, EXPARAM_DEFAULT);
+    }
+    else if (dtype.equal(DdbPythonUtil::preserved_->pdInt16Dtype_)) {
+        return std::make_pair(DT_SHORT, EXPARAM_DEFAULT);
+    }
+    else if (dtype.equal(DdbPythonUtil::preserved_->pdInt32Dtype_)) {
+        return std::make_pair(DT_INT, EXPARAM_DEFAULT);
+    }
+    else if (dtype.equal(DdbPythonUtil::preserved_->pdInt64Dtype_)) {
+        return std::make_pair(DT_LONG, EXPARAM_DEFAULT);
+    }
+    else if (DdbPythonUtil::preserved_->pd_above_1_2_ && dtype.equal(DdbPythonUtil::preserved_->pdFloat32Dtype_)) {
+        return std::make_pair(DT_FLOAT, EXPARAM_DEFAULT);
+    }
+    else if (DdbPythonUtil::preserved_->pd_above_1_2_ && dtype.equal(DdbPythonUtil::preserved_->pdFloat64Dtype_)) {
+        return std::make_pair(DT_DOUBLE, EXPARAM_DEFAULT);
+    }
+    else if (dtype.get_type().equal(DdbPythonUtil::preserved_->pdStringDtype_)) {
+        return std::make_pair(DT_STRING, EXPARAM_DEFAULT);
+    }
+    else {
+        throw RuntimeException("Unsupported data types: dtype '" + py2str(dtype) +
+                                "'. DolphinDB supports pandas ExtensionDtype Boolean/Int8/Int16/Int32/Int64/Float32/Float64/String");
+    }
+}
+
 ConstantSP
-toDolphinDB_Table(py::object    obj,
-                  TableChecker  &checker) {
+_toDolphinDB_Table(py::object       obj,
+                   TableChecker     &checker) {
     // Get TableChecker
     py::dict dict_checker = py::getattr(obj, "__DolphinDB_Type__", py::dict());
     TableChecker tmp_checker = TableChecker(dict_checker);
@@ -998,7 +1073,7 @@ toDolphinDB_Table(py::object    obj,
             if (!isArrayLike(tmpObj)) {
                 throw RuntimeException("Table columns must be vectors (np.array, series, tuple, or list) for upload.");
             }
-            columns[ni] = toDolphinDB_Vector_SeriesOrIndex(
+            columns[ni] = _toDolphinDB_Vector_SeriesOrIndex(
                 tmpObj, checker[col_names[ni]],
                 {CHILD_VECTOR_OPTION::ARRAY_VECTOR}, info);
         }
@@ -1008,8 +1083,8 @@ toDolphinDB_Table(py::object    obj,
             if (!isArrayLike(tmpObj)) {
                 throw RuntimeException("Table columns must be vectors (np.array, series, tuple, or list) for upload.");
             }
-            columns[ni] = toDolphinDB_Vector_SeriesOrIndex(
-                tmpObj, std::make_pair(DT_UNK, -1),
+            columns[ni] = _toDolphinDB_Vector_SeriesOrIndex(
+                tmpObj, std::make_pair(DT_UNK, EXPARAM_DEFAULT),
                 {CHILD_VECTOR_OPTION::ARRAY_VECTOR}, info);
         }
         columns[ni]->setTemporary(true);
@@ -1020,7 +1095,7 @@ toDolphinDB_Table(py::object    obj,
 }
 
 ConstantSP
-toDolphinDB_Dictionary(py::object obj) {
+_toDolphinDB_Dictionary(py::object obj) {
     py::dict pyDict = obj;
     size_t size = pyDict.size();
     vector<ConstantSP> _ddbKeyVec;
@@ -1036,8 +1111,8 @@ toDolphinDB_Dictionary(py::object obj) {
     int valForms = 1;
     int scale_counts = 0;
     for (auto &it : pyDict) {
-        _ddbKeyVec.push_back(DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(it.first), {DT_UNK, -1}));
-        _ddbValVec.push_back(DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(it.second), {DT_UNK, -1}));
+        _ddbKeyVec.push_back(DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(it.first), {DT_UNK, EXPARAM_DEFAULT}));
+        _ddbValVec.push_back(DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(it.second), {DT_UNK, EXPARAM_DEFAULT}));
         if (!_ddbKeyVec.back()->isNull()) {
             DATA_TYPE tmpKeyType = _ddbKeyVec.back()->getType();
             DATA_FORM tmpKeyForm = _ddbKeyVec.back()->getForm();
@@ -1110,7 +1185,7 @@ toDolphinDB_Dictionary(py::object obj) {
     return ddbDict;
 }
 
-ConstantSP toDolphinDB_Set(py::object obj) {
+ConstantSP _toDolphinDB_Set(py::object obj) {
     py::set pySet = obj;
     size_t size = pySet.size();
     vector<ConstantSP> _ddbSet;
@@ -1119,7 +1194,7 @@ ConstantSP toDolphinDB_Set(py::object obj) {
     int types = 0;
     int forms = 0;
     for (auto &it : pySet) {
-        _ddbSet.push_back(DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(it), {DT_UNK, -1}));
+        _ddbSet.push_back(DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(it), {DT_UNK, EXPARAM_DEFAULT}));
         if (_ddbSet.back()->isNull()) { continue; }
         DATA_TYPE tmpType = _ddbSet.back()->getType();
         DATA_FORM tmpForm = _ddbSet.back()->getForm();
@@ -1142,7 +1217,7 @@ ConstantSP toDolphinDB_Set(py::object obj) {
     return ddbSet;
 }
 
-ConstantSP toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VECTOR_OPTION &option) {
+ConstantSP _toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VECTOR_OPTION &option) {
     TableVectorInfo info = {true, ""};
     DATA_TYPE &typeInfer = typeIndicator.first;
     int &exparam = typeIndicator.second;
@@ -1169,13 +1244,13 @@ ConstantSP toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VE
         }
         py::dtype dtype = obj.dtype();
         Is_DTypeObject = dtype.equal(DdbPythonUtil::preserved_->npobject_);
-        if (typeInfer == DT_UNK) {  // Infer DType [NumpyDType, ...]
-            typeIndicator = InferDataTypeFromDType(dtype, Is_ArrowDType);
-        }
         
         DLOG("Infer: ", Util::getDataTypeString(typeIndicator.first), typeIndicator.second);
         DLOG("Is_DTypeObject: ", Is_DTypeObject);
         if (!Is_DTypeObject) {
+            if (typeInfer == DT_UNK) {  // Infer DType [NumpyDType, ...]
+                typeIndicator = InferDataTypeFromDType(dtype, Is_ArrowDType);
+            }
             // Explicit Type
             // Data in Series with NumpyDType cannot be ArrayVector
             if (typeInfer == DT_OBJECT)
@@ -1305,15 +1380,40 @@ ConstantSP toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VE
             return ddbVec;
         }
 inferobjectdtype:
-        DLOG("[toDolphinDB_NDArray dtype=object]");
+        DLOG("[_toDolphinDB_NDArray dtype=object]");
         VectorSP ddbVec;
         size_t size = obj.size();
         bool canCheck = false;
         bool is_Null = false;
         bool all_Null = true;
         int nullpri = 0;
-        Type nullType = {DT_UNK, -1};
+        Type nullType = {DT_UNK, EXPARAM_DEFAULT};
         py::object tmpObj;
+        if (typeInfer != DT_UNK && typeInfer != DT_OBJECT) {
+            // Indicate Explicit Type
+            DLOG("typeInfer: ", typeInfer);
+            DLOG("exparam: ", exparam);
+            ddbVec = Util::createVector(typeInfer, 0, size, true, exparam == EXPARAM_DEFAULT ? 0 : exparam);
+            if (typeInfer == DT_ANY) {
+                if (option == CHILD_VECTOR_OPTION::ARRAY_VECTOR) {
+                    throw RuntimeException("unsupport Indicate Array Vector as Any Vector.");
+                }
+                for (auto &it : obj) {
+                    tmpObj = py::reinterpret_borrow<py::object>(it);
+                    ConstantSP item = DdbPythonUtil::toDolphinDB(tmpObj, Type{DT_UNK, EXPARAM_DEFAULT});
+                    ddbVec->append(item);
+                }
+            }
+            else {
+                for (auto &it : obj) {
+                    tmpObj = py::reinterpret_borrow<py::object>(it);
+                    ConstantSP item = DdbPythonUtil::toDolphinDB_Scalar(tmpObj, typeIndicator);
+                    ddbVec->append(item);
+                }
+            }
+            return ddbVec;
+        }
+        
         for (auto &it : obj) {
             tmpObj = py::reinterpret_borrow<py::object>(it);
             canCheck = checkElemType(tmpObj, typeIndicator, option, Is_ArrayVector, is_Null, nullpri, nullType);
@@ -1391,7 +1491,7 @@ inferobjectdtype:
                 size_t index = 0;
                 for (auto &it : series_array) {
                     try {
-                        tmpObj = toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(it), typeIndicator);
+                        tmpObj = _toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(it), typeIndicator);
                         ddbVec->append(tmpObj);
                     }
                     catch (...) {
@@ -1435,8 +1535,8 @@ inferobjectdtype:
             case DT_DECIMAL64:
             case DT_DECIMAL128: {
                 size_t index = 0;
-                int exparam = -1;
-                if (typeIndicator.second == -1) {
+                int exparam = EXPARAM_DEFAULT;
+                if (typeIndicator.second == EXPARAM_DEFAULT) {
                     // Need to Infer Exparam
                     int nullCount = 0;
                     for (auto &it : series_array) {
@@ -1448,7 +1548,7 @@ inferobjectdtype:
                             }
                             if (py::isinstance(it, DdbPythonUtil::preserved_->decimal_)) {
                                 exparam = getPyDecimalScale(it.ptr());
-                                if (exparam == -1) {
+                                if (exparam == EXPARAM_DEFAULT) {
                                     ++nullCount;
                                     ++index;
                                     continue;
@@ -1468,7 +1568,7 @@ inferobjectdtype:
                     createAllNullVector(ddbVec, typeInfer, size, 0);
                     break;
                 }
-                if (exparam != -1) {    // Infer exparam
+                if (exparam != EXPARAM_DEFAULT) {    // Infer exparam
                     ddbVec = Util::createVector(typeInfer, index, size, true, exparam);
                 }
                 else {
@@ -1503,10 +1603,10 @@ inferobjectdtype:
                 }
             }
             case DT_ANY: {
-                ddbVec = Util::createVector(typeInfer, 0, size, true, typeIndicator.second == -1 ? 0 : typeIndicator.second);
+                ddbVec = Util::createVector(typeInfer, 0, size, true, typeIndicator.second == EXPARAM_DEFAULT ? 0 : typeIndicator.second);
                 for (auto &it : series_array) {
                     tmpObj = py::reinterpret_borrow<py::object>(it);
-                    ConstantSP item = DdbPythonUtil::toDolphinDB(tmpObj, typeInfer == DT_ANY ? Type{DT_UNK, -1} : typeIndicator);
+                    ConstantSP item = DdbPythonUtil::toDolphinDB(tmpObj, typeInfer == DT_ANY ? Type{DT_UNK, EXPARAM_DEFAULT} : typeIndicator);
                     ddbVec->append(item);
                 }
                 break;
@@ -1527,7 +1627,7 @@ inferobjectdtype:
         DLOG(py2str(obj.get_type()));
     }
     obj = obj.attr("transpose")().attr("reshape")(obj.size());
-    ConstantSP tmp = toDolphinDB_NDArray(obj, typeIndicator, CHILD_VECTOR_OPTION::DISABLE);
+    ConstantSP tmp = _toDolphinDB_NDArray(obj, typeIndicator, CHILD_VECTOR_OPTION::DISABLE);
     ConstantSP matrix = Util::createMatrix(tmp->getType(), cols, rows, cols);
     matrix->set(0, 0, tmp);
     return matrix;
@@ -1535,10 +1635,11 @@ inferobjectdtype:
 
 template <typename T>
 ConstantSP
-toDolphinDB_Vector_TupleOrList(T obj,
-                               Type typeIndicator,
-                               const CHILD_VECTOR_OPTION &option,
-                               typename std::enable_if<std::is_same<T, py::list>::value || std::is_same<T, py::tuple>::value, T>::type*) {
+_toDolphinDB_Vector_TupleOrList(
+    T                           obj,
+    Type                        typeIndicator,
+    const CHILD_VECTOR_OPTION   &option,
+    typename std::enable_if<std::is_same<T, py::list>::value || std::is_same<T, py::tuple>::value, T>::type*) {
     TableVectorInfo info = {true, ""};
     DATA_TYPE &typeInfer = typeIndicator.first;
     int &exparam = typeIndicator.second;
@@ -1550,7 +1651,32 @@ toDolphinDB_Vector_TupleOrList(T obj,
     bool is_Null = false;
     bool all_Null = true;
     int nullpri = 0;
-    Type nullType = {DT_UNK, -1};
+    Type nullType = {DT_UNK, EXPARAM_DEFAULT};
+    if (typeInfer != DT_UNK) {
+        // Indicate Explicit Type
+        DLOG("typeInfer: ", typeInfer);
+        DLOG("exparam: ", exparam);
+        ddbVec = Util::createVector(typeInfer, 0, size, true, exparam == EXPARAM_DEFAULT ? 0 : exparam);
+        if (typeInfer == DT_ANY) {
+            if (option == CHILD_VECTOR_OPTION::ARRAY_VECTOR) {
+                throw RuntimeException("unsupport Indicate Array Vector as Any Vector.");
+            }
+            for (auto &it : obj) {
+                tmpObj = py::reinterpret_borrow<py::object>(it);
+                ConstantSP item = DdbPythonUtil::toDolphinDB(tmpObj, Type{DT_UNK, EXPARAM_DEFAULT});
+                ddbVec->append(item);
+            }
+        }
+        else {
+            for (auto &it : obj) {
+                tmpObj = py::reinterpret_borrow<py::object>(it);
+                ConstantSP item = DdbPythonUtil::toDolphinDB_Scalar(tmpObj, typeIndicator);
+                ddbVec->append(item);
+            }
+        }
+        return ddbVec;
+    }
+
     for (auto &it : obj) {
         tmpObj = py::reinterpret_borrow<py::object>(it);
         canCheck = checkElemType(tmpObj, typeIndicator, option, is_ArrayVector, is_Null, nullpri, nullType);
@@ -1576,26 +1702,33 @@ toDolphinDB_Vector_TupleOrList(T obj,
     }
     DLOG("typeInfer: ", typeInfer);
     DLOG("exparam: ", exparam);
-    ddbVec = Util::createVector(typeInfer, 0, size, true, exparam == -1 ? 0 : exparam);
+    ddbVec = Util::createVector(typeInfer, 0, size, true, exparam == EXPARAM_DEFAULT ? 0 : exparam);
     for (auto &it : obj) {
         tmpObj = py::reinterpret_borrow<py::object>(it);
-        ConstantSP item = DdbPythonUtil::toDolphinDB(tmpObj, typeInfer == DT_ANY ? Type{DT_UNK, -1} : typeIndicator);
+        ConstantSP item = DdbPythonUtil::toDolphinDB(tmpObj, typeInfer == DT_ANY ? Type{DT_UNK, EXPARAM_DEFAULT} : typeIndicator);
         ddbVec->append(item);
     }
     return ddbVec;
 }
 
-ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, const CHILD_VECTOR_OPTION &options, const TableVectorInfo &info) {
+ConstantSP _toDolphinDB_Vector_SeriesOrIndex(
+    py::object                  obj,
+    Type                        typeIndicator,
+    const CHILD_VECTOR_OPTION   &options,
+    const TableVectorInfo       &info) {
     // Convert from pd.Series to VectorSP
     DATA_TYPE &typeInfer = typeIndicator.first;
     bool Is_ArrayVector = false;
     bool Is_DTypeObject = false;
     bool Is_ArrowDType = false;
-    bool need_check_arrow = DdbPythonUtil::preserved_->pd_above_2_00_ && DdbPythonUtil::preserved_->pyarrow_import_;
+    bool need_check_arrow = DdbPythonUtil::preserved_->pd_above_2_0_ && DdbPythonUtil::preserved_->pyarrow_import_;
     py::dtype dtype = py::reinterpret_borrow<py::dtype>(obj.attr("dtype"));
     Is_DTypeObject = dtype.equal(DdbPythonUtil::preserved_->npobject_);
     if (typeInfer == DT_UNK) {  // Infer DType [NumpyDType, ...]
         typeIndicator = InferDataTypeFromDType(dtype, Is_ArrowDType, need_check_arrow);
+        if (typeInfer == DT_EXTENSION) {
+            typeIndicator = InferDataTypeFromExtensionDType(dtype);
+        }
     }
     else if (need_check_arrow) {
         if (py::isinstance(dtype, DdbPythonUtil::preserved_->pdarrowdtype_)) {
@@ -1609,12 +1742,104 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
         // Data in Series with NumpyDType cannot be ArrayVector
         Type exactDtype = InferDataTypeFromDType(dtype, Is_ArrowDType, need_check_arrow);
         if (exactDtype.first == DT_EXTENSION) {
-            if (typeInfer != DT_EXTENSION) {
-                // Indicate Type & Dtype=pd.core.dtypes.dtypes.ExtensionDtype
-                goto indicatetype;
+            exactDtype = InferDataTypeFromExtensionDType(dtype);
+            py::array series_array = py::cast<py::array>(obj);
+            py::dtype series_array_dt = series_array.dtype();
+            size_t size = series_array.size();
+            VectorSP ddbVec;
+            switch (typeInfer) {
+                case DT_BOOL:
+                case DT_CHAR: {
+                    if (exactDtype.first != DT_BOOL && exactDtype.first != DT_CHAR &&
+                        exactDtype.first != DT_SHORT && exactDtype.first != DT_INT && exactDtype.first != DT_LONG) {
+                        throw RuntimeException(py2str(dtype) + " cannot be specified as " + Util::getDataTypeString(typeInfer));
+                    }
+                    ddbVec = Util::createVector(typeInfer, 0, size);
+                    py::array_t<int8_t> change_array = obj.attr("to_numpy")("dtype"_a="int8", "na_value"_a=CHAR_MIN);
+                    ddbVec->appendChar(reinterpret_cast<char*>(const_cast<int8_t*>(change_array.data())), size);
+                    break;
+                }
+                case DT_SHORT: {
+                    if (exactDtype.first != DT_BOOL && exactDtype.first != DT_CHAR &&
+                        exactDtype.first != DT_SHORT && exactDtype.first != DT_INT && exactDtype.first != DT_LONG) {
+                        throw RuntimeException(py2str(dtype) + " cannot be specified as " + Util::getDataTypeString(typeInfer));
+                    }
+                    ddbVec = Util::createVector(typeInfer, 0, size);
+                    py::array_t<int16_t> change_array = obj.attr("to_numpy")("dtype"_a="int16", "na_value"_a=SHRT_MIN);
+                    ddbVec->appendShort(reinterpret_cast<short*>(const_cast<int16_t*>(change_array.data())), size);
+                    break;
+                }
+                case DT_INT: {
+                    if (exactDtype.first != DT_BOOL && exactDtype.first != DT_CHAR &&
+                        exactDtype.first != DT_SHORT && exactDtype.first != DT_INT && exactDtype.first != DT_LONG) {
+                        throw RuntimeException(py2str(dtype) + " cannot be specified as " + Util::getDataTypeString(typeInfer));
+                    }
+                    ddbVec = Util::createVector(typeInfer, 0, size);
+                    py::array_t<int32_t> change_array = obj.attr("to_numpy")("dtype"_a="int32", "na_value"_a=INT_MIN);
+                    ddbVec->appendInt(reinterpret_cast<int*>(const_cast<int32_t*>(change_array.data())), size);
+                    break;
+                }
+                case DT_LONG: {
+                    if (exactDtype.first != DT_BOOL && exactDtype.first != DT_CHAR &&
+                        exactDtype.first != DT_SHORT && exactDtype.first != DT_INT && exactDtype.first != DT_LONG) {
+                        throw RuntimeException(py2str(dtype) + " cannot be specified as " + Util::getDataTypeString(typeInfer));
+                    }
+                    ddbVec = Util::createVector(typeInfer, 0, size);
+                    py::array_t<int64_t> change_array = obj.attr("to_numpy")("dtype"_a="int64", "na_value"_a=LLONG_MIN);
+                    ddbVec->appendLong(reinterpret_cast<long long*>(const_cast<int64_t*>(change_array.data())), size);
+                    break;
+                }
+                case DT_FLOAT: {
+                    if (exactDtype.first != DT_BOOL && exactDtype.first != DT_CHAR &&
+                        exactDtype.first != DT_SHORT && exactDtype.first != DT_INT && exactDtype.first != DT_LONG &&
+                        exactDtype.first != DT_FLOAT && exactDtype.first != DT_DOUBLE) {
+                        throw RuntimeException(py2str(dtype) + " cannot be specified as " + Util::getDataTypeString(typeInfer));
+                    }
+                    ddbVec = Util::createVector(typeInfer, 0, size);
+                    py::array_t<float> change_array = obj.attr("to_numpy")("dtype"_a="float32", "na_value"_a=FLT_NMIN);
+                    ddbVec->appendFloat(const_cast<float*>(change_array.data()), size);
+                    break;
+                }
+                case DT_DOUBLE: {
+                    if (exactDtype.first != DT_BOOL && exactDtype.first != DT_CHAR &&
+                        exactDtype.first != DT_SHORT && exactDtype.first != DT_INT && exactDtype.first != DT_LONG &&
+                        exactDtype.first != DT_FLOAT && exactDtype.first != DT_DOUBLE) {
+                        throw RuntimeException(py2str(dtype) + " cannot be specified as " + Util::getDataTypeString(typeInfer));
+                    }
+                    ddbVec = Util::createVector(typeInfer, 0, size);
+                    py::array_t<double> change_array = obj.attr("to_numpy")("dtype"_a="float64", "na_value"_a=DBL_NMIN);
+                    ddbVec->appendDouble(const_cast<double*>(change_array.data()), size);
+                    break;
+                }
+                case DT_IP:
+                case DT_UUID:
+                case DT_INT128:
+                case DT_SYMBOL:
+                case DT_STRING: {
+                    if (exactDtype.first != DT_STRING) {
+                        throw RuntimeException(py2str(dtype) + " cannot be specified as " + Util::getDataTypeString(typeInfer));
+                    }
+                    py::array series_array = py::cast<py::array>(obj);
+                    size_t size = series_array.size();
+                    ddbVec = Util::createVector(typeInfer, 0, size);
+                    addStringVector(ddbVec, series_array, size, 0, info);
+                    break;
+                }
+                case DT_BLOB: {
+                    if (exactDtype.first != DT_STRING) {
+                        throw RuntimeException(py2str(dtype) + " cannot be specified as " + Util::getDataTypeString(typeInfer));
+                    }
+                    py::array series_array = py::cast<py::array>(obj);
+                    size_t size = series_array.size();
+                    ddbVec = Util::createVector(DT_BLOB, size, size);
+                    setBlobVector(ddbVec, series_array, size, 0, info);
+                    break;
+                }
+                default: {
+                    throw RuntimeException(py2str(dtype) + " cannot be specified as " + Util::getDataTypeString(typeInfer));
+                }
             }
-            typeInfer = DT_OBJECT;
-            goto inferobjecttype;
+            return ddbVec;
         }
         if (typeInfer == DT_OBJECT)
             // typeInfer == DT_OBJECT && !Is_DTypeObject ==> Indicate Type is OBJECT !!Not possible!!
@@ -1812,7 +2037,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                 case DT_DECIMAL32:
                 case DT_DECIMAL64:
                 case DT_DECIMAL128: {
-                    if (elemType.second == -1) {
+                    if (elemType.second == EXPARAM_DEFAULT) {
                         elemType.second = py::cast<int>(dtype.attr("pyarrow_dtype").attr("value_type").attr("scale"));
                     }
                     py::array values = DdbPythonUtil::preserved_->pdseries_(obj.attr("values"),
@@ -2033,7 +2258,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                 case DT_DECIMAL32:
                 case DT_DECIMAL64:
                 case DT_DECIMAL128: {
-                    if (typeIndicator.second == -1) {
+                    if (typeIndicator.second == EXPARAM_DEFAULT) {
                         typeIndicator.second = py::cast<int>(dtype.attr("pyarrow_dtype").attr("scale"));
                     }
                     py::array series_array = obj.attr("to_numpy")("dtype"_a="object");
@@ -2111,7 +2336,7 @@ ConstantSP toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, 
                 case DT_NANOTIMESTAMP: {
                     // dtype = datetime64[ns] | datetime64[s] | datetime64[ms]
                     // In Pandas2.0 : s -> int32 | ms -> int64, need special case
-                    if (!DdbPythonUtil::preserved_->pd_above_2_00_ || dtype.equal(DdbPythonUtil::preserved_->npdatetime64ns_())) {
+                    if (!DdbPythonUtil::preserved_->pd_above_2_0_ || dtype.equal(DdbPythonUtil::preserved_->npdatetime64ns_())) {
                         py::array_t<int64_t> series_array = py::cast<py::array_t<int64_t, py::array::f_style | py::array::forcecast>>(obj);
                         size_t size = series_array.size();
                         ddbVec = Util::createVector(DT_NANOTIMESTAMP, 0, size);
@@ -2238,7 +2463,7 @@ indicatetype:
         if (typeInfer >= ARRAY_TYPE_BASE) {
             // Indicate as ARRAY VECTOR
             DLOG("is_ArrayVector.");
-            Type typeExact = std::make_pair(DT_OBJECT, -1);
+            Type typeExact = std::make_pair(DT_OBJECT, EXPARAM_DEFAULT);
             Type elemType = {(DATA_TYPE)(typeInfer - ARRAY_TYPE_BASE), typeIndicator.second};
             DLOG("elemType: ", Util::getDataTypeString(elemType.first), elemType.second);
             bool isArrayVector;
@@ -2246,14 +2471,14 @@ indicatetype:
             bool allNull;
             int Nullpri;
             bool canCheck = false;
-            Type NullType = std::make_pair(DT_UNK, -1);
+            Type NullType = std::make_pair(DT_UNK, EXPARAM_DEFAULT);
             vector<size_t> noneCounts;
             VectorSP pChildVector;
             VectorSP pAnyVector;
             noneCounts.reserve(size);
             bool ElemIsArrayLike;
 
-            if (Util::getCategory(elemType.first) == DATA_CATEGORY::DENARY && elemType.second == -1) {
+            if (Util::getCategory(elemType.first) == DATA_CATEGORY::DENARY && elemType.second == EXPARAM_DEFAULT) {
                 // Get scale at first.
                 size_t index = 0;
                 for (auto &it : series_array) {
@@ -2263,15 +2488,15 @@ indicatetype:
                     allNull = true;
                     typeExact = getChildrenType(tmpObj, CHILD_VECTOR_OPTION::DISABLE, ElemIsArrayLike, allNull);
                     if (allNull) {
-                        typeExact = {DT_UNK, -1};
+                        typeExact = {DT_UNK, EXPARAM_DEFAULT};
                         noneCounts.push_back(py::len(tmpObj));
                         ++index;
                         continue;
                     }
-                    if (typeExact.second == -1) {
+                    if (typeExact.second == EXPARAM_DEFAULT) {
                         throw RuntimeException("Cannot convert " + Util::getDataTypeString(typeExact.first) + " to " + Util::getDataTypeString(elemType.first) + ".");
                     }
-                    if (typeIndicator.second == -1) {
+                    if (typeIndicator.second == EXPARAM_DEFAULT) {
                         typeIndicator.second = typeExact.second;
                         elemType.second = typeExact.second;
                     }
@@ -2280,7 +2505,7 @@ indicatetype:
                     }
                     if (ddbVec.isNull()) {
                         DLOG("Crate ArrayVector: ", Util::getDataTypeString(typeInfer), typeIndicator.second);
-                        ddbVec = Util::createArrayVector(typeInfer, 0, size, true, typeIndicator.second == -1 ? 0 : typeIndicator.second);
+                        ddbVec = Util::createArrayVector(typeInfer, 0, size, true, typeIndicator.second == EXPARAM_DEFAULT ? 0 : typeIndicator.second);
                     }
                         
                     if (noneCounts.size() > 0) {
@@ -2294,7 +2519,7 @@ indicatetype:
                     pChildVector = Util::createVector(elemType.first, 0, len, true, elemType.second);
                     try {
                         for (auto &item : tmpObj) {
-                            pChildVector->append(toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(item), elemType));
+                            pChildVector->append(_toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(item), elemType));
                         }
                         DLOG("here: ", pChildVector->getString());
                         pAnyVector = Util::createVector(DT_ANY, 0, 1);
@@ -2318,7 +2543,7 @@ indicatetype:
                 }
             }
             else {
-                ddbVec = Util::createArrayVector(typeInfer, 0, size, true, typeIndicator.second == -1 ? 0 : typeIndicator.second);
+                ddbVec = Util::createArrayVector(typeInfer, 0, size, true, typeIndicator.second == EXPARAM_DEFAULT ? 0 : typeIndicator.second);
                 size_t index = 0;
                 for (auto &it : series_array) {
                     tmpObj = py::cast<py::object>(it);
@@ -2329,7 +2554,7 @@ indicatetype:
                     pChildVector = Util::createVector(elemType.first, 0, len, true, elemType.second);
                     try {
                         for (auto &item : tmpObj) {
-                            pChildVector->append(toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(item), elemType));
+                            pChildVector->append(_toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(item), elemType));
                         }
                         pAnyVector = Util::createVector(DT_ANY, 0, 1);
                         pAnyVector->append(pChildVector);
@@ -2395,7 +2620,7 @@ indicatetype:
                 size_t index = 0;
                 for (auto &it : series_array) {
                     try {
-                        tmpObj = toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(it), typeIndicator);
+                        tmpObj = _toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(it), typeIndicator);
                         ddbVec->append(tmpObj);
                     }
                     catch (...) {
@@ -2439,8 +2664,8 @@ indicatetype:
             case DT_DECIMAL64:
             case DT_DECIMAL128: {
                 size_t index = 0;
-                int exparam = -1;
-                if (typeIndicator.second == -1) {
+                int exparam = EXPARAM_DEFAULT;
+                if (typeIndicator.second == EXPARAM_DEFAULT) {
                     // Need to Infer Exparam
                     int nullCount = 0;
                     for (auto &it : series_array) {
@@ -2452,7 +2677,7 @@ indicatetype:
                             }
                             if (py::isinstance(it, DdbPythonUtil::preserved_->decimal_)) {
                                 exparam = getPyDecimalScale(it.ptr());
-                                if (exparam == -1) {
+                                if (exparam == EXPARAM_DEFAULT) {
                                     ++nullCount;
                                     ++index;
                                     continue;
@@ -2472,7 +2697,7 @@ indicatetype:
                     createAllNullVector(ddbVec, typeInfer, size, 0);
                     break;
                 }
-                if (exparam != -1) {    // Infer exparam
+                if (exparam != EXPARAM_DEFAULT) {    // Infer exparam
                     ddbVec = Util::createVector(typeInfer, index, size, true, exparam);
                 }
                 else {
@@ -2521,7 +2746,7 @@ inferobjecttype:
     bool is_Null = false;
     bool all_Null = true;
     int nullpri = 0;
-    Type nullType = {DT_UNK, -1};
+    Type nullType = {DT_UNK, EXPARAM_DEFAULT};
     py::object tmpObj;
     for (auto &it : series_array) {
         tmpObj = py::reinterpret_borrow<py::object>(it);
@@ -2563,8 +2788,8 @@ inferobjecttype:
     if (is_ArrayVector) {           // options == CHILD_VERTOR_OPTION::ARRAY_VECTOR
         // Infer as ARRAY VECTOR
         DLOG("is_ArrayVector.");
-        typeIndicator = {DT_UNK, -1};
-        Type typeExact = std::make_pair(DT_UNK, -1);
+        typeIndicator = {DT_UNK, EXPARAM_DEFAULT};
+        Type typeExact = std::make_pair(DT_UNK, EXPARAM_DEFAULT);
         bool ElemIsArrayLike = false;
         vector<size_t> noneCounts;
         VectorSP pChildVector;
@@ -2580,7 +2805,7 @@ inferobjecttype:
             DLOG("typeExact: ", Util::getDataTypeString(typeExact.first), typeExact.second);
             DLOG("all_Null: ", all_Null);
             if (all_Null) {
-                typeExact = {DT_UNK, -1};
+                typeExact = {DT_UNK, EXPARAM_DEFAULT};
                 noneCounts.push_back(py::len(tmpObj));
                 ++index;
                 continue;
@@ -2593,7 +2818,7 @@ inferobjecttype:
                 throw RuntimeException("Not allowed to create a Table column with type Any.");
             }
             if (ddbVec.isNull())
-                ddbVec = Util::createArrayVector((DATA_TYPE)(typeInfer + 64), 0, size, true, typeIndicator.second == -1 ? 0 : typeIndicator.second);
+                ddbVec = Util::createArrayVector((DATA_TYPE)(typeInfer + 64), 0, size, true, typeIndicator.second == EXPARAM_DEFAULT ? 0 : typeIndicator.second);
             if (noneCounts.size() > 0) {
                 for (auto count : noneCounts) {
                     createAllNullVector(pChildVector, typeInfer, count);
@@ -2605,7 +2830,7 @@ inferobjecttype:
             pChildVector = Util::createVector(typeInfer, 0, len, true, typeIndicator.second);
             try {
                 for (auto &item : tmpObj) {
-                    pChildVector->append(toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(item), typeIndicator));
+                    pChildVector->append(_toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(item), typeIndicator));
                 }
                 pAnyVector = Util::createVector(DT_ANY, 0, 1);
                 pAnyVector->append(pChildVector);
@@ -2680,7 +2905,7 @@ inferobjecttype:
             size_t index = 0;
             for (auto &it : series_array) {
                 try {
-                    tmpObj = toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(it), typeIndicator);
+                    tmpObj = _toDolphinDB_Scalar(py::reinterpret_borrow<py::object>(it), typeIndicator);
                     ddbVec->append(tmpObj);
                 }
                 catch (...) {
@@ -2724,8 +2949,8 @@ inferobjecttype:
         case DT_DECIMAL64:
         case DT_DECIMAL128: {
             size_t index = 0;
-            int exparam = -1;
-            if (typeIndicator.second == -1) {
+            int exparam = EXPARAM_DEFAULT;
+            if (typeIndicator.second == EXPARAM_DEFAULT) {
                 // Need to Infer Exparam
                 int nullCount = 0;
                 for (auto &it : series_array) {
@@ -2737,7 +2962,7 @@ inferobjecttype:
                         }
                         if (py::isinstance(it, DdbPythonUtil::preserved_->decimal_)) {
                             exparam = getPyDecimalScale(it.ptr());
-                            if (exparam == -1) {
+                            if (exparam == EXPARAM_DEFAULT) {
                                 ++nullCount;
                                 ++index;
                                 continue;
@@ -2757,7 +2982,7 @@ inferobjecttype:
                 createAllNullVector(ddbVec, typeInfer, size, 0);
                 break;
             }
-            if (exparam != -1) {    // Infer exparam
+            if (exparam != EXPARAM_DEFAULT) {    // Infer exparam
                 ddbVec = Util::createVector(typeInfer, 0, size, true, exparam);
             }
             else {
@@ -2789,10 +3014,10 @@ inferobjecttype:
             }
         }
         case DT_ANY: {
-            ddbVec = Util::createVector(typeInfer, 0, size, true, typeIndicator.second == -1 ? 0 : typeIndicator.second);
+            ddbVec = Util::createVector(typeInfer, 0, size, true, typeIndicator.second == EXPARAM_DEFAULT ? 0 : typeIndicator.second);
             for (auto &it : series_array) {
                 tmpObj = py::reinterpret_borrow<py::object>(it);
-                ConstantSP item = DdbPythonUtil::toDolphinDB(tmpObj, typeInfer == DT_ANY ? Type{DT_OBJECT, -1} : typeIndicator);
+                ConstantSP item = DdbPythonUtil::toDolphinDB(tmpObj, typeInfer == DT_ANY ? Type{DT_OBJECT, EXPARAM_DEFAULT} : typeIndicator);
                 ddbVec->append(item);
             }
         }
@@ -2803,47 +3028,47 @@ inferobjecttype:
     return ddbVec;
 }
 
-ConstantSP toDolphinDB_Vector(py::object obj, Type typeIndicator, CHILD_VECTOR_OPTION option, TableVectorInfo info) {
+ConstantSP _toDolphinDB_Vector(py::object obj, Type typeIndicator, CHILD_VECTOR_OPTION option, TableVectorInfo info) {
     if (py::isinstance(obj, DdbPythonUtil::preserved_->pytuple_)) {
         // Indicate as DF_VECTOR
-        return toDolphinDB_Vector_TupleOrList(py::reinterpret_borrow<py::tuple>(obj), typeIndicator, option);
+        return _toDolphinDB_Vector_TupleOrList(py::reinterpret_borrow<py::tuple>(obj), typeIndicator, option);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pylist_)) {
         // Indicate as DF_VECTOR
-        return toDolphinDB_Vector_TupleOrList(py::reinterpret_borrow<py::list>(obj), typeIndicator, option);
+        return _toDolphinDB_Vector_TupleOrList(py::reinterpret_borrow<py::list>(obj), typeIndicator, option);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->nparray_)) {
         // Indicate as DF_VECTOR or DF_MATRIX
-        return toDolphinDB_NDArray(py::reinterpret_borrow<py::array>(obj), typeIndicator, option);
+        return _toDolphinDB_NDArray(py::reinterpret_borrow<py::array>(obj), typeIndicator, option);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pdseries_)) {
         // Indicate as DF_VECTOR
         TableVectorInfo info = {true, ""};
-        return toDolphinDB_Vector_SeriesOrIndex(obj, typeIndicator, option, info);
+        return _toDolphinDB_Vector_SeriesOrIndex(obj, typeIndicator, option, info);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pdindex_)) {
         // Indicate as DF_VECTOR
         TableVectorInfo info = {true, ""};
-        return toDolphinDB_Vector_SeriesOrIndex(obj, typeIndicator, option, info);
+        return _toDolphinDB_Vector_SeriesOrIndex(obj, typeIndicator, option, info);
     }
     else {
         throw RuntimeException("cannot convert " + py2str(obj) + " to Vector.");
     }
 }
 
-ConstantSP toDolphinDB_Scalar(py::object obj) {
-    Type typeIndicator = {DT_UNK, -1};
-    return toDolphinDB_Scalar(obj, typeIndicator);
+ConstantSP _toDolphinDB_Scalar(py::object obj) {
+    Type typeIndicator = {DT_UNK, EXPARAM_DEFAULT};
+    return _toDolphinDB_Scalar(obj, typeIndicator);
 }
 
-ConstantSP toDolphinDB_Scalar(py::object obj, Type typeIndicator) {
+ConstantSP _toDolphinDB_Scalar(py::object obj, Type typeIndicator) {
     bool isNull = false;
     int nullpri = 0;
     if (typeIndicator.first >= ARRAY_TYPE_BASE) {
         // Element in ArrayVector is Vector
         Type elemType = {(DATA_TYPE)(typeIndicator.first-ARRAY_TYPE_BASE), typeIndicator.second};
         TableVectorInfo info = {true, ""};
-        ConstantSP dataVector = toDolphinDB_Vector(obj, elemType, CHILD_VECTOR_OPTION::DISABLE, info);
+        ConstantSP dataVector = _toDolphinDB_Vector(obj, elemType, CHILD_VECTOR_OPTION::DISABLE, info);
         VectorSP anyVector = Util::createVector(DT_ANY, 0, 1);
         anyVector->append(dataVector);
         return anyVector;
@@ -2855,7 +3080,7 @@ ConstantSP toDolphinDB_Scalar(py::object obj, Type typeIndicator) {
     // Assert type < ARRAY_TYPE_BASE
     if (py::isinstance(obj, DdbPythonUtil::preserved_->pynone_) ||
         py::isinstance(obj, DdbPythonUtil::preserved_->pdNaT_)) {
-        return Util::createNullConstant(type);
+        return Util::createNullConstant(type, exparam == EXPARAM_DEFAULT ? 0 : exparam);
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pybool_)) {
         auto result = obj.cast<bool>();
@@ -2898,8 +3123,8 @@ ConstantSP toDolphinDB_Scalar(py::object obj, Type typeIndicator) {
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->decimal_)) {
         bool hasNull=false;
         int scale = getPyDecimalScale(obj.ptr());
-        if (scale == -1) {
-            return Util::createNullConstant(type);
+        if (scale == EXPARAM_DEFAULT) {
+            return Util::createNullConstant(type, exparam == EXPARAM_DEFAULT ? 0 : exparam);
         }
         if (type == DT_DECIMAL32) {
             return new Decimal32(scale, getPyDecimalData<int32_t>(obj.ptr(), hasNull));
@@ -2917,7 +3142,12 @@ ConstantSP toDolphinDB_Scalar(py::object obj, Type typeIndicator) {
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pdtimestamp_)) {
         long long result=obj.attr("value").cast<long long>();
-        return Util::createObject(type, result/1000000);       //to ms
+        ConstantSP constobj = Util::createTimestamp(result / 1000000);
+        if (type == DT_TIMESTAMP) {
+            return constobj;
+        }
+        constobj = constobj->castTemporal(type);
+        return constobj;
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->datetime64_)) {
         py::object dtype=getDType(obj);
@@ -3769,13 +3999,13 @@ py::object DdbPythonUtil::toPython(ConstantSP obj,bool tableFlag,ToPythonOption 
             case DT_INT128:
             case DT_SYMBOL: {
                 PyObject *tmp = PickleUnmarshall::decodeUtf8Text(obj->getString().data(), obj->getString().size());
-                pyObject=py::reinterpret_borrow<py::object>(tmp);
+                pyObject=py::reinterpret_steal<py::object>(tmp);
                 break;
             }
             case DT_BLOB:
             case DT_STRING: {
                 PyObject *tmp = PickleUnmarshall::decodeUtf8Text(obj->getStringRef().data(), obj->getStringRef().size());
-                pyObject=py::reinterpret_borrow<py::object>(tmp);
+                pyObject=py::reinterpret_steal<py::object>(tmp);
                 break;
             }
             case DT_DECIMAL32: {
@@ -4010,7 +4240,7 @@ void PytoDdbRowPool::convertLoop(){
                     size = prow->size();
                     for (i = 0; i < size; i++)
                     {
-                        pDdbRow->emplace_back(toDolphinDB_Scalar(prow->at(i), {pcolType[i], -1}));
+                        pDdbRow->emplace_back(_toDolphinDB_Scalar(prow->at(i), {pcolType[i], EXPARAM_DEFAULT}));
                     }
                     insertRows.emplace_back(pDdbRow);
                     pDdbRow = NULL;

@@ -10,6 +10,7 @@
 #include <DdbPythonUtil.h>
 #include <Util.h>
 #include <Wrappers.h>
+#include <EventHandler.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/eval.h>
@@ -243,7 +244,7 @@ public:
             checker[colNames[i]] = colTypes[i];
         }
         TRY
-            insertRows = partitionedTableAppender_.append(ddb::DdbPythonUtil::toDolphinDB(table, {ddb::DT_UNK, -1}, checker));
+            insertRows = partitionedTableAppender_.append(ddb::DdbPythonUtil::toDolphinDB(table, {ddb::DT_UNK, EXPARAM_DEFAULT}, checker));
         CATCH_EXCEPTION("<Exception> in append: ")
         return insertRows;
     }
@@ -735,7 +736,9 @@ public:
 
     void subscribe(const string &host, const int &port, py::object handler, const string &tableName, const string &actionName,
                         const long long &offset, const bool &resub, py::array filter,const string &userName,const string &password,
-                        StreamDeserializer &streamDeserializer) {
+                        StreamDeserializer &streamDeserializer,
+                        const std::vector<std::string> backupSites = std::vector<std::string>(),
+                        int resubTimeout = 100, bool subOnce = false) {
         if (subscriber_.isNull() && subscriberPool_.isNull() ) { throw std::runtime_error("streaming is not enabled"); }
         ddb::LockGuard<ddb::Mutex> LockGuard(&subscriberMutex_);
         string topic = host + "/" + std::to_string(port) + "/" + tableName + "/" + actionName;
@@ -754,21 +757,25 @@ public:
             handler(row);
         };
         ddb::VectorSP ddbFilter = filter.size() ? ddb::DdbPythonUtil::toDolphinDB(filter) : nullptr;
+        TRY
         vector<ddb::ThreadSP> threads;
         if(subscriber_.isNull() == false){
             ddb::ThreadSP thread = subscriber_->subscribe(host, port, ddbHandler, tableName, actionName, offset, resub, ddbFilter,
-                    false,false,userName,password,streamDeserializer.get());
+                    false,false,userName,password,streamDeserializer.get(), backupSites, resubTimeout, subOnce);
             threads.push_back(thread);
         }else{
             threads = subscriberPool_->subscribe(host, port, ddbHandler, tableName, actionName, offset, resub, ddbFilter,
-                    false,false,userName,password,streamDeserializer.get());
+                    false,false,userName,password,streamDeserializer.get(), backupSites, resubTimeout, subOnce);
         }
         topicThread_[topic] = threads;
+        CATCH_EXCEPTION("<Exception> in subscribe: ")
     }
 
     // FIXME: not thread safe
     void subscribeBatch(string &host,int port, py::object handler,string &tableName,string &actionName,long long offset, bool resub, py::array filter,
-            const bool & msgAsTable, int batchSize, double throttle,const string &userName,const string &password,StreamDeserializer &streamDeserializer) {
+            const bool & msgAsTable, int batchSize, double throttle,const string &userName,const string &password,StreamDeserializer &streamDeserializer,
+            const std::vector<std::string> backupSites = std::vector<std::string>(),
+            int resubTimeout = 100, bool subOnce = false) {
         if (subscriber_.isNull()) {
             if(subscriberPool_.isNull()){
                 throw std::runtime_error("streaming is not enabled");
@@ -804,11 +811,13 @@ public:
             }
         };
         ddb::VectorSP ddbFilter = filter.size() ? ddb::DdbPythonUtil::toDolphinDB(filter) : nullptr;
+        TRY
         vector<ddb::ThreadSP> threads;
         ddb::ThreadSP thread = subscriber_->subscribe(host, port, ddbHandler, tableName, actionName, offset, resub, ddbFilter, false, 
-            batchSize, throttle,msgAsTable,userName,password,streamDeserializer.get());
+            batchSize, throttle,msgAsTable,userName,password,streamDeserializer.get(), backupSites, resubTimeout, subOnce);
         threads.push_back(thread);
         topicThread_[topic] = threads;
+        CATCH_EXCEPTION("<Exception> in subscribeBatch: ")
     }
 
     // FIXME: not thread safe
@@ -818,10 +827,12 @@ public:
         string topic = host + "/" + std::to_string(port) + "/" + tableName + "/" + actionName;
         if (topicThread_.find(topic) == topicThread_.end()) { throw std::runtime_error("subscription " + topic + " not exists"); }
         {
+            TRY
             ddb::SmartPointer<py::gil_scoped_release> pgilRelease;
             if(PyGILState_Check() == 1)
                 pgilRelease = new py::gil_scoped_release;
             subscriber_->unsubscribe(host, port, tableName, actionName);
+            CATCH_EXCEPTION("<Exception> in unsubscribe: ")
         }
         vector<ddb::ThreadSP> &threads = topicThread_[topic];
         for(auto thread : threads){
@@ -871,14 +882,10 @@ public:
         }
         for (auto &it : topics) {
             vector<std::string> args = ddb::Util::split(it, '/');
-            TRY
+            try {
                 unsubscribe(args[0], std::stoi(args[1]), args[2], args[3]);
-            CATCH_EXCEPTION("<Exception> in session desctruction: ")
-        }
-        for (auto &it : topicThread_) {
-            for(auto &thread : it.second){
-                thread->join();
             }
+            catch (...) { }
         }
     }
 
@@ -984,7 +991,7 @@ public:
             checker[colNames[i]] = colTypes[i];
         }
         TRY
-            insertRows = autoFitTableAppender_.append(ddb::DdbPythonUtil::toDolphinDB(table, {ddb::DT_UNK, -1}, checker));
+            insertRows = autoFitTableAppender_.append(ddb::DdbPythonUtil::toDolphinDB(table, {ddb::DT_UNK, EXPARAM_DEFAULT}, checker));
         CATCH_EXCEPTION("<Exception> in append: ")
         return insertRows;
     }
@@ -1010,7 +1017,7 @@ public:
             checker[colNames[i]] = colTypes[i];
         }
         TRY
-            insertRows = autoFitTableUpsert_.upsert(ddb::DdbPythonUtil::toDolphinDB(table, {ddb::DT_UNK, -1}, checker));
+            insertRows = autoFitTableUpsert_.upsert(ddb::DdbPythonUtil::toDolphinDB(table, {ddb::DT_UNK, EXPARAM_DEFAULT}, checker));
         CATCH_EXCEPTION("<Exception> in append: ")
         return insertRows;
     }
@@ -1260,6 +1267,241 @@ private:
     ddb::SmartPointer<ddb::MultithreadedTableWriter> writer_;
 };
 
+
+class PyEventScheme {
+public:
+    PyEventScheme(py::object pyScheme) {
+        pyScheme_ = pyScheme;
+        name_ = py::cast<std::string>(pyScheme.attr("_event_name"));
+        std::vector<std::string> attrKeys;
+        std::vector<ddb::DATA_TYPE> attrTypes;
+        std::vector<ddb::DATA_FORM> attrForms;
+        std::vector<int> attrExtraParams;
+        py::dict typeCache = py::reinterpret_borrow<py::dict>(pyScheme.attr("_type_cache"));
+        for (auto &item : typeCache) {
+            attrKeys.push_back(py::cast<std::string>(item.first));
+            py::list tmpList = py::reinterpret_borrow<py::list>(item.second);
+            attrTypes.push_back((ddb::DATA_TYPE)(py::cast<int>(tmpList[0])));
+            attrForms.push_back((ddb::DATA_FORM)(py::cast<int>(tmpList[1])));
+            attrExtraParams.push_back(py::cast<int>(tmpList[2]));
+        }
+        scheme_ = ddb::EventSchema{name_, attrKeys, attrTypes, attrForms, attrExtraParams};
+    }
+    py::object createEvent(const std::vector<ddb::ConstantSP> &attrs) {
+        py::object event = pyScheme_();
+        int len = scheme_.fieldNames_.size();
+        for (int i = 0; i < len; ++i) {
+            py::setattr(event, scheme_.fieldNames_[i].c_str(), ddb::DdbPythonUtil::toPython(attrs[i]));
+        }
+        return std::move(event);
+    }
+    ddb::EventSchema scheme() {
+        return scheme_;
+    }
+    py::object pyScheme() {
+        return pyScheme_;
+    }
+    std::string name() {
+        return name_;
+    }
+private:
+    std::string         name_;
+    py::object          pyScheme_;
+    ddb::EventSchema    scheme_;
+};
+
+
+class PyEventSender {
+public:
+    PyEventSender(
+        SessionImpl &session,
+        const std::string& tableName,
+        const py::list &eventSchemes,
+        const std::vector<std::string>& eventTimeKeys,
+        const std::vector<std::string>& commonKeys): isReleased_(false) {
+        std::vector<ddb::EventSchema> schemes;
+        for (auto &scheme : eventSchemes) {
+            ddb::SmartPointer<PyEventScheme> pyScheme = new PyEventScheme(py::reinterpret_borrow<py::object>(scheme));
+            schemeMap_[pyScheme->name()] = pyScheme;
+            schemes.push_back(pyScheme->scheme());
+        }
+        sender_ = new ddb::EventSender(session.getConnection(), tableName, schemes, eventTimeKeys, commonKeys);
+    }
+    ~PyEventSender() {
+        release();
+    }
+    void release() {
+        if (!isReleased_) {
+            sender_.clear();
+            isReleased_ = true;
+        }
+    }
+    void sendEvent(const py::object& event) {
+        std::string eventType = py::cast<std::string>(event.attr("_event_name"));
+        if (schemeMap_.find(eventType) == schemeMap_.end()) {
+            throw std::runtime_error("Unknown eventType " + eventType);
+        }
+        ddb::EventSchema scheme = schemeMap_[eventType]->scheme();
+        std::vector<ddb::ConstantSP> attributes;
+        int len = scheme.fieldNames_.size();
+        attributes.reserve(len);
+
+        for (int i = 0; i < len; ++i) {
+            py::object obj = py::reinterpret_borrow<py::object>(event.attr(py::cast(scheme.fieldNames_[i])));
+            switch (scheme.fieldForms_[i])
+            {
+            case ddb::DATA_FORM::DF_SCALAR: {
+                attributes.push_back(ddb::DdbPythonUtil::toDolphinDB_Scalar(obj, {scheme.fieldTypes_[i], scheme.fieldExtraParams_[i]}));
+                break;
+            }
+            case ddb::DATA_FORM::DF_VECTOR: {
+                attributes.push_back(ddb::DdbPythonUtil::toDolphinDB_Vector(obj, {scheme.fieldTypes_[i], scheme.fieldExtraParams_[i]}, ddb::CHILD_VECTOR_OPTION::ARRAY_VECTOR));
+                break;
+            }
+            default:
+                throw std::runtime_error("Invalid data form for the field " + scheme.fieldNames_[i] + " of event " + scheme.eventType_ + ".");
+                break;
+            }
+        }
+        sender_->sendEvent(eventType, attributes);
+    }
+private:
+    std::map<std::string, ddb::SmartPointer<PyEventScheme>> schemeMap_;
+    ddb::SmartPointer<ddb::EventSender> sender_;
+    bool isReleased_;
+};
+
+
+class PyStreamingClient {
+public:
+    PyStreamingClient() {}
+    ~PyStreamingClient() {}
+public:
+    py::list getSubscriptionTopics() {
+        ddb::LockGuard<ddb::Mutex> LockGuard(&mutex_);
+        py::list topics;
+        for (auto &it : topicThread_) { topics.append(it.first); }
+        return topics;
+    }
+protected:
+    void unsubscribeImpl(
+        const std::string   &host,
+        const int           &port,
+        const std::string   &tableName,
+        const std::string   &actionName,
+        std::function<void(std::string, int, std::string, std::string)> unsubscribe) {
+        ddb::LockGuard<ddb::Mutex> lockGuard(&mutex_);
+        std::string topic = concatTopic(host, port, tableName, actionName);
+        if (!hasTopic(topic)) { throw std::runtime_error("subscription " + topic + " not exists"); }
+        {
+            TRY
+            ddb::SmartPointer<py::gil_scoped_release> pgilRelease;
+            if(PyGILState_Check() == 1)
+                pgilRelease = new py::gil_scoped_release;
+            unsubscribe(host, port, tableName, actionName);
+            CATCH_EXCEPTION("<Exception> in unsubscribe: ")
+        }
+        vector<ddb::ThreadSP> &threads = topicThread_[topic];
+        for(auto thread : threads){
+            if(thread->isRunning()) {
+                gcThread_.push_back(thread);
+                auto it = std::remove_if(gcThread_.begin(), gcThread_.end(), [](const ddb::ThreadSP& th) {
+                    return th->isComplete();
+                });
+                gcThread_.erase(it, gcThread_.end());
+            }
+        }
+        topicThread_.erase(topic);
+    }
+    void clearAllSubscribeImpl(std::function<void(std::string, int, std::string, std::string)> unsubscribe) {
+        vector<std::string> topics;
+        for (auto &it : topicThread_) {
+            topics.emplace_back(it.first);
+        }
+        for (auto &it : topics) {
+            vector<std::string> args = ddb::Util::split(it, '/');
+            try {
+                unsubscribeImpl(args[0], std::stoi(args[1]), args[2], args[3], unsubscribe);
+            }
+            catch (...) { }
+        }
+    }
+    inline std::string concatTopic(
+        const std::string   &host,
+        const int           &port,
+        const std::string   &tableName,
+        const std::string   &actionName) {
+        return host + "/" + std::to_string(port) + "/" + tableName + "/" + actionName;
+    }
+    inline bool hasTopic(const std::string &topic) {
+        return topicThread_.find(topic) != topicThread_.end();
+    }
+protected:
+    ddb::Mutex mutex_;
+    std::unordered_map<std::string, std::vector<ddb::ThreadSP>> topicThread_;
+    std::vector<ddb::ThreadSP> gcThread_;
+};
+
+
+class PyEventClient : public PyStreamingClient {
+public:
+    PyEventClient(
+        const py::list &eventSchemes,
+        const std::vector<std::string> &eventTimeKeys,
+        const std::vector<std::string> &commonKeys) : PyStreamingClient() {
+        std::vector<ddb::EventSchema> schemes;
+        for (const auto &scheme : eventSchemes) {
+            ddb::SmartPointer<PyEventScheme> pyScheme = new PyEventScheme(py::reinterpret_borrow<py::object>(scheme));
+            schemeMap_[pyScheme->name()] = pyScheme;
+            schemes.push_back(pyScheme->scheme());
+        }
+        client_ = new ddb::EventClient(schemes, eventTimeKeys, commonKeys);
+    }
+    ~PyEventClient() {
+        clearAllSubscribeImpl([this](std::string host, int port, std::string tableName, std::string actionName) {
+            this->client_->unsubscribe(host, port, tableName, actionName);
+        });
+    }
+    void subscribe(
+        const std::string &host,
+        const int &port,
+        py::object handler,
+        const std::string &tableName,
+        const std::string &actionName,
+        const long long &offset,
+        const bool &resub,
+        const std::string &userName,
+        const std::string &passWord) {
+        ddb::LockGuard<ddb::Mutex> lockGuard(&mutex_);
+        std::string topic = concatTopic(host, port, tableName, actionName);
+        if (hasTopic(topic)) { throw std::runtime_error("subscription " + topic + " already exists"); }
+        ddb::EventMessageHandler ddbHanlder = [handler, this](const std::string &name, const std::vector<ddb::ConstantSP> &attributes) {
+            // handle GIL
+            py::gil_scoped_acquire acquire;
+            ddb::SmartPointer<PyEventScheme> pyScheme = this->schemeMap_[name];
+            handler(pyScheme->createEvent(attributes));
+        };
+        TRY
+        std::vector<ddb::ThreadSP> threads;
+        threads.push_back(client_->subscribe(host, port, ddbHanlder, tableName, actionName, offset, resub, userName, passWord));
+        topicThread_[topic] = threads;
+        CATCH_EXCEPTION("<Exception> in subscribe: ")
+    }
+    void unsubscribe(
+        const std::string &host,
+        const int &port,
+        const std::string &tableName,
+        const std::string &actionName) {
+        unsubscribeImpl(host, port, tableName, actionName, [this](std::string host_, int port_, std::string tableName_, std::string actionName_) {
+            this->client_->unsubscribe(host_, port_, tableName_, actionName_);
+        });
+    }
+private:
+    std::map<std::string, ddb::SmartPointer<PyEventScheme>> schemeMap_;
+    ddb::SmartPointer<ddb::EventClient> client_;
+};
+
+
 PYBIND11_MODULE(_dolphindbcpp, m) {
     m.doc() = R"pbdoc(_dolphindbcpp: this is a C++ boosted DolphinDB Python API)pbdoc";
     m.def("init", &ddbinit);
@@ -1351,6 +1593,16 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
     
     py::class_<ddb::TableChecker>(m, "TableChecker")
         .def(py::init<const py::dict &>());
+
+    py::class_<PyEventSender>(m, "EventSender")
+        .def(py::init<SessionImpl&, const std::string&, const py::list&, const std::vector<std::string>&, const std::vector<std::string>&>())
+        .def("sendEvent", &PyEventSender::sendEvent);
+
+    py::class_<PyEventClient>(m, "EventClient")
+        .def(py::init<const py::list&, const std::vector<std::string>&, const std::vector<std::string>&>())
+        .def("subscribe", &PyEventClient::subscribe)
+        .def("unsubscribe", &PyEventClient::unsubscribe)
+        .def("getSubscriptionTopics", &PyEventClient::getSubscriptionTopics);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;

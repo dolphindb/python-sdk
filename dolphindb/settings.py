@@ -207,9 +207,9 @@ def getCategory(data_type):
         return DATA_CATEGORY.LOGICAL
     elif data_type in [DT_DOUBLE, DT_FLOAT]:
         return DATA_CATEGORY.FLOATING
-    elif data_type in [DT_STRING, DT_SYMBOL]:
+    elif data_type in [DT_STRING, DT_SYMBOL, DT_BLOB]:
         return DATA_CATEGORY.LITERAL
-    elif data_type in [DT_INT128, DT_UUID, DT_IPADDR, DT_BLOB]:
+    elif data_type in [DT_INT128, DT_UUID, DT_IPADDR]:
         return DATA_CATEGORY.BINARY
     elif data_type in [DT_ANY]:
         return DATA_CATEGORY.MIXED

@@ -30,15 +30,11 @@ IO_ERR StringVector::deserialize(DataInputStream* in, INDEX indexStart, INDEX ta
     auto readBlob = [&](string& value) -> IO_ERR {
         IO_ERR ret;
         int len;
-		size_t acLen = 0;
         if ((ret = in->readInt(len)) != OK)
             return ret;
         std::unique_ptr<char[]> buf(new char[len]);
-		if ((ret = in->readBytes(buf.get(), len, acLen)) != OK)
-			return ret;
-		if (acLen != (size_t) len)
-			return INVALIDDATA;
-
+        if ((ret = in->read(buf.get(), len)) != OK)
+            return ret;
         value.clear();
         value.append(buf.get(), len);
         return ret;

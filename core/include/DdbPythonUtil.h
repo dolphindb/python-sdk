@@ -25,11 +25,14 @@ namespace dolphindb {
 #endif
 #define DLOG true?ddb::DLogger::GetMinLevel():ddb::DLogger::Info
 
+#define EXPARAM_DEFAULT INT_MIN
+
 
 struct HIDEVISIBILITY Preserved {
     // instantiation only once for frequently use
     bool np_above_1_20_;
-    bool pd_above_2_00_;
+    bool pd_above_2_0_;
+    bool pd_above_1_2_;
     bool pyarrow_import_;
     bool has_arrow_;
     // modules and methods
@@ -49,6 +52,16 @@ struct HIDEVISIBILITY Preserved {
     py::object pdtimestamp_;
     py::object pdindex_;
     py::object pdextensiondtype_;
+
+    // pandas extension dtypes (use equal)
+    py::object pdBooleanDtype_;
+    py::object pdFloat32Dtype_;
+    py::object pdFloat64Dtype_;
+    py::object pdInt8Dtype_;
+    py::object pdInt16Dtype_;
+    py::object pdInt32Dtype_;
+    py::object pdInt64Dtype_;
+    py::object pdStringDtype_;
 
     // numpy dtypes (instances of dtypes, use equal)
     py::object nparray_;
@@ -197,8 +210,10 @@ public:
         }
     };
 
-    static ConstantSP toDolphinDB(py::object obj, Type typeIndicator = {DT_UNK, -1}, TableChecker checker = TableChecker());
+    static ConstantSP toDolphinDB(py::object obj, Type typeIndicator = {DT_UNK, EXPARAM_DEFAULT}, TableChecker checker = TableChecker());
     static py::object toPython(ConstantSP obj, bool tableFlag=false, ToPythonOption *poption = NULL);
+    static ConstantSP toDolphinDB_Scalar(py::object obj, Type typeIndicator = {DT_UNK, EXPARAM_DEFAULT});
+    static ConstantSP toDolphinDB_Vector(py::object obj, Type typeIndicator = {DT_UNK, EXPARAM_DEFAULT}, CHILD_VECTOR_OPTION option = CHILD_VECTOR_OPTION::DISABLE);
     static py::object loadPickleFile(const std::string &filepath);
     static void createPyVector(const ConstantSP &obj,py::object &pyObject,bool tableFlag,ToPythonOption *poption);
     static Preserved *preserved_;

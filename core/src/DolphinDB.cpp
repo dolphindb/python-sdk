@@ -1103,9 +1103,10 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
     if(fetchSize > 0 && fetchSize < 8192)
         throw IOException("fetchSize must be greater than 8192");
     //force Python release GIL
-    SmartPointer<py::gil_scoped_release> pgilRelease;
-    if(PyGILState_Check() == 1)
-        pgilRelease = new py::gil_scoped_release;
+    // SmartPointer<py::gil_scoped_release> pgilRelease;
+    // if(PyGILState_Check() == 1)
+    //     pgilRelease = new py::gil_scoped_release;
+    ProtectGil nogil(true, "run");
     string body;
     int argCount = args.size();
     if (scriptType == "script")

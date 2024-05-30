@@ -695,9 +695,9 @@ DATA_CATEGORY Util::getCategory(DATA_TYPE type){
 		return LOGICAL;
 	else if (type == DT_DOUBLE || type == DT_FLOAT)
 		return FLOATING;
-	else if (type == DT_STRING || type == DT_SYMBOL)
+	else if (type == DT_STRING || type == DT_SYMBOL || type == DT_BLOB)
 		return LITERAL;
-	else if (type == DT_INT128 || type == DT_UUID || type == DT_IP || type == DT_BLOB)
+	else if (type == DT_INT128 || type == DT_UUID || type == DT_IP)
 		return BINARY;
 	else if (type == DT_ANY)
 		return MIXED;
@@ -1039,7 +1039,7 @@ int Util::getDataTypeSize(DATA_TYPE type){
 	if (type >= ARRAY_TYPE_BASE) {
 		type = DATA_TYPE(type - ARRAY_TYPE_BASE);
 	}
-	if(type == DT_BOOL || type == DT_CHAR || type == DT_COMPRESS){
+	if(type == DT_VOID || type == DT_BOOL || type == DT_CHAR || type == DT_COMPRESS){
 		return sizeof(char);
 	}
 	else if(type == DT_INT || type == DT_SYMBOL || type == DT_SECOND ||

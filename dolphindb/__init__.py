@@ -19,7 +19,7 @@ from .vector import Vector, FilterCond
 from .database import Database
 from .utils import month
 
-__version__ = "2.0.11.0"
+__version__ = "3.0.0.0"
 
 name = "dolphindb"
 
@@ -49,6 +49,7 @@ __all__ = [
     "settings",
     "__version__",
     "name",
+    "cep",
 
     "wavg",
     "wsum",

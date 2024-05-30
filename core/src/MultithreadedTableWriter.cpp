@@ -88,7 +88,7 @@ MultithreadedTableWriter::MultithreadedTableWriter(const std::string& hostName, 
 	int colIndex = colDefs->getColumnIndex("extra");
 	if (colIndex >= 0) {
 		ConstantSP colExtra = colDefs->getColumn(colIndex);
-		for (int i = 0; i < colExtra->size(); i++) {
+		for (int i = 0; i < static_cast<int>(colExtra->size()); i++) {
 			colExtras_[i] = colExtra->getInt(i);
 		}
 	} 

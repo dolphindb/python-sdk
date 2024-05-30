@@ -6,6 +6,7 @@
 #include "Concurrent.h"
 #include "TableImp.h"
 #include "DolphinDB.h"
+#include "EventHandler.h"
 #include "Util.h"
 #ifdef _MSC_VER
 	#ifdef _USRDLL	
@@ -76,6 +77,7 @@ using MessageQueueSP = SmartPointer<MessageQueue>;
 using MessageTableQueueSP = SmartPointer<MessageTableQueue>;
 using MessageHandler = std::function<void(Message)>;
 using MessageBatchHandler = std::function<void(vector<Message>)>;
+using EventMessageHandler = std::function<void(const std::string&, std::vector<ConstantSP>&)>;
 
 #define DEFAULT_ACTION_NAME "cppStreamingAPI"
 constexpr int DEFAULT_QUEUE_CAPACITY = 65536;
@@ -102,7 +104,8 @@ typedef SmartPointer<StreamDeserializer> StreamDeserializerSP;
 
 struct SubscribeInfo {
 	SubscribeInfo()
-		: host("INVAILD"),
+		: 	ID("INVALID"),
+			host("INVAILD"),
 			port(-1),
 			tableName("INVALID"),
 			actionName("INVALID"),
@@ -116,11 +119,32 @@ struct SubscribeInfo {
 			tqueue(nullptr),
 			userName(""),
 			password(""),
-			streamDeserializer(nullptr) {}
-	explicit SubscribeInfo(const string &host, int port, const string &tableName, const string &actionName, long long offset, bool resub,
-							const VectorSP &filter, bool msgAsTable, bool allowExists, int batchSize,
-							const string &userName, const string &password, const StreamDeserializerSP &blobDeserializer, const bool istqueue)
-		: host(move(host)),
+			streamDeserializer(nullptr),
+			currentSiteIndex(-1),
+			isEvent_(false),
+			resubTimeout(100),
+			subOnce(false),
+			lastSiteIndex(-1) {}
+	explicit SubscribeInfo(const string					&id,
+						   const string 				&host,
+						   int 							port,
+						   const string 				&tableName,
+						   const string 				&actionName,
+						   long long 					offset,
+						   bool 						resub,
+						   const VectorSP 				&filter,
+						   bool 						msgAsTable,
+						   bool 						allowExists,
+						   int 							batchSize,
+						   const string 				&userName,
+						   const string 				&password,
+						   const StreamDeserializerSP 	&blobDeserializer,
+						   const bool 					istqueue,
+						   bool							isEvent,
+						   int							resubTimeout,
+						   bool							subOnce)
+		: 	ID(move(id)),
+			host(move(host)),
 			port(port),
 			tableName(move(tableName)),
 			actionName(move(actionName)),
@@ -136,9 +160,15 @@ struct SubscribeInfo {
 			userName(move(userName)),
 			password(move(password)),
 			istqueue(istqueue),
-			streamDeserializer(blobDeserializer){
+			streamDeserializer(blobDeserializer),
+			currentSiteIndex(-1),
+			isEvent_(isEvent),
+			resubTimeout(resubTimeout),
+			subOnce(subOnce),
+			lastSiteIndex(-1) {
 	}
 
+	string ID;
 	string host;
 	int port;
 	string tableName;
@@ -158,6 +188,12 @@ struct SubscribeInfo {
 	SocketSP socket;
 	
 	vector<ThreadSP> handleThread;
+	vector<pair<string, int>> availableSites;
+	int currentSiteIndex;
+	bool isEvent_;
+	int resubTimeout;
+	bool subOnce;
+	int lastSiteIndex;
 	void setExitFlag() {
 		if (istqueue) {
 			tqueue->setExitFlag();
@@ -181,6 +217,22 @@ struct SubscribeInfo {
 		}
 		handleThread.clear();
 	}
+
+	void updateByReconnect(int currentReconnSiteIndex, const std::string &topic) {
+		auto thisTopicLastSuccessfulNode = this->lastSiteIndex;
+		if (this->subOnce && thisTopicLastSuccessfulNode != currentReconnSiteIndex) {
+			// update currentSiteIndex
+			if (thisTopicLastSuccessfulNode < currentReconnSiteIndex) {
+				currentReconnSiteIndex--;
+			}
+			// update info
+			this->availableSites.erase(this->availableSites.begin() + thisTopicLastSuccessfulNode);
+			this->currentSiteIndex = currentReconnSiteIndex;
+
+			// update lastSuccessfulNode
+			this->lastSiteIndex = currentReconnSiteIndex;
+		}
+	}
 };
 
 
@@ -198,12 +250,26 @@ protected:
                                      int64_t offset = -1, bool resubscribe = true, const VectorSP &filter = nullptr,
                                      bool msgAsTable = false, bool allowExists = false, int batchSize  = 1,
 									 string userName="", string password="",
-									 const StreamDeserializerSP &blobDeserializer = nullptr, bool istqueue = false);
+									 const StreamDeserializerSP &blobDeserializer = nullptr, bool istqueue = false,
+									 const std::vector<std::string> &backupSites = std::vector<std::string>(), bool isEvent = false,
+									 int resubTimeout = 100, bool subOnce = false);
     void unsubscribeInternal(string host, int port, string tableName, string actionName = DEFAULT_ACTION_NAME);
 
 protected:
     SmartPointer<StreamingClientImpl> impl_;
 };
+
+class EventClient : public StreamingClient{
+public:
+    EventClient(const std::vector<EventSchema>& eventSchemes, const std::vector<std::string>& eventTimeKeys, const std::vector<std::string>& commonKeys);
+    ThreadSP subscribe(const string& host, int port, const EventMessageHandler &handler, const string& tableName, const string& actionName = DEFAULT_ACTION_NAME, int64_t offset = -1,
+        bool resub = true, const string& userName="", const string& password="");
+    void unsubscribe(const string& host, int port, const string& tableName, const string& actionName = DEFAULT_ACTION_NAME);
+
+private:
+    EventHandler      eventHandler_;
+};
+
 
 class EXPORT_DECL ThreadedClient : public StreamingClient {
 public:
@@ -215,13 +281,17 @@ public:
                        string actionName = DEFAULT_ACTION_NAME, int64_t offset = -1, bool resub = true,
                        const VectorSP &filter = nullptr, bool msgAsTable = false, bool allowExists = false,
 						string userName="", string password="",
-					   const StreamDeserializerSP &blobDeserializer = nullptr);
+					   const StreamDeserializerSP &blobDeserializer = nullptr,
+					   const std::vector<std::string> &backupSites = std::vector<std::string>(),
+					   int resubTimeout = 100, bool subOnce = false);
     ThreadSP subscribe(string host, int port, const MessageBatchHandler &handler, string tableName,
                        string actionName = DEFAULT_ACTION_NAME, int64_t offset = -1, bool resub = true,
                        const VectorSP &filter = nullptr, bool allowExists = false, int batchSize = 1,
 						double throttle = 1,bool msgAsTable = false,
 						string userName = "", string password = "",
-						const StreamDeserializerSP &blobDeserializer = nullptr);
+						const StreamDeserializerSP &blobDeserializer = nullptr,
+						const std::vector<std::string> &backupSites = std::vector<std::string>(),
+						int resubTimeout = 100, bool subOnce = false);
 	size_t getQueueDepth(const ThreadSP &thread);
     void unsubscribe(string host, int port, string tableName, string actionName = DEFAULT_ACTION_NAME);
 };
@@ -236,7 +306,9 @@ public:
                                string actionName, int64_t offset = -1, bool resub = true,
                                const VectorSP &filter = nullptr, bool msgAsTable = false, bool allowExists = false,
 								string userName = "", string password = "",
-							   const StreamDeserializerSP &blobDeserializer = nullptr);
+							   const StreamDeserializerSP &blobDeserializer = nullptr,
+							   const std::vector<std::string> &backupSites = std::vector<std::string>(),
+							   int resubTimeout = 100, bool subOnce = false);
     void unsubscribe(string host, int port, string tableName, string actionName = DEFAULT_ACTION_NAME);
 	size_t getQueueDepth(const ThreadSP &thread);
 
@@ -254,7 +326,9 @@ public:
                              int64_t offset = -1, bool resub = true, const VectorSP &filter = nullptr,
                              bool msgAsTable = false, bool allowExists = false,
 							string userName="", string password="",
-							 const StreamDeserializerSP &blobDeserializer = nullptr);
+							 const StreamDeserializerSP &blobDeserializer = nullptr,
+							 const std::vector<std::string> &backupSites = std::vector<std::string>(),
+							 int resubTimeout = 100, bool subOnce = false);
     void unsubscribe(string host, int port, string tableName, string actionName = DEFAULT_ACTION_NAME);
 };
 
