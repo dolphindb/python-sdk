@@ -453,6 +453,7 @@ bool MultithreadedTableWriter::SendExecutor::writeAllData(){
 			{
 				for (auto &one : items) {
 					if (tableWriter_.unusedQueue_.size() < 65535) {
+                        one->clear();
 						tableWriter_.unusedQueue_.push(one);
 					}
 					else {
