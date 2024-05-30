@@ -1,0 +1,9 @@
+/build/
+/builds/
+/dist/
+/*egg-info/
+/wheelhouse/
+/.venv*/
+/.vscode/
+/.python-version
+*/__pycache__/*

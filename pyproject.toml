@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "pybind11==2.9.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+archs = ["auto"]
+build-frontend = "default"
+config-settings = {}
+dependency-versions = "pinned"
+environment = {}
+environment-pass = []
+build-verbosity = "3"
+
+skip = ["*-win32", "*-manylinux_i686", "pp*", "*-musllinux*", "cp312*", "cp311*"]
+
+before-all = ""
+before-build = [
+    "python --version",
+    "python -m pip install --upgrade pip"
+]
+repair-wheel-command = ""
+
+test-command = ""
+before-test = ""
+test-requires = []
+test-extras = []
+
+container-engine = "docker"
+
+manylinux-x86_64-image = "manylinux2014_x86_64:dolphindb"
+manylinux-aarch64-image = "manylinux2014_aarch64:dolphindb"
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+before-all = "rm -rf build"
+before-build = [
+    "python --version",
+    "python -m pip config set global.index-url --site https://pypi.tuna.tsinghua.edu.cn/simple",
+    "python -m pip install --upgrade pip"
+]
+
+[[tool.cibuildwheel.overrides]]
+select = "*-aarch64*"
+before-build = [
+    "python --version",
+    "python -m pip install --upgrade pip"
+]
+
+[tool.cibuildwheel.macos]
+repair-wheel-command = "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+archs = ["universal2", "x86_64", "arm64"]
+before-all = "rm -rf build"
+
+[tool.cibuildwheel.windows]
+before-all = [
+    "(if exist build rmdir /s /q build)",
+]
