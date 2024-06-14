@@ -793,8 +793,14 @@ public:
 	const string& getInitScript() const;
 	DataInputStreamSP getDataInputStream();
 
-	py::object runPy(const string& script, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory=false,bool pickleTableToList=false);
-	py::object runPy(const string& funcName, vector<ConstantSP>& args, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory=false,bool pickleTableToList=false);
+	py::object runPy(
+		const string& script, int priority=4, int parallelism=2,
+		int fetchSize=0, bool clearMemory=false,
+		bool pickleTableToList=false, bool disableDecimal=false);
+	py::object runPy(
+		const string& funcName, vector<ConstantSP>& args, int priority=4, int parallelism=2,
+		int fetchSize=0, bool clearMemory=false,
+		bool pickleTableToList=false, bool disableDecimal=false);
 	void setKeepAliveTime(int keepAliveTime);
 	const string getSessionId() const;
 	void setProtocol(PROTOCOL protocol);
@@ -892,8 +898,16 @@ public:
 
 	int getConnectionCount();
 
-	void runPy(const string& script, int identity, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory = false, bool pickleTableToList=false);
-    void runPy(const string& functionName, const vector<ConstantSP>& args, int identity, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory = false, bool pickleTableToList=false);
+	void runPy(
+		const string& script, int identity,
+		int priority=4, int parallelism=2,
+		int fetchSize=0, bool clearMemory = false,
+		bool pickleTableToList=false, bool disableDecimal=false);
+    void runPy(
+		const string& functionName, const vector<ConstantSP>& args,
+		int identity, int priority=4, int parallelism=2,
+		int fetchSize=0, bool clearMemory = false,
+		bool pickleTableToList=false, bool disableDecimal=false);
 	py::object getPyData(int identity);
 	vector<string> getSessionId();
 private:

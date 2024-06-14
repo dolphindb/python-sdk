@@ -821,5 +821,83 @@ class TestDecimal:
         mtwriter.waitForThreadCompletion()
         assert all(self.conn.run("res = select * from loadTable(dbpath, `pt);each(eqObj, res.values(), t.values())"))
 
+    @pytest.mark.parametrize('compress', [True,False])
+    def test_session_disableDecimal(self,compress):
+        conn=ddb.Session(HOST,PORT,USER,PASSWD,compress=compress)
+        result=conn.run("""
+            v_decimal32=array(DECIMAL32(2)).append!(decimal32(["nan","3.15","nan"],2));
+            v_decimal64=array(DECIMAL64(17)).append!(decimal64(["nan","3.14159265358979324","nan"],17));
+            v_decimal128=array(DECIMAL128(38)).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
+            av_decimal32=array(DECIMAL32(2)[]).append!([decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2)]);
+            av_decimal64=array(DECIMAL64(17)[]).append!([decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17)]);
+            av_decimal128=array(DECIMAL128(38)[]).append!([decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38)]);
+            table(
+                v_decimal32 as `v_decimal32,
+                v_decimal64 as `v_decimal64,
+                v_decimal128 as `v_decimal128,
+                av_decimal32 as `av_decimal32,
+                av_decimal64 as `av_decimal64,
+                av_decimal128 as `av_decimal128,
+                [1,2,3] as other
+            );
+        """,disableDecimal=True)
+        expect=conn.run("""
+            v_decimal32_d=array(DOUBLE).append!(decimal32(["nan","3.15","nan"],2));
+            v_decimal64_d=array(DOUBLE).append!(decimal64(["nan","3.14159265358979324","nan"],17));
+            v_decimal128_d=array(DOUBLE).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
+            av_decimal32_d=array(DOUBLE[]).append!([decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2)]);
+            av_decimal64_d=array(DOUBLE[]).append!([decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17)]);
+            av_decimal128_d=array(DOUBLE[]).append!([decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38)]);
+            table(
+                v_decimal32_d as `v_decimal32,
+                v_decimal64_d as `v_decimal64,
+                v_decimal128_d as `v_decimal128,
+                av_decimal32_d as `av_decimal32,
+                av_decimal64_d as `av_decimal64,
+                av_decimal128_d as `av_decimal128,
+                [1,2,3] as other
+            );
+        """,disableDecimal=False)
+        assert_frame_equal(result,expect)
+
+    @pytest.mark.parametrize('compress', [True, False])
+    def test_DBConnectionPool_disableDecimal(self,compress):
+        pool = ddb.DBConnectionPool(HOST, PORT, 2,USER,PASSWD,compress=compress)
+        result=pool.runTaskAsync("""
+            v_decimal32=array(DECIMAL32(2)).append!(decimal32(["nan","3.15","nan"],2));
+            v_decimal64=array(DECIMAL64(17)).append!(decimal64(["nan","3.14159265358979324","nan"],17));
+            v_decimal128=array(DECIMAL128(38)).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
+            av_decimal32=array(DECIMAL32(2)[]).append!([decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2)]);
+            av_decimal64=array(DECIMAL64(17)[]).append!([decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17)]);
+            av_decimal128=array(DECIMAL128(38)[]).append!([decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38)]);
+            table(
+                v_decimal32 as `v_decimal32,
+                v_decimal64 as `v_decimal64,
+                v_decimal128 as `v_decimal128,
+                av_decimal32 as `av_decimal32,
+                av_decimal64 as `av_decimal64,
+                av_decimal128 as `av_decimal128,
+                [1,2,3] as other
+            );
+        """,disableDecimal=True).result()
+        expect=pool.runTaskAsync("""
+            v_decimal32_d=array(DOUBLE).append!(decimal32(["nan","3.15","nan"],2));
+            v_decimal64_d=array(DOUBLE).append!(decimal64(["nan","3.14159265358979324","nan"],17));
+            v_decimal128_d=array(DOUBLE).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
+            av_decimal32_d=array(DOUBLE[]).append!([decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2)]);
+            av_decimal64_d=array(DOUBLE[]).append!([decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17)]);
+            av_decimal128_d=array(DOUBLE[]).append!([decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38)]);
+            table(
+                v_decimal32_d as `v_decimal32,
+                v_decimal64_d as `v_decimal64,
+                v_decimal128_d as `v_decimal128,
+                av_decimal32_d as `av_decimal32,
+                av_decimal64_d as `av_decimal64,
+                av_decimal128_d as `av_decimal128,
+                [1,2,3] as other
+            );
+        """,disableDecimal=False).result()
+        assert_frame_equal(result, expect)
+
 if __name__ == '__main__':
     pytest.main(["-s", "test/test_decimal.py"])

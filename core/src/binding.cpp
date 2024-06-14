@@ -130,8 +130,12 @@ public:
         if (kwargs.contains("parallelism")) {
             parallelism = kwargs["parallelism"].cast<int>();
         }
+        bool disableDecimal = false;
+        if(kwargs.contains("disableDecimal")){
+            disableDecimal = kwargs["disableDecimal"].cast<bool>();
+        }
         TRY
-            dbConnectionPool_.runPy(script, taskId, priority, parallelism, 0, clearMemory, pickleTableToList);
+            dbConnectionPool_.runPy(script, taskId, priority, parallelism, 0, clearMemory, pickleTableToList, disableDecimal);
         CATCH_EXCEPTION("<Exception> in run: ")
         //ddb::DLogger::Info(script,"cost time\n",ddb::RecordTime::printAllTime());
         return py::none();
@@ -154,10 +158,16 @@ public:
         if (kwargs.contains("parallelism")) {
             parallelism = kwargs["parallelism"].cast<int>();
         }
+        bool disableDecimal = false;
+        if(kwargs.contains("disableDecimal")){
+            disableDecimal = kwargs["disableDecimal"].cast<bool>();
+        }
         vector<ddb::ConstantSP> ddbArgs;
         for (auto it = args.begin(); it != args.end(); ++it) { ddbArgs.push_back(ddb::DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(*it))); }
         TRY
-            dbConnectionPool_.runPy(funcName, ddbArgs, taskId, priority, parallelism, 0, clearMemory,pickleTableToList);
+            dbConnectionPool_.runPy(
+                funcName, ddbArgs, taskId,
+                priority, parallelism, 0, clearMemory, pickleTableToList, disableDecimal);
         CATCH_EXCEPTION("<Exception> in run: ")
         return py::none();
     }
@@ -580,10 +590,14 @@ public:
         if (kwargs.contains("parallelism")) {
             parallelism = kwargs["parallelism"].cast<int>();
         }
+        bool disableDecimal = false;
+        if(kwargs.contains("disableDecimal")){
+            disableDecimal = kwargs["disableDecimal"].cast<bool>();
+        }
         py::object result;
         TRY
             //ddb::RecordTime::printAllTime();
-            result = dbConnection_.runPy(script, priority, parallelism, 0, clearMemory, pickleTableToList);
+            result = dbConnection_.runPy(script, priority, parallelism, 0, clearMemory, pickleTableToList, disableDecimal);
             DLOG(ddb::RecordTime::printAllTime());
         CATCH_EXCEPTION("<Exception> in run: ")
         return result;
@@ -652,12 +666,16 @@ public:
         if (kwargs.contains("parallelism")) {
             parallelism = kwargs["parallelism"].cast<int>();
         }
+        bool disableDecimal = false;
+        if(kwargs.contains("disableDecimal")){
+            disableDecimal = kwargs["disableDecimal"].cast<bool>();
+        }
         py::object result;
         //ddb::RecordTime::printAllTime();
         TRY
             vector<ddb::ConstantSP> ddbArgs;
             for (auto it = args.begin(); it != args.end(); ++it) { ddbArgs.push_back(ddb::DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(*it))); }
-            result = dbConnection_.runPy(funcName, ddbArgs, priority, parallelism, 0, clearMemory,pickleTableToList);
+            result = dbConnection_.runPy(funcName, ddbArgs, priority, parallelism, 0, clearMemory, pickleTableToList, disableDecimal);
         CATCH_EXCEPTION("<Exception> in run: ")
         DLOG(ddb::RecordTime::printAllTime());
         return result;

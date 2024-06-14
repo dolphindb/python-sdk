@@ -104,6 +104,7 @@ class DBConnectionPool(object):
             pickleTableToList : whether to convert table to list or DataFrame. True: to list, False: to DataFrame. Defaults to False.
             priority : a job priority system with 10 priority levels (0 to 9), allocating thread resources to high-priority jobs and using round-robin allocation for jobs of the same priority. Defaults to 4.
             parallelism : parallelism determines the maximum number of threads to execute a job's tasks simultaneously on a data node; the system optimizes resource utilization by allocating all available threads to a job if there's only one job running and multiple local executors are available. Defaults to 2.
+            disableDecimal: whether to convert decimal to double in the result table. True: convert to double, False: return as is. Defaults to False.
 
         Returns:
             execution result.
@@ -476,6 +477,7 @@ class Session(object):
             priority : a job priority system with 10 priority levels (0 to 9), allocating thread resources to high-priority jobs and using round-robin allocation for jobs of the same priority. Defaults to 4.
             parallelism : parallelism determines the maximum number of threads to execute a job's tasks simultaneously on a data node; the system optimizes resource utilization by allocating all available threads to a job if there's only one job running and multiple local executors are available. Defaults to 2.
             fetchSize : the size of a block.
+            disableDecimal: whether to convert decimal to double in the result table. True: convert to double, False: return as is. Defaults to False.
 
         Note:
             fetchSize cannot be less than 8192 Bytes.

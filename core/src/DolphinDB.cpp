@@ -166,8 +166,14 @@ public:
     void setShowOutput(bool flag) {
         msg_ = flag;
     }
-	py::object runPy(const string& script, int priority = 4, int parallelism = 2, int fetchSize = 0, bool clearMemory = false, bool pickleTableToList=false);
-    py::object runPy(const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 2, int fetchSize = 0, bool clearMemory = false, bool pickleTableToList=false);
+    py::object runPy(
+        const string& script, int priority = 4, int parallelism = 2,
+        int fetchSize = 0, bool clearMemory = false,
+        bool pickleTableToList = false, bool disableDecimal = false);
+    py::object runPy(
+        const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 2,
+        int fetchSize = 0, bool clearMemory = false,
+        bool pickleTableToList = false, bool disableDecimal = false);
 	void setkeepAliveTime(int keepAliveTime){
         keepAliveTime_ = keepAliveTime;
     }
@@ -176,9 +182,12 @@ public:
     }
     DataInputStreamSP getDataInputStream(){return inputStream_;}
 private:
-	long generateRequestFlag(bool clearSessionMemory = false, bool disableprotocol = false, bool pickleTableToList = false);
+    long generateRequestFlag(bool clearSessionMemory = false, bool disableprotocol = false, bool pickleTableToList = false, bool disableDecimal = false);
     ConstantSP run(const string& script, const string& scriptType, vector<ConstantSP>& args, int priority = 4, int parallelism = 2,int fetchSize = 0, bool clearMemory = false);
-    py::object runPy(const string& script, const string& scriptType, vector<ConstantSP>& args, int priority = 4, int parallelism = 2,int fetchSize = 0, bool clearMemory = false, bool pickleTableToList=false);
+    py::object runPy(
+        const string& script, const string& scriptType, vector<ConstantSP>& args,
+        int priority = 4, int parallelism = 2, int fetchSize = 0, bool clearMemory = false,
+        bool pickleTableToList = false, bool disableDecimal = false);
     bool connect();
     void login();
 
@@ -229,13 +238,13 @@ class HIDEVISIBILITY DBConnectionPoolImpl{
 public:
     struct Task{
         Task(const string& sc = "", int id = 0, int pr = 4, int pa = 2, bool clearM = false,
-        		bool isPy = false, bool pickleTableToL=false)
-              	: script(sc), identity(id), priority(pr), parallelism(pa), clearMemory(clearM), isPyTask(isPy)
-                        ,pickleTableToList(pickleTableToL){}
+                bool isPy = false, bool pickleTableToL = false, bool disableDec = false)
+                : script(sc), identity(id), priority(pr), parallelism(pa), clearMemory(clearM)
+                , isPyTask(isPy), pickleTableToList(pickleTableToL), disableDecimal(disableDec){}
         Task(const string& function, const vector<ConstantSP>& args, int id = 0, int pr = 4, int pa = 2, bool clearM = false,
-                bool isPy = false,bool pickleTableToL=false)
+                bool isPy = false, bool pickleTableToL = false, bool disableDec = false)
                 : script(function), arguments(args), identity(id), priority(pr), parallelism(pa), clearMemory(clearM)
-                , isPyTask(isPy),pickleTableToList(pickleTableToL){ isFunc = true; }
+                , isPyTask(isPy), pickleTableToList(pickleTableToL), disableDecimal(disableDec){ isFunc = true; }
         string script;
         vector<ConstantSP> arguments;
         int identity;
@@ -244,7 +253,8 @@ public:
 		bool clearMemory;
 		bool isFunc = false;
         bool isPyTask = true;
-        bool pickleTableToList=false;
+        bool pickleTableToList = false;
+        bool disableDecimal = false;
     };
     
     DBConnectionPoolImpl(const string& hostName, int port, int threadNum = 10, const string& userId = "", const string& password = "",
@@ -292,13 +302,29 @@ public:
 		return workers_.size();
 	}
 	
-	void runPy(const string& script, int identity, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory = false, bool pickleTableToList=false){
-        queue_->push(Task(script, identity, priority, parallelism, clearMemory, true,pickleTableToList));
+    void runPy(
+        const string& script, int identity,
+        int priority = 4, int parallelism = 2,
+        int fetchSize = 0, bool clearMemory = false,
+        bool pickleTableToList = false, bool disableDecimal = false
+    ){
+        queue_->push(Task(
+            script, identity, priority, parallelism,
+            clearMemory, true, pickleTableToList, disableDecimal
+        ));
         taskStatus_.setResult(identity, TaskStatusMgmt::Result());
     }
 
-    void runPy(const string& functionName, const vector<ConstantSP>& args, int identity, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory = false, bool pickleTableToList=false){
-        queue_->push(Task(functionName, args, identity, priority, parallelism, clearMemory, true,pickleTableToList));
+    void runPy(
+        const string& functionName, const vector<ConstantSP>& args, int identity,
+        int priority = 4, int parallelism = 2,
+        int fetchSize = 0, bool clearMemory = false,
+        bool pickleTableToList = false, bool disableDecimal = false
+    ){
+        queue_->push(Task(
+            functionName, args, identity, priority, parallelism,
+            clearMemory, true, pickleTableToList, disableDecimal
+        ));
         taskStatus_.setResult(identity, TaskStatusMgmt::Result());
     }
     
@@ -1022,14 +1048,27 @@ ConstantSP DBConnectionImpl::run(const string& funcName, vector<ConstantSP>& arg
     return run(funcName, "function", args, priority, parallelism, fetchSize, clearMemory);
 }
 
-py::object DBConnectionImpl::runPy(const string &script, int priority, int parallelism, int fetchSize, bool clearMemory, bool pickleTableToList) {
+py::object DBConnectionImpl::runPy(
+    const string &script, int priority,
+    int parallelism, int fetchSize, bool clearMemory,
+    bool pickleTableToList, bool disableDecimal
+) {
     vector<ConstantSP> args;
-    return runPy(script, "script", args, priority, parallelism, fetchSize, clearMemory,pickleTableToList);
+    return runPy(
+        script, "script", args, priority, parallelism,
+        fetchSize, clearMemory, pickleTableToList, disableDecimal
+    );
 }
 
-py::object DBConnectionImpl::runPy(const string &funcName, vector<ConstantSP> &args, int priority, int parallelism,
-                                   int fetchSize, bool clearMemory, bool pickleTableToList) {
-    return runPy(funcName, "function", args, priority, parallelism, fetchSize, clearMemory,pickleTableToList);
+py::object DBConnectionImpl::runPy(
+    const string &funcName, vector<ConstantSP> &args, int priority,
+    int parallelism, int fetchSize, bool clearMemory,
+    bool pickleTableToList, bool disableDecimal
+) {
+    return runPy(
+        funcName, "function", args, priority, parallelism,
+        fetchSize, clearMemory, pickleTableToList, disableDecimal
+    );
 }
 
 ConstantSP DBConnectionImpl::upload(const string& name, const ConstantSP& obj) {
@@ -1056,13 +1095,13 @@ ConstantSP DBConnectionImpl::upload(vector<string>& names, vector<ConstantSP>& o
     return run(varNames, "variable", objs);
 }
 
-long DBConnectionImpl::generateRequestFlag(bool clearSessionMemory, bool disableprotocol, bool pickleTableToList) {
+long DBConnectionImpl::generateRequestFlag(bool clearSessionMemory, bool disableprotocol, bool pickleTableToList, bool disableDecimal) {
 	long flag = 32; //32 API client
-	if (asynTask_){
+	if (asynTask_) {
         DLOG("async");
 		flag += 4;
     }
-	if (clearSessionMemory){
+	if (clearSessionMemory) {
         DLOG("clearMem");
 		flag += 16;
     }
@@ -1084,12 +1123,15 @@ long DBConnectionImpl::generateRequestFlag(bool clearSessionMemory, bool disable
     else {
         throw RuntimeException("unsupport PROTOCOL Type: " + std::to_string(protocol_));
     }
-    if (python_){
+    if (python_) {
         DLOG("python");
 		flag += 2048;
     }
-    if(isReverseStreaming_){
+    if (isReverseStreaming_) {
         flag += 131072;
+    }
+    if (disableDecimal) {
+        flag += (1 << 23);
     }
 	return flag;
 }
@@ -1244,9 +1286,11 @@ DBConnection::DBConnection(bool enableSSL, bool asynTask, int keepAliveTime, boo
 		lastConnNodeIndex_(0), reconnect_(false), closed_(true), msg_(true){
 }
 
-py::object DBConnectionImpl::runPy(const string &script, const string &scriptType, vector<ConstantSP> &args,
-                                       int priority, int parallelism, int fetchSize, bool clearMemory,
-                                       bool pickleTableToList) {
+py::object DBConnectionImpl::runPy(
+    const string &script, const string &scriptType, vector<ConstantSP> &args,
+    int priority, int parallelism, int fetchSize, bool clearMemory,
+    bool pickleTableToList, bool disableDecimal
+) {
     //RecordTime record("Db.runPy"+script);
     DLOG("runPy",script,"start argsize",args.size());
     //force Python release GIL
@@ -1267,8 +1311,10 @@ py::object DBConnectionImpl::runPy(const string &script, const string &scriptTyp
     }
     string out("API2 " + sessionId_ + " ");
     out.append(Util::convert((int)body.size()));
-    long flag=generateRequestFlag(clearMemory,false,pickleTableToList);
-    DLOG("runPy flag",flag,"protocol_",protocol_," pickleTableToList ", pickleTableToList,"compress",compress_,"python",python_);
+    long flag = generateRequestFlag(clearMemory, false, pickleTableToList, disableDecimal);
+    DLOG("runPy flag: ", flag);
+    DLOG("protocol: ", protocol_, " pickleTableToList: ", pickleTableToList);
+    DLOG("compress: ", compress_, " python: ", python_, " disableDecimal: ", disableDecimal);
     out.append(" / " + std::to_string(flag) + "_1_" + std::to_string(priority) + "_" + std::to_string(parallelism));
     if(fetchSize > 0)
         out.append("__" + std::to_string(fetchSize));
@@ -1726,11 +1772,14 @@ ConstantSP DBConnection::run(const string& script, int priority, int parallelism
     return NULL;
 }
 
-py::object DBConnection::runPy(const string &script, int priority, int parallelism, int fetchSize, bool clearMemory, bool pickleTableToList) {
+py::object DBConnection::runPy(
+    const string &script, int priority, int parallelism,
+    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal
+) {
     if (nodes_.empty() == false) {
         while (closed_ == false) {
             try {
-                return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList);
+                return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
             } catch (IOException& e) {
                 string host;
                 int port = 0;
@@ -1749,7 +1798,7 @@ py::object DBConnection::runPy(const string &script, int priority, int paralleli
         }
         return py::none();
     } else {
-        return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList);
+        return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
     }
 }
 
@@ -1781,12 +1830,14 @@ ConstantSP DBConnection::run(const string& funcName, vector<dolphindb::ConstantS
     return NULL;
 }
 
-py::object DBConnection::runPy(const string &funcName, vector<ConstantSP> &args, int priority, int parallelism,
-                                     int fetchSize, bool clearMemory, bool pickleTableToList) {
+py::object DBConnection::runPy(
+    const string &funcName, vector<ConstantSP> &args, int priority, int parallelism,
+    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal
+) {
     if (nodes_.empty() == false) {
         while (closed_ == false) {
             try {
-                return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory,pickleTableToList);
+                return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
             } catch (IOException& e) {
                 string host;
                 int port = 0;
@@ -1804,7 +1855,7 @@ py::object DBConnection::runPy(const string &funcName, vector<ConstantSP> &args,
         }
         return py::none();
     } else {
-        return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory,pickleTableToList);
+        return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
     }
 }
 
@@ -2032,10 +2083,10 @@ void AsynWorker::run() {
             try {
                 if(task.isPyTask){
                     if(task.isFunc){
-                        pyResult = conn_->runPy(task.script, task.arguments, task.priority, task.parallelism, 0, task.clearMemory,task.pickleTableToList);
+                        pyResult = conn_->runPy(task.script, task.arguments, task.priority, task.parallelism, 0, task.clearMemory, task.pickleTableToList, task.disableDecimal);
                     }
                     else{
-                        pyResult = conn_->runPy(task.script, task.priority, task.parallelism, 0, task.clearMemory,task.pickleTableToList);
+                        pyResult = conn_->runPy(task.script, task.priority, task.parallelism, 0, task.clearMemory,task.pickleTableToList, task.disableDecimal);
                     }
                 }
                 else {
@@ -2128,16 +2179,16 @@ void DBConnectionPool::run(const string& functionName, const vector<ConstantSP>&
     pool_->run(functionName, args, identity, priority, parallelism, fetchSize, clearMemory);
 }
 
-void DBConnectionPool::runPy(const string& script, int identity, int priority, int parallelism, int fetchSize, bool clearMemory, bool pickleTableToList){
+void DBConnectionPool::runPy(const string& script, int identity, int priority, int parallelism, int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal){
     if(identity < 0)
         throw RuntimeException("Invalid identity: " + std::to_string(identity) + ". Identity must be a non-negative integer.");
-    pool_->runPy(script, identity, priority, parallelism, fetchSize, clearMemory,pickleTableToList);
+    pool_->runPy(script, identity, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
 }
 
-void DBConnectionPool::runPy(const string& functionName, const vector<ConstantSP>& args, int identity, int priority, int parallelism, int fetchSize, bool clearMemory, bool pickleTableToList){
+void DBConnectionPool::runPy(const string& functionName, const vector<ConstantSP>& args, int identity, int priority, int parallelism, int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal){
     if(identity < 0)
         throw RuntimeException("Invalid identity: " + std::to_string(identity) + ". Identity must be a non-negative integer.");
-    pool_->runPy(functionName, args, identity, priority, parallelism, fetchSize, clearMemory,pickleTableToList);
+    pool_->runPy(functionName, args, identity, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
 }
 
 bool DBConnectionPool::isFinished(int identity){
