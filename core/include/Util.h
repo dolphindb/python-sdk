@@ -12,6 +12,7 @@
 #include <vector>
 #include <unordered_set>
 #include <ctime>
+#include <algorithm>
 #ifdef _MSC_VER
 
 #elif defined MAC
@@ -20,23 +21,18 @@
 	#include <tr1/random>
 #endif
 #include <chrono>
-#include <WideInteger.h>
-
-#ifdef _MSC_VER
-	#ifdef _USRDLL	
-		#define EXPORT_DECL _declspec(dllexport)
-	#else
-		#define EXPORT_DECL __declspec(dllimport)
-	#endif
-#else
-	#define EXPORT_DECL 
-#endif
-
-#include "DolphinDB.h"
-
+#include "Exports.h"
+#include "WideInteger.h"
+#include "Constant.h"
+#include "Vector.h"
+#include "Table.h"
+#include "ErrorCodeInfo.h"
+using std::vector;
 namespace dolphindb {
 
-class ConstantFactory;
+class Dictionary;
+class Set;
+class Domain;
 
 class EXPORT_DECL Util {
 public:
@@ -67,7 +63,6 @@ private:
 	static long long tmporalDurationRatioMatrix[9][10];
 	static long long tmporalRatioMatrix[81];
 	static long long tmporalUplimit[9];
-	static SmartPointer<ConstantFactory> constFactory_;
 
 public:
 	static Constant* parseConstant(int type, const string& word);
@@ -134,20 +129,20 @@ public:
 	static Vector* createIndexVector(INDEX length, bool arrayOnly, INDEX capacity = 0);
 
 	/**
-	 * Convert unsigned byte sequences to hex string.
-	 *
-	 * littleEndian: if true, the first byte is the least significant and should be printed at the most right.
-	 * str: the length of buffer must be at least 2 * len.
-	 */
-	static void toHex(const unsigned char* data, int len, bool littleEndian, char* str);
+	* Convert unsigned byte sequences to hex string.
+	*
+	* littleEndian: if true, the first byte is the least significant and should be printed at the most right.
+	* str: the length of buffer must be at least 2 * len.
+	*/
+	static void toHex(const unsigned char* data, size_t len, bool littleEndian, char* str);
 	/**
-	 * Convert hex string to unsigned byte sequences.
-	 *
-	 * len: must be a positive even number.
-	 * littleEndian: if true, the first byte is the least significant, i.e. the leftmost characters would be converted to the rightmost byte.
-	 * data: the length of buffer must be at least len/2
-	 */
-	static bool fromHex(const char* str, int len, bool littleEndian, unsigned char* data);
+	* Convert hex string to unsigned byte sequences.
+	*
+	* len: must be a positive even number.
+	* littleEndian: if true, the first byte is the least significant, i.e. the leftmost characters would be converted to the rightmost byte.
+	* data: the length of buffer must be at least len/2
+	*/
+	static bool fromHex(const char* str, size_t len, bool littleEndian, unsigned char* data);
 
 	static void toGuid(const unsigned char*, char* str);
 	static bool fromGuid(const char* str, unsigned char* data);
@@ -272,7 +267,7 @@ public:
 	static ConstantSP createValue(DATA_TYPE dataType, long long val, const char *pTypeName, ErrorCodeInfo *errorCodeInfo = NULL, int extraParam = 0);
 	static bool checkColDataType(DATA_TYPE colDataType, bool isColTemporal, ConstantSP &constsp);
 	static unsigned long getCurThreadId();
-	static void writeFile(const char *pfilepath, const void *pbytes, int bytelen);
+	static void writeFile(const char *pfilepath, const void *pbytes, std::size_t bytelen);
 
 	static void enumBoolVector(const VectorSP &pVector, std::function<bool(const char *pbuf, INDEX startIndex, INDEX size)> func, INDEX offset = 0) {
 		enumDdbVector<char>(pVector, &Vector::getBoolConst, func, offset);
@@ -386,6 +381,8 @@ template <>
 inline string getNullValue<string>() { return ""; }
 template <>
 inline Guid getNullValue<Guid>() { return Guid(); }
+template <>
+inline wide_integer::int128 getNullValue<wide_integer::int128>() { return std::numeric_limits<wide_integer::int128>::min(); }
 
 class ResultSet {
 public:

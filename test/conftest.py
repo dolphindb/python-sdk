@@ -1,19 +1,20 @@
 import pytest
 import time
-import os
 import dolphindb as ddb
-import sys
 import json
 from filelock import FileLock
 from setup.settings import *
 from setup.utils import SSHConnection
+import sys
+import os
 
 if sys.platform.startswith('win'):
     cur_os = 'win'
 elif sys.platform.startswith('linux'):
     cur_os = 'linux'
-elif sys.platform.startswith('darwin'):
+else:
     cur_os = 'mac'
+
 
 class ServerManager:
     def __init__(self, host, port, user, password, is_cluster, ctl_port=None):
@@ -45,7 +46,7 @@ class ServerManager:
         try:
             conn.run("1+1")
             return True
-        except:
+        except RuntimeError:
             return False
 
     def check_if_restart(self):
@@ -53,7 +54,7 @@ class ServerManager:
 
         if self.is_cluster:
             conn_ctl = ddb.session()
-            if not conn_ctl.connect(self.host, self.ctl_p, self.user, self.password):   # 控制节点挂了，当前集群应该全部挂掉的
+            if not conn_ctl.connect(self.host, self.ctl_p, self.user, self.password):
                 print("The cluster has crashed, try to restart this cluster.")
                 command = self.restart_cmd
                 self.exec_cmd(command)
@@ -72,7 +73,7 @@ class ServerManager:
                     print("Time out, cluster is not ready yet.")
                     return False
 
-            elif not conn.connect(self.host, self.port, self.user, self.password):  # 控制节点没挂，当前数据节点挂了
+            elif not conn.connect(self.host, self.port, self.user, self.password):
                 print("Some datanodes in cluster are crashed, try to restart them.")
                 restart_s = f"""
                                 login("{self.user}", "{self.password}");
@@ -118,6 +119,7 @@ class ServerManager:
         conn.close()
         return True
 
+
 def check_version():
     cur_version = ddb.__version__
     setup_version = os.environ.get("API_VERSION")
@@ -125,29 +127,30 @@ def check_version():
         pytest.exit("current api version is different to env [API_VERSION]")
     return 'OK'
 
+
 def get_restart_scripts():
     if cur_os == 'linux':
-        RESTRAT_SINGLE_INIT = 'cd {} && sh startSingle.sh'
-        RESTRAT_CLUSTER_INIT = 'cd {} && sh startAgent.sh && sh startController.sh'
-
+        _RESTRAT_SINGLE_INIT = 'cd {} && sh startSingle.sh'
+        _RESTRAT_CLUSTER_INIT = 'cd {} && sh startAgent.sh && sh startController.sh'
     elif cur_os == 'win':
-        RESTRAT_SINGLE_INIT = 'cd /d {} && backgroundSingle.vbs'
-        RESTRAT_CLUSTER_INIT = 'cd /d {} && backgroundStartAgent.vbs && ping -n 2 127.0.0.1 && backgroundStartController.vbs'
+        _RESTRAT_SINGLE_INIT = 'cd /d {} && backgroundSingle.vbs'
+        _RESTRAT_CLUSTER_INIT = 'cd /d {} && backgroundStartAgent.vbs && ping -n 2 127.0.0.1 && backgroundStartController.vbs'
+    else:
+        _RESTRAT_SINGLE_INIT = 'cd {} && sh startSingle.sh'
+        _RESTRAT_CLUSTER_INIT = 'cd {} && sh startAgent.sh && sh startController.sh'
+    return _RESTRAT_SINGLE_INIT, _RESTRAT_CLUSTER_INIT
 
-    elif cur_os == 'mac':
-        RESTRAT_SINGLE_INIT = 'cd {} && sh startSingle.sh'
-        RESTRAT_CLUSTER_INIT = 'cd {} && sh startAgent.sh && sh startController.sh'
-
-    return RESTRAT_SINGLE_INIT, RESTRAT_CLUSTER_INIT
 
 if AUTO_TESTING:
     import pickle
+
     with open('setup/SERVER_MAP.pickle', 'rb') as handle:
         SERVER_MAP = pickle.load(handle)
 
     with open('setup/CONFIG_MAP.pickle', 'rb') as handle:
         CONFIG_MAP = pickle.load(handle)
     RESTRAT_SINGLE_INIT, RESTRAT_CLUSTER_INIT = get_restart_scripts()
+
 
 @pytest.fixture(scope="session", autouse=AUTO_TESTING)
 def check_package_version(tmp_path_factory, worker_id):
@@ -162,17 +165,18 @@ def check_package_version(tmp_path_factory, worker_id):
     fn = root_tmp_dir / "data.json"
     with FileLock(str(fn) + ".lock"):
         if fn.is_file():
-            data = json.loads(fn.read_text())
+            json.loads(fn.read_text())
         else:
             data = 'NG' if check_version() != 'OK' else 'OK'
             fn.write_text(json.dumps(data))
+
 
 @pytest.fixture(scope="function", autouse=AUTO_TESTING)
 def check_server_status(request):
     setup_name = request.node.nodeid.split('.')[0].replace('/', '.')
     manager = ServerManager(*CONFIG_MAP[setup_name])
 
-    if CONFIG_MAP[setup_name][4] == True:
+    if CONFIG_MAP[setup_name][4]:
         manager.set_restart_cmd(
             RESTRAT_CLUSTER_INIT.format(SERVER_MAP[setup_name]))
     else:

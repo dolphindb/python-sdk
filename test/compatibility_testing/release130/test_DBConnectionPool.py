@@ -348,95 +348,6 @@ class TestDBConnectionPool:
         assert_frame_equal(df, res)
         pool.shutDown()
 
-    # TODO: 'loadbalance' in class DBConnectionPool need to test with a new file
-    @pytest.mark.CONNECTIONPOOL
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    @pytest.mark.skip(reason="need a special test")
-    def test_DBConnectionPool_loadbalance(self, _compress):
-        pass
-
-    # TODO: 'python' in class DBConnectionPool need to test with a new file
-    @pytest.mark.CONNECTIONPOOL
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    @pytest.mark.skip(reason="need a special test")
-    def test_DBConnectionPool_python(self, _compress):
-        pass
-
-    # TODO: 'reconnect' in class DBConnectionPool need to test with a new file
-    @pytest.mark.CONNECTIONPOOL
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    @pytest.mark.skip(reason="need a special test")
-    def test_DBConnectionPool_reconnect(self, _compress):
-        pass
-
-    # TODO: 'highAvailability' in class DBConnectionPool need to test with a new file
-    @pytest.mark.CONNECTIONPOOL
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    @pytest.mark.skip(reason="need a special test")
-    def test_DBConnectionPool_highAvailability(self, _compress):
-        pass
-
-    @pytest.mark.CONNECTIONPOOL
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_func_run_clearMemory(self, _compress):
-        loop = asyncio.get_event_loop_policy().new_event_loop()
-        pool = ddb.DBConnectionPool(
-            HOST, PORT, 1, "admin", "123456", compress=_compress)
-        task1 = pool.run('''
-                            login("admin","123456")
-                            dbpath="dfs://test_dfs";
-                            if(existsDatabase(dbpath)){dropDatabase(dbpath)};
-                            db=database(dbpath, VALUE, `APPL`TESLA`GOOGLE`PDD);
-                            t=table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3);
-                            db.createPartitionedTable(t,`dfs_tab,`col1).append!(t);
-                            asdeee = select * from loadTable(dbpath, `dfs_tab)
-                            asdeee
-                         ''', clearMemory=True, pickleTableToList=True)
-        task2 = pool.run('''
-                            login("admin","123456")
-                            dbpath="dfs://test_dfs_1";
-                            if(existsDatabase(dbpath)){dropDatabase(dbpath)};
-                            db=database(dbpath, VALUE, `APPL`TESLA`GOOGLE`PDD);
-                            t=table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3);
-                            db.createPartitionedTable(t,`dfs_tab,`col1).append!(t);
-                            zxcfff = select * from loadTable(dbpath, `dfs_tab)
-                            zxcfff
-                         ''', clearMemory=True, pickleTableToList=False)
-
-        task_list = [
-            loop.create_task(task1),
-            loop.create_task(task2),
-        ]
-        loop.run_until_complete(asyncio.wait(task_list))
-        tab = task_list[0].result()
-        tab1 = task_list[1].result()
-        assert (type(tab) == list)
-        assert (type(tab1) == pd.DataFrame)
-
-        expect_df = self.conn.run(
-            """select * from loadTable("dfs://test_dfs", `dfs_tab)""")
-        expect_tab = self.conn.table(data=expect_df)
-        assert_array_equal(tab, expect_tab.toList())
-        expect_df2 = self.conn.run(
-            """select * from loadTable("dfs://test_dfs_1", `dfs_tab)""")
-        expect_tab2 = self.conn.table(data=expect_df2)
-        assert_frame_equal(tab1, expect_tab2.toDF())
-
-        try:
-            loop.run_until_complete(pool.run("asdeee"))
-            assert False
-        except Exception as e:
-            assert "Cannot recognize the token asdeee" in str(e)
-
-        pool.shutDown()
-        loop.close()
-
-    # TODO: startLoop and stopLoop may be useless
-    @pytest.mark.CONNECTIONPOOL
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_func_startLoop(self, _compress):
-        pass
-
     @pytest.mark.CONNECTIONPOOL
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_addTask(self, _compress):
@@ -883,20 +794,20 @@ class TestDBConnectionPool:
         pool1 = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop_policy().new_event_loop()
         tasks = [
-            loop.create_task(pool1.run("""
-            sessionid = exec sessionid from getSessionMemoryStat() where userId=`admin;
+            loop.create_task(pool1.run(f"""
+            sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
             priority = exec priority from getConsoleJobs() where sessionId=sessionid;
             parallelism = exec parallelism from getConsoleJobs() where sessionId=sessionid;
             [priority[0], parallelism[0]]
             """, priority=0, parallelism=10)),
-            loop.create_task(pool1.run("""
-            sessionid = exec sessionid from getSessionMemoryStat() where userId=`admin;
+            loop.create_task(pool1.run(f"""
+            sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
             priority = exec priority from getConsoleJobs() where sessionId=sessionid;
             parallelism = exec parallelism from getConsoleJobs() where sessionId=sessionid;
             [priority[0], parallelism[0]]
             """)),
-            loop.create_task(pool1.run("""
-            sessionid = exec sessionid from getSessionMemoryStat() where userId=`admin;
+            loop.create_task(pool1.run(f"""
+            sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
             priority = exec priority from getConsoleJobs() where sessionId=sessionid;
             parallelism = exec parallelism from getConsoleJobs() where sessionId=sessionid;
             [priority[0], parallelism[0]]
@@ -928,21 +839,21 @@ class TestDBConnectionPool:
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop()
         with pytest.raises(RuntimeError,match="String too long, Serialization failed, length must be less than 256K bytes") as e:
-            loop.run_until_complete(asyncio.gather(*[pool.run('print', {'0'*4 * 64 * 1024})]))
+            loop.run_until_complete(asyncio.gather(*[pool.run('print', {'0'*256 * 1024})]))
         pool.shutDown()
 
     def test_DBConnectionPool_dicionary_overlenth(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop()
         with pytest.raises(RuntimeError,match="String too long, Serialization failed, length must be less than 256K bytes") as e:
-            loop.run_until_complete(asyncio.gather(*[pool.run('print', {'a':'0'*4 * 64 * 1024})]))
+            loop.run_until_complete(asyncio.gather(*[pool.run('print', {'a':'0'*256 * 1024})]))
         pool.shutDown()
 
     def test_DBConnectionPool_table_overlenth(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop()
         with pytest.raises(RuntimeError,match="String too long, Serialization failed, length must be less than 256K bytes") as e:
-            loop.run_until_complete(asyncio.gather(*[pool.run('print', pd.DataFrame({'a': [1, 2, 3], 'b': ['1'*4 * 64 * 1024, '2', '3']}))]))
+            loop.run_until_complete(asyncio.gather(*[pool.run('print', pd.DataFrame({'a': [1, 2, 3], 'b': ['1'*256 * 1024, '2', '3']}))]))
         pool.shutDown()
 
 if __name__ == '__main__':

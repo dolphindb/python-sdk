@@ -6,13 +6,15 @@ import math
 from decimal import Decimal
 import pandas as pd
 import dolphindb.settings as keys
-import pyarrow as pa
+from importlib.util import find_spec
+if find_spec("pyarrow") is not None:
+    import pyarrow as pa
+    PYARROW_VERSION = tuple(int(i) for i in pa.__version__.split('.'))
 
 PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
 PYTHON_VERSION = tuple(int(i) for i in platform.python_version().split('.'))
 
 
-# todo:exception(a_[] is not a qualified variable name.)
 # todo:str & bytes empty
 # todo:dtype,str
 class DataUtils(object):
@@ -25,7 +27,7 @@ class DataUtils(object):
             'dtype': 'object',
         },
         'data_numpy_nan': {
-            'value': np.NAN,
+            'value': np.nan,
             'expect_typestr': 'DOUBLE',
             'expect_value': '00F',
             'dtype': np.float64,
@@ -1108,303 +1110,303 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL128(0)',
         },
     }
-
-    DATA_UPLOAD_ARROW = {
-        'data_arrow_int8_0': {
-            'value': 0,
-            'dtype_arrow': pa.int8(),
-            'expect_typestr': "'FAST CHAR VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_int8_max': {
-            'value': 2 ** 7 - 1,
-            'dtype_arrow': pa.int8(),
-            'expect_typestr': "'FAST CHAR VECTOR'",
-            'expect_value': 127,
-        },
-        'data_arrow_int8_min': {
-            'value': -2 ** 7 + 1,
-            'dtype_arrow': pa.int8(),
-            'expect_typestr': "'FAST CHAR VECTOR'",
-            'expect_value': -127,
-        },
-        'data_arrow_int8_none': {
-            'value': -2 ** 7,
-            'dtype_arrow': pa.int8(),
-            'expect_typestr': "'FAST CHAR VECTOR'",
-            'expect_value': '00c',
-        },
-        'data_arrow_int16_0': {
-            'value': 0,
-            'dtype_arrow': pa.int16(),
-            'expect_typestr': "'FAST SHORT VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_int16_max': {
-            'value': 2 ** 15 - 1,
-            'dtype_arrow': pa.int16(),
-            'expect_typestr': "'FAST SHORT VECTOR'",
-            'expect_value': 2 ** 15 - 1,
-        },
-        'data_arrow_int16_min': {
-            'value': -2 ** 15 + 1,
-            'dtype_arrow': pa.int16(),
-            'expect_typestr': "'FAST SHORT VECTOR'",
-            'expect_value': -2 ** 15 + 1,
-        },
-        'data_arrow_int16_none': {
-            'value': -2 ** 15,
-            'dtype_arrow': pa.int16(),
-            'expect_typestr': "'FAST SHORT VECTOR'",
-            'expect_value': '00h',
-        },
-        'data_arrow_int32_0': {
-            'value': 0,
-            'dtype_arrow': pa.int32(),
-            'expect_typestr': "'FAST INT VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_int32_max': {
-            'value': 2 ** 31 - 1,
-            'dtype_arrow': pa.int32(),
-            'expect_typestr': "'FAST INT VECTOR'",
-            'expect_value': 2 ** 31 - 1,
-        },
-        'data_arrow_int32_min': {
-            'value': -2 ** 31 + 1,
-            'dtype_arrow': pa.int32(),
-            'expect_typestr': "'FAST INT VECTOR'",
-            'expect_value': -2 ** 31 + 1,
-        },
-        'data_arrow_int32_none': {
-            'value': -2 ** 31,
-            'dtype_arrow': pa.int32(),
-            'expect_typestr': "'FAST INT VECTOR'",
-            'expect_value': '00i',
-        },
-        'data_arrow_int64_0': {
-            'value': 0,
-            'dtype_arrow': pa.int64(),
-            'expect_typestr': "'FAST LONG VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_int64_max': {
-            'value': 2 ** 63 - 1,
-            'dtype_arrow': pa.int64(),
-            'expect_typestr': "'FAST LONG VECTOR'",
-            'expect_value': 2 ** 63 - 1,
-        },
-        'data_arrow_int64_min': {
-            'value': -2 ** 63 + 1,
-            'dtype_arrow': pa.int64(),
-            'expect_typestr': "'FAST LONG VECTOR'",
-            'expect_value': -2 ** 63 + 1,
-        },
-        'data_arrow_int64_none': {
-            'value': -2 ** 63,
-            'dtype_arrow': pa.int64(),
-            'expect_typestr': "'FAST LONG VECTOR'",
-            'expect_value': '00l',
-        },
-        'data_arrow_float32_0': {
-            'value': 0,
-            'dtype_arrow': pa.float32(),
-            'expect_typestr': "'FAST FLOAT VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_float32_nan': {
-            'value': float('nan'),
-            'dtype_arrow': pa.float32(),
-            'expect_typestr': "'FAST FLOAT VECTOR'",
-            'expect_value': '00f',
-        },
-        # 'data_arrow_float32_inf': {
-        #     'value': float('inf'),
-        #     'dtype_arrow': pa.float32(),
-        #     'expect_typestr': "'FAST FLOAT VECTOR'",
-        # },
-        'data_arrow_float32_max': {
-            'value': 3.4028235e+38,
-            'dtype_arrow': pa.float32(),
-            'expect_typestr': "'FAST FLOAT VECTOR'",
-            'expect_value': 'float(3.4028235e+38)',
-        },
-        'data_arrow_float32_none': {
-            'value': -3.4028235e+38,
-            'dtype_arrow': pa.float32(),
-            'expect_typestr': "'FAST FLOAT VECTOR'",
-            'expect_value': '00f',
-        },
-        'data_arrow_float64_0': {
-            'value': 0,
-            'dtype_arrow': pa.float64(),
-            'expect_typestr': "'FAST DOUBLE VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_float64_nan': {
-            'value': float('nan'),
-            'dtype_arrow': pa.float64(),
-            'expect_typestr': "'FAST DOUBLE VECTOR'",
-            'expect_value': '00F',
-        },
-        # 'data_arrow_float64_inf': {
-        #     'value': float('inf'),
-        #     'dtype_arrow': pa.float64(),
-        #     'expect_typestr': "'FAST DOUBLE VECTOR'",
-        # },
-        'data_arrow_float64_max': {
-            'value': 1.7976931348623157e+308,
-            'dtype_arrow': pa.float64(),
-            'expect_typestr': "'FAST DOUBLE VECTOR'",
-            'expect_value': 'double(1.7976931348623157e+308)',
-        },
-        'data_arrow_float64_none': {
-            'value': -1.7976931348623157e+308,
-            'dtype_arrow': pa.float64(),
-            'expect_typestr': "'FAST DOUBLE VECTOR'",
-            'expect_value': '00F',
-        },
-        'data_arrow_string': {
-            'value': 'abc!@#中文 123',
-            'dtype_arrow': pa.utf8(),
-            'expect_typestr': "'STRING VECTOR'",
-            'expect_value': "'abc!@#中文 123'",
-        },
-        'data_arrow_bytes_utf8': {
-            'value': 'abc!@#中文 123'.encode(),
-            'dtype_arrow': pa.large_binary(),
-            'expect_typestr': "'BLOB VECTOR'",
-            'expect_value': "'abc!@#中文 123'",
-        },
-        'data_arrow_bytes_gbk': {
-            'value': 'abc!@#中文 123'.encode('gbk'),
-            'dtype_arrow': pa.large_binary(),
-            'expect_typestr': "'BLOB VECTOR'",
-            'expect_value': "fromUTF8('abc!@#中文 123','gbk')",
-        },
-        'data_arrow_bool_true': {
-            'value': True,
-            'dtype_arrow': pa.bool_(),
-            'expect_typestr': "'FAST BOOL VECTOR'",
-            'expect_value': 'true',
-        },
-        'data_arrow_bool_false': {
-            'value': False,
-            'dtype_arrow': pa.bool_(),
-            'expect_typestr': "'FAST BOOL VECTOR'",
-            'expect_value': 'false',
-        },
-        'data_arrow_date32_0': {
-            'value': 0,
-            'dtype_arrow': pa.date32(),
-            'expect_typestr': "'FAST DATE VECTOR'",
-            'expect_value': "1970.01.01",
-        },
-        # not support
-        # 'data_arrow_date64_0': {
-        #     'value': 0,
-        #     'dtype_arrow': pa.date64(),
-        # },
-        'data_arrow_time32_ms_0': {
-            'value': 0,
-            'dtype_arrow': pa.time32('ms'),
-            'expect_typestr': "'FAST TIME VECTOR'",
-            'expect_value': "00:00:00.000",
-        },
-        'data_arrow_time32_s_0': {
-            'value': 0,
-            'dtype_arrow': pa.time32('s'),
-            'expect_typestr': "'FAST SECOND VECTOR'",
-            'expect_value': "00:00:00",
-        },
-        'data_arrow_time64_ns_0': {
-            'value': 0,
-            'dtype_arrow': pa.time64('ns'),
-            'expect_typestr': "'FAST NANOTIME VECTOR'",
-            'expect_value': "00:00:00.000000000",
-        },
-        # not support
-        # 'data_arrow_time64_us_0': {
-        #     'value': 0,
-        #     'dtype_arrow': pa.time64('us'),
-        # },
-        'data_arrow_timestamp_ns_0': {
-            'value': 0,
-            'dtype_arrow': pa.timestamp('ns'),
-            'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
-            'expect_value': "1970.01.01T00:00:00.000000000",
-        },
-        'data_arrow_timestamp_ns_max': {
-            'value': np.datetime64('2262-04-11T23:47:16.854775807', 'ns'),
-            'dtype_arrow': pa.timestamp('ns'),
-            'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
-            'expect_value': "2262.04.11T23:47:16.854775807",
-        },
-        'data_arrow_timestamp_ns_min': {
-            'value': np.datetime64('1677-09-21T00:12:43.145224193', 'ns'),
-            'dtype_arrow': pa.timestamp('ns'),
-            'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
-            'expect_value': "1677.09.21T00:12:43.145224193",
-        },
-        'data_arrow_timestamp_ns_none': {
-            'value': np.datetime64('1677-09-21T00:12:43.145224192', 'ns'),
-            'dtype_arrow': pa.timestamp('ns'),
-            'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
-            'expect_value': "00N",
-        },
-        # not support
-        # 'data_arrow_timestamp_us_0': {
-        #     'value': 0,
-        #     'dtype_arrow': pa.timestamp('us'),
-        # },
-        'data_arrow_timestamp_ms_0': {
-            'value': 0,
-            'dtype_arrow': pa.timestamp('ms'),
-            'expect_typestr': "'FAST TIMESTAMP VECTOR'",
-            'expect_value': "1970.01.01T00:00:00.000",
-        },
-        'data_arrow_timestamp_s_0': {
-            'value': 0,
-            'dtype_arrow': pa.timestamp('s'),
-            'expect_typestr': "'FAST DATETIME VECTOR'",
-            'expect_value': "1970.01.01T00:00:00",
-        },
-        'data_arrow_decimal128': {
-            'value': Decimal('0.00'),
-            'dtype_arrow': pa.decimal128(3, 2),
-            'expect_typestr': "'FAST DECIMAL128 VECTOR'",
-            'expect_value': "decimal128('0.00',2)",
-        },
-        'data_arrow_decimal128_nan': {
-            'value': Decimal('nan'),
-            'dtype_arrow': pa.decimal128(3, 2),
-            'expect_typestr': "'FAST DECIMAL128 VECTOR'",
-            'expect_value': "decimal64(NULL,2)",
-        },
-        # not support
-        # 'data_arrow_decimal256_0': {
-        #     'value': 0,
-        #     'dtype_arrow': pa.decimal256(2),
-        # },
-        'data_arrow_symbol': {
-            'value': 'aaa',
-            'dtype_arrow': pa.dictionary(pa.int32(), pa.utf8()),
-            'expect_typestr': "'FAST SYMBOL VECTOR'",
-            'expect_value': "'aaa'",
-        },
-        'data_arrow_uuid': {
-            'value': UUID('5d212a78-cc48-e3b1-4235-b4d91473ee87').bytes,
-            'dtype_arrow': pa.binary(16),
-            'expect_typestr': "'FAST UUID VECTOR'",
-            'expect_value': "uuid('5d212a78-cc48-e3b1-4235-b4d91473ee87')"
-        },
-        'data_arrow_int128': {
-            'value': UUID('e1671797c52e15f763380b45e841ec32').bytes,
-            'dtype_arrow': pa.binary(16),
-            'expect_typestr': "'FAST INT128 VECTOR'",
-            'expect_value': "int128('e1671797c52e15f763380b45e841ec32')"
-        },
-    }
+    if find_spec("pyarrow") is not None:
+        DATA_UPLOAD_ARROW = {
+            'data_arrow_int8_0': {
+                'value': 0,
+                'dtype_arrow': pa.int8(),
+                'expect_typestr': "'FAST CHAR VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_int8_max': {
+                'value': 2 ** 7 - 1,
+                'dtype_arrow': pa.int8(),
+                'expect_typestr': "'FAST CHAR VECTOR'",
+                'expect_value': 127,
+            },
+            'data_arrow_int8_min': {
+                'value': -2 ** 7 + 1,
+                'dtype_arrow': pa.int8(),
+                'expect_typestr': "'FAST CHAR VECTOR'",
+                'expect_value': -127,
+            },
+            'data_arrow_int8_none': {
+                'value': -2 ** 7,
+                'dtype_arrow': pa.int8(),
+                'expect_typestr': "'FAST CHAR VECTOR'",
+                'expect_value': '00c',
+            },
+            'data_arrow_int16_0': {
+                'value': 0,
+                'dtype_arrow': pa.int16(),
+                'expect_typestr': "'FAST SHORT VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_int16_max': {
+                'value': 2 ** 15 - 1,
+                'dtype_arrow': pa.int16(),
+                'expect_typestr': "'FAST SHORT VECTOR'",
+                'expect_value': 2 ** 15 - 1,
+            },
+            'data_arrow_int16_min': {
+                'value': -2 ** 15 + 1,
+                'dtype_arrow': pa.int16(),
+                'expect_typestr': "'FAST SHORT VECTOR'",
+                'expect_value': -2 ** 15 + 1,
+            },
+            'data_arrow_int16_none': {
+                'value': -2 ** 15,
+                'dtype_arrow': pa.int16(),
+                'expect_typestr': "'FAST SHORT VECTOR'",
+                'expect_value': '00h',
+            },
+            'data_arrow_int32_0': {
+                'value': 0,
+                'dtype_arrow': pa.int32(),
+                'expect_typestr': "'FAST INT VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_int32_max': {
+                'value': 2 ** 31 - 1,
+                'dtype_arrow': pa.int32(),
+                'expect_typestr': "'FAST INT VECTOR'",
+                'expect_value': 2 ** 31 - 1,
+            },
+            'data_arrow_int32_min': {
+                'value': -2 ** 31 + 1,
+                'dtype_arrow': pa.int32(),
+                'expect_typestr': "'FAST INT VECTOR'",
+                'expect_value': -2 ** 31 + 1,
+            },
+            'data_arrow_int32_none': {
+                'value': -2 ** 31,
+                'dtype_arrow': pa.int32(),
+                'expect_typestr': "'FAST INT VECTOR'",
+                'expect_value': '00i',
+            },
+            'data_arrow_int64_0': {
+                'value': 0,
+                'dtype_arrow': pa.int64(),
+                'expect_typestr': "'FAST LONG VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_int64_max': {
+                'value': 2 ** 63 - 1,
+                'dtype_arrow': pa.int64(),
+                'expect_typestr': "'FAST LONG VECTOR'",
+                'expect_value': 2 ** 63 - 1,
+            },
+            'data_arrow_int64_min': {
+                'value': -2 ** 63 + 1,
+                'dtype_arrow': pa.int64(),
+                'expect_typestr': "'FAST LONG VECTOR'",
+                'expect_value': -2 ** 63 + 1,
+            },
+            'data_arrow_int64_none': {
+                'value': -2 ** 63,
+                'dtype_arrow': pa.int64(),
+                'expect_typestr': "'FAST LONG VECTOR'",
+                'expect_value': '00l',
+            },
+            'data_arrow_float32_0': {
+                'value': 0,
+                'dtype_arrow': pa.float32(),
+                'expect_typestr': "'FAST FLOAT VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_float32_nan': {
+                'value': float('nan'),
+                'dtype_arrow': pa.float32(),
+                'expect_typestr': "'FAST FLOAT VECTOR'",
+                'expect_value': '00f',
+            },
+            # 'data_arrow_float32_inf': {
+            #     'value': float('inf'),
+            #     'dtype_arrow': pa.float32(),
+            #     'expect_typestr': "'FAST FLOAT VECTOR'",
+            # },
+            'data_arrow_float32_max': {
+                'value': 3.4028235e+38,
+                'dtype_arrow': pa.float32(),
+                'expect_typestr': "'FAST FLOAT VECTOR'",
+                'expect_value': 'float(3.4028235e+38)',
+            },
+            'data_arrow_float32_none': {
+                'value': -3.4028235e+38,
+                'dtype_arrow': pa.float32(),
+                'expect_typestr': "'FAST FLOAT VECTOR'",
+                'expect_value': '00f',
+            },
+            'data_arrow_float64_0': {
+                'value': 0,
+                'dtype_arrow': pa.float64(),
+                'expect_typestr': "'FAST DOUBLE VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_float64_nan': {
+                'value': float('nan'),
+                'dtype_arrow': pa.float64(),
+                'expect_typestr': "'FAST DOUBLE VECTOR'",
+                'expect_value': '00F',
+            },
+            # 'data_arrow_float64_inf': {
+            #     'value': float('inf'),
+            #     'dtype_arrow': pa.float64(),
+            #     'expect_typestr': "'FAST DOUBLE VECTOR'",
+            # },
+            'data_arrow_float64_max': {
+                'value': 1.7976931348623157e+308,
+                'dtype_arrow': pa.float64(),
+                'expect_typestr': "'FAST DOUBLE VECTOR'",
+                'expect_value': 'double(1.7976931348623157e+308)',
+            },
+            'data_arrow_float64_none': {
+                'value': -1.7976931348623157e+308,
+                'dtype_arrow': pa.float64(),
+                'expect_typestr': "'FAST DOUBLE VECTOR'",
+                'expect_value': '00F',
+            },
+            'data_arrow_string': {
+                'value': 'abc!@#中文 123',
+                'dtype_arrow': pa.utf8(),
+                'expect_typestr': "'STRING VECTOR'",
+                'expect_value': "'abc!@#中文 123'",
+            },
+            'data_arrow_bytes_utf8': {
+                'value': 'abc!@#中文 123'.encode(),
+                'dtype_arrow': pa.large_binary(),
+                'expect_typestr': "'BLOB VECTOR'",
+                'expect_value': "'abc!@#中文 123'",
+            },
+            'data_arrow_bytes_gbk': {
+                'value': 'abc!@#中文 123'.encode('gbk'),
+                'dtype_arrow': pa.large_binary(),
+                'expect_typestr': "'BLOB VECTOR'",
+                'expect_value': "fromUTF8('abc!@#中文 123','gbk')",
+            },
+            'data_arrow_bool_true': {
+                'value': True,
+                'dtype_arrow': pa.bool_(),
+                'expect_typestr': "'FAST BOOL VECTOR'",
+                'expect_value': 'true',
+            },
+            'data_arrow_bool_false': {
+                'value': False,
+                'dtype_arrow': pa.bool_(),
+                'expect_typestr': "'FAST BOOL VECTOR'",
+                'expect_value': 'false',
+            },
+            'data_arrow_date32_0': {
+                'value': 0,
+                'dtype_arrow': pa.date32(),
+                'expect_typestr': "'FAST DATE VECTOR'",
+                'expect_value': "1970.01.01",
+            },
+            # not support
+            # 'data_arrow_date64_0': {
+            #     'value': 0,
+            #     'dtype_arrow': pa.date64(),
+            # },
+            'data_arrow_time32_ms_0': {
+                'value': 0,
+                'dtype_arrow': pa.time32('ms'),
+                'expect_typestr': "'FAST TIME VECTOR'",
+                'expect_value': "00:00:00.000",
+            },
+            'data_arrow_time32_s_0': {
+                'value': 0,
+                'dtype_arrow': pa.time32('s'),
+                'expect_typestr': "'FAST SECOND VECTOR'",
+                'expect_value': "00:00:00",
+            },
+            'data_arrow_time64_ns_0': {
+                'value': 0,
+                'dtype_arrow': pa.time64('ns'),
+                'expect_typestr': "'FAST NANOTIME VECTOR'",
+                'expect_value': "00:00:00.000000000",
+            },
+            # not support
+            # 'data_arrow_time64_us_0': {
+            #     'value': 0,
+            #     'dtype_arrow': pa.time64('us'),
+            # },
+            'data_arrow_timestamp_ns_0': {
+                'value': 0,
+                'dtype_arrow': pa.timestamp('ns'),
+                'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
+                'expect_value': "1970.01.01T00:00:00.000000000",
+            },
+            'data_arrow_timestamp_ns_max': {
+                'value': np.datetime64('2262-04-11T23:47:16.854775807', 'ns'),
+                'dtype_arrow': pa.timestamp('ns'),
+                'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
+                'expect_value': "2262.04.11T23:47:16.854775807",
+            },
+            'data_arrow_timestamp_ns_min': {
+                'value': np.datetime64('1677-09-21T00:12:43.145224193', 'ns'),
+                'dtype_arrow': pa.timestamp('ns'),
+                'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
+                'expect_value': "1677.09.21T00:12:43.145224193",
+            },
+            'data_arrow_timestamp_ns_none': {
+                'value': np.datetime64('1677-09-21T00:12:43.145224192', 'ns'),
+                'dtype_arrow': pa.timestamp('ns'),
+                'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
+                'expect_value': "00N",
+            },
+            # not support
+            # 'data_arrow_timestamp_us_0': {
+            #     'value': 0,
+            #     'dtype_arrow': pa.timestamp('us'),
+            # },
+            'data_arrow_timestamp_ms_0': {
+                'value': 0,
+                'dtype_arrow': pa.timestamp('ms'),
+                'expect_typestr': "'FAST TIMESTAMP VECTOR'",
+                'expect_value': "1970.01.01T00:00:00.000",
+            },
+            'data_arrow_timestamp_s_0': {
+                'value': 0,
+                'dtype_arrow': pa.timestamp('s'),
+                'expect_typestr': "'FAST DATETIME VECTOR'",
+                'expect_value': "1970.01.01T00:00:00",
+            },
+            'data_arrow_decimal128': {
+                'value': Decimal('0.00'),
+                'dtype_arrow': pa.decimal128(3, 2),
+                'expect_typestr': "'FAST DECIMAL128 VECTOR'",
+                'expect_value': "decimal128('0.00',2)",
+            },
+            'data_arrow_decimal128_nan': {
+                'value': Decimal('nan'),
+                'dtype_arrow': pa.decimal128(3, 2),
+                'expect_typestr': "'FAST DECIMAL128 VECTOR'",
+                'expect_value': "decimal64(NULL,2)",
+            },
+            # not support
+            # 'data_arrow_decimal256_0': {
+            #     'value': 0,
+            #     'dtype_arrow': pa.decimal256(2),
+            # },
+            'data_arrow_symbol': {
+                'value': 'aaa',
+                'dtype_arrow': pa.dictionary(pa.int32(), pa.utf8()),
+                'expect_typestr': "'FAST SYMBOL VECTOR'",
+                'expect_value': "'aaa'",
+            },
+            'data_arrow_uuid': {
+                'value': UUID('5d212a78-cc48-e3b1-4235-b4d91473ee87').bytes,
+                'dtype_arrow': pa.binary(16),
+                'expect_typestr': "'FAST UUID VECTOR'",
+                'expect_value': "uuid('5d212a78-cc48-e3b1-4235-b4d91473ee87')"
+            },
+            'data_arrow_int128': {
+                'value': UUID('e1671797c52e15f763380b45e841ec32').bytes,
+                'dtype_arrow': pa.binary(16),
+                'expect_typestr': "'FAST INT128 VECTOR'",
+                'expect_value': "int128('e1671797c52e15f763380b45e841ec32')"
+            },
+        }
 
     DATA_TYPE = {
         'VOID': {
@@ -1921,9 +1923,17 @@ class DataUtils(object):
                     'value': '()',
                     'expect': [],
                 },
+                'vectorSpecial_pair': {
+                    'value': '[1:2]',
+                    'expect': [[1, 2]],
+                },
                 'vectorSpecial_vector': {
                     'value': '[[1]]',
                     'expect': [np.array([1], dtype=np.int32)],
+                },
+                'vectorSpecial_matrix': {
+                    'value': '[1..6$2:3]',
+                    'expect': [[np.array([[1, 3, 5], [2, 4, 6]], dtype=np.int32), None, None]],
                 },
                 'vectorSpecial_set': {
                     'value': '[set([1])]',
@@ -2104,26 +2114,26 @@ class DataUtils(object):
             rtn = {
                 'matrixSpecial_empty_' + k.replace('[', '_').replace(']', ''): {
                     'value': np.array([[], []], dtype=k),
-                    'expect_typestr':v,
+                    'expect_typestr': v,
                     # 'expect_value':f"matrix(array({v.split(' ')[1]}[],0,0).append!([[],[]]))"
-                } for k,v in {
-                    'int8':"'FAST CHAR MATRIX'",
-                    'int16':"'FAST SHORT MATRIX'",
-                    'int32':"'FAST INT MATRIX'",
-                    'int64':"'FAST LONG MATRIX'",
-                    'float32':"'FAST FLOAT MATRIX'",
-                    'float64':"'FAST DOUBLE MATRIX'",
+                } for k, v in {
+                    'int8': "'FAST CHAR MATRIX'",
+                    'int16': "'FAST SHORT MATRIX'",
+                    'int32': "'FAST INT MATRIX'",
+                    'int64': "'FAST LONG MATRIX'",
+                    'float32': "'FAST FLOAT MATRIX'",
+                    'float64': "'FAST DOUBLE MATRIX'",
                     # 'longdouble',
-                    'bool':"'FAST BOOL MATRIX'",
-                    'datetime64[ns]':"'FAST NANOTIMESTAMP MATRIX'",
-                    'datetime64[us]':"'FAST NANOTIMESTAMP MATRIX'",
-                    'datetime64[ms]':"'FAST TIMESTAMP MATRIX'",
-                    'datetime64[s]':"'FAST DATETIME MATRIX'",
-                    'datetime64[m]':"'FAST DATETIME MATRIX'",
-                    'datetime64[h]':"'FAST DATEHOUR MATRIX'",
-                    'datetime64[D]':"'FAST DATE MATRIX'",
-                    'datetime64[M]':"'FAST MONTH MATRIX'",
-                    'object':"'FAST DOUBLE MATRIX'",
+                    'bool': "'FAST BOOL MATRIX'",
+                    'datetime64[ns]': "'FAST NANOTIMESTAMP MATRIX'",
+                    'datetime64[us]': "'FAST NANOTIMESTAMP MATRIX'",
+                    'datetime64[ms]': "'FAST TIMESTAMP MATRIX'",
+                    'datetime64[s]': "'FAST DATETIME MATRIX'",
+                    'datetime64[m]': "'FAST DATETIME MATRIX'",
+                    'datetime64[h]': "'FAST DATEHOUR MATRIX'",
+                    'datetime64[D]': "'FAST DATE MATRIX'",
+                    'datetime64[M]': "'FAST MONTH MATRIX'",
+                    'object': "'FAST DOUBLE MATRIX'",
                 }.items()
             }
             return rtn
@@ -2138,9 +2148,7 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             rtn = {k.replace('data', 'set'): {
                 'value': {v['value']},
-                'expect_typestr': f"'{v['expect_typestr']} SET'" if v['expect_typestr'] not in (
-                    'BLOB',
-                ) else "'STRING SET'",
+                'expect_typestr': f"'{v['expect_typestr']} SET'",
                 'expect_value': f"set([{v['expect_value']}])",
             } for k, v in cls.DATA_UPLOAD.items()
                 if k not in (
@@ -2227,9 +2235,7 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             rtn = {k.replace('data', 'set'): {
                 'value': {v['value'], None},
-                'expect_typestr': f"'{v['expect_typestr']} SET'" if v['expect_typestr'] not in (
-                    'BLOB',
-                ) else "'STRING SET'",
+                'expect_typestr': f"'{v['expect_typestr']} SET'",
                 'expect_value': f"set([{v['expect_value']},NULL])",
             } for k, v in cls.DATA_UPLOAD.items()
                 if k not in (
@@ -2341,7 +2347,7 @@ class DataUtils(object):
         """
         if _type.lower() == 'upload':
             rtn = {k.replace('data', 'dict'): {
-                'value': {'b': None,'a': v['value']},
+                'value': {'b': None, 'a': v['value']},
                 'expect_typestr': f"'STRING->{v['expect_typestr']} DICTIONARY'",
                 'expect_value': v['expect_value'],
             } for k, v in cls.DATA_UPLOAD.items()
@@ -2784,7 +2790,7 @@ class DataUtils(object):
             rtn = {k: {
                 'value': f"table([{v['value']},{v['value']}] as a)",
                 'expect': pd.DataFrame({'a': [v['expect'], v['expect']]},
-                                       dtype=v['dtype'] if not isinstance(v['dtype'], str) else re.sub(r'\[.*\]',
+                                       dtype=v['dtype'] if not isinstance(v['dtype'], str) else re.sub(r'\[.*]',
                                                                                                        '[ns]',
                                                                                                        v['dtype'])),
             } for k, v in cls.DATA_DOWNLOAD.items()
@@ -3014,91 +3020,96 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            rtn={
-                'table_extension_boolean':{
-                    'value':pd.DataFrame({'a':[True,False,None]},dtype=pd.BooleanDtype()),
-                    'expect_typestr':"'FAST BOOL VECTOR'",
-                    'expect_value':"table([true,false,00b] as `a)",
+            rtn = {
+                'table_extension_boolean': {
+                    'value': pd.DataFrame({'a': [True, False, None]}, dtype=pd.BooleanDtype()),
+                    'expect_typestr': "'FAST BOOL VECTOR'",
+                    'expect_value': "table([true,false,00b] as `a)",
                 },
                 'table_extension_int8': {
-                    'value': pd.DataFrame({'a': [0, 1,None]}, dtype=pd.Int8Dtype()),
+                    'value': pd.DataFrame({'a': [0, 1, None]}, dtype=pd.Int8Dtype()),
                     'expect_typestr': "'FAST CHAR VECTOR'",
                     'expect_value': "table([0c,1c,00c] as `a)",
                 },
                 'table_extension_int16': {
-                    'value': pd.DataFrame({'a': [0, 1,None]}, dtype=pd.Int16Dtype()),
+                    'value': pd.DataFrame({'a': [0, 1, None]}, dtype=pd.Int16Dtype()),
                     'expect_typestr': "'FAST SHORT VECTOR'",
                     'expect_value': "table([0h,1h,00h] as `a)",
                 },
                 'table_extension_int32': {
-                    'value': pd.DataFrame({'a': [0, 1,None]}, dtype=pd.Int32Dtype()),
+                    'value': pd.DataFrame({'a': [0, 1, None]}, dtype=pd.Int32Dtype()),
                     'expect_typestr': "'FAST INT VECTOR'",
                     'expect_value': "table([0i,1i,00i] as `a)",
                 },
                 'table_extension_int64': {
-                    'value': pd.DataFrame({'a': [0, 1,None]}, dtype=pd.Int64Dtype()),
+                    'value': pd.DataFrame({'a': [0, 1, None]}, dtype=pd.Int64Dtype()),
                     'expect_typestr': "'FAST LONG VECTOR'",
                     'expect_value': "table([0l,1l,00l] as `a)",
                 },
                 'table_extension_string': {
-                    'value': pd.DataFrame({'a': ["0", "1",None]}, dtype=pd.StringDtype()),
+                    'value': pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype()),
                     'expect_typestr': "'STRING VECTOR'",
                     'expect_value': "table([\"0\",\"1\",\"\"] as `a)",
                 },
             }
-            if PANDAS_VERSION>=(1,3,0):
-                rtn["table_extension_string_pyarrow"]={
-                    'value': pd.DataFrame({'a': ["0", "1",None]}, dtype=pd.StringDtype(storage="pyarrow")),
-                    'expect_typestr': "'STRING VECTOR'",
-                    'expect_value': "table([\"0\",\"1\",\"\"] as `a)",
+            if find_spec("pyarrow") is not None:
+                if PANDAS_VERSION >= (1, 3, 0):
+                    rtn["table_extension_string_pyarrow"] = {
+                        'value': pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype(storage="pyarrow")),
+                        'expect_typestr': "'STRING VECTOR'",
+                        'expect_value': "table([\"0\",\"1\",\"\"] as `a)",
+                    }
+                    rtn["table_extension_string_python"] = {
+                        'value': pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype(storage="python")),
+                        'expect_typestr': "'STRING VECTOR'",
+                        'expect_value': "table([\"0\",\"1\",\"\"] as `a)",
+                    }
+                if PANDAS_VERSION >= (2, 1, 0):
+                    rtn['table_extension_string_pyarrow_numpy'] = {
+                        'value': pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype(storage="pyarrow_numpy")),
+                        'expect_typestr': "'STRING VECTOR'",
+                        'expect_value': "table([\"0\",\"1\",\"\"] as `a)",
+                    }
+            if PANDAS_VERSION >= (1, 2, 0):
+                rtn["table_extension_float32"] = {
+                    'value': pd.DataFrame({'a': [0, 1, None]}, dtype=pd.Float32Dtype()),
+                    'expect_typestr': "'FAST FLOAT VECTOR'",
+                    'expect_value': "table([0f,1f,00f] as `a)",
                 }
-                rtn["table_extension_string_python"]={
-                    'value': pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype(storage="python")),
-                    'expect_typestr': "'STRING VECTOR'",
-                    'expect_value': "table([\"0\",\"1\",\"\"] as `a)",
-                }
-            if PANDAS_VERSION>=(2,1,0):
-                rtn['table_extension_string_pyarrow_numpy']={
-                    'value': pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype(storage="pyarrow_numpy")),
-                    'expect_typestr': "'STRING VECTOR'",
-                    'expect_value': "table([\"0\",\"1\",\"\"] as `a)",
-                }
-            if PANDAS_VERSION>=(1,2,0):
-                rtn["table_extension_float32"]={
-                    'value':pd.DataFrame({'a':[0,1,None]},dtype=pd.Float32Dtype()),
-                    'expect_typestr':"'FAST FLOAT VECTOR'",
-                    'expect_value':"table([0f,1f,00f] as `a)",
-                }
-                rtn["table_extension_float64"]={
-                    'value': pd.DataFrame({'a': [0, 1,None]}, dtype=pd.Float64Dtype()),
+                rtn["table_extension_float64"] = {
+                    'value': pd.DataFrame({'a': [0, 1, None]}, dtype=pd.Float64Dtype()),
                     'expect_typestr': "'FAST DOUBLE VECTOR'",
                     'expect_value': "table([0F,1F,00F] as `a)",
                 }
-            df_symbol=pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype())
-            df_symbol.__DolphinDB_Type__={'a':keys.DT_SYMBOL}
-            rtn['table_extension_symbol']={
-                'value':df_symbol,
+            df_symbol = pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype())
+            df_symbol.__DolphinDB_Type__ = {'a': keys.DT_SYMBOL}
+            rtn['table_extension_symbol'] = {
+                'value': df_symbol,
                 'expect_typestr': "'FAST SYMBOL VECTOR'",
                 'expect_value': "table(symbol([\"0\",\"1\",\"\"]) as `a)",
             }
-            df_blob=pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype())
-            df_blob.__DolphinDB_Type__={'a':keys.DT_BLOB}
-            rtn['table_extension_blob']={
-                'value':df_blob,
+            df_blob = pd.DataFrame({'a': ["0", "1", None]}, dtype=pd.StringDtype())
+            df_blob.__DolphinDB_Type__ = {'a': keys.DT_BLOB}
+            rtn['table_extension_blob'] = {
+                'value': df_blob,
                 'expect_typestr': "'BLOB VECTOR'",
                 'expect_value': "table(blob([\"0\",\"1\",\"\"]) as `a)",
             }
-            df_uuid=pd.DataFrame({'a': ["5d212a78-cc48-e3b1-4235-b4d91473ee87", "00000000-0000-0000-0000-000000000000", None]}, dtype=pd.StringDtype())
-            df_uuid.__DolphinDB_Type__={'a':keys.DT_UUID}
-            rtn['table_extension_uuid']={
-                'value':df_uuid,
+            df_uuid = pd.DataFrame(
+                {'a': ["5d212a78-cc48-e3b1-4235-b4d91473ee87", "00000000-0000-0000-0000-000000000000", None]},
+                dtype=pd.StringDtype())
+            df_uuid.__DolphinDB_Type__ = {'a': keys.DT_UUID}
+            rtn['table_extension_uuid'] = {
+                'value': df_uuid,
                 'expect_typestr': "'FAST UUID VECTOR'",
                 'expect_value': "table(uuid([\"5d212a78-cc48-e3b1-4235-b4d91473ee87\",\"00000000-0000-0000-0000-000000000000\",\"00000000-0000-0000-0000-000000000000\"]) as `a)",
             }
-            df_int128=pd.DataFrame({'a': ["5d212a78cc48e3b14235b4d91473ee87", "00000000000000000000000000000000", None]}, dtype=pd.StringDtype())
-            df_int128.__DolphinDB_Type__={'a':keys.DT_INT128}
-            rtn['table_extension_int128']={
-                'value':df_int128,
+            df_int128 = pd.DataFrame(
+                {'a': ["5d212a78cc48e3b14235b4d91473ee87", "00000000000000000000000000000000", None]},
+                dtype=pd.StringDtype())
+            df_int128.__DolphinDB_Type__ = {'a': keys.DT_INT128}
+            rtn['table_extension_int128'] = {
+                'value': df_int128,
                 'expect_typestr': "'FAST INT128 VECTOR'",
                 'expect_value': "table(int128([\"5d212a78cc48e3b14235b4d91473ee87\",\"00000000000000000000000000000000\",\"00000000000000000000000000000000\"]) as `a)",
             }
@@ -6001,7 +6012,7 @@ class DataUtils(object):
                                 '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_decimal_nan,'
                                 '[decimal128("3.14159265358979323",30),decimal128("3.14159265358979323",30),decimal128("3.14159265358979323",30)] as `data_decimal_17,'
                                 '[decimal128("-0.141592653589793238",30),decimal128("-0.141592653589793238",30),decimal128("-0.141592653589793238",30)] as `data_decimal_18,'
-                                '[decimal128("0.14159265358979323846264338327950288419",30),decimal128("0.14159265358979323846264338327950288419",30),decimal128("0.14159265358979323846264338327950288419",30)] as `data_decimal_38,'
+                                '[decimal128("0.141592653589793238462643383279",30),decimal128("0.141592653589793238462643383279",30),decimal128("0.141592653589793238462643383279",30)] as `data_decimal_38,'
                                 '[decimal128(NULL,30),decimal128("0",30),decimal128("-1",30)] as `first_none,'
                                 '[decimal128("0",30),decimal128(NULL,30),decimal128("-1",30)] as `middle_none,'
                                 '[decimal128("0",30),decimal128("-1",30),decimal128(NULL,30)] as `last_none'
@@ -6758,104 +6769,105 @@ class DataUtils(object):
             else:
                 return {}
 
-        @classmethod
-        def getTableArrowArrayVector(cls, _type):
-            """
-            _type:upload or download
-            """
-            if _type.lower() == 'upload':
-                rtn = {k.replace('data', 'tableArrayVector'): {
-                    'value': pd.DataFrame(
-                        {'a': [[v['value'], v['value'], v['value']], [v['value'], v['value'], v['value']]]},
-                        dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
-                    'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
-                    'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)" if
-                    v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
-                    f"table(array(DECIMAL128(2)[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)"
-                } for k, v in cls.DATA_UPLOAD_ARROW.items()
-                    if k not in (
-                        'data_arrow_string',
-                        'data_arrow_bytes_utf8',
-                        'data_arrow_bytes_gbk',
-                        'data_arrow_symbol',
-                    )
-                }
-                rtn['tableArrayVector_arrow_uuid']['value'].__DolphinDB_Type__ = {
-                    'a': keys.DT_UUID_ARRAY,
-                }
-                rtn['tableArrayVector_arrow_int128']['value'].__DolphinDB_Type__ = {
-                    'a': keys.DT_INT128_ARRAY,
-                }
-                return rtn
-            else:
-                return {}
+        if find_spec("pyarrow") is not None:
+            @classmethod
+            def getTableArrowArrayVector(cls, _type):
+                """
+                _type:upload or download
+                """
+                if _type.lower() == 'upload':
+                    rtn = {k.replace('data', 'tableArrayVector'): {
+                        'value': pd.DataFrame(
+                            {'a': [[v['value'], v['value'], v['value']], [v['value'], v['value'], v['value']]]},
+                            dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
+                        'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
+                        'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)" if
+                        v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
+                        f"table(array(DECIMAL128(2)[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)"
+                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                        if k not in (
+                            'data_arrow_string',
+                            'data_arrow_bytes_utf8',
+                            'data_arrow_bytes_gbk',
+                            'data_arrow_symbol',
+                        )
+                    }
+                    rtn['tableArrayVector_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_UUID_ARRAY,
+                    }
+                    rtn['tableArrayVector_arrow_int128']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_INT128_ARRAY,
+                    }
+                    return rtn
+                else:
+                    return {}
 
-        # todo:None
-        @classmethod
-        def getTableArrowArrayVectorContainNone(cls, _type):
-            """
-            _type:upload or download
-            """
-            if _type.lower() == 'upload':
-                rtn = {k.replace('data', 'tableArrayVectorContainNone'): {
-                    'value': pd.DataFrame({'a': [[None, None, None], [v['value'], None, v['value']], [v['value']]]},
-                                          dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
-                    'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
-                    'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL)],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
-                    v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
-                    f"table(array(DECIMAL128(2)[],0,3).append!([[decimal128(NULL,2),decimal128(NULL,2),decimal128(NULL,2)],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
-                } for k, v in cls.DATA_UPLOAD_ARROW.items()
-                    if k not in (
-                        'data_arrow_string',
-                        'data_arrow_bytes_utf8',
-                        'data_arrow_bytes_gbk',
-                        'data_arrow_symbol',
-                    )
-                }
-                rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value'] = \
-                    rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value'].replace('uuid(NULL)',
-                                                                                          "uuid('00000000-0000-0000-0000-000000000000')")
-                rtn['tableArrayVectorContainNone_arrow_int128']['expect_value'] = \
-                    rtn['tableArrayVectorContainNone_arrow_int128']['expect_value'].replace('int128(NULL)',
-                                                                                            "int128('00000000000000000000000000000000')")
-                rtn['tableArrayVectorContainNone_arrow_uuid']['value'].__DolphinDB_Type__ = {
-                    'a': keys.DT_UUID_ARRAY,
-                }
-                rtn['tableArrayVectorContainNone_arrow_int128']['value'].__DolphinDB_Type__ = {
-                    'a': keys.DT_INT128_ARRAY,
-                }
-                return rtn
-            else:
-                return {}
+            # todo:None
+            @classmethod
+            def getTableArrowArrayVectorContainNone(cls, _type):
+                """
+                _type:upload or download
+                """
+                if _type.lower() == 'upload':
+                    rtn = {k.replace('data', 'tableArrayVectorContainNone'): {
+                        'value': pd.DataFrame({'a': [[None, None, None], [v['value'], None, v['value']], [v['value']]]},
+                                              dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
+                        'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
+                        'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL)],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
+                        v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
+                        f"table(array(DECIMAL128(2)[],0,3).append!([[decimal128(NULL,2),decimal128(NULL,2),decimal128(NULL,2)],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
+                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                        if k not in (
+                            'data_arrow_string',
+                            'data_arrow_bytes_utf8',
+                            'data_arrow_bytes_gbk',
+                            'data_arrow_symbol',
+                        )
+                    }
+                    rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value'] = \
+                        rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value'].replace('uuid(NULL)',
+                                                                                              "uuid('00000000-0000-0000-0000-000000000000')")
+                    rtn['tableArrayVectorContainNone_arrow_int128']['expect_value'] = \
+                        rtn['tableArrayVectorContainNone_arrow_int128']['expect_value'].replace('int128(NULL)',
+                                                                                                "int128('00000000000000000000000000000000')")
+                    rtn['tableArrayVectorContainNone_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_UUID_ARRAY,
+                    }
+                    rtn['tableArrayVectorContainNone_arrow_int128']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_INT128_ARRAY,
+                    }
+                    return rtn
+                else:
+                    return {}
 
-        @classmethod
-        def getTableArrowArrayVectorContainEmpty(cls, _type):
-            """
-            _type:upload or download
-            """
-            if _type.lower() == 'upload':
-                rtn = {k.replace('data', 'tableArrayVectorContainEmpty'): {
-                    'value': pd.DataFrame({'a': [[], [v['value'], None, v['value']], [v['value']]]},
-                                          dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
-                    'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
-                    # todo: why
-                    # 'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
-                    # v['expect_typestr'] != "'FAST DECIMAL64 VECTOR'" else
-                    # f"table(array(DECIMAL64(2)[],0,3).append!([[],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
-                } for k, v in cls.DATA_UPLOAD_ARROW.items()
-                    if k not in (
-                        'data_arrow_string',
-                        'data_arrow_bytes_utf8',
-                        'data_arrow_bytes_gbk',
-                        'data_arrow_symbol',
-                    )
-                }
-                rtn['tableArrayVectorContainEmpty_arrow_uuid']['value'].__DolphinDB_Type__ = {
-                    'a': keys.DT_UUID_ARRAY,
-                }
-                rtn['tableArrayVectorContainEmpty_arrow_int128']['value'].__DolphinDB_Type__ = {
-                    'a': keys.DT_INT128_ARRAY,
-                }
-                return rtn
-            else:
-                return {}
+            @classmethod
+            def getTableArrowArrayVectorContainEmpty(cls, _type):
+                """
+                _type:upload or download
+                """
+                if _type.lower() == 'upload':
+                    rtn = {k.replace('data', 'tableArrayVectorContainEmpty'): {
+                        'value': pd.DataFrame({'a': [[], [v['value'], None, v['value']], [v['value']]]},
+                                              dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
+                        'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
+                        # todo: why
+                        # 'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
+                        # v['expect_typestr'] != "'FAST DECIMAL64 VECTOR'" else
+                        # f"table(array(DECIMAL64(2)[],0,3).append!([[],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
+                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                        if k not in (
+                            'data_arrow_string',
+                            'data_arrow_bytes_utf8',
+                            'data_arrow_bytes_gbk',
+                            'data_arrow_symbol',
+                        )
+                    }
+                    rtn['tableArrayVectorContainEmpty_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_UUID_ARRAY,
+                    }
+                    rtn['tableArrayVectorContainEmpty_arrow_int128']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_INT128_ARRAY,
+                    }
+                    return rtn
+                else:
+                    return {}

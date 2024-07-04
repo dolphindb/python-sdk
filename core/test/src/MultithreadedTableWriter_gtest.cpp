@@ -1,3 +1,5 @@
+#include "config.h"
+
 class MultithreadedTableWriterTest : public testing::Test
 {
 protected:
@@ -35,10 +37,11 @@ protected:
 		}
 
 		cout << "ok" << endl;
+		CLEAR_ENV(conn);
 	}
-	virtual void TearDown()
-	{
-		conn.run("undef all;");
+    virtual void TearDown()
+    {
+		CLEAR_ENV(conn);
 	}
 };
 
@@ -469,38 +472,23 @@ TEST_F(MultithreadedTableWriterTest, threadByColNameNullWithFileTable)
 
 TEST_F(MultithreadedTableWriterTest, mutiThreadWithDimensionTable)
 {
-
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
-	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		cout << "server version: 2.00.xx, run this case." << endl;
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"                   dropDatabase(dbName)\n"
-						"}\n"
-						"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
-						"t = table(1000:0, `bool`char`short`long`date`month`second`datetime`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id,[BOOL,CHAR,SHORT,LONG,DATE,MONTH,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT])\n"
-						"pt = db.createTable(t,`pt,,`symbol)";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		EXPECT_ANY_THROW(new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 10000, 1, 5, "sym"));
-		string script2 = "if(exists(dbName)){\n"
-						 "     dropDatabase(dbName)\n"
-						 "}\n";
-		conn.run(script2);
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	cout << "server version: 2.00.xx, run this case." << endl;
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"                   dropDatabase(dbName)\n"
+					"}\n"
+					"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
+					"t = table(1000:0, `bool`char`short`long`date`month`second`datetime`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id,[BOOL,CHAR,SHORT,LONG,DATE,MONTH,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT])\n"
+					"pt = db.createTable(t,`pt,,`symbol)";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	EXPECT_ANY_THROW(new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 10000, 1, 5, "sym"));
+	string script2 = "if(exists(dbName)){\n"
+						"     dropDatabase(dbName)\n"
+						"}\n";
+	conn.run(script2);
 }
 
 TEST_F(MultithreadedTableWriterTest, threadByColNameNullWithPartitionTable)
@@ -1340,7 +1328,7 @@ TEST_F(MultithreadedTableWriterTest, insertValuesErrorTypeDataPartitionTable_1)
 	conn.run(script);
 	SmartPointer<MultithreadedTableWriter> mulwrite;
 	ErrorCodeInfo pErrorInfo;
-	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", "", "t1", false, false, nullptr, 1, 0.1, 5, "sym");
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "sym");
 	bool flag = mulwrite->insert(pErrorInfo, "A", 12, 12.9);
 	EXPECT_EQ(flag, false);
 	cout << pErrorInfo.errorInfo;
@@ -1581,142 +1569,87 @@ TEST_F(MultithreadedTableWriterTest, insertVectorPartitionTableWithThrottle)
 
 TEST_F(MultithreadedTableWriterTest, insertValueLongerThanTSDBPartitionTable)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
-	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
-						"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
-						"pt = db.createPartitionedTable(t,`pt,`sym,,`sym`id)";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "sym");
-		bool flag = mulwrite->insert(pErrorInfo, "A1", 12, 12, 12);
-		EXPECT_EQ(flag, false);
-		EXPECT_EQ(pErrorInfo.errorInfo, "Column counts don't match 4");
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
+					"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
+					"pt = db.createPartitionedTable(t,`pt,`sym,,`sym`id)";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "sym");
+	bool flag = mulwrite->insert(pErrorInfo, "A1", 12, 12, 12);
+	EXPECT_EQ(flag, false);
+	EXPECT_EQ(pErrorInfo.errorInfo, "Column counts don't match 4");
 }
 
 TEST_F(MultithreadedTableWriterTest, insertValuesShorterThanTSDBPartitionTable)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
-	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
-						"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
-						"pt = db.createPartitionedTable(t,`pt,`sym,,`sym`id)";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "sym");
-		bool flag = mulwrite->insert(pErrorInfo, "A1", 12);
-		EXPECT_EQ(flag, false);
-		EXPECT_EQ(pErrorInfo.errorInfo, "Column counts don't match 2");
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
+					"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
+					"pt = db.createPartitionedTable(t,`pt,`sym,,`sym`id)";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "sym");
+	bool flag = mulwrite->insert(pErrorInfo, "A1", 12);
+	EXPECT_EQ(flag, false);
+	EXPECT_EQ(pErrorInfo.errorInfo, "Column counts don't match 2");
+
 }
 
 TEST_F(MultithreadedTableWriterTest, insertValuesErrorTypeTSDBPartitionTable_1)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
-	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
-						"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
-						"pt = db.createPartitionedTable(t,`pt,`sym,,`sym`id)";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "sym");
-		bool flag = mulwrite->insert(pErrorInfo, "A1", 12, "A");
-		EXPECT_EQ(flag, false);
-		// EXPECT_EQ(pErrorInfo->errorInfo,"Argument size mismatch.");
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
+					"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
+					"pt = db.createPartitionedTable(t,`pt,`sym,,`sym`id)";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "sym");
+	bool flag = mulwrite->insert(pErrorInfo, "A1", 12, "A");
+	EXPECT_EQ(flag, false);
+	// EXPECT_EQ(pErrorInfo->errorInfo,"Argument size mismatch.");
 }
 
 TEST_F(MultithreadedTableWriterTest, insertValuesTSDBPartitionTable)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
-	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
-						"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
-						"pt = db.createPartitionedTable(t,`pt,`sym,,`sym`id)";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "sym");
-		bool flag = mulwrite->insert(pErrorInfo, "A1", 12, 12);
-		EXPECT_EQ(flag, true);
-		mulwrite->waitForThreadCompletion();
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt)");
-		EXPECT_EQ((t1->getRow(0)->getString() == "value->12\nsym->A1\nid->12\n") || (t1->getRow(0)->getString() == "value->12\nid->12\nsym->A1\n"), true);
-		//  cout << pErrorInfo->errorCode << "\n";
-		//  cout << pErrorInfo->errorInfo;
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
+					"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
+					"pt = db.createPartitionedTable(t,`pt,`sym,,`sym`id)";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "sym");
+	bool flag = mulwrite->insert(pErrorInfo, "A1", 12, 12);
+	EXPECT_EQ(flag, true);
+	mulwrite->waitForThreadCompletion();
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt)");
+	EXPECT_EQ((t1->getRow(0)->getString() == "value->12\nsym->A1\nid->12\n") || (t1->getRow(0)->getString() == "value->12\nid->12\nsym->A1\n"), true);
+	//  cout << pErrorInfo->errorCode << "\n";
+	//  cout << pErrorInfo->errorInfo;
 }
 
 TEST_F(MultithreadedTableWriterTest, chear)
@@ -1730,422 +1663,329 @@ TEST_F(MultithreadedTableWriterTest, chear)
 
 TEST_F(MultithreadedTableWriterTest, insertValuesTSDBPartitionTableDifferentTypeData)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
-	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
-		script += "t = table(1000:0, `bool`char`short`long`date`month`second`datetime`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
-				  "[BOOL,CHAR,SHORT,LONG,DATE,MONTH,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
-				  "pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
-		conn.run(script);
-		Util::sleep(3000);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		unsigned char data[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "symbol");
-		bool flag = mulwrite->insert(pErrorInfo, false, char(12), (short)12, (long)12, Util::createDate(2012, 11, 12), Util::createMonth(2012, 11), Util::createSecond(134),
-									 Util::createDateTime(2012, 11, 13, 6, 12, 12), Util::createTimestamp(43241), Util::createNanoTime(532432),
-									 Util::createNanoTimestamp(85932494), 12.4f, 3412.3, "A", "AAPL", data, data, data, 12, "0f0e0d0c0b0a0908070605040302010");
-		// EXPECT_EQ(flag, true);
-		mulwrite->waitForThreadCompletion();
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt);");
-		EXPECT_EQ(t1->getColumn(0)->getRow(0)->getString(), "0");
-		EXPECT_EQ(t1->getColumn(1)->getRow(0)->getString(), "12");
-		EXPECT_EQ(t1->getColumn(2)->getRow(0)->getString(), "12");
-		EXPECT_EQ(t1->getColumn(3)->getRow(0)->getString(), "12");
-		EXPECT_EQ(t1->getColumn(4)->getRow(0)->getString(), "2012.11.12");
-		EXPECT_EQ(t1->getColumn(5)->getRow(0)->getString(), "2012.11M");
-		EXPECT_EQ(t1->getColumn(6)->getRow(0)->getString(), "00:02:14");
-		EXPECT_EQ(t1->getColumn(7)->getRow(0)->getString(), Util::createDateTime(2012, 11, 13, 6, 12, 12)->getString());
-		EXPECT_EQ(t1->getColumn(8)->getRow(0)->getString(), Util::createTimestamp(43241)->getString());
-		EXPECT_EQ(t1->getColumn(9)->getRow(0)->getString(), Util::createNanoTime(532432)->getString());
-		EXPECT_EQ(t1->getColumn(10)->getRow(0)->getString(), Util::createNanoTimestamp(85932494)->getString());
-		EXPECT_EQ(t1->getColumn(11)->getRow(0)->getString(), "12.4");
-		EXPECT_EQ(t1->getColumn(12)->getRow(0)->getString(), "3412.3");
-		EXPECT_EQ(t1->getColumn(13)->getRow(0)->getString(), "A");
-		EXPECT_EQ(t1->getColumn(14)->getRow(0)->getString(), "AAPL");
-		EXPECT_EQ(t1->getColumn(15)->getRow(0)->getString(), "0f0e0d0c-0b0a-0908-0706-050403020100");
-		EXPECT_EQ(t1->getColumn(16)->getRow(0)->getString(), "f0e:d0c:b0a:908:706:504:302:100");
-		EXPECT_EQ(t1->getColumn(17)->getRow(0)->getString(), "0f0e0d0c0b0a09080706050403020100");
-		EXPECT_EQ(t1->getColumn(19)->getRow(0)->getString(), "0f0e0d0c0b0a0908070605040302010");
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
+	script += "t = table(1000:0, `bool`char`short`long`date`month`second`datetime`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
+				"[BOOL,CHAR,SHORT,LONG,DATE,MONTH,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
+				"pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
+	conn.run(script);
+	Util::sleep(3000);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	unsigned char data[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "symbol");
+	bool flag = mulwrite->insert(pErrorInfo, false, char(12), (short)12, (long)12, Util::createDate(2012, 11, 12), Util::createMonth(2012, 11), Util::createSecond(134),
+									Util::createDateTime(2012, 11, 13, 6, 12, 12), Util::createTimestamp(43241), Util::createNanoTime(532432),
+									Util::createNanoTimestamp(85932494), 12.4f, 3412.3, "A", "AAPL", data, data, data, 12, "0f0e0d0c0b0a0908070605040302010");
+	// EXPECT_EQ(flag, true);
+	mulwrite->waitForThreadCompletion();
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt);");
+	EXPECT_EQ(t1->getColumn(0)->getRow(0)->getString(), "0");
+	EXPECT_EQ(t1->getColumn(1)->getRow(0)->getString(), "12");
+	EXPECT_EQ(t1->getColumn(2)->getRow(0)->getString(), "12");
+	EXPECT_EQ(t1->getColumn(3)->getRow(0)->getString(), "12");
+	EXPECT_EQ(t1->getColumn(4)->getRow(0)->getString(), "2012.11.12");
+	EXPECT_EQ(t1->getColumn(5)->getRow(0)->getString(), "2012.11M");
+	EXPECT_EQ(t1->getColumn(6)->getRow(0)->getString(), "00:02:14");
+	EXPECT_EQ(t1->getColumn(7)->getRow(0)->getString(), Util::createDateTime(2012, 11, 13, 6, 12, 12)->getString());
+	EXPECT_EQ(t1->getColumn(8)->getRow(0)->getString(), Util::createTimestamp(43241)->getString());
+	EXPECT_EQ(t1->getColumn(9)->getRow(0)->getString(), Util::createNanoTime(532432)->getString());
+	EXPECT_EQ(t1->getColumn(10)->getRow(0)->getString(), Util::createNanoTimestamp(85932494)->getString());
+	EXPECT_EQ(t1->getColumn(11)->getRow(0)->getString(), "12.4");
+	EXPECT_EQ(t1->getColumn(12)->getRow(0)->getString(), "3412.3");
+	EXPECT_EQ(t1->getColumn(13)->getRow(0)->getString(), "A");
+	EXPECT_EQ(t1->getColumn(14)->getRow(0)->getString(), "AAPL");
+	EXPECT_EQ(t1->getColumn(15)->getRow(0)->getString(), "0f0e0d0c-0b0a-0908-0706-050403020100");
+	EXPECT_EQ(t1->getColumn(16)->getRow(0)->getString(), "f0e:d0c:b0a:908:706:504:302:100");
+	EXPECT_EQ(t1->getColumn(17)->getRow(0)->getString(), "0f0e0d0c0b0a09080706050403020100");
+	EXPECT_EQ(t1->getColumn(19)->getRow(0)->getString(), "0f0e0d0c0b0a0908070605040302010");
 }
 
 TEST_F(MultithreadedTableWriterTest, insertVectorTSDBPartitionTableDifferentTypeDataLessThan256)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,string(0..10),,`TSDB);\n";
+	script += "t = table(1000:0, `bool`char`short`long`date`month`datetime`second`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
+				"[BOOL,CHAR,SHORT,LONG,DATE,MONTH,DATETIME,SECOND,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
+				"pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	int data[] = {0, 1};
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "symbol");
+	vector<vector<ConstantSP> *> datas;
+	for (int i = 0; i < 10; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
+		vector<ConstantSP> *prow = new vector<ConstantSP>;
+		vector<ConstantSP> &row = *prow;
+		row.push_back(Util::createBool(data[i % 2]));
+		row.push_back(Util::createChar(i * 2));
+		row.push_back(Util::createShort(i + 12));
+		row.push_back(Util::createLong((long)i * 100));
+		row.push_back(Util::createDate(i + 432));
+		row.push_back(Util::createMonth(i + 21));
+		row.push_back(Util::createDateTime(i * 192));
+		row.push_back(Util::createSecond((long long)i * 1932));
+		row.push_back(Util::createTimestamp((long long)i * 2342));
+		row.push_back(Util::createNanoTime((long long)i * 4214));
+		row.push_back(Util::createNanoTimestamp((long long)i * 4264));
+		row.push_back(Util::createFloat(i * 42.64));
+		row.push_back(Util::createDouble(i * 4.264));
+		row.push_back(Util::createString(std::to_string(i)));
+		row.push_back(Util::createString("A" + to_string(i)));
+		// uuid,ipAddr, int128, blob
+		row.push_back(Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100"));
+		row.push_back(Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255)));
+		row.push_back(Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100"));
+		row.push_back(Util::createInt(i));
+		row.push_back(Util::createBlob("0f0e0d0c0b0a0908070605040302010" + to_string(i)));
+		datas.push_back(prow);
 	}
-	else if (v.find("2.00") == 0)
+	mulwrite->insertUnwrittenData(datas, pErrorInfo);
+	cout << pErrorInfo.errorInfo;
+	mulwrite->waitForThreadCompletion();
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by long;");
+	// cout << t1->getColumn(19)->getRow(1)->getString();
+	for (int i = 0; i < 10; i++)
 	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,string(0..10),,`TSDB);\n";
-		script += "t = table(1000:0, `bool`char`short`long`date`month`datetime`second`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
-				  "[BOOL,CHAR,SHORT,LONG,DATE,MONTH,DATETIME,SECOND,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
-				  "pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		int data[] = {0, 1};
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "symbol");
-		vector<vector<ConstantSP> *> datas;
-		for (int i = 0; i < 10; i++)
-		{
-			vector<ConstantSP> *prow = new vector<ConstantSP>;
-			vector<ConstantSP> &row = *prow;
-			row.push_back(Util::createBool(data[i % 2]));
-			row.push_back(Util::createChar(i * 2));
-			row.push_back(Util::createShort(i + 12));
-			row.push_back(Util::createLong((long)i * 100));
-			row.push_back(Util::createDate(i + 432));
-			row.push_back(Util::createMonth(i + 21));
-			row.push_back(Util::createDateTime(i * 192));
-			row.push_back(Util::createSecond((long long)i * 1932));
-			row.push_back(Util::createTimestamp((long long)i * 2342));
-			row.push_back(Util::createNanoTime((long long)i * 4214));
-			row.push_back(Util::createNanoTimestamp((long long)i * 4264));
-			row.push_back(Util::createFloat(i * 42.64));
-			row.push_back(Util::createDouble(i * 4.264));
-			row.push_back(Util::createString(std::to_string(i)));
-			row.push_back(Util::createString("A" + to_string(i)));
-			// uuid,ipAddr, int128, blob
-			row.push_back(Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100"));
-			row.push_back(Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255)));
-			row.push_back(Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100"));
-			row.push_back(Util::createInt(i));
-			row.push_back(Util::createBlob("0f0e0d0c0b0a0908070605040302010" + to_string(i)));
-			datas.push_back(prow);
-		}
-		mulwrite->insertUnwrittenData(datas, pErrorInfo);
-		cout << pErrorInfo.errorInfo;
-		mulwrite->waitForThreadCompletion();
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by long;");
-		// cout << t1->getColumn(19)->getRow(1)->getString();
-		for (int i = 0; i < 10; i++)
-		{
-			EXPECT_EQ(t1->getColumn(0)->getRow(i)->getString(), Util::createBool(data[i % 2])->getString());
-			EXPECT_EQ(t1->getColumn(1)->getRow(i)->getString(), Util::createChar(i * 2)->getString());
-			EXPECT_EQ(t1->getColumn(2)->getRow(i)->getString(), Util::createShort(i + 12)->getString());
-			EXPECT_EQ(t1->getColumn(3)->getRow(i)->getString(), Util::createLong((long)i * 100)->getString());
-			EXPECT_EQ(t1->getColumn(4)->getRow(i)->getString(), Util::createDate(i + 432)->getString());
-			EXPECT_EQ(t1->getColumn(5)->getRow(i)->getString(), Util::createMonth(i + 21)->getString());
-			EXPECT_EQ(t1->getColumn(6)->getRow(i)->getString(), Util::createDateTime(i * 192)->getString());
-			EXPECT_EQ(t1->getColumn(7)->getRow(i)->getString(), Util::createSecond((long long)i * 1932)->getString());
-			EXPECT_EQ(t1->getColumn(8)->getRow(i)->getString(), Util::createTimestamp((long long)i * 2342)->getString());
-			EXPECT_EQ(t1->getColumn(9)->getRow(i)->getString(), Util::createNanoTime((long long)i * 4214)->getString());
-			EXPECT_EQ(t1->getColumn(10)->getRow(i)->getString(), Util::createNanoTimestamp((long long)i * 4264)->getString());
-			EXPECT_EQ(t1->getColumn(11)->getRow(i)->getString(), Util::createFloat(i * 42.64)->getString());
-			EXPECT_EQ(t1->getColumn(12)->getRow(i)->getString(), Util::createDouble(i * 4.264)->getString());
-			EXPECT_EQ(t1->getColumn(13)->getRow(i)->getString(), Util::createString(std::to_string(i))->getString());
-			EXPECT_EQ(t1->getColumn(14)->getRow(i)->getString(), Util::createString("A" + to_string(i))->getString());
-			EXPECT_EQ(t1->getColumn(15)->getRow(i)->getString(), Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100")->getString());
-			EXPECT_EQ(t1->getColumn(16)->getRow(i)->getString(), Util::parseConstant(DT_IP, "192.168.2." + to_string(i))->getString());
-			EXPECT_EQ(t1->getColumn(17)->getRow(i)->getString(), Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100")->getString());
-			EXPECT_EQ(t1->getColumn(18)->getRow(i)->getString(), Util::createInt(i)->getString());
-			EXPECT_EQ(t1->getColumn(19)->getRow(i)->getString(), Util::createString("0f0e0d0c0b0a0908070605040302010" + to_string(i))->getString());
-			//  cout << t1->getColumn(0)->getRow(i)->getString() << endl;
-		}
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
+		EXPECT_EQ(t1->getColumn(0)->getRow(i)->getString(), Util::createBool(data[i % 2])->getString());
+		EXPECT_EQ(t1->getColumn(1)->getRow(i)->getString(), Util::createChar(i * 2)->getString());
+		EXPECT_EQ(t1->getColumn(2)->getRow(i)->getString(), Util::createShort(i + 12)->getString());
+		EXPECT_EQ(t1->getColumn(3)->getRow(i)->getString(), Util::createLong((long)i * 100)->getString());
+		EXPECT_EQ(t1->getColumn(4)->getRow(i)->getString(), Util::createDate(i + 432)->getString());
+		EXPECT_EQ(t1->getColumn(5)->getRow(i)->getString(), Util::createMonth(i + 21)->getString());
+		EXPECT_EQ(t1->getColumn(6)->getRow(i)->getString(), Util::createDateTime(i * 192)->getString());
+		EXPECT_EQ(t1->getColumn(7)->getRow(i)->getString(), Util::createSecond((long long)i * 1932)->getString());
+		EXPECT_EQ(t1->getColumn(8)->getRow(i)->getString(), Util::createTimestamp((long long)i * 2342)->getString());
+		EXPECT_EQ(t1->getColumn(9)->getRow(i)->getString(), Util::createNanoTime((long long)i * 4214)->getString());
+		EXPECT_EQ(t1->getColumn(10)->getRow(i)->getString(), Util::createNanoTimestamp((long long)i * 4264)->getString());
+		EXPECT_EQ(t1->getColumn(11)->getRow(i)->getString(), Util::createFloat(i * 42.64)->getString());
+		EXPECT_EQ(t1->getColumn(12)->getRow(i)->getString(), Util::createDouble(i * 4.264)->getString());
+		EXPECT_EQ(t1->getColumn(13)->getRow(i)->getString(), Util::createString(std::to_string(i))->getString());
+		EXPECT_EQ(t1->getColumn(14)->getRow(i)->getString(), Util::createString("A" + to_string(i))->getString());
+		EXPECT_EQ(t1->getColumn(15)->getRow(i)->getString(), Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100")->getString());
+		EXPECT_EQ(t1->getColumn(16)->getRow(i)->getString(), Util::parseConstant(DT_IP, "192.168.2." + to_string(i))->getString());
+		EXPECT_EQ(t1->getColumn(17)->getRow(i)->getString(), Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100")->getString());
+		EXPECT_EQ(t1->getColumn(18)->getRow(i)->getString(), Util::createInt(i)->getString());
+		EXPECT_EQ(t1->getColumn(19)->getRow(i)->getString(), Util::createString("0f0e0d0c0b0a0908070605040302010" + to_string(i))->getString());
+		//  cout << t1->getColumn(0)->getRow(i)->getString() << endl;
 	}
 }
 
 TEST_F(MultithreadedTableWriterTest, insertVectorTSDBPartitionTableWithFilter)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,1..9,,`TSDB);\n";
+	script += "t = table(1000:0,`id`symbol`value,[INT,SYMBOL,INT]);"
+				"pt = db.createPartitionedTable(t,`pt,`id,,`symbol`id,LAST);";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	int ids[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+	string syms[] = {"A", "B", "C", "D"};
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 100, 0.1, 5, "id");
+	vector<vector<ConstantSP> *> datas;
+	for (int i = 0; i < 2000; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
+		vector<ConstantSP> *prow = new vector<ConstantSP>;
+		vector<ConstantSP> &row = *prow;
+		row.push_back(Util::createInt(ids[i % 9]));
+		row.push_back(Util::createString(syms[i % 4]));
+		row.push_back(Util::createInt(i));
+		datas.push_back(prow);
 	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,1..9,,`TSDB);\n";
-		script += "t = table(1000:0,`id`symbol`value,[INT,SYMBOL,INT]);"
-				  "pt = db.createPartitionedTable(t,`pt,`id,,`symbol`id,LAST);";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		int ids[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-		string syms[] = {"A", "B", "C", "D"};
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 100, 0.1, 5, "id");
-		vector<vector<ConstantSP> *> datas;
-		for (int i = 0; i < 2000; i++)
-		{
-			vector<ConstantSP> *prow = new vector<ConstantSP>;
-			vector<ConstantSP> &row = *prow;
-			row.push_back(Util::createInt(ids[i % 9]));
-			row.push_back(Util::createString(syms[i % 4]));
-			row.push_back(Util::createInt(i));
-			datas.push_back(prow);
-		}
-		mulwrite->insertUnwrittenData(datas, pErrorInfo);
-		mulwrite->waitForThreadCompletion();
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by id;");
-		EXPECT_EQ(t1->size(), 36);
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	mulwrite->insertUnwrittenData(datas, pErrorInfo);
+	mulwrite->waitForThreadCompletion();
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by id;");
+	EXPECT_EQ(t1->size(), 36);
+
 }
 
 TEST_F(MultithreadedTableWriterTest, insertVectorTSDBPartitionTableDifferentTypeDataBiggerThan1048576)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
+	script += "t = table(1000:0, `bool`char`short`long`date`month`datetime`second`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
+				"[BOOL,CHAR,SHORT,LONG,DATE,MONTH,DATETIME,SECOND,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
+				"pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	int data[] = {0, 1};
+	string sym[] = {"A", "B", "C", "D"};
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "symbol");
+	vector<vector<ConstantSP> *> datas;
+	srand((int)time(NULL));
+	for (int i = 0; i < 1098576; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
+		vector<ConstantSP> *prow = new vector<ConstantSP>;
+		vector<ConstantSP> &row = *prow;
+		row.push_back(Util::createBool(data[i % 2]));
+		row.push_back(Util::createChar(i * 2));
+		row.push_back(Util::createShort(i + 12));
+		row.push_back(Util::createLong((long)i * 100));
+		row.push_back(Util::createDate(i + 432));
+		row.push_back(Util::createMonth(i + 21));
+		row.push_back(Util::createDateTime(i * 192));
+		row.push_back(Util::createSecond((long long)i * 1932));
+		row.push_back(Util::createTimestamp((long long)i * 2342));
+		row.push_back(Util::createNanoTime((long long)i * 4214));
+		row.push_back(Util::createNanoTimestamp((long long)i * 4264));
+		row.push_back(Util::createFloat(i * 42.64));
+		row.push_back(Util::createDouble(i * 4.264));
+		row.push_back(Util::createString(sym[rand() % 4]));
+		row.push_back(Util::createString("A" + to_string(i)));
+		// uuid,ipAddr, int128, blob
+		row.push_back(Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100"));
+		row.push_back(Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255)));
+		row.push_back(Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100"));
+		row.push_back(Util::createInt(i));
+		row.push_back(Util::createBlob("0f0e0d0c0b0a0908070605040302010" + to_string(i)));
+		datas.push_back(prow);
 	}
-	else if (v.find("2.00") == 0)
+	mulwrite->insertUnwrittenData(datas, pErrorInfo);
+	mulwrite->waitForThreadCompletion();
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by long limit 1024;");
+	for (int i = 0; i < 1024; i++)
 	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
-		script += "t = table(1000:0, `bool`char`short`long`date`month`datetime`second`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
-				  "[BOOL,CHAR,SHORT,LONG,DATE,MONTH,DATETIME,SECOND,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
-				  "pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		int data[] = {0, 1};
-		string sym[] = {"A", "B", "C", "D"};
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "symbol");
-		vector<vector<ConstantSP> *> datas;
-		srand((int)time(NULL));
-		for (int i = 0; i < 1098576; i++)
-		{
-			vector<ConstantSP> *prow = new vector<ConstantSP>;
-			vector<ConstantSP> &row = *prow;
-			row.push_back(Util::createBool(data[i % 2]));
-			row.push_back(Util::createChar(i * 2));
-			row.push_back(Util::createShort(i + 12));
-			row.push_back(Util::createLong((long)i * 100));
-			row.push_back(Util::createDate(i + 432));
-			row.push_back(Util::createMonth(i + 21));
-			row.push_back(Util::createDateTime(i * 192));
-			row.push_back(Util::createSecond((long long)i * 1932));
-			row.push_back(Util::createTimestamp((long long)i * 2342));
-			row.push_back(Util::createNanoTime((long long)i * 4214));
-			row.push_back(Util::createNanoTimestamp((long long)i * 4264));
-			row.push_back(Util::createFloat(i * 42.64));
-			row.push_back(Util::createDouble(i * 4.264));
-			row.push_back(Util::createString(sym[rand() % 4]));
-			row.push_back(Util::createString("A" + to_string(i)));
-			// uuid,ipAddr, int128, blob
-			row.push_back(Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100"));
-			row.push_back(Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255)));
-			row.push_back(Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100"));
-			row.push_back(Util::createInt(i));
-			row.push_back(Util::createBlob("0f0e0d0c0b0a0908070605040302010" + to_string(i)));
-			datas.push_back(prow);
-		}
-		mulwrite->insertUnwrittenData(datas, pErrorInfo);
-		mulwrite->waitForThreadCompletion();
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by long limit 1024;");
-		for (int i = 0; i < 1024; i++)
-		{
-			EXPECT_EQ(t1->getColumn(0)->getRow(i)->getString(), Util::createBool(data[i % 2])->getString());
-			EXPECT_EQ(t1->getColumn(1)->getRow(i)->getString(), Util::createChar(i * 2)->getString());
-			EXPECT_EQ(t1->getColumn(2)->getRow(i)->getString(), Util::createShort(i + 12)->getString());
-			EXPECT_EQ(t1->getColumn(3)->getRow(i)->getString(), Util::createLong((long)i * 100)->getString());
-			EXPECT_EQ(t1->getColumn(4)->getRow(i)->getString(), Util::createDate(i + 432)->getString());
-			EXPECT_EQ(t1->getColumn(5)->getRow(i)->getString(), Util::createMonth(i + 21)->getString());
-			EXPECT_EQ(t1->getColumn(6)->getRow(i)->getString(), Util::createDateTime(i * 192)->getString());
-			EXPECT_EQ(t1->getColumn(7)->getRow(i)->getString(), Util::createSecond((long long)i * 1932)->getString());
-			EXPECT_EQ(t1->getColumn(8)->getRow(i)->getString(), Util::createTimestamp((long long)i * 2342)->getString());
-			EXPECT_EQ(t1->getColumn(9)->getRow(i)->getString(), Util::createNanoTime((long long)i * 4214)->getString());
-			EXPECT_EQ(t1->getColumn(10)->getRow(i)->getString(), Util::createNanoTimestamp((long long)i * 4264)->getString());
-			EXPECT_EQ(t1->getColumn(11)->getRow(i)->getString(), Util::createFloat(i * 42.64)->getString());
-			EXPECT_EQ(t1->getColumn(12)->getRow(i)->getString(), Util::createDouble(i * 4.264)->getString());
-			EXPECT_EQ(t1->getColumn(14)->getRow(i)->getString(), Util::createString("A" + to_string(i))->getString());
-			EXPECT_EQ(t1->getColumn(15)->getRow(i)->getString(), Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100")->getString());
-			EXPECT_EQ(t1->getColumn(16)->getRow(i)->getString(), Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255))->getString());
-			EXPECT_EQ(t1->getColumn(17)->getRow(i)->getString(), Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100")->getString());
-			EXPECT_EQ(t1->getColumn(18)->getRow(i)->getString(), Util::createInt(i)->getString());
-			EXPECT_EQ(t1->getColumn(19)->getRow(i)->getString(), Util::createString("0f0e0d0c0b0a0908070605040302010" + to_string(i))->getString());
-			//  cout << t1->getColumn(0)->getRow(i)->getString() << endl;
-		}
+		EXPECT_EQ(t1->getColumn(0)->getRow(i)->getString(), Util::createBool(data[i % 2])->getString());
+		EXPECT_EQ(t1->getColumn(1)->getRow(i)->getString(), Util::createChar(i * 2)->getString());
+		EXPECT_EQ(t1->getColumn(2)->getRow(i)->getString(), Util::createShort(i + 12)->getString());
+		EXPECT_EQ(t1->getColumn(3)->getRow(i)->getString(), Util::createLong((long)i * 100)->getString());
+		EXPECT_EQ(t1->getColumn(4)->getRow(i)->getString(), Util::createDate(i + 432)->getString());
+		EXPECT_EQ(t1->getColumn(5)->getRow(i)->getString(), Util::createMonth(i + 21)->getString());
+		EXPECT_EQ(t1->getColumn(6)->getRow(i)->getString(), Util::createDateTime(i * 192)->getString());
+		EXPECT_EQ(t1->getColumn(7)->getRow(i)->getString(), Util::createSecond((long long)i * 1932)->getString());
+		EXPECT_EQ(t1->getColumn(8)->getRow(i)->getString(), Util::createTimestamp((long long)i * 2342)->getString());
+		EXPECT_EQ(t1->getColumn(9)->getRow(i)->getString(), Util::createNanoTime((long long)i * 4214)->getString());
+		EXPECT_EQ(t1->getColumn(10)->getRow(i)->getString(), Util::createNanoTimestamp((long long)i * 4264)->getString());
+		EXPECT_EQ(t1->getColumn(11)->getRow(i)->getString(), Util::createFloat(i * 42.64)->getString());
+		EXPECT_EQ(t1->getColumn(12)->getRow(i)->getString(), Util::createDouble(i * 4.264)->getString());
+		EXPECT_EQ(t1->getColumn(14)->getRow(i)->getString(), Util::createString("A" + to_string(i))->getString());
+		EXPECT_EQ(t1->getColumn(15)->getRow(i)->getString(), Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100")->getString());
+		EXPECT_EQ(t1->getColumn(16)->getRow(i)->getString(), Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255))->getString());
+		EXPECT_EQ(t1->getColumn(17)->getRow(i)->getString(), Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100")->getString());
+		EXPECT_EQ(t1->getColumn(18)->getRow(i)->getString(), Util::createInt(i)->getString());
+		EXPECT_EQ(t1->getColumn(19)->getRow(i)->getString(), Util::createString("0f0e0d0c0b0a0908070605040302010" + to_string(i))->getString());
+		//  cout << t1->getColumn(0)->getRow(i)->getString() << endl;
 	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+
 }
 
 TEST_F(MultithreadedTableWriterTest, insertVectorTSDBPartitionTableWithNullptr)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
-	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n";
-		script += "t = table(1000:0, `symbol`id`value,[SYMBOL, INT, INT]);"
-				  "pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "symbol");
-		bool flag = mulwrite->insert(pErrorInfo, "A1", (std::nullptr_t)0, 12);
-		EXPECT_EQ(flag, true);
-		mulwrite->waitForThreadCompletion();
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt)");
-		EXPECT_EQ((t1->getRow(0)->getString() == "value->12\nsymbol->A1\nid->\n") || (t1->getRow(0)->getString() == "value->12\nid->\nsymbol->A1\n"), true);
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n";
+	script += "t = table(1000:0, `symbol`id`value,[SYMBOL, INT, INT]);"
+				"pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1, 0.1, 5, "symbol");
+	bool flag = mulwrite->insert(pErrorInfo, "A1", (std::nullptr_t)0, 12);
+	EXPECT_EQ(flag, true);
+	mulwrite->waitForThreadCompletion();
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt)");
+	EXPECT_EQ((t1->getRow(0)->getString() == "value->12\nsymbol->A1\nid->\n") || (t1->getRow(0)->getString() == "value->12\nid->\nsymbol->A1\n"), true);
+
 }
 
 TEST_F(MultithreadedTableWriterTest, insertVectorTSDBPartitionTableWithbatchSize)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
+	script += "t = table(1000:0, `symbol`id`value,[SYMBOL, INT, INT]);"
+				"pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1000, 10, 1, "symbol");
+	string sym[] = {"A", "B", "C", "D"};
+	vector<vector<ConstantSP> *> datas;
+	srand((int)time(NULL));
+	for (int i = 0; i < 999; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
+		vector<ConstantSP> *prow = new vector<ConstantSP>;
+		vector<ConstantSP> &row = *prow;
+		row.push_back(Util::createString(sym[rand() % 4]));
+		row.push_back(Util::createInt(i * 12));
+		row.push_back(Util::createInt(i + 64));
+		datas.push_back(prow);
 	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
-		script += "t = table(1000:0, `symbol`id`value,[SYMBOL, INT, INT]);"
-				  "pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1000, 10, 1, "symbol");
-		string sym[] = {"A", "B", "C", "D"};
-		vector<vector<ConstantSP> *> datas;
-		srand((int)time(NULL));
-		for (int i = 0; i < 999; i++)
-		{
-			vector<ConstantSP> *prow = new vector<ConstantSP>;
-			vector<ConstantSP> &row = *prow;
-			row.push_back(Util::createString(sym[rand() % 4]));
-			row.push_back(Util::createInt(i * 12));
-			row.push_back(Util::createInt(i + 64));
-			datas.push_back(prow);
-		}
-		mulwrite->insertUnwrittenData(datas, pErrorInfo);
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by value;");
-		EXPECT_EQ(t1->size(), 0);
-		mulwrite->insert(pErrorInfo, "A", 12, 16);
-		mulwrite->waitForThreadCompletion();
-		t1 = conn.run("select * from loadTable(dbName,`pt) order by value;");
-		EXPECT_EQ(t1->size(), 1000);
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	mulwrite->insertUnwrittenData(datas, pErrorInfo);
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by value;");
+	EXPECT_EQ(t1->size(), 0);
+	mulwrite->insert(pErrorInfo, "A", 12, 16);
+	mulwrite->waitForThreadCompletion();
+	t1 = conn.run("select * from loadTable(dbName,`pt) order by value;");
+	EXPECT_EQ(t1->size(), 1000);
+
 }
 
 TEST_F(MultithreadedTableWriterTest, insertVectorTSDBPartitionTableWithThrottle)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
+	script += "t = table(1000:0, `symbol`id`value,[SYMBOL, INT, INT]);"
+				"pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1000, 2, 5, "symbol");
+	string sym[] = {"A", "B", "C", "D"};
+	vector<vector<ConstantSP> *> datas;
+	srand((int)time(NULL));
+	for (int i = 0; i < 999; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
+		vector<ConstantSP> *prow = new vector<ConstantSP>;
+		vector<ConstantSP> &row = *prow;
+		row.push_back(Util::createString(sym[rand() % 4]));
+		row.push_back(Util::createInt(i * 12));
+		row.push_back(Util::createInt(i + 64));
+		datas.push_back(prow);
 	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
-		script += "t = table(1000:0, `symbol`id`value,[SYMBOL, INT, INT]);"
-				  "pt = db.createPartitionedTable(t,`pt,`symbol,,`symbol`id);";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1000, 2, 5, "symbol");
-		string sym[] = {"A", "B", "C", "D"};
-		vector<vector<ConstantSP> *> datas;
-		srand((int)time(NULL));
-		for (int i = 0; i < 999; i++)
-		{
-			vector<ConstantSP> *prow = new vector<ConstantSP>;
-			vector<ConstantSP> &row = *prow;
-			row.push_back(Util::createString(sym[rand() % 4]));
-			row.push_back(Util::createInt(i * 12));
-			row.push_back(Util::createInt(i + 64));
-			datas.push_back(prow);
-		}
-		mulwrite->insertUnwrittenData(datas, pErrorInfo);
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by value;");
-		EXPECT_EQ(t1->size(), 0);
-		mulwrite->waitForThreadCompletion();
-		t1 = conn.run("select * from loadTable(dbName,`pt) order by value;");
-		EXPECT_EQ(t1->size(), 999);
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	mulwrite->insertUnwrittenData(datas, pErrorInfo);
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by value;");
+	EXPECT_EQ(t1->size(), 0);
+	mulwrite->waitForThreadCompletion();
+	t1 = conn.run("select * from loadTable(dbName,`pt) order by value;");
+	EXPECT_EQ(t1->size(), 999);
+
 }
 
 // different partition type
@@ -2941,192 +2781,153 @@ TEST_F(MultithreadedTableWriterTest, insertValuesOlapDimensionTableDifferentType
 // TSDB dimension table
 TEST_F(MultithreadedTableWriterTest, threadByColNameNULLTSDBDimensionTable)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
-	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
+					"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
+					"pt = db.createTable(t,`pt,,`sym)";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	// mulwrite =new MultithreadedTableWriter(hostName,port, "admin","123456",dbName,"pt",NULL,1000000,13,5,"");
+	EXPECT_ANY_THROW(new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1000000, 13, 5, ""));
+	string script2 = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
 						"if(exists(dbName)){\n"
 						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,symbol(\"A\"+string(0..10)),,`TSDB);\n"
-						"t = table(1000:0, `sym`id`value,[SYMBOL, INT, INT])\n"
-						"pt = db.createTable(t,`pt,,`sym)";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		// mulwrite =new MultithreadedTableWriter(hostName,port, "admin","123456",dbName,"pt",NULL,1000000,13,5,"");
-		EXPECT_ANY_THROW(new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", false, false, nullptr, 1000000, 13, 5, ""));
-		string script2 = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						 "if(exists(dbName)){\n"
-						 "\tdropDatabase(dbName)\t\n"
-						 "}\n";
-		conn.run(script2);
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+						"}\n";
+	conn.run(script2);
+
 }
 
 TEST_F(MultithreadedTableWriterTest, insertValuesTSDBDimensionTableDifferentType)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
-	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
-		script += "t = table(1000:0, `bool`char`short`long`date`month`second`datetime`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
-				  "[BOOL,CHAR,SHORT,LONG,DATE,MONTH,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
-				  "pt = db.createTable(t,`pt,,`symbol);";
-		conn.run(script);
-		Util::sleep(3000);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		unsigned char data[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", NULL, false, nullptr, 1, 0.1, 1, "symbol");
-		bool flag = mulwrite->insert(pErrorInfo, false, char(12), (short)12, (long)12,
-									 Util::createDate(2012, 11, 12), Util::createMonth(2012, 11), Util::createSecond(134),
-									 Util::createDateTime(2012, 11, 13, 6, 12, 12), Util::createTimestamp(43241),
-									 Util::createNanoTime(532432),
-									 Util::createNanoTimestamp(85932494), 12.4f, 3412.3, "A", "AAPL", data, data, data, 12,
-									 "0f0e0d0c0b0a0908070605040302010");
-		// EXPECT_EQ(flag, true);
-		mulwrite->waitForThreadCompletion();
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt);");
-		EXPECT_EQ(t1->getColumn(0)->getRow(0)->getString(), "0");
-		EXPECT_EQ(t1->getColumn(1)->getRow(0)->getString(), "12");
-		EXPECT_EQ(t1->getColumn(2)->getRow(0)->getString(), "12");
-		EXPECT_EQ(t1->getColumn(3)->getRow(0)->getString(), "12");
-		EXPECT_EQ(t1->getColumn(4)->getRow(0)->getString(), "2012.11.12");
-		EXPECT_EQ(t1->getColumn(5)->getRow(0)->getString(), "2012.11M");
-		EXPECT_EQ(t1->getColumn(6)->getRow(0)->getString(), "00:02:14");
-		EXPECT_EQ(t1->getColumn(7)->getRow(0)->getString(), Util::createDateTime(2012, 11, 13, 6, 12, 12)->getString());
-		EXPECT_EQ(t1->getColumn(8)->getRow(0)->getString(), Util::createTimestamp(43241)->getString());
-		EXPECT_EQ(t1->getColumn(9)->getRow(0)->getString(), Util::createNanoTime(532432)->getString());
-		EXPECT_EQ(t1->getColumn(10)->getRow(0)->getString(), Util::createNanoTimestamp(85932494)->getString());
-		EXPECT_EQ(t1->getColumn(11)->getRow(0)->getString(), "12.4");
-		EXPECT_EQ(t1->getColumn(12)->getRow(0)->getString(), "3412.3");
-		EXPECT_EQ(t1->getColumn(13)->getRow(0)->getString(), "A");
-		EXPECT_EQ(t1->getColumn(14)->getRow(0)->getString(), "AAPL");
-		EXPECT_EQ(t1->getColumn(15)->getRow(0)->getString(), "0f0e0d0c-0b0a-0908-0706-050403020100");
-		EXPECT_EQ(t1->getColumn(16)->getRow(0)->getString(), "f0e:d0c:b0a:908:706:504:302:100");
-		EXPECT_EQ(t1->getColumn(17)->getRow(0)->getString(), "0f0e0d0c0b0a09080706050403020100");
-		EXPECT_EQ(t1->getColumn(19)->getRow(0)->getString(), "0f0e0d0c0b0a0908070605040302010");
-	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
+	script += "t = table(1000:0, `bool`char`short`long`date`month`second`datetime`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
+				"[BOOL,CHAR,SHORT,LONG,DATE,MONTH,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
+				"pt = db.createTable(t,`pt,,`symbol);";
+	conn.run(script);
+	Util::sleep(3000);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	unsigned char data[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", NULL, false, nullptr, 1, 0.1, 1, "symbol");
+	bool flag = mulwrite->insert(pErrorInfo, false, char(12), (short)12, (long)12,
+									Util::createDate(2012, 11, 12), Util::createMonth(2012, 11), Util::createSecond(134),
+									Util::createDateTime(2012, 11, 13, 6, 12, 12), Util::createTimestamp(43241),
+									Util::createNanoTime(532432),
+									Util::createNanoTimestamp(85932494), 12.4f, 3412.3, "A", "AAPL", data, data, data, 12,
+									"0f0e0d0c0b0a0908070605040302010");
+	// EXPECT_EQ(flag, true);
+	mulwrite->waitForThreadCompletion();
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt);");
+	EXPECT_EQ(t1->getColumn(0)->getRow(0)->getString(), "0");
+	EXPECT_EQ(t1->getColumn(1)->getRow(0)->getString(), "12");
+	EXPECT_EQ(t1->getColumn(2)->getRow(0)->getString(), "12");
+	EXPECT_EQ(t1->getColumn(3)->getRow(0)->getString(), "12");
+	EXPECT_EQ(t1->getColumn(4)->getRow(0)->getString(), "2012.11.12");
+	EXPECT_EQ(t1->getColumn(5)->getRow(0)->getString(), "2012.11M");
+	EXPECT_EQ(t1->getColumn(6)->getRow(0)->getString(), "00:02:14");
+	EXPECT_EQ(t1->getColumn(7)->getRow(0)->getString(), Util::createDateTime(2012, 11, 13, 6, 12, 12)->getString());
+	EXPECT_EQ(t1->getColumn(8)->getRow(0)->getString(), Util::createTimestamp(43241)->getString());
+	EXPECT_EQ(t1->getColumn(9)->getRow(0)->getString(), Util::createNanoTime(532432)->getString());
+	EXPECT_EQ(t1->getColumn(10)->getRow(0)->getString(), Util::createNanoTimestamp(85932494)->getString());
+	EXPECT_EQ(t1->getColumn(11)->getRow(0)->getString(), "12.4");
+	EXPECT_EQ(t1->getColumn(12)->getRow(0)->getString(), "3412.3");
+	EXPECT_EQ(t1->getColumn(13)->getRow(0)->getString(), "A");
+	EXPECT_EQ(t1->getColumn(14)->getRow(0)->getString(), "AAPL");
+	EXPECT_EQ(t1->getColumn(15)->getRow(0)->getString(), "0f0e0d0c-0b0a-0908-0706-050403020100");
+	EXPECT_EQ(t1->getColumn(16)->getRow(0)->getString(), "f0e:d0c:b0a:908:706:504:302:100");
+	EXPECT_EQ(t1->getColumn(17)->getRow(0)->getString(), "0f0e0d0c0b0a09080706050403020100");
+	EXPECT_EQ(t1->getColumn(19)->getRow(0)->getString(), "0f0e0d0c0b0a0908070605040302010");
+
 }
 
 TEST_F(MultithreadedTableWriterTest, insertValuesTSDBDimensionTableBiggerThan1048576)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string dbName = "dfs://test_MultithreadedTableWriter";
+	string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
+					"if(exists(dbName)){\n"
+					"\tdropDatabase(dbName)\t\n"
+					"}\n"
+					"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
+	script += "t = table(1000:0, `bool`char`short`long`date`month`datetime`second`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
+				"[BOOL,CHAR,SHORT,LONG,DATE,MONTH,DATETIME,SECOND,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
+				"pt = db.createTable(t,`pt,,`symbol);";
+	conn.run(script);
+	Util::sleep(3000);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	unsigned char data[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+	string syms[] = {"A", "B", "C", "D"};
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", NULL, false, nullptr, 1, 0.1, 1, "symbol");
+	vector<vector<ConstantSP> *> datas;
+	for (int i = 0; i < 3098576; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
+		vector<ConstantSP> *prow = new vector<ConstantSP>;
+		vector<ConstantSP> &row = *prow;
+		row.push_back(Util::createBool(data[i % 2]));
+		row.push_back(Util::createChar(i * 2));
+		row.push_back(Util::createShort(i + 12));
+		row.push_back(Util::createLong((long)i * 100));
+		row.push_back(Util::createDate(i + 432));
+		row.push_back(Util::createMonth(i + 21));
+		row.push_back(Util::createDateTime(i * 192));
+		row.push_back(Util::createSecond((long long)i * 1932));
+		row.push_back(Util::createTimestamp((long long)i * 2342));
+		row.push_back(Util::createNanoTime((long long)i * 4214));
+		row.push_back(Util::createNanoTimestamp((long long)i * 4264));
+		row.push_back(Util::createFloat(i * 42.64));
+		row.push_back(Util::createDouble(i * 4.264));
+		row.push_back(Util::createString(syms[i % 4]));
+		row.push_back(Util::createString(std::to_string(i)));
+		// uuid,ipAddr, int128, blob
+		row.push_back(Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100"));
+		row.push_back(Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255)));
+		row.push_back(Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100"));
+		row.push_back(Util::createInt(i));
+		row.push_back(Util::createBlob("0f0e0d0c0b0a0908070605040302010" + to_string(i)));
+		datas.push_back(prow);
 	}
-	else if (v.find("2.00") == 0)
+	mulwrite->insertUnwrittenData(datas, pErrorInfo);
+	mulwrite->waitForThreadCompletion();
+	ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by long;");
+	// cout << t1->getColumn(19)->getRow(1)->getString();
+	for (int i = 0; i < 165536; i++)
 	{
-		string dbName = "dfs://test_MultithreadedTableWriter";
-		string script = "dbName = \"dfs://test_MultithreadedTableWriter\"\n"
-						"if(exists(dbName)){\n"
-						"\tdropDatabase(dbName)\t\n"
-						"}\n"
-						"db  = database(dbName, VALUE,`A`B`C`D,,`TSDB);\n";
-		script += "t = table(1000:0, `bool`char`short`long`date`month`datetime`second`timestamp`nanotime`nanotimestamp`float`double`symbol`string`uuid`ipaddr`int128`id`bolb,"
-				  "[BOOL,CHAR,SHORT,LONG,DATE,MONTH,DATETIME,SECOND,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,UUID, IPADDR, INT128,INT,BLOB]);"
-				  "pt = db.createTable(t,`pt,,`symbol);";
-		conn.run(script);
-		Util::sleep(3000);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		unsigned char data[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		string syms[] = {"A", "B", "C", "D"};
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", dbName, "pt", NULL, false, nullptr, 1, 0.1, 1, "symbol");
-		vector<vector<ConstantSP> *> datas;
-		for (int i = 0; i < 3098576; i++)
-		{
-			vector<ConstantSP> *prow = new vector<ConstantSP>;
-			vector<ConstantSP> &row = *prow;
-			row.push_back(Util::createBool(data[i % 2]));
-			row.push_back(Util::createChar(i * 2));
-			row.push_back(Util::createShort(i + 12));
-			row.push_back(Util::createLong((long)i * 100));
-			row.push_back(Util::createDate(i + 432));
-			row.push_back(Util::createMonth(i + 21));
-			row.push_back(Util::createDateTime(i * 192));
-			row.push_back(Util::createSecond((long long)i * 1932));
-			row.push_back(Util::createTimestamp((long long)i * 2342));
-			row.push_back(Util::createNanoTime((long long)i * 4214));
-			row.push_back(Util::createNanoTimestamp((long long)i * 4264));
-			row.push_back(Util::createFloat(i * 42.64));
-			row.push_back(Util::createDouble(i * 4.264));
-			row.push_back(Util::createString(syms[i % 4]));
-			row.push_back(Util::createString(std::to_string(i)));
-			// uuid,ipAddr, int128, blob
-			row.push_back(Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100"));
-			row.push_back(Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255)));
-			row.push_back(Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100"));
-			row.push_back(Util::createInt(i));
-			row.push_back(Util::createBlob("0f0e0d0c0b0a0908070605040302010" + to_string(i)));
-			datas.push_back(prow);
-		}
-		mulwrite->insertUnwrittenData(datas, pErrorInfo);
-		mulwrite->waitForThreadCompletion();
-		ConstantSP t1 = conn.run("select * from loadTable(dbName,`pt) order by long;");
-		// cout << t1->getColumn(19)->getRow(1)->getString();
-		for (int i = 0; i < 165536; i++)
-		{
-			EXPECT_EQ(t1->getColumn(0)->getRow(i)->getString(), Util::createBool(data[i % 2])->getString());
-			EXPECT_EQ(t1->getColumn(1)->getRow(i)->getString(), Util::createChar(i * 2)->getString());
-			EXPECT_EQ(t1->getColumn(2)->getRow(i)->getString(), Util::createShort(i + 12)->getString());
-			EXPECT_EQ(t1->getColumn(3)->getRow(i)->getString(), Util::createLong((long)i * 100)->getString());
-			EXPECT_EQ(t1->getColumn(4)->getRow(i)->getString(), Util::createDate(i + 432)->getString());
-			EXPECT_EQ(t1->getColumn(5)->getRow(i)->getString(), Util::createMonth(i + 21)->getString());
-			EXPECT_EQ(t1->getColumn(6)->getRow(i)->getString(), Util::createDateTime(i * 192)->getString());
-			EXPECT_EQ(t1->getColumn(7)->getRow(i)->getString(), Util::createSecond((long long)i * 1932)->getString());
-			EXPECT_EQ(t1->getColumn(8)->getRow(i)->getString(), Util::createTimestamp((long long)i * 2342)->getString());
-			EXPECT_EQ(t1->getColumn(9)->getRow(i)->getString(), Util::createNanoTime((long long)i * 4214)->getString());
-			EXPECT_EQ(t1->getColumn(10)->getRow(i)->getString(), Util::createNanoTimestamp((long long)i * 4264)->getString());
-			EXPECT_EQ(t1->getColumn(11)->getRow(i)->getString(), Util::createFloat(i * 42.64)->getString());
-			EXPECT_EQ(t1->getColumn(12)->getRow(i)->getString(), Util::createDouble(i * 4.264)->getString());
-			EXPECT_EQ(t1->getColumn(13)->getRow(i)->getString(), Util::createString(syms[i % 4])->getString());
-			EXPECT_EQ(t1->getColumn(14)->getRow(i)->getString(), Util::createString(std::to_string(i))->getString());
-			EXPECT_EQ(t1->getColumn(15)->getRow(i)->getString(), Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100")->getString());
-			EXPECT_EQ(t1->getColumn(16)->getRow(i)->getString(), Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255))->getString());
-			EXPECT_EQ(t1->getColumn(17)->getRow(i)->getString(), Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100")->getString());
-			EXPECT_EQ(t1->getColumn(18)->getRow(i)->getString(), Util::createInt(i)->getString());
-			EXPECT_EQ(t1->getColumn(19)->getRow(i)->getString(), Util::createString("0f0e0d0c0b0a0908070605040302010" + to_string(i))->getString());
-			//  cout << t1->getColumn(0)->getRow(i)->getString() << endl;
-		}
+		EXPECT_EQ(t1->getColumn(0)->getRow(i)->getString(), Util::createBool(data[i % 2])->getString());
+		EXPECT_EQ(t1->getColumn(1)->getRow(i)->getString(), Util::createChar(i * 2)->getString());
+		EXPECT_EQ(t1->getColumn(2)->getRow(i)->getString(), Util::createShort(i + 12)->getString());
+		EXPECT_EQ(t1->getColumn(3)->getRow(i)->getString(), Util::createLong((long)i * 100)->getString());
+		EXPECT_EQ(t1->getColumn(4)->getRow(i)->getString(), Util::createDate(i + 432)->getString());
+		EXPECT_EQ(t1->getColumn(5)->getRow(i)->getString(), Util::createMonth(i + 21)->getString());
+		EXPECT_EQ(t1->getColumn(6)->getRow(i)->getString(), Util::createDateTime(i * 192)->getString());
+		EXPECT_EQ(t1->getColumn(7)->getRow(i)->getString(), Util::createSecond((long long)i * 1932)->getString());
+		EXPECT_EQ(t1->getColumn(8)->getRow(i)->getString(), Util::createTimestamp((long long)i * 2342)->getString());
+		EXPECT_EQ(t1->getColumn(9)->getRow(i)->getString(), Util::createNanoTime((long long)i * 4214)->getString());
+		EXPECT_EQ(t1->getColumn(10)->getRow(i)->getString(), Util::createNanoTimestamp((long long)i * 4264)->getString());
+		EXPECT_EQ(t1->getColumn(11)->getRow(i)->getString(), Util::createFloat(i * 42.64)->getString());
+		EXPECT_EQ(t1->getColumn(12)->getRow(i)->getString(), Util::createDouble(i * 4.264)->getString());
+		EXPECT_EQ(t1->getColumn(13)->getRow(i)->getString(), Util::createString(syms[i % 4])->getString());
+		EXPECT_EQ(t1->getColumn(14)->getRow(i)->getString(), Util::createString(std::to_string(i))->getString());
+		EXPECT_EQ(t1->getColumn(15)->getRow(i)->getString(), Util::parseConstant(DT_UUID, "0f0e0d0c-0b0a-0908-0706-050403020100")->getString());
+		EXPECT_EQ(t1->getColumn(16)->getRow(i)->getString(), Util::parseConstant(DT_IP, "192.168.2." + to_string(i % 255))->getString());
+		EXPECT_EQ(t1->getColumn(17)->getRow(i)->getString(), Util::parseConstant(DT_INT128, "0f0e0d0c0b0a09080706050403020100")->getString());
+		EXPECT_EQ(t1->getColumn(18)->getRow(i)->getString(), Util::createInt(i)->getString());
+		EXPECT_EQ(t1->getColumn(19)->getRow(i)->getString(), Util::createString("0f0e0d0c0b0a0908070605040302010" + to_string(i))->getString());
+		//  cout << t1->getColumn(0)->getRow(i)->getString() << endl;
 	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+
 }
 
 TEST_F(MultithreadedTableWriterTest, insertMoreColumns)
@@ -3187,186 +2988,163 @@ TEST_F(MultithreadedTableWriterTest, insertMoreColumns)
 
 TEST_F(MultithreadedTableWriterTest, insertArrayVector)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	string script = "share streamTable(1:0,`id`name`value,[INT,SYMBOL,LONG[]]) as t1;";
+	conn.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", "", "t1", false, false, nullptr, 10, 0.1, 3, "id");
+	vector<vector<ConstantSP> *> datas;
+	// arrayVector
+	vector<int> val(10);
+	for (int i = 0; i < 10; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
+		val[i] = i + 10;
 	}
-	else if (v.find("2.00") == 0)
+	int values[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+	VectorSP array = Util::createVector(DT_LONG, 10, 10);
+	array->setInt(0, 10, val.data());
+	// cout << array->getString();
+	VectorSP pvectorAny = Util::createVector(DT_ANY, 0, 1);
+	pvectorAny->append(array);
+	for (int i = 0; i < 100; i++)
 	{
-		string script = "share streamTable(1:0,`id`name`value,[INT,SYMBOL,LONG[]]) as t1;";
-		conn.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", "", "t1", false, false, nullptr, 10, 0.1, 3, "id");
-		vector<vector<ConstantSP> *> datas;
-		// arrayVector
-		vector<int> val(10);
-		for (int i = 0; i < 10; i++)
-		{
-			val[i] = i + 10;
-		}
-		int values[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-		VectorSP array = Util::createVector(DT_LONG, 10, 10);
-		array->setInt(0, 10, val.data());
-		// cout << array->getString();
-		VectorSP pvectorAny = Util::createVector(DT_ANY, 0, 1);
-		pvectorAny->append(array);
-		for (int i = 0; i < 100; i++)
-		{
-			vector<ConstantSP> *prow = new vector<ConstantSP>;
-			vector<ConstantSP> &rows = *prow;
-			rows.push_back(Util::createInt(i));
-			rows.push_back(Util::createString("A"));
-			rows.push_back(pvectorAny);
-			datas.push_back(prow);
-		}
-		MultithreadedTableWriter ::Status status;
-		mulwrite->insertUnwrittenData(datas, pErrorInfo);
-		mulwrite->waitForThreadCompletion();
-		mulwrite->getStatus(status);
-		TableSP t1 = conn.run("select * from t1 order by id");
-		// cout<<t1->getRow(0)->values()->get(1)->getString()<<endl;
-		for (int i = 0; i < 100; i++)
-		{
-			string rowvals = t1->getRow(i)->values()->getString();
-			string colval = (*(*datas[i])[2]).getString().substr(1, 31);
-			EXPECT_FALSE(rowvals.find(colval) == string::npos);
-		}
+		vector<ConstantSP> *prow = new vector<ConstantSP>;
+		vector<ConstantSP> &rows = *prow;
+		rows.push_back(Util::createInt(i));
+		rows.push_back(Util::createString("A"));
+		rows.push_back(pvectorAny);
+		datas.push_back(prow);
 	}
-	else
+	MultithreadedTableWriter ::Status status;
+	std::vector<std::string> colvalVec;
+	for(int i = 0; i < 100; ++i){
+		colvalVec.push_back((*(*datas[i])[2]).getString().substr(1, 31));
+	}
+	mulwrite->insertUnwrittenData(datas, pErrorInfo);
+	mulwrite->waitForThreadCompletion();
+	mulwrite->getStatus(status);
+	TableSP t1 = conn.run("select * from t1 order by id");
+	// cout<<t1->getRow(0)->values()->get(1)->getString()<<endl;
+	for (int i = 0; i < 100; i++)
 	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
+		string rowvals = t1->getRow(i)->values()->getString();
+		EXPECT_FALSE(rowvals.find(colvalVec[i]) == string::npos);
 	}
+
 }
 
 TEST_F(MultithreadedTableWriterTest, insertArrayVectordiffType)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	DBConnection conn1(false, false, 7200, true);
+	conn1.connect(hostName, port, "admin", "123456");
+	string script = "colName = [`id,`name]\n"
+					"for(i in 1..17){\n"
+					"\tcolName.append!(\"factor\"+string(i))\t\n"
+					"}\n"
+					"colType =[INT,SYMBOL,BOOL[], CHAR[], SHORT[], INT[], LONG[], FLOAT[], DOUBLE[], DATE[], TIMESTAMP[], DATEHOUR[], DATETIME[], TIME[], MINUTE[], MONTH[], SECOND[], NANOTIME[], NANOTIMESTAMP[]]\n"
+					"share streamTable(1:0,colName,colType) as t1;";
+	conn1.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", "", "t1", false, false, nullptr, 10, 0.1, 3, "id");
+	vector<vector<ConstantSP> *> datas;
+	// arrayVector
+	vector<int> val(10);
+	for (int i = 0; i < 10; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
+		val[i] = i + 10;
 	}
-	else if (v.find("2.00") == 0)
+	string names[] = {"A", "B", "C"};
+	VectorSP boolvector = Util::createVector(DT_BOOL, 10, 10);
+	VectorSP charvector = Util::createVector(DT_CHAR, 10, 10);
+	VectorSP shortvector = Util::createVector(dolphindb::DT_SHORT, 10, 10);
+	VectorSP intvector = Util::createVector(dolphindb::DT_INT, 10, 10);
+	VectorSP longvector = Util::createVector(DT_LONG, 10, 10);
+	VectorSP floatvector = Util::createVector(dolphindb::DT_FLOAT, 10, 10);
+	VectorSP doublevector = Util::createVector(DT_DOUBLE, 10, 10);
+	VectorSP datevector = Util::createVector(dolphindb::DT_DATE, 10, 10);
+	VectorSP timestampvector = Util::createVector(dolphindb::DT_TIMESTAMP, 10, 10);
+	VectorSP datehourvector = Util::createVector(dolphindb::DT_DATEHOUR, 10, 10);
+	VectorSP datetimevector = Util::createVector(dolphindb::DT_DATETIME, 10, 10);
+	VectorSP timevector = Util::createVector(DT_TIME, 10, 10);
+	VectorSP minutevector = Util::createVector(DT_MINUTE, 10, 10);
+	VectorSP monthvector = Util::createVector(dolphindb::DT_MONTH, 10, 10);
+	VectorSP secondvector = Util::createVector(DT_SECOND, 10, 10);
+	VectorSP nanotimevector = Util::createVector(dolphindb::DT_NANOTIME, 10, 10);
+	VectorSP nanotimestampVector = Util::createVector(dolphindb::DT_NANOTIMESTAMP, 10, 10);
+
+	boolvector->setInt(0, 10, val.data());
+	charvector->setInt(0, 10, val.data());
+	shortvector->setInt(0, 10, val.data());
+	intvector->setInt(0, 10, val.data());
+	longvector->setInt(0, 10, val.data());
+	floatvector->setInt(0, 10, val.data());
+	doublevector->setInt(0, 10, val.data());
+	datevector->setInt(0, 10, val.data());
+	timestampvector->setInt(0, 10, val.data());
+	datehourvector->setInt(0, 10, val.data());
+	datetimevector->setInt(0, 10, val.data());
+	timevector->setInt(0, 10, val.data());
+	minutevector->setInt(0, 10, val.data());
+	monthvector->setInt(0, 10, val.data());
+	secondvector->setInt(0, 10, val.data());
+	nanotimevector->setInt(0, 10, val.data());
+	nanotimestampVector->setInt(0, 10, val.data());
+	vector<VectorSP> pvectorAny;
+	for (int i = 0; i < 17; i++)
 	{
-		DBConnection conn1(false, false, 7200, true);
-		conn1.connect(hostName, port, "admin", "123456");
-		string script = "colName = [`id,`name]\n"
-						"for(i in 1..17){\n"
-						"\tcolName.append!(\"factor\"+string(i))\t\n"
-						"}\n"
-						"colType =[INT,SYMBOL,BOOL[], CHAR[], SHORT[], INT[], LONG[], FLOAT[], DOUBLE[], DATE[], TIMESTAMP[], DATEHOUR[], DATETIME[], TIME[], MINUTE[], MONTH[], SECOND[], NANOTIME[], NANOTIMESTAMP[]]\n"
-						"share streamTable(1:0,colName,colType) as t1;";
-		conn1.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", "", "t1", false, false, nullptr, 10, 0.1, 3, "id");
-		vector<vector<ConstantSP> *> datas;
-		// arrayVector
-		vector<int> val(10);
-		for (int i = 0; i < 10; i++)
-		{
-			val[i] = i + 10;
-		}
-		string names[] = {"A", "B", "C"};
-		VectorSP boolvector = Util::createVector(DT_BOOL, 10, 10);
-		VectorSP charvector = Util::createVector(DT_CHAR, 10, 10);
-		VectorSP shortvector = Util::createVector(dolphindb::DT_SHORT, 10, 10);
-		VectorSP intvector = Util::createVector(dolphindb::DT_INT, 10, 10);
-		VectorSP longvector = Util::createVector(DT_LONG, 10, 10);
-		VectorSP floatvector = Util::createVector(dolphindb::DT_FLOAT, 10, 10);
-		VectorSP doublevector = Util::createVector(DT_DOUBLE, 10, 10);
-		VectorSP datevector = Util::createVector(dolphindb::DT_DATE, 10, 10);
-		VectorSP timestampvector = Util::createVector(dolphindb::DT_TIMESTAMP, 10, 10);
-		VectorSP datehourvector = Util::createVector(dolphindb::DT_DATEHOUR, 10, 10);
-		VectorSP datetimevector = Util::createVector(dolphindb::DT_DATETIME, 10, 10);
-		VectorSP timevector = Util::createVector(DT_TIME, 10, 10);
-		VectorSP minutevector = Util::createVector(DT_MINUTE, 10, 10);
-		VectorSP monthvector = Util::createVector(dolphindb::DT_MONTH, 10, 10);
-		VectorSP secondvector = Util::createVector(DT_SECOND, 10, 10);
-		VectorSP nanotimevector = Util::createVector(dolphindb::DT_NANOTIME, 10, 10);
-		VectorSP nanotimestampVector = Util::createVector(dolphindb::DT_NANOTIMESTAMP, 10, 10);
-
-		boolvector->setInt(0, 10, val.data());
-		charvector->setInt(0, 10, val.data());
-		shortvector->setInt(0, 10, val.data());
-		intvector->setInt(0, 10, val.data());
-		longvector->setInt(0, 10, val.data());
-		floatvector->setInt(0, 10, val.data());
-		doublevector->setInt(0, 10, val.data());
-		datevector->setInt(0, 10, val.data());
-		timestampvector->setInt(0, 10, val.data());
-		datehourvector->setInt(0, 10, val.data());
-		datetimevector->setInt(0, 10, val.data());
-		timevector->setInt(0, 10, val.data());
-		minutevector->setInt(0, 10, val.data());
-		monthvector->setInt(0, 10, val.data());
-		secondvector->setInt(0, 10, val.data());
-		nanotimevector->setInt(0, 10, val.data());
-		nanotimestampVector->setInt(0, 10, val.data());
-		vector<VectorSP> pvectorAny;
-		for (int i = 0; i < 17; i++)
-		{
-			pvectorAny.push_back(Util::createVector(DT_ANY, 0, 1));
-		}
-
-		// cout << array->getString();
-		// VectorSP pvectorAny=Util::createVector(DT_ANY,0,17);
-		pvectorAny[0]->append(boolvector);
-		pvectorAny[1]->append(charvector);
-		pvectorAny[2]->append(shortvector);
-		pvectorAny[3]->append(intvector);
-		pvectorAny[4]->append(longvector);
-		pvectorAny[5]->append(floatvector);
-		pvectorAny[6]->append(doublevector);
-		pvectorAny[7]->append(datevector);
-		pvectorAny[8]->append(timestampvector);
-		pvectorAny[9]->append(datehourvector);
-		pvectorAny[10]->append(datetimevector);
-		pvectorAny[11]->append(timevector);
-		pvectorAny[12]->append(minutevector);
-		pvectorAny[13]->append(monthvector);
-		pvectorAny[14]->append(secondvector);
-		pvectorAny[15]->append(nanotimevector);
-		pvectorAny[16]->append(nanotimestampVector);
-		for (int i = 0; i < 100; i++)
-		{
-			vector<ConstantSP> *prow = new vector<ConstantSP>;
-			vector<ConstantSP> &rows = *prow;
-			rows.push_back(Util::createInt(i));
-			rows.push_back(Util::createString(names[i % 3]));
-			for (int j = 0; j < 17; j++)
-			{
-				rows.push_back(pvectorAny[j]);
-			}
-			datas.push_back(prow);
-		}
-		MultithreadedTableWriter ::Status status;
-		mulwrite->insertUnwrittenData(datas, pErrorInfo);
-		mulwrite->waitForThreadCompletion();
-		TableSP t1 = conn1.run("select * from t1");
-
-		// EXPECT_EQ(t1->size(), 100);
-		for (int i = 0; i < 100; i++)
-		{
-			for (int j = 2; j < 19; j++)
-			{
-				// cout << (*(*datas[i])[j]).getString();
-				EXPECT_EQ("(" + t1->getColumn(j)->getRow(i)->getString() + ")", pvectorAny[j - 2]->getString());
-			}
-		}
-		conn1.close();
+		pvectorAny.push_back(Util::createVector(DT_ANY, 0, 1));
 	}
-	else
+
+	// cout << array->getString();
+	// VectorSP pvectorAny=Util::createVector(DT_ANY,0,17);
+	pvectorAny[0]->append(boolvector);
+	pvectorAny[1]->append(charvector);
+	pvectorAny[2]->append(shortvector);
+	pvectorAny[3]->append(intvector);
+	pvectorAny[4]->append(longvector);
+	pvectorAny[5]->append(floatvector);
+	pvectorAny[6]->append(doublevector);
+	pvectorAny[7]->append(datevector);
+	pvectorAny[8]->append(timestampvector);
+	pvectorAny[9]->append(datehourvector);
+	pvectorAny[10]->append(datetimevector);
+	pvectorAny[11]->append(timevector);
+	pvectorAny[12]->append(minutevector);
+	pvectorAny[13]->append(monthvector);
+	pvectorAny[14]->append(secondvector);
+	pvectorAny[15]->append(nanotimevector);
+	pvectorAny[16]->append(nanotimestampVector);
+	for (int i = 0; i < 100; i++)
 	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
+		vector<ConstantSP> *prow = new vector<ConstantSP>;
+		vector<ConstantSP> &rows = *prow;
+		rows.push_back(Util::createInt(i));
+		rows.push_back(Util::createString(names[i % 3]));
+		for (int j = 0; j < 17; j++)
+		{
+			rows.push_back(pvectorAny[j]);
+		}
+		datas.push_back(prow);
 	}
+	MultithreadedTableWriter ::Status status;
+	mulwrite->insertUnwrittenData(datas, pErrorInfo);
+	mulwrite->waitForThreadCompletion();
+	TableSP t1 = conn1.run("select * from t1");
+
+	// EXPECT_EQ(t1->size(), 100);
+	for (int i = 0; i < 100; i++)
+	{
+		for (int j = 2; j < 19; j++)
+		{
+			// cout << (*(*datas[i])[j]).getString();
+			EXPECT_EQ("(" + t1->getColumn(j)->getRow(i)->getString() + ")", pvectorAny[j - 2]->getString());
+		}
+	}
+	conn1.close();
+
 }
 
 TEST_F(MultithreadedTableWriterTest, vectorinsertdifftype)
@@ -3509,183 +3287,157 @@ TEST_F(MultithreadedTableWriterTest, inserTimetWithCompress)
 
 TEST_F(MultithreadedTableWriterTest, insertArrayDiffTypeWithCompress)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	DBConnection conn1(false, false, 7200, true);
+	conn1.connect(hostName, port, "admin", "123456");
+	string script = "colName = [`id,`name]\n"
+					"for(i in 1..17){\n"
+					"\tcolName.append!(\"factor\"+string(i))\t\n"
+					"}\n"
+					"colType =[INT,SYMBOL,BOOL[], CHAR[], SHORT[], INT[], LONG[], FLOAT[], DOUBLE[], DATE[], TIMESTAMP[], DATEHOUR[], DATETIME[], TIME[], MINUTE[], MONTH[], SECOND[], NANOTIME[], NANOTIMESTAMP[]]\n"
+					"share streamTable(1:0,colName,colType) as t1;";
+	conn1.run(script);
+	SmartPointer<MultithreadedTableWriter> mulwrite;
+	ErrorCodeInfo pErrorInfo;
+	vector<COMPRESS_METHOD> typeVec(19);
+	typeVec[0] = COMPRESS_DELTA;
+	typeVec[1] = COMPRESS_DELTA;
+	for (int i = 0; i < 17; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
+		typeVec[i + 2] = COMPRESS_LZ4;
 	}
-	else if (v.find("2.00") == 0)
+	mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", "", "t1", false, false, nullptr, 10, 0.1, 3, "id", &typeVec);
+	vector<vector<ConstantSP> *> datas;
+	// arrayVector
+	vector<int> val(10);
+	for (int i = 0; i < 10; i++)
 	{
-		DBConnection conn1(false, false, 7200, true);
-		conn1.connect(hostName, port, "admin", "123456");
-		string script = "colName = [`id,`name]\n"
-						"for(i in 1..17){\n"
-						"\tcolName.append!(\"factor\"+string(i))\t\n"
-						"}\n"
-						"colType =[INT,SYMBOL,BOOL[], CHAR[], SHORT[], INT[], LONG[], FLOAT[], DOUBLE[], DATE[], TIMESTAMP[], DATEHOUR[], DATETIME[], TIME[], MINUTE[], MONTH[], SECOND[], NANOTIME[], NANOTIMESTAMP[]]\n"
-						"share streamTable(1:0,colName,colType) as t1;";
-		conn1.run(script);
-		SmartPointer<MultithreadedTableWriter> mulwrite;
-		ErrorCodeInfo pErrorInfo;
-		vector<COMPRESS_METHOD> typeVec(19);
-		typeVec[0] = COMPRESS_DELTA;
-		typeVec[1] = COMPRESS_DELTA;
-		for (int i = 0; i < 17; i++)
-		{
-			typeVec[i + 2] = COMPRESS_LZ4;
-		}
-		mulwrite = new MultithreadedTableWriter(hostName, port, "admin", "123456", "", "t1", false, false, nullptr, 10, 0.1, 3, "id", &typeVec);
-		vector<vector<ConstantSP> *> datas;
-		// arrayVector
-		vector<int> val(10);
-		for (int i = 0; i < 10; i++)
-		{
-			val[i] = i + 10;
-		}
-		string names[] = {"A", "B", "C"};
-		VectorSP boolvector = Util::createVector(DT_BOOL, 10, 10);
-		VectorSP charvector = Util::createVector(DT_CHAR, 10, 10);
-		VectorSP shortvector = Util::createVector(dolphindb::DT_SHORT, 10, 10);
-		VectorSP intvector = Util::createVector(dolphindb::DT_INT, 10, 10);
-		VectorSP longvector = Util::createVector(DT_LONG, 10, 10);
-		VectorSP floatvector = Util::createVector(dolphindb::DT_FLOAT, 10, 10);
-		VectorSP doublevector = Util::createVector(DT_DOUBLE, 10, 10);
-		VectorSP datevector = Util::createVector(dolphindb::DT_DATE, 10, 10);
-		VectorSP timestampvector = Util::createVector(dolphindb::DT_TIMESTAMP, 10, 10);
-		VectorSP datehourvector = Util::createVector(dolphindb::DT_DATEHOUR, 10, 10);
-		VectorSP datetimevector = Util::createVector(dolphindb::DT_DATETIME, 10, 10);
-		VectorSP timevector = Util::createVector(DT_TIME, 10, 10);
-		VectorSP minutevector = Util::createVector(DT_MINUTE, 10, 10);
-		VectorSP monthvector = Util::createVector(dolphindb::DT_MONTH, 10, 10);
-		VectorSP secondvector = Util::createVector(DT_SECOND, 10, 10);
-		VectorSP nanotimevector = Util::createVector(dolphindb::DT_NANOTIME, 10, 10);
-		VectorSP nanotimestampVector = Util::createVector(dolphindb::DT_NANOTIMESTAMP, 10, 10);
+		val[i] = i + 10;
+	}
+	string names[] = {"A", "B", "C"};
+	VectorSP boolvector = Util::createVector(DT_BOOL, 10, 10);
+	VectorSP charvector = Util::createVector(DT_CHAR, 10, 10);
+	VectorSP shortvector = Util::createVector(dolphindb::DT_SHORT, 10, 10);
+	VectorSP intvector = Util::createVector(dolphindb::DT_INT, 10, 10);
+	VectorSP longvector = Util::createVector(DT_LONG, 10, 10);
+	VectorSP floatvector = Util::createVector(dolphindb::DT_FLOAT, 10, 10);
+	VectorSP doublevector = Util::createVector(DT_DOUBLE, 10, 10);
+	VectorSP datevector = Util::createVector(dolphindb::DT_DATE, 10, 10);
+	VectorSP timestampvector = Util::createVector(dolphindb::DT_TIMESTAMP, 10, 10);
+	VectorSP datehourvector = Util::createVector(dolphindb::DT_DATEHOUR, 10, 10);
+	VectorSP datetimevector = Util::createVector(dolphindb::DT_DATETIME, 10, 10);
+	VectorSP timevector = Util::createVector(DT_TIME, 10, 10);
+	VectorSP minutevector = Util::createVector(DT_MINUTE, 10, 10);
+	VectorSP monthvector = Util::createVector(dolphindb::DT_MONTH, 10, 10);
+	VectorSP secondvector = Util::createVector(DT_SECOND, 10, 10);
+	VectorSP nanotimevector = Util::createVector(dolphindb::DT_NANOTIME, 10, 10);
+	VectorSP nanotimestampVector = Util::createVector(dolphindb::DT_NANOTIMESTAMP, 10, 10);
 
-		boolvector->setInt(0, 10, val.data());
-		charvector->setInt(0, 10, val.data());
-		shortvector->setInt(0, 10, val.data());
-		intvector->setInt(0, 10, val.data());
-		longvector->setInt(0, 10, val.data());
-		floatvector->setInt(0, 10, val.data());
-		doublevector->setInt(0, 10, val.data());
-		datevector->setInt(0, 10, val.data());
-		timestampvector->setInt(0, 10, val.data());
-		datehourvector->setInt(0, 10, val.data());
-		datetimevector->setInt(0, 10, val.data());
-		timevector->setInt(0, 10, val.data());
-		minutevector->setInt(0, 10, val.data());
-		monthvector->setInt(0, 10, val.data());
-		secondvector->setInt(0, 10, val.data());
-		nanotimevector->setInt(0, 10, val.data());
-		nanotimestampVector->setInt(0, 10, val.data());
-		vector<VectorSP> pvectorAny;
-		for (int i = 0; i < 17; i++)
-		{
-			pvectorAny.push_back(Util::createVector(DT_ANY, 0, 1));
-		}
-
-		// cout << array->getString();
-		//  VectorSP pvectorAny=Util::createVector(DT_ANY,0,17);
-		pvectorAny[0]->append(boolvector);
-		pvectorAny[1]->append(charvector);
-		pvectorAny[2]->append(shortvector);
-		pvectorAny[3]->append(intvector);
-		pvectorAny[4]->append(longvector);
-		pvectorAny[5]->append(floatvector);
-		pvectorAny[6]->append(doublevector);
-		pvectorAny[7]->append(datevector);
-		pvectorAny[8]->append(timestampvector);
-		pvectorAny[9]->append(datehourvector);
-		pvectorAny[10]->append(datetimevector);
-		pvectorAny[11]->append(timevector);
-		pvectorAny[12]->append(minutevector);
-		pvectorAny[13]->append(monthvector);
-		pvectorAny[14]->append(secondvector);
-		pvectorAny[15]->append(nanotimevector);
-		pvectorAny[16]->append(nanotimestampVector);
-		for (int i = 0; i < 100; i++)
-		{
-			vector<ConstantSP> *prow = new vector<ConstantSP>;
-			vector<ConstantSP> &rows = *prow;
-			rows.push_back(Util::createInt(i));
-			rows.push_back(Util::createString(names[i % 3]));
-			for (int j = 0; j < 17; j++)
-			{
-				rows.push_back(pvectorAny[j]);
-			}
-			datas.push_back(prow);
-		}
-		MultithreadedTableWriter ::Status status;
-		mulwrite->insertUnwrittenData(datas, pErrorInfo);
-		mulwrite->waitForThreadCompletion();
-		TableSP t1 = conn1.run("select * from t1 order by id");
-		// EXPECT_EQ(t1->size(), 100);
-		for (int i = 0; i < 100; i++)
-		{
-			for (int j = 2; j < 19; j++)
-			{
-				EXPECT_EQ("(" + t1->getColumn(j)->getRow(i)->getString() + ")", pvectorAny[j - 2]->getString());
-			}
-		}
-		conn1.close();
-	}
-	else
+	boolvector->setInt(0, 10, val.data());
+	charvector->setInt(0, 10, val.data());
+	shortvector->setInt(0, 10, val.data());
+	intvector->setInt(0, 10, val.data());
+	longvector->setInt(0, 10, val.data());
+	floatvector->setInt(0, 10, val.data());
+	doublevector->setInt(0, 10, val.data());
+	datevector->setInt(0, 10, val.data());
+	timestampvector->setInt(0, 10, val.data());
+	datehourvector->setInt(0, 10, val.data());
+	datetimevector->setInt(0, 10, val.data());
+	timevector->setInt(0, 10, val.data());
+	minutevector->setInt(0, 10, val.data());
+	monthvector->setInt(0, 10, val.data());
+	secondvector->setInt(0, 10, val.data());
+	nanotimevector->setInt(0, 10, val.data());
+	nanotimestampVector->setInt(0, 10, val.data());
+	vector<VectorSP> pvectorAny;
+	for (int i = 0; i < 17; i++)
 	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
+		pvectorAny.push_back(Util::createVector(DT_ANY, 0, 1));
 	}
+
+	// cout << array->getString();
+	//  VectorSP pvectorAny=Util::createVector(DT_ANY,0,17);
+	pvectorAny[0]->append(boolvector);
+	pvectorAny[1]->append(charvector);
+	pvectorAny[2]->append(shortvector);
+	pvectorAny[3]->append(intvector);
+	pvectorAny[4]->append(longvector);
+	pvectorAny[5]->append(floatvector);
+	pvectorAny[6]->append(doublevector);
+	pvectorAny[7]->append(datevector);
+	pvectorAny[8]->append(timestampvector);
+	pvectorAny[9]->append(datehourvector);
+	pvectorAny[10]->append(datetimevector);
+	pvectorAny[11]->append(timevector);
+	pvectorAny[12]->append(minutevector);
+	pvectorAny[13]->append(monthvector);
+	pvectorAny[14]->append(secondvector);
+	pvectorAny[15]->append(nanotimevector);
+	pvectorAny[16]->append(nanotimestampVector);
+	for (int i = 0; i < 100; i++)
+	{
+		vector<ConstantSP> *prow = new vector<ConstantSP>;
+		vector<ConstantSP> &rows = *prow;
+		rows.push_back(Util::createInt(i));
+		rows.push_back(Util::createString(names[i % 3]));
+		for (int j = 0; j < 17; j++)
+		{
+			rows.push_back(pvectorAny[j]);
+		}
+		datas.push_back(prow);
+	}
+	MultithreadedTableWriter ::Status status;
+	mulwrite->insertUnwrittenData(datas, pErrorInfo);
+	mulwrite->waitForThreadCompletion();
+	TableSP t1 = conn1.run("select * from t1 order by id");
+	// EXPECT_EQ(t1->size(), 100);
+	for (int i = 0; i < 100; i++)
+	{
+		for (int j = 2; j < 19; j++)
+		{
+			EXPECT_EQ("(" + t1->getColumn(j)->getRow(i)->getString() + ")", pvectorAny[j - 2]->getString());
+		}
+	}
+	conn1.close();
+
 }
 
 TEST_F(MultithreadedTableWriterTest, vectorIntable)
 {
-	ConstantSP server_version = conn.run("version()");
-	string v = server_version->getString();
-	if (v.find("1.30") == 0)
+	if (!isNewServer(conn, 2, 0, 0)) {GTEST_SKIP() << "at least server v2.00.xx is required";}
+	const int count = 6;
+	vector<string> colName = {"time", "value"};
+	vector<int> time(24);
+	vector<long long> value(count);
+	vector<int> index = {1, 3, 6, 11, 14, 24};
+	int basetime = Util::countDays(2012, 1, 1);
+	for (int i = 0; i < 24; i++)
 	{
-		cout << "server version: 1.30.xx, skip this case." << endl;
-		EXPECT_EQ(1, 1);
-	}
-	else if (v.find("2.00") == 0)
-	{
-		const int count = 6;
-		vector<string> colName = {"time", "value"};
-		vector<int> time(24);
-		vector<long long> value(count);
-		vector<int> index = {1, 3, 6, 11, 14, 24};
-		int basetime = Util::countDays(2012, 1, 1);
-		for (int i = 0; i < 24; i++)
+		if (i < 6)
 		{
-			if (i < 6)
-			{
-				value[i] = i + 10000;
-			}
-			time[i] = basetime + (i % 15);
+			value[i] = i + 10000;
 		}
-		VectorSP idvector = Util::createVector(DT_INT, count, count);
-		VectorSP timeVector = Util::createVector(DT_DATE, 24, count);
-		VectorSP valueVector = Util::createVector(DT_LONG, count, count);
-		timeVector->setInt(0, 24, time.data());
-		valueVector->setLong(0, count, value.data());
-		idvector->setInt(0, count, index.data());
-		VectorSP timearray = Util::createArrayVector(idvector, timeVector);
-		vector<ConstantSP> colVector{timearray, valueVector};
-		TableSP table = Util::createTable(colName, colVector);
-
-		vector<ConstantSP> args{table};
-		conn.run("share streamTable(1:0, `time`value,[DATE[],LONG]) as table1");
-		int success = conn.run("tableInsert{table1}", args)->getInt();
-		EXPECT_EQ(success, count);
-
-		TableSP t1 = conn.run("select * from table1");
-		EXPECT_EQ(t1->getString(), table->getString());
+		time[i] = basetime + (i % 15);
 	}
-	else
-	{
-		cout << "server version is not 1.30 and 2.00, please check.";
-		EXPECT_EQ(1, 2);
-	}
+	VectorSP idvector = Util::createVector(DT_INT, count, count);
+	VectorSP timeVector = Util::createVector(DT_DATE, 24, count);
+	VectorSP valueVector = Util::createVector(DT_LONG, count, count);
+	timeVector->setInt(0, 24, time.data());
+	valueVector->setLong(0, count, value.data());
+	idvector->setInt(0, count, index.data());
+	VectorSP timearray = Util::createArrayVector(idvector, timeVector);
+	vector<ConstantSP> colVector{timearray, valueVector};
+	TableSP table = Util::createTable(colName, colVector);
+
+	vector<ConstantSP> args{table};
+	conn.run("share streamTable(1:0, `time`value,[DATE[],LONG]) as table1");
+	int success = conn.run("tableInsert{table1}", args)->getInt();
+	EXPECT_EQ(success, count);
+
+	TableSP t1 = conn.run("select * from table1");
+	EXPECT_EQ(t1->getString(), table->getString());
+
 }
 
 TEST_F(MultithreadedTableWriterTest, TimeTypedata)
@@ -4153,7 +3905,16 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableRangeType)
 		rows.emplace_back(Util::createInt((int)(rand() % 1000)));
 		datas.emplace_back(prows);
 	}
-
+	std::vector<std::vector<string>> datasVec;
+	for (int i = 0; i < rowNum; i++)
+	{
+		std::vector<string> oneRow;
+		for (int j = 0; j < colNum; j++)
+		{
+			oneRow.push_back(datas[i][0][j]->getString());
+		}
+		datasVec.push_back(oneRow);
+	}
 	bool s = mulwriter->insertUnwrittenData(datas, pErrorInfo);
 	mulwriter->waitForThreadCompletion();
 
@@ -4178,7 +3939,7 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableRangeType)
 	{
 		for (int j = 0; j < colNum; j++)
 		{
-			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datas[i][0][j]->getString());
+			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datasVec[i][j]);
 		}
 	}
 }
@@ -4302,6 +4063,17 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableHashType)
 		datas.emplace_back(prows);
 	}
 
+	std::vector<std::vector<string>> datasVec;
+	for (int i = 0; i < rowNum; i++)
+	{
+		std::vector<string> oneRow;
+		for (int j = 0; j < colNum; j++)
+		{
+			oneRow.push_back(datas[i][0][j]->getString());
+		}
+		datasVec.push_back(oneRow);
+	}
+
 	bool s = mulwriter->insertUnwrittenData(datas, pErrorInfo);
 	mulwriter->waitForThreadCompletion();
 
@@ -4326,7 +4098,7 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableHashType)
 	{
 		for (int j = 0; j < colNum; j++)
 		{
-			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datas[i][0][j]->getString());
+			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datasVec[i][j]);
 		}
 	}
 }
@@ -4378,6 +4150,17 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableValueType)
 		datas.emplace_back(prows);
 	}
 
+	std::vector<std::vector<string>> datasVec;
+	for (int i = 0; i < rowNum; i++)
+	{
+		std::vector<string> oneRow;
+		for (int j = 0; j < colNum; j++)
+		{
+			oneRow.push_back(datas[i][0][j]->getString());
+		}
+		datasVec.push_back(oneRow);
+	}
+
 	bool s = mulwriter->insertUnwrittenData(datas, pErrorInfo);
 	mulwriter->waitForThreadCompletion();
 
@@ -4402,7 +4185,7 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableValueType)
 	{
 		for (int j = 0; j < colNum; j++)
 		{
-			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datas[i][0][j]->getString());
+			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datasVec[i][j]);
 		}
 	}
 }
@@ -4454,6 +4237,17 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableListType)
 		datas.emplace_back(prows);
 	}
 
+	std::vector<std::vector<string>> datasVec;
+	for (int i = 0; i < rowNum; i++)
+	{
+		std::vector<string> oneRow;
+		for (int j = 0; j < colNum; j++)
+		{
+			oneRow.push_back(datas[i][0][j]->getString());
+		}
+		datasVec.push_back(oneRow);
+	}
+
 	bool s = mulwriter->insertUnwrittenData(datas, pErrorInfo);
 	mulwriter->waitForThreadCompletion();
 
@@ -4472,7 +4266,7 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableListType)
 	{
 		for (int j = 0; j < colNum; j++)
 		{
-			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datas[i][0][j]->getString());
+			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datasVec[i][j]);
 		}
 	}
 }
@@ -4524,6 +4318,17 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableRangeTypeIgnoreNull)
 		datas.emplace_back(prows);
 	}
 
+	std::vector<std::vector<string>> datasVec;
+	for (int i = 0; i < rowNum; i++)
+	{
+		std::vector<string> oneRow;
+		for (int j = 0; j < colNum; j++)
+		{
+			oneRow.push_back(datas[i][0][j]->getString());
+		}
+		datasVec.push_back(oneRow);
+	}
+	std::string prow0Str = prow0[0][0]->getString();
 	bool s = mulwriter->insertUnwrittenData(datas, pErrorInfo);
 	mulwriter->waitForThreadCompletion();
 
@@ -4544,14 +4349,14 @@ TEST_F(MultithreadedTableWriterTest, upsertToPartitionTableRangeTypeIgnoreNull)
 	// cout<< datas[1][0][0]->getString()<<endl;
 	// cout<< datas[1][0][1]->getString()<<endl;
 	// cout<< datas[1][0][2]->getString()<<endl;
-	EXPECT_EQ(res->getColumn(0)->getRow(0)->getString(), prow0[0][0]->getString());
+	EXPECT_EQ(res->getColumn(0)->getRow(0)->getString(), prow0Str);
 	EXPECT_EQ(res->getColumn(1)->getRow(0)->getInt(), 0);
 	EXPECT_EQ(res->getColumn(2)->getRow(0)->getInt(), 10);
 	for (int i = 1; i < rowNum; i++)
 	{
 		for (int j = 0; j < colNum; j++)
 		{
-			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datas[i][0][j]->getString());
+			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datasVec[i][j]);
 		}
 	}
 }
@@ -4595,6 +4400,17 @@ TEST_F(MultithreadedTableWriterTest, upsertToKeyedTable)
 		datas.emplace_back(prows);
 	}
 
+	std::vector<std::vector<string>> datasVec;
+	for (int i = 0; i < rowNum; i++)
+	{
+		std::vector<string> oneRow;
+		for (int j = 0; j < colNum; j++)
+		{
+			oneRow.push_back(datas[i][0][j]->getString());
+		}
+		datasVec.push_back(oneRow);
+	}
+
 	bool s = mulwriter->insertUnwrittenData(datas, pErrorInfo);
 
 	mulwriter->waitForThreadCompletion();
@@ -4611,7 +4427,7 @@ TEST_F(MultithreadedTableWriterTest, upsertToKeyedTable)
 	{
 		for (int j = 0; j < colNum; j++)
 		{
-			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datas[i][0][j]->getString());
+			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datasVec[i][j]);
 		}
 	}
 }
@@ -4655,6 +4471,17 @@ TEST_F(MultithreadedTableWriterTest, upsertToKeyedTableIgnoreNull)
 		datas.emplace_back(prows);
 	}
 
+	std::vector<std::vector<string>> datasVec;
+	for (int i = 0; i < rowNum; i++)
+	{
+		std::vector<string> oneRow;
+		for (int j = 0; j < colNum; j++)
+		{
+			oneRow.push_back(datas[i][0][j]->getString());
+		}
+		datasVec.push_back(oneRow);
+	}
+	std::string prow0Str = prow0[0][0]->getString();
 	bool s = mulwriter->insertUnwrittenData(datas, pErrorInfo);
 	mulwriter->waitForThreadCompletion();
 
@@ -4668,14 +4495,14 @@ TEST_F(MultithreadedTableWriterTest, upsertToKeyedTableIgnoreNull)
 	EXPECT_EQ(res->getColumnType(1), 4);
 	EXPECT_EQ(res->getColumnType(2), 4);
 
-	EXPECT_EQ(res->getColumn(0)->getRow(0)->getString(), prow0[0][0]->getString());
+	EXPECT_EQ(res->getColumn(0)->getRow(0)->getString(), prow0Str);
 	EXPECT_EQ(res->getColumn(1)->getRow(0)->getInt(), 0);
 	EXPECT_EQ(res->getColumn(2)->getRow(0)->getInt(), 10);
 	for (int i = 1; i < rowNum; i++)
 	{
 		for (int j = 0; j < colNum; j++)
 		{
-			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datas[i][0][j]->getString());
+			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datasVec[i][j]);
 		}
 	}
 }
@@ -4719,6 +4546,17 @@ TEST_F(MultithreadedTableWriterTest, upsertToIndexedTable)
 		datas.emplace_back(prows);
 	}
 
+	std::vector<std::vector<string>> datasVec;
+	for (int i = 0; i < rowNum; i++)
+	{
+		std::vector<string> oneRow;
+		for (int j = 0; j < colNum; j++)
+		{
+			oneRow.push_back(datas[i][0][j]->getString());
+		}
+		datasVec.push_back(oneRow);
+	}
+
 	bool s = mulwriter->insertUnwrittenData(datas, pErrorInfo);
 
 	mulwriter->waitForThreadCompletion();
@@ -4735,7 +4573,7 @@ TEST_F(MultithreadedTableWriterTest, upsertToIndexedTable)
 	{
 		for (int j = 0; j < colNum; j++)
 		{
-			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datas[i][0][j]->getString());
+			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datasVec[i][j]);
 		}
 	}
 }
@@ -4779,6 +4617,17 @@ TEST_F(MultithreadedTableWriterTest, upsertIndexedTableIgnoreNull)
 		datas.emplace_back(prows);
 	}
 
+	std::vector<std::vector<string>> datasVec;
+	for (int i = 0; i < rowNum; i++)
+	{
+		std::vector<string> oneRow;
+		for (int j = 0; j < colNum; j++)
+		{
+			oneRow.push_back(datas[i][0][j]->getString());
+		}
+		datasVec.push_back(oneRow);
+	}
+	std::string prow0Str = prow0[0][0]->getString();
 	bool s = mulwriter->insertUnwrittenData(datas, pErrorInfo);
 	mulwriter->waitForThreadCompletion();
 
@@ -4792,14 +4641,14 @@ TEST_F(MultithreadedTableWriterTest, upsertIndexedTableIgnoreNull)
 	EXPECT_EQ(res->getColumnType(1), 4);
 	EXPECT_EQ(res->getColumnType(2), 4);
 
-	EXPECT_EQ(res->getColumn(0)->getRow(0)->getString(), prow0[0][0]->getString());
+	EXPECT_EQ(res->getColumn(0)->getRow(0)->getString(), prow0Str);
 	EXPECT_EQ(res->getColumn(1)->getRow(0)->getInt(), 0);
 	EXPECT_EQ(res->getColumn(2)->getRow(0)->getInt(), 10);
 	for (int i = 1; i < rowNum; i++)
 	{
 		for (int j = 0; j < colNum; j++)
 		{
-			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datas[i][0][j]->getString());
+			EXPECT_EQ(res->getColumn(j)->getRow(i)->getString(), datasVec[i][j]);
 		}
 	}
 }
@@ -5267,11 +5116,11 @@ TEST_F(MultithreadedTableWriterTest, test_column_info_in_errMsg)
 	ErrorCodeInfo errorInfo;
 	MultithreadedTableWriter writer(hostName, port, "admin", "123456", "", "t1", false, false, nullptr, 1, 0.1, 1, "csymbol");
 	MultithreadedTableWriter writer2(hostName, port, "admin", "123456", "", "t1", false, false, nullptr, 1, 0.1, 1, "csymbol");
-	string msg = "123456msg";
+	char msg[] = "123456msg";
 
-	writer.insert(errorInfo, false, '1', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1ll, 1l, 1l, 1, 10.0, -0.123, msg, msg, msg, "192.168.2.1", "0f0e0d0c-0b0a-0908-0706-050403020100", "0f0e0d0c0b0a09080706050403020100", 0.2353, -1);
+	writer.insert(errorInfo, false, '1', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1ll, 1l, 1l, 1, 10.0, -0.123, msg, msg, msg, "192.168.2.1", "0f0e0d0c-0b0a-0908-0706-050403020100", "0f0e0d0c0b0a09080706050403020100", 0.2313, -1);
 	writer.waitForThreadCompletion();
-	EXPECT_TRUE(conn.run("eqObj(values t1, [[false], ['1'], [short(1)], [int(1)], [long(1)], [date(1)], [month(1)], [time(1)], [minute(1)], [second(1)], [datetime(1)], [timestamp(1)], [nanotime(1)], [nanotimestamp(1)], [datehour(1)], [float(10.0)], [double(-0.123)], symbol([`123456msg]), [`123456msg], [blob(`123456msg)], [ipaddr('192.168.2.1')], [uuid('0f0e0d0c-0b0a-0908-0706-050403020100')], [int128('0f0e0d0c0b0a09080706050403020100')], decimal32([0.2353], 2), decimal64([-1], 11)])")->getBool());
+	EXPECT_TRUE(conn.run("eqObj(values t1, [[false], ['1'], [short(1)], [int(1)], [long(1)], [date(1)], [month(1)], [time(1)], [minute(1)], [second(1)], [datetime(1)], [timestamp(1)], [nanotime(1)], [nanotimestamp(1)], [datehour(1)], [float(10.0)], [double(-0.123)], symbol([`123456msg]), [`123456msg], [blob(`123456msg)], [ipaddr('192.168.2.1')], [uuid('0f0e0d0c-0b0a-0908-0706-050403020100')], [int128('0f0e0d0c0b0a09080706050403020100')], decimal32([0.2313], 2), decimal64([-1], 11)])")->getBool());
 
 	// insert int to timestamp
 	if (!writer2.insert(errorInfo, false, '1', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1ll, 1l, 1, 10.0, -0.123, msg, msg, msg, "192.168.2.1", "0f0e0d0c-0b0a-0908-0706-050403020100", "0f0e0d0c0b0a09080706050403020100", 0.2353, -1))
@@ -5339,11 +5188,11 @@ TEST_F(MultithreadedTableWriterTest, test_insert_dfs_column_info_in_errMsg)
 	ErrorCodeInfo errorInfo;
 	MultithreadedTableWriter writer(hostName, port, "admin", "123456", "dfs://test_errMsg", "pt", false, false, nullptr, 1, 0.1, 1, "cint");
 	MultithreadedTableWriter writer2(hostName, port, "admin", "123456", "dfs://test_errMsg", "pt", false, false, nullptr, 1, 0.1, 1, "cint");
-	string msg = "123456msg";
+	char msg[] = "123456msg";
 
-	writer.insert(errorInfo, false, '1', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1ll, 1l, 1l, 1, 10.0, -0.123, msg, msg, msg, "192.168.2.1", "0f0e0d0c-0b0a-0908-0706-050403020100", "0f0e0d0c0b0a09080706050403020100", 0.2353, -1);
+	writer.insert(errorInfo, false, '1', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1ll, 1l, 1l, 1, 10.0, -0.123, msg, msg, msg, "192.168.2.1", "0f0e0d0c-0b0a-0908-0706-050403020100", "0f0e0d0c0b0a09080706050403020100", 0.2313, -1);
 	writer.waitForThreadCompletion();
-	EXPECT_TRUE(conn.run("eqObj(values t1, [[false], ['1'], [short(1)], [int(1)], [long(1)], [date(1)], [month(1)], [time(1)], [minute(1)], [second(1)], [datetime(1)], [timestamp(1)], [nanotime(1)], [nanotimestamp(1)], [datehour(1)], [float(10.0)], [double(-0.123)], symbol([`123456msg]), [`123456msg], [blob(`123456msg)], [ipaddr('192.168.2.1')], [uuid('0f0e0d0c-0b0a-0908-0706-050403020100')], [int128('0f0e0d0c0b0a09080706050403020100')], decimal32([0.2353], 2), decimal64([-1], 11)])")->getBool());
+	EXPECT_TRUE(conn.run("eqObj((select * from loadTable('dfs://test_errMsg',`pt)).values(), [[false], ['1'], [short(1)], [int(1)], [long(1)], [date(1)], [month(1)], [time(1)], [minute(1)], [second(1)], [datetime(1)], [timestamp(1)], [nanotime(1)], [nanotimestamp(1)], [datehour(1)], [float(10.0)], [double(-0.123)], symbol([`123456msg]), [`123456msg], [blob(`123456msg)], [ipaddr('192.168.2.1')], [uuid('0f0e0d0c-0b0a-0908-0706-050403020100')], [int128('0f0e0d0c0b0a09080706050403020100')], decimal32([0.2313], 2), decimal64([-1], 11)])")->getBool());
 
 	// insert int to timestamp
 	if (!writer2.insert(errorInfo, false, '1', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1ll, 1l, 1, 10.0, -0.123, msg, msg, msg, "192.168.2.1", "0f0e0d0c-0b0a-0908-0706-050403020100", "0f0e0d0c0b0a09080706050403020100", 0.2353, -1))
@@ -5396,3 +5245,165 @@ TEST_F(MultithreadedTableWriterTest, test_insert_dfs_column_info_in_errMsg)
 	// EXPECT_TRUE(conn.run("eqObj(values t1, [[false,true], ['1', '1'], [short(1),short(1)], [int(1),int(1)], [long(1),long(1)], [date(1),date(1)], [month(1),month(1)], [time(1),time(1)], [minute(1),minute(1)], [second(1),second(1)], [datetime(1),datetime(1)], [timestamp(1),timestamp(1)], [nanotime(1),nanotime(1)], [nanotimestamp(1),nanotimestamp(1)], [datehour(1),datehour(1)], [float(10.0),float(10.0)], [double(-0.123),double(-0.123)], symbol([`123456msg,`1]), [`123456msg, `1], blob(`123456msg`1), [ipaddr('192.168.2.1'),ipaddr('192.168.2.1')], [uuid('0f0e0d0c-0b0a-0908-0706-050403020100'),uuid('0f0e0d0c-0b0a-0908-0706-050403020100')], [int128('0f0e0d0c0b0a09080706050403020100'),int128('0f0e0d0c0b0a09080706050403020100')], decimal32([0.2353, 0.2353], 2), decimal64([-1,-1], 11)])")->getBool());
 
 }
+
+class MTW_insert_null_data : public MultithreadedTableWriterTest, public testing::WithParamInterface<string>
+{
+public:
+	static vector<string> testTypes()
+	{
+		return {"BOOL", "CHAR", "SHORT", "INT", "LONG", "DATE", "MONTH", "TIME", "MINUTE", "SECOND", "DATETIME", "TIMESTAMP", "NANOTIME", "NANOTIMESTAMP", "DATEHOUR", "FLOAT", "DOUBLE", "STRING", "SYMBOL", "BLOB", "IPADDR", "UUID", "INT128", "DECIMAL32(8)", "DECIMAL64(15)", "DECIMAL128(28)",
+				"BOOL[]", "CHAR[]", "SHORT[]", "INT[]", "LONG[]", "DATE[]", "MONTH[]", "TIME[]", "MINUTE[]", "SECOND[]", "DATETIME[]", "TIMESTAMP[]", "NANOTIME[]", "NANOTIMESTAMP[]", "DATEHOUR[]", "FLOAT[]", "DOUBLE[]", "IPADDR[]", "UUID[]", "INT128[]", "DECIMAL32(8)[]", "DECIMAL64(15)[]", "DECIMAL128(25)[]"};
+	}
+};
+INSTANTIATE_TEST_SUITE_P(, MTW_insert_null_data, testing::ValuesIn(MTW_insert_null_data::testTypes()));
+
+TEST_P(MTW_insert_null_data, test_insert_all_null_data)
+{
+	string type = GetParam();
+	cout << "test type: " << type << endl;
+	string colName = "c1";
+	string script1 =
+		"colName = [`" + colName + "];"
+		"colType = [" + type + "];"
+		"share table(1:0, colName, colType) as att;";
+
+	conn.run(script1);
+	ErrorCodeInfo errorInfo;
+	MultithreadedTableWriter writer(hostName, port, "admin", "123456", "", "att", false);
+	bool success = false;
+	if (type == "STRING" || type == "SYMBOL" || type == "BLOB"){
+		success = writer.insert(errorInfo, "");
+	}else if (type.find("IPADDR") != string::npos){
+		success = writer.insert(errorInfo, Util::createNullConstant(DT_IP));
+	}else if (type.find("UUID") != string::npos){
+		success = writer.insert(errorInfo, Util::createNullConstant(DT_UUID));
+	}else if (type.find("INT128") != string::npos){
+		success = writer.insert(errorInfo, Util::createNullConstant(DT_INT128));
+	}
+	else if (type == "BOOL"){
+		success = writer.insert(errorInfo, Util::createNullConstant(DT_BOOL));
+	}
+	else{
+		success = writer.insert(errorInfo, Util::createNullConstant(DT_CHAR));
+	}
+	EXPECT_FALSE(errorInfo.hasError()) << errorInfo.errorInfo;
+	EXPECT_TRUE(success);
+	writer.waitForThreadCompletion();
+
+	auto res = conn.run("exec * from att");
+	EXPECT_EQ(res->rows(), 1);
+	auto val = res->getColumn(0)->get(0);
+	EXPECT_TRUE(val->get(0)->isNull()) << val->getString();
+	conn.run("undef(`att, SHARED);go");
+}
+
+TEST_F(MultithreadedTableWriterTest, test_insertToinMemoryTable_threadCount_gt1)
+{
+	string script1 =
+		"colName = [`c1];"
+		"colType = [INT];"
+		"share table(1:0, colName, colType) as att;";
+
+	conn.run(script1);
+	ErrorCodeInfo errorInfo;
+	unsigned int threadCount = 2;
+	EXPECT_ANY_THROW(MultithreadedTableWriter writer(hostName, port, "admin", "123456", "", "att", true, false, nullptr, 1, 0.01, threadCount));
+	conn.run("undef(`att, SHARED);go");
+}
+
+class MultithreadedTableWriterTest_enableStreamTableTimestamp : public MultithreadedTableWriterTest, public testing::WithParamInterface<string>{
+public:
+	static vector<string> getScripts(){
+		return {
+			// R"(try{dropStreamTable(`test_enableStreamTableTimestamp)}catch(ex){};go;
+			// 	share streamTable(1:0, `ts`sym`ind`val, [TIMESTAMP, SYMBOL, INT, DOUBLE]) as test_enableStreamTableTimestamp;
+			// 	setStreamTableTimestamp(test_enableStreamTableTimestamp, `ts))",
+			// R"(try{dropStreamTable(`test_enableStreamTableTimestamp)}catch(ex){};go;
+			// 	share streamTable(1:0, `sym`ind`ts`val, [SYMBOL, INT, TIMESTAMP, DOUBLE]) as test_enableStreamTableTimestamp;
+			// 	setStreamTableTimestamp(test_enableStreamTableTimestamp, `ts))",
+			R"(try{dropStreamTable(`test_enableStreamTableTimestamp)}catch(ex){};go;
+				share streamTable(1:0, `sym`ind`val`ts, [SYMBOL, INT, DOUBLE, TIMESTAMP]) as test_enableStreamTableTimestamp;
+				setStreamTableTimestamp(test_enableStreamTableTimestamp, `ts))"
+		};
+	}
+};
+//INSTANTIATE_TEST_SUITE_P(, MultithreadedTableWriterTest_enableStreamTableTimestamp, testing::ValuesIn(MultithreadedTableWriterTest_enableStreamTableTimestamp::getScripts()));
+//TEST_P(MultithreadedTableWriterTest_enableStreamTableTimestamp, test_timeCol_position){
+//	srand(time(0));
+//	conn.run(GetParam());
+//
+//	MultithreadedTableWriter* writer = new MultithreadedTableWriter(hostName, port, "admin", "123456", "", "test_enableStreamTableTimestamp", false, false, nullptr, 1, 0.01, 1, "", nullptr,MultithreadedTableWriter::M_Append, nullptr, nullptr, true);
+//	const int rows = 1000;
+//	vector<string> syms = {"APPL", "MSFT", "GOOL", "ORCL", "BABA"};
+//	vector<int> inds = {0, -10823, 94, 305, 19};
+//	vector<double> vals = {0.0, -2.394, 99.2016, 50.002, 9};
+//	ErrorCodeInfo err;
+//	for (auto i=0;i<rows;i++){
+//		if (!writer->insert(err, syms[rand()%5], inds[rand()%5], vals[rand()%5]))
+//			throw RuntimeException(err.errorInfo);
+//	}
+//
+//	writer->waitForThreadCompletion();
+//	EXPECT_EQ(conn.run("test_enableStreamTableTimestamp.rows()")->getInt(), 1000);
+//	conn.run("try{dropStreamTable(`test_enableStreamTableTimestamp)}catch(ex){};");
+//	delete writer;
+//}
+
+
+//TEST_F(MultithreadedTableWriterTest, test_insertTable_arrayVector)
+//{
+//	TableSP table1 = conn.run(R"(
+//		cindex = [0]
+//		cbool= array(BOOL[]).append!([(0..8).append!(NULL)]);
+//		cchar = array(CHAR[]).append!([(0..8).append!(NULL)]);
+//		cshort = array(SHORT[]).append!([(0..8).append!(NULL)]);
+//		cint = array(INT[]).append!([(0..8).append!(NULL)]);
+//		clong = array(LONG[]).append!([(0..8).append!(NULL)]);
+//		cdate = array(DATE[]).append!([(0..8).append!(NULL)]);
+//		cmonth = array(MONTH[]).append!([(0..8).append!(NULL)]);
+//		ctime = array(TIME[]).append!([(0..8).append!(NULL)]);
+//		cminute = array(MINUTE[]).append!([(0..8).append!(NULL)]);
+//		csecond = array(SECOND[]).append!([(0..8).append!(NULL)]);
+//		cdatetime = array(DATETIME[]).append!([(0..8).append!(NULL)]);
+//		ctimestamp = array(TIMESTAMP[]).append!([(0..8).append!(NULL)]);
+//		cnanotime = array(NANOTIME[]).append!([(0..8).append!(NULL)]);
+//		cnanotimestamp = array(NANOTIMESTAMP[]).append!([(0..8).append!(NULL)]);
+//		cdatehour = array(DATEHOUR[]).append!([(0..8).append!(NULL)]);
+//		cfloat = array(FLOAT[]).append!([(0..8).append!(NULL)]);
+//		cdouble = array(DOUBLE[]).append!([(0..8).append!(NULL)]);
+//		cipaddr = array(IPADDR[]).append!([(take(ipaddr(['192.168.1.13']),9)).append!(NULL)]);
+//		cuuid = array(UUID[]).append!([(take(uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87']),9)).append!(NULL)]);
+//		cint128 = array(INT128[]).append!([(take(int128(['e1671797c52e15f763380b45e841ec32']),9)).append!(NULL)]);
+//		cdecimal32 = array(DECIMAL32(6)[], 0, 10).append!(decimal32([(0..8).append!(NULL)], 6));
+//		cdecimal64 = array(DECIMAL64(16)[], 0, 10).append!(decimal64([(0..8).append!(NULL)], 16));
+//		cdecimal128 = array(DECIMAL128(26)[], 0, 10).append!(decimal128([(0..8).append!(NULL)], 26));
+//		try{undef(`table1,SHARED)}catch(ex){};go;
+//		table1=table(cindex, cchar,cbool,cshort,cint,clong,cdate,cmonth,ctime,cminute,cdatetime,csecond,ctimestamp,cnanotime,cnanotimestamp,cdatehour,cfloat,cdouble,cuuid,cipaddr,cint128,cdecimal32,cdecimal64,cdecimal128);
+//		for (i in 1:100){
+//			tableInsert(table1, i, cchar,cbool,cshort,cint,clong,cdate,cmonth,ctime,cminute,cdatetime,csecond,ctimestamp,cnanotime,cnanotimestamp,cdatehour,cfloat,cdouble,cuuid,cipaddr,cint128,cdecimal32,cdecimal64,cdecimal128)}
+//		tableInsert(table1,100, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+//		table1
+//	)");
+//	conn.run("tmp = select top 0* from table1;share tmp as act");
+//
+//	SmartPointer<MultithreadedTableWriter> mtw;
+//	ErrorCodeInfo pErrorInfo;
+//
+//	mtw = new MultithreadedTableWriter(hostName, port, "admin", "123456", "", "act", false, false, nullptr, 1, 1, 1, "cindex", nullptr, MultithreadedTableWriter::Mode::M_Append, nullptr, nullptr, false);
+//
+//	for (auto i = 0; i < table1->rows(); i++){
+//		if (!mtw->insert(pErrorInfo, table1->getColumn(0)->get(i), table1->getColumn(1)->get(i), table1->getColumn(2)->get(i), table1->getColumn(3)->get(i), table1->getColumn(4)->get(i), table1->getColumn(5)->get(i), table1->getColumn(6)->get(i), table1->getColumn(7)->get(i), table1->getColumn(8)->get(i), table1->getColumn(9)->get(i), table1->getColumn(10)->get(i), table1->getColumn(11)->get(i), table1->getColumn(12)->get(i), table1->getColumn(13)->get(i), table1->getColumn(14)->get(i), table1->getColumn(15)->get(i), table1->getColumn(16)->get(i), table1->getColumn(17)->get(i), table1->getColumn(18)->get(i), table1->getColumn(19)->get(i), table1->getColumn(20)->get(i), table1->getColumn(21)->get(i), table1->getColumn(22)->get(i), table1->getColumn(23)->get(i))){
+//			cout << "insert failed, reason: " << pErrorInfo.errorInfo<< endl;
+//			break;
+//		}
+//	}
+//	mtw->waitForThreadCompletion();
+//
+//	EXPECT_TRUE(conn.run(
+//		"res = select * from act order by cindex;"
+//		"ex = select * from table1 order by cindex;"
+//		"all(each(eqObj, res.values(), ex.values()))"
+//	)->getBool());
+//
+//	conn.run("undef(`act, SHARED)");
+//}

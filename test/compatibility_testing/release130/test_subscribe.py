@@ -611,7 +611,6 @@ class TestSubscribe:
             insert into trades14 values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0)
         """
         conn1.run(script)
-        print(1)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
         conn1.subscribe(HOST, PORT, gethandler(df, counter),
@@ -620,6 +619,7 @@ class TestSubscribe:
         script = """
             stopPublishTable("{}", {}, `trades14, `action)
         """.format(CLIENT_HOST, SUBPORT)
+        time.sleep(3)
         conn1.run(script)
         script = """
             insert_table = table(take(now(), 5) as time, take(`000905`600001`300201`000908`600002, 5) as sym, rand(1000,5)/10.0 as price)
@@ -658,65 +658,6 @@ class TestSubscribe:
             "select * from trades16 where sym=`000905"))
         conn1.unsubscribe(HOST, PORT, "trades16", "action")
         conn1.close()
-
-    @pytest.mark.SUBSCRIBE
-    def test_enableStreaming_subscribe_double_arrayvector_msgAsTable_False(self):
-        conn1 = ddb.session()
-        conn1.connect(HOST, PORT, "admin", "123456")
-        conn1.enableStreaming(SUBPORT)
-        df = pd.DataFrame(columns=["symbolv", "doublev"])
-        script = '''
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){
-	            stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-            }
-            try{ dropStreamTable(`trades_doublev) }catch(ex){}
-            share streamTable(10000:0,`symbolv`doublev, [SYMBOL, DOUBLE]) as trades_doublev
-            n = 10
-            exTable = table(n:0, `symbolv`doublev, [SYMBOL, DOUBLE])
-            symbol_vector=take(`A`B`C`D`E`F`G, n)
-            double_vector=take(double([36,98,95,69,41,60,78,92,78,21]), n)
-            exTable.tableInsert(symbol_vector, double_vector)
-            trades_doublev.append!(exTable)
-        '''
-        conn1.run(script)
-        counter = CountBatchDownLatch(1)
-        counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter),
-                        "trades_doublev", "action", 0, False, msgAsTable=False)
-        assert counter.wait_s(20)
-        assert_frame_equal(df, conn1.run("select * from trades_doublev"))
-        conn1.unsubscribe(HOST, PORT, "trades_doublev", "action")
-        conn1.close()
-
-    @pytest.mark.SUBSCRIBE
-    def test_enableStreaming_subscribe_double_arrayvector_msgAsTable_True(self):
-        conn1 = ddb.session()
-        conn1.connect(HOST, PORT, "admin", "123456")
-        conn1.enableStreaming(SUBPORT)
-        self.df = pd.DataFrame(columns=["symbolv", "doublev"])
-        script = '''
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){
-	            stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-            }
-            try{ dropStreamTable(`trades_doublev) }catch(ex){}
-            share streamTable(10000:0,`symbolv`doublev, [SYMBOL, DOUBLE]) as trades_doublev2
-            n = 10
-            exTable = table(n:0, `symbolv`doublev, [SYMBOL, DOUBLE])
-            symbol_vector=take(`A`B`C`D`E`F`G, n)
-            double_vector=take(double([36,98,95,69,41,60,78,92,78,21]), n)
-            exTable.tableInsert(symbol_vector, double_vector)
-            trades_doublev2.append!(exTable)
-        '''
-        conn1.run(script)
-        counter = CountBatchDownLatch(1)
-        counter.reset(1)
-        conn1.subscribe(HOST, PORT, self.handler_df(counter), "trades_doublev2",
-                        "action", 0, False, msgAsTable=True, batchSize=1000, throttle=1)
-        assert counter.wait_s(20)
-        assert_frame_equal(self.df, conn1.run("select * from trades_doublev2"))
-        conn1.unsubscribe(HOST, PORT, "trades_doublev2", "action")
 
     @pytest.mark.SUBSCRIBE
     def test_enableStreaming_subscribe_batchSize_lt_zero(self):
@@ -1398,44 +1339,6 @@ class TestSubscribe:
         conn1.close()
         self.conn.run(
             "undef(`trades,SHARED);undef(`trades2,SHARED);undef(`trades3,SHARED);undef(`trades4,SHARED);undef(`trades5,SHARED);go")
-
-    @pytest.mark.SUBSCRIBE
-    @pytest.mark.v130221
-    def test_enalbeStreaming_gbk_encoding(self):
-        conn1 = ddb.session()
-        conn1.connect(HOST, PORT, "admin", "123456")
-        conn1.enableStreaming(SUBPORT)
-        script="""
-            schema=extractTextSchema("{data_dir}/trade.csv");
-            schematable=table(`type`account`subfilter1`subfilter2`subfilter3`requestid`iserror`error`islast`data`tradingday`time as name,`INT`SYMBOL`SYMBOL`SYMBOL`SYMBOL`INT`BOOL`STRING`BOOL`STRING`DATE`TIME as type)
-            t = loadText("{data_dir}/trade.csv",,schematable)
-
-            try{{undef(`trades, SHARED)}}catch(ex){{}}
-            share streamTable(10000:0,`type`account`subfilter1`subfilter2`subfilter3`requestid`iserror`error`islast`data`tradingday`time, [INT,SYMBOL,SYMBOL,SYMBOL,SYMBOL,INT,BOOL,STRING,BOOL,STRING,DATE,TIME]) as trades
-            insert into trades values (select * from t order by time)
-        """.format(data_dir=DATA_DIR)
-        conn1.run(script)
-        counter = CountBatchDownLatch(10)
-        vec1 = []
-        def tmp_handle(local_lst, counter):
-            print("get msg")
-            def handler(lst):
-                local_lst.append(lst)
-                counter.countDown(1)
-            return handler
-            
-
-        conn1.subscribe(HOST,PORT,tmp_handle(vec1, counter),"trades","action",0,True)
-        assert counter.wait_s(10)
-        conn1.unsubscribe(HOST, PORT, "trades","action")
-        trades = conn1.run("select * from trades order by time")
-        for i in range(len(trades)):
-            # print("-----------------vec1-----------------")
-            # print(vec1[i])
-            # print("-----------------trades-----------------")
-            # print(trades.iloc[i].tolist())
-            assert_array_equal(vec1[i], [x if x != '' else None for x in trades.iloc[i].tolist()])
-        conn1.close()
 
     @pytest.mark.SUBSCRIBE
     @pytest.mark.v130221

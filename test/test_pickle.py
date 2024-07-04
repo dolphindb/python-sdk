@@ -9,6 +9,7 @@ import sys
 import copyreg
 import weakref
 
+
 class ExtensionSaver:
     # Remember current registration for code (if any), and remove it (if
     # there is one).
@@ -29,22 +30,27 @@ class ExtensionSaver:
         pair = self.pair
         if pair is not None:
             copyreg.add_extension(pair[0], pair[1], code)
-    
+
+
 class C:
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
+
 
 class D(C):
     def __init__(self, arg):
         pass
 
+
 class E(C):
     def __getinitargs__(self):
         return ()
 
+
 # Simple mutable object.
 class Object:
     pass
+
 
 # Hashable immutable key object containing unheshable mutable data.
 class K:
@@ -54,11 +60,14 @@ class K:
     def __reduce__(self):
         # Shouldn't support the recursion itself
         return K, (self.value,)
-    
+
+
 def identity(x):
     return x
 
+
 import __main__
+
 __main__.C = C
 C.__module__ = "__main__"
 __main__.D = D
@@ -66,9 +75,11 @@ D.__module__ = "__main__"
 __main__.E = E
 E.__module__ = "__main__"
 
+
 class myint(int):
     def __init__(self, x):
         self.str = str(x)
+
 
 class initarg(C):
 
@@ -79,11 +90,14 @@ class initarg(C):
     def __getinitargs__(self):
         return self.a, self.b
 
+
 class metaclass(type):
     pass
 
+
 class use_metaclass(object, metaclass=metaclass):
     pass
+
 
 class pickling_metaclass(type):
     def __eq__(self, other):
@@ -154,6 +168,7 @@ class ZeroCopyBytearray(bytearray):
                 return obj
             else:
                 return cls(obj)
+
 
 DATA0 = (
     b'(lp0\nL0L\naL1L\naF2.0\n'
@@ -244,98 +259,125 @@ DATA_COOKIE = (b'\x80\x02cCookie\nSimpleCookie\nq\x00)\x81q\x01U\x03key'
 # set([3]) pickled from 2.x with protocol 2
 DATA_SET2 = b'\x80\x02c__builtin__\nset\nq\x00]q\x01K\x03a\x85q\x02Rq\x03.'
 
+
 def create_data():
     c = C()
     c.foo = 1
     c.bar = 2
-    x = [0, 1, 2.0, 3.0+0j]
+    x = [0, 1, 2.0, 3.0 + 0j]
     # Append some integer test cases at cPickle.c's internal size
     # cutoffs.
     uint1max = 0xff
     uint2max = 0xffff
     int4max = 0x7fffffff
     x.extend([1, -1,
-              uint1max, -uint1max, -uint1max-1,
-              uint2max, -uint2max, -uint2max-1,
-               int4max,  -int4max,  -int4max-1])
+              uint1max, -uint1max, -uint1max - 1,
+              uint2max, -uint2max, -uint2max - 1,
+              int4max, -int4max, -int4max - 1])
     y = ('abc', 'abc', c, c)
     x.append(y)
     x.append(y)
     x.append(5)
     return x
 
+
 class REX_one(object):
     """No __reduce_ex__ here, but inheriting it from object"""
     _reduce_called = 0
+
     def __reduce__(self):
         self._reduce_called = 1
         return REX_one, ()
 
+
 class REX_two(object):
     """No __reduce__ here, but inheriting it from object"""
     _proto = None
+
     def __reduce_ex__(self, proto):
         self._proto = proto
         return REX_two, ()
 
+
 class REX_three(object):
     _proto = None
+
     def __reduce_ex__(self, proto):
         self._proto = proto
         return REX_two, ()
+
     def __reduce__(self):
-        raise TestFailed("This __reduce__ shouldn't be called")
+        raise RuntimeError("This __reduce__ shouldn't be called")
+
 
 class REX_four(object):
     """Calling base class method should succeed"""
     _proto = None
+
     def __reduce_ex__(self, proto):
         self._proto = proto
         return object.__reduce_ex__(self, proto)
 
+
 class REX_five(object):
     """This one used to fail with infinite recursion"""
     _reduce_called = 0
+
     def __reduce__(self):
         self._reduce_called = 1
         return object.__reduce__(self)
+
 
 class REX_six(object):
     """This class is used to check the 4th argument (list iterator) of
     the reduce protocol.
     """
+
     def __init__(self, items=None):
         self.items = items if items is not None else []
+
     def __eq__(self, other):
         return type(self) is type(other) and self.items == other.items
+
     def append(self, item):
         self.items.append(item)
+
     def __reduce__(self):
         return type(self), (), None, iter(self.items), None
+
 
 class REX_seven(object):
     """This class is used to check the 5th argument (dict iterator) of
     the reduce protocol.
     """
+
     def __init__(self, table=None):
         self.table = table if table is not None else {}
+
     def __eq__(self, other):
         return type(self) is type(other) and self.table == other.table
+
     def __setitem__(self, key, value):
         self.table[key] = value
+
     def __reduce__(self):
         return type(self), (), None, None, iter(self.table.items())
+
 
 class REX_state(object):
     """This class is used to check the 3th argument (state) of
     the reduce protocol.
     """
+
     def __init__(self, state=None):
         self.state = state
+
     def __eq__(self, other):
         return type(self) is type(other) and self.state == other.state
+
     def __setstate__(self, state):
         self.state = state
+
     def __reduce__(self):
         return type(self), (), self.state
 
@@ -345,41 +387,53 @@ class REX_state(object):
 class MyInt(int):
     sample = 1
 
+
 class MyFloat(float):
     sample = 1.0
+
 
 class MyComplex(complex):
     sample = 1.0 + 0.0j
 
+
 class MyStr(str):
     sample = "hello"
+
 
 class MyUnicode(str):
     sample = "hello \u1234"
 
+
 class MyTuple(tuple):
     sample = (1, 2, 3)
+
 
 class MyList(list):
     sample = [1, 2, 3]
 
+
 class MyDict(dict):
     sample = {"a": 1, "b": 2}
+
 
 class MySet(set):
     sample = {"a", "b"}
 
+
 class MyFrozenSet(frozenset):
     sample = frozenset({"a", "b"})
+
 
 myclasses = [MyInt, MyFloat,
              MyComplex,
              MyStr, MyUnicode,
              MyTuple, MyList, MyDict, MySet, MyFrozenSet]
 
+
 class MyIntWithNew(int):
     def __new__(cls, value):
         raise AssertionError
+
 
 class MyIntWithNew2(MyIntWithNew):
     __new__ = int.__new__
@@ -388,30 +442,38 @@ class MyIntWithNew2(MyIntWithNew):
 class SlotList(MyList):
     __slots__ = ["foo"]
 
+
 class SimpleNewObj(int):
     def __init__(self, *args, **kwargs):
         # raise an error, to make sure this isn't called
         raise TypeError("SimpleNewObj.__init__() didn't expect to get called")
+
     def __eq__(self, other):
         return int(self) == int(other) and self.__dict__ == other.__dict__
+
 
 class ComplexNewObj(SimpleNewObj):
     def __getnewargs__(self):
         return ('%X' % self, 16)
 
+
 class ComplexNewObjEx(SimpleNewObj):
     def __getnewargs_ex__(self):
         return ('%X' % self,), {'base': 16}
+
 
 class BadGetattr:
     def __getattr__(self, key):
         self.foo
 
+
 REDUCE_A = 'reduce_A'
+
 
 class AAA(object):
     def __reduce__(self):
         return str, (REDUCE_A,)
+
 
 class BBB(object):
     def __init__(self):
@@ -422,8 +484,8 @@ class BBB(object):
     def __setstate__(self, state):
         self.a = "BBB.__setstate__"
 
-class TestPickleUnmarshal:
 
+class TestPickleUnmarshal:
     _testdata = create_data()
 
     def load(self, obj, protocol=4):
@@ -511,7 +573,7 @@ class TestPickleUnmarshal:
             pass
         else:
             raise AssertionError(data, errors)
-        
+
     def test_load_proto(self):
         goodpickles = [(b'\x80\x04\x80\x00S""\n.', ''),
                        (b'\x80\x04\x80\x01S""\n.', ''),
@@ -520,9 +582,9 @@ class TestPickleUnmarshal:
                        (b'\x80\x04\x80\x04S""\n.', '')]
         for p, expected in goodpickles:
             self.assertEqual(self.loads(p), expected)
-            
+
         self.check_unmarshal_typeerror(b'\x80\x04\x80\x05S""\n.')
-        
+
     def test_load_from_data0(self):
         # self.assert_is_copy(self._testdata, self.loads(DATA0))
         self.check_unmarshal_error(DATA0)
@@ -541,37 +603,36 @@ class TestPickleUnmarshal:
 
     def test_load_from_data4(self):
         self.assert_is_copy(self._testdata, self.loads(DATA4))
-        
+
     def test_load_inst(self):
         X, args = (C, ())
         xname = X.__name__.encode('ascii')
         pickle0 = (b"\x80\x04i__main__\n"
-                    b"X\n"
-                    b"p0\n"
-                    b"(dp1\nb.").replace(b'X', xname)
+                   b"X\n"
+                   b"p0\n"
+                   b"(dp1\nb.").replace(b'X', xname)
         self.check_unmarshal_typeerror(pickle0)
-        
+
         pickle1 = (b"\x80\x04(i__main__").replace(b'X', xname)
         self.check_unmarshal_typeerror(pickle1)
-        
+
         pickle2 = (b"\x80\x04(i\n").replace(b'X', xname)
         self.check_unmarshal_typeerror(pickle2)
-        
+
         pickle3 = (b"\x80\x04(i\x96\n").replace(b'X', xname)
         self.check_unmarshal_typeerror(pickle3)
-        
+
         pickle4 = (b"\x80\x04(i__main__\n"
-                    b"\n"
-                    b"p0\n"
-                    b"(dp1\nb.").replace(b'X', xname)
+                   b"\n"
+                   b"p0\n"
+                   b"(dp1\nb.").replace(b'X', xname)
         self.check_unmarshal_typeerror(pickle4)
-        
+
         pickle5 = (b"\x80\x04(i__main__\n"
-                    b"\x96\n"
-                    b"p0\n"
-                    b"(dp1\nb.").replace(b'X', xname)
+                   b"\x96\n"
+                   b"p0\n"
+                   b"(dp1\nb.").replace(b'X', xname)
         self.check_unmarshal_typeerror(pickle5)
-        
 
     def test_load_classic_instance(self):
         # See issue5180.  Test loading 2.x pickles that
@@ -594,7 +655,7 @@ class TestPickleUnmarshal:
                        b"p0\n"
                        b"(dp1\nb.").replace(b'X', xname)
             self.assert_is_copy(X(*args), self.loads(pickle0))
-            
+
             # Protocol 1 (binary mode pickle)
             """
              0: (    MARK
@@ -611,7 +672,7 @@ class TestPickleUnmarshal:
                        b'X\n'
                        b'q\x00oq\x01}q\x02b.').replace(b'X', xname)
             self.assert_is_copy(X(*args), self.loads(pickle1))
-            
+
             # Protocol 2 (pickle2 = b'\x80\x02' + pickle1)
             """
              0: \x80 PROTO      2
@@ -629,7 +690,7 @@ class TestPickleUnmarshal:
                        b'X\n'
                        b'q\x00oq\x01}q\x02b.').replace(b'X', xname)
             self.assert_is_copy(X(*args), self.loads(pickle2))
-            
+
             data = X(*args)
             self.assert_is_copy(data, self.load(data))
 
@@ -672,25 +733,25 @@ class TestPickleUnmarshal:
     def test_get(self):
         pickled = b'\x80\x04((lp100000\ng100000\nt.'
         unpickled = self.loads(pickled)
-        self.assertEqual(unpickled, ([],)*2)
+        self.assertEqual(unpickled, ([],) * 2)
         self.assertIs(unpickled[0], unpickled[1])
 
     def test_binget(self):
         pickled = b'\x80\x04(]q\xffh\xfft.'
         unpickled = self.loads(pickled)
-        self.assertEqual(unpickled, ([],)*2)
+        self.assertEqual(unpickled, ([],) * 2)
         self.assertIs(unpickled[0], unpickled[1])
 
     def test_long_binget(self):
         pickled = b'\x80\x04(]r\x00\x00\x01\x00j\x00\x00\x01\x00t.'
         unpickled = self.loads(pickled)
-        self.assertEqual(unpickled, ([],)*2)
+        self.assertEqual(unpickled, ([],) * 2)
         self.assertIs(unpickled[0], unpickled[1])
 
     def test_dup(self):
         pickled = b'\x80\04((l2t.'
         unpickled = self.loads(pickled)
-        self.assertEqual(unpickled, ([],)*2)
+        self.assertEqual(unpickled, ([],) * 2)
         self.assertIs(unpickled[0], unpickled[1])
 
     def test_negative_put(self):
@@ -720,7 +781,7 @@ class TestPickleUnmarshal:
         for p in badpickles:
             # self.check_unmarshal_error(p)
             self.check_unmarshal_typeerror(p)
-            # self.check_unpickling_error(pickle.UnpicklingError, p)
+        # self.check_unpickling_error(pickle.UnpicklingError, p)
 
     def test_correctly_quoted_string(self):
         goodpickles = [(b"\x80\x04S''\n.", ''),
@@ -734,97 +795,97 @@ class TestPickleUnmarshal:
         # self.check_unpickling_error(EOFError, b'')
         # self.check_unpickling_error(EOFError, b'N')
         badpickles = [
-            b'B',                       # BINBYTES
+            b'B',  # BINBYTES
             b'B\x03\x00\x00',
             b'B\x03\x00\x00\x00',
             b'B\x03\x00\x00\x00ab',
-            b'C',                       # SHORT_BINBYTES
+            b'C',  # SHORT_BINBYTES
             b'C\x03',
             b'C\x03ab',
-            b'F',                       # FLOAT
+            b'F',  # FLOAT
             b'F0.0',
             b'F0.00',
-            b'G',                       # BINFLOAT
+            b'G',  # BINFLOAT
             b'G\x00\x00\x00\x00\x00\x00\x00',
-            b'I',                       # INT
+            b'I',  # INT
             b'I0',
-            b'J',                       # BININT
+            b'J',  # BININT
             b'J\x00\x00\x00',
-            b'K',                       # BININT1
-            b'L',                       # LONG
+            b'K',  # BININT1
+            b'L',  # LONG
             b'L0',
             b'L10',
             b'L0L',
             b'L10L',
-            b'M',                       # BININT2
+            b'M',  # BININT2
             b'M\x00',
             # b'P',                       # PERSID
             # b'Pabc',
-            b'S',                       # STRING
+            b'S',  # STRING
             b"S'abc'",
-            b'T',                       # BINSTRING
+            b'T',  # BINSTRING
             b'T\x03\x00\x00',
             b'T\x03\x00\x00\x00',
             b'T\x03\x00\x00\x00ab',
-            b'U',                       # SHORT_BINSTRING
+            b'U',  # SHORT_BINSTRING
             b'U\x03',
             b'U\x03ab',
-            b'V',                       # UNICODE
+            b'V',  # UNICODE
             b'Vabc',
-            b'X',                       # BINUNICODE
+            b'X',  # BINUNICODE
             b'X\x03\x00\x00',
             b'X\x03\x00\x00\x00',
             b'X\x03\x00\x00\x00ab',
-            b'(c',                      # GLOBAL
+            b'(c',  # GLOBAL
             b'(cbuiltins',
             b'(cbuiltins\n',
             b'(cbuiltins\nlist',
-            b'Ng',                      # GET
+            b'Ng',  # GET
             b'Ng0',
-            b'(i',                      # INST
+            b'(i',  # INST
             b'(ibuiltins',
             b'(ibuiltins\n',
             b'(ibuiltins\nlist',
-            b'Nh',                      # BINGET
-            b'Nj',                      # LONG_BINGET
+            b'Nh',  # BINGET
+            b'Nj',  # LONG_BINGET
             b'Nj\x00\x00\x00',
-            b'Np',                      # PUT
+            b'Np',  # PUT
             b'Np0',
-            b'Nq',                      # BINPUT
-            b'Nr',                      # LONG_BINPUT
+            b'Nq',  # BINPUT
+            b'Nr',  # LONG_BINPUT
             b'Nr\x00\x00\x00',
-            b'\x80',                    # PROTO
-            b'\x82',                    # EXT1
-            b'\x83',                    # EXT2
+            b'\x80',  # PROTO
+            b'\x82',  # EXT1
+            b'\x83',  # EXT2
             b'\x84\x01',
-            b'\x84',                    # EXT4
+            b'\x84',  # EXT4
             b'\x84\x01\x00\x00',
-            b'\x8a',                    # LONG1
-            b'\x8b',                    # LONG4
+            b'\x8a',  # LONG1
+            b'\x8b',  # LONG4
             b'\x8b\x00\x00\x00',
-            b'\x8c',                    # SHORT_BINUNICODE
+            b'\x8c',  # SHORT_BINUNICODE
             b'\x8c\x03',
             b'\x8c\x03ab',
-            b'\x8d',                    # BINUNICODE8
+            b'\x8d',  # BINUNICODE8
             b'\x8d\x03\x00\x00\x00\x00\x00\x00',
             b'\x8d\x03\x00\x00\x00\x00\x00\x00\x00',
             b'\x8d\x03\x00\x00\x00\x00\x00\x00\x00ab',
-            b'\x8e',                    # BINBYTES8
+            b'\x8e',  # BINBYTES8
             b'\x8e\x03\x00\x00\x00\x00\x00\x00',
             b'\x8e\x03\x00\x00\x00\x00\x00\x00\x00',
             b'\x8e\x03\x00\x00\x00\x00\x00\x00\x00ab',
-            b'\x96',                    # BYTEARRAY8
+            b'\x96',  # BYTEARRAY8
             b'\x96\x03\x00\x00\x00\x00\x00\x00',
             b'\x96\x03\x00\x00\x00\x00\x00\x00\x00',
             b'\x96\x03\x00\x00\x00\x00\x00\x00\x00ab',
-            b'\x95',                    # FRAME
+            b'\x95',  # FRAME
             b'\x95\x02\x00\x00\x00\x00\x00\x00',
             b'\x95\x02\x00\x00\x00\x00\x00\x00\x00',
             b'\x95\x02\x00\x00\x00\x00\x00\x00\x00N',
         ]
         for p in badpickles:
             self.check_unmarshal_typeerror(b"\x80\x04" + p)
-            # self.check_unpickling_error(self.truncated_errors, "\x80\x04" + p)
+        # self.check_unpickling_error(self.truncated_errors, "\x80\x04" + p)
 
     def test_frame_readline(self):
         # pickled = b'\x80\x04\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x05I42\n.'
@@ -834,65 +895,65 @@ class TestPickleUnmarshal:
         #   11: I    INT        42
         #   15: .    STOP
         self.assertEqual(self.loads(pickled), 42)
-        
+
     def test_load_int(self):
         pickled = b'\x80\x04\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x00I00\n.'
         self.assertIs(self.loads(pickled), False)
-        
+
         pickled = b'\x80\x04\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x00I01\n.'
         self.assertIs(self.loads(pickled), True)
-        
+
         pickled = b'\x80\x04\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x00I\n.'
         self.check_unmarshal_typeerror(pickled)
-        
+
         pickled = b'\x80\x04\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x00I02\n.'
         self.assertEqual(self.loads(pickled), 2)
-        
+
         pickled = b'\x80\x04\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x00I123456\n.'
         self.assertEqual(self.loads(pickled), 123456)
-        
+
         pickled = b'\x80\x04\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x00I123a\n.'
         self.check_unmarshal_typeerror(pickled)
-        
+
         pickled = b'\x80\x04\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x00I123.'
         self.check_unmarshal_typeerror(pickled)
-        
+
         pickled = b'\x80\x04\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x00I123\0\n.'
         self.assertEqual(self.loads(pickled), 123)
-        
+
     def test_load_long(self):
         pickled = b'\x80\x04\x80\x04L11111L\n.'
         self.assertEqual(self.loads(pickled), 11111)
-        
+
         pickled = b'\x80\x04\x80\x04L11111\n.'
         self.assertEqual(self.loads(pickled), 11111)
-        
+
         pickled = b'\x80\x04\x80\x04L011111L\n.'
         self.check_unmarshal_typeerror(pickled)
-        
+
         pickled = b'\x80\x04\x80\x04L\n.'
         self.check_unmarshal_typeerror(pickled)
-        
+
     def test_load_float(self):
         pickled = b'\x80\x04\x80\x04F0.00\n.'
         self.assertEqual(self.loads(pickled), 0.00)
-        
+
         pickled = b'\x80\x04\x80\x04F0.0012232333333333333\n.'
         self.check_unmarshal_typeerror(pickled)
-        
+
         pickled = b'\x80\x04\x80\x04F0.0a\n.'
         self.check_unmarshal_typeerror(pickled)
-        
+
         pickled = b'\x80\x04\x80\x04Fa\n.'
         self.check_unmarshal_typeerror(pickled)
-        
+
         pickled = b'\x80\x04\x80\x04F\n.'
         self.check_unmarshal_typeerror(pickled)
-        
+
     def test_load_unicode(self):
         pickled = b'\x80\x04\x80\x04Vabc\n.'
         self.assertEqual(self.loads(pickled), "abc")
-        
+
         pickled = b'\x80\x04\x80\x04V\n.'
         self.check_unmarshal_typeerror(pickled)
 
@@ -1036,20 +1097,20 @@ class TestPickleUnmarshal:
 
     def test_recursive_tuple_and_dict_like(self):
         self._test_recursive_tuple_and_dict(REX_seven, asdict=lambda x: x.table)
-        
+
     def _test_recursive_dict_key(self, cls, asdict=identity, minprotocol=0):
         # Dict containing an immutable object (as key) containing the original
         # dict.
         d = cls()
         d[K(d)] = 1
-        
+
         x = self.load(d)
         self.assertIsInstance(x, cls)
         y = asdict(x)
         self.assertEqual(len(y.keys()), 1)
         self.assertIsInstance(list(y.keys())[0], K)
         self.assertIs(list(y.keys())[0].value, x)
-        
+
     def test_recursive_dict_key(self):
         self._test_recursive_dict_key(dict)
 
@@ -1125,7 +1186,7 @@ class TestPickleUnmarshal:
 
     def test_recursive_multi(self):
         l = []
-        d = {1:l}
+        d = {1: l}
         i = Object()
         i.attr = d
         l.append(i)
@@ -1215,7 +1276,7 @@ class TestPickleUnmarshal:
 
     def test_unicode(self):
         endcases = ['', '<\\u>', '<\\\u1234>', '<\n>',
-                    '<\\>', '<\\\U00012345>',]
+                    '<\\>', '<\\\U00012345>', ]
         for u in endcases:
             u2 = self.load(u)
             self.assert_is_copy(u, u2)
@@ -1226,7 +1287,7 @@ class TestPickleUnmarshal:
         self.assert_is_copy(t, t2)
 
     def test_bytes(self):
-        for s in b'', b'xyz', b'xyz'*100:
+        for s in b'', b'xyz', b'xyz' * 100:
             self.assert_is_copy(s, self.load(s))
         for s in [bytes([i]) for i in range(256)]:
             self.assert_is_copy(s, self.load(s))
@@ -1234,12 +1295,12 @@ class TestPickleUnmarshal:
             self.assert_is_copy(s, self.load(s))
 
     def test_bytearray(self):
-        for s in b'', b'xyz', b'xyz'*100:
+        for s in b'', b'xyz', b'xyz' * 100:
             b = bytearray(s)
             bb = self.load(b)
             self.assertIsNot(bb, b)
             self.assert_is_copy(b, bb)
-            
+
     def test_ints(self):
         n = sys.maxsize
         while n:
@@ -1250,9 +1311,9 @@ class TestPickleUnmarshal:
 
     def test_long(self):
         # 256 bytes is where LONG4 begins.
-        for nbits in 1, 8, 8*254, 8*255, 8*256, 8*257:
+        for nbits in 1, 8, 8 * 254, 8 * 255, 8 * 256, 8 * 257:
             nbase = 1 << nbits
-            for npos in nbase-1, nbase, nbase+1:
+            for npos in nbase - 1, nbase, nbase + 1:
                 for n in npos, -npos:
                     got = self.load(n)
                     self.assert_is_copy(n, got)
@@ -1334,7 +1395,7 @@ class TestPickleUnmarshal:
         self.assert_is_copy(x, y)
 
     def test_long4(self):
-        x = 12345678910111213141516178920 << (256*8)
+        x = 12345678910111213141516178920 << (256 * 8)
         y = self.load(x)
         self.assert_is_copy(x, y)
 
@@ -1369,10 +1430,10 @@ class TestPickleUnmarshal:
             x.foo = 42
             y = self.load(x)
             detail = (4, C, B, x, y, type(y))
-            self.assert_is_copy(x, y) # XXX revisit
+            self.assert_is_copy(x, y)  # XXX revisit
             self.assertEqual(B(x), B(y), detail)
             self.assertEqual(x.__dict__, y.__dict__, detail)
-            
+
     def test_newobj_proxies(self):
         # NEWOBJ should use the __class__ rather than the raw type
         classes = myclasses[:]
@@ -1389,7 +1450,7 @@ class TestPickleUnmarshal:
             detail = (4, C, B, x, y, type(y))
             self.assertEqual(B(x), B(y), detail)
             self.assertEqual(x.__dict__, y.__dict__, detail)
-            
+
     def test_newobj_overridden_new(self):
         # Test that Python class with C implemented __new__ is pickleable
         x = MyIntWithNew2(1)
@@ -1425,7 +1486,7 @@ class TestPickleUnmarshal:
         self.produce_global_ext(0x00010000, pickle.EXT4)  # smallest EXT4 code
         self.produce_global_ext(0x7fffffff, pickle.EXT4)  # largest EXT4 code
         self.produce_global_ext(0x12abcdef, pickle.EXT4)  # check endianness
-        
+
     def test_list_chunking(self):
         n = 10  # too small to chunk
         x = list(range(n))
@@ -1513,7 +1574,7 @@ class TestPickleUnmarshal:
         self.assertEqual(x._reduce_called, 0)
         y = self.load(x)
         self.assertEqual(y._reduce_called, 1)
-        
+
     def test_many_puts_and_gets(self):
         # Test that internal data structures correctly deal with lots of
         # puts/gets.
@@ -1522,7 +1583,7 @@ class TestPickleUnmarshal:
         obj = [dict(large_dict), dict(large_dict), dict(large_dict)]
         loaded = self.load(obj)
         self.assert_is_copy(obj, loaded)
-        
+
     def test_attribute_name_interning(self):
         # Test that attribute names of pickled objects are interned when
         # unpickling.
@@ -1534,7 +1595,7 @@ class TestPickleUnmarshal:
         y_keys = sorted(y.__dict__)
         for x_key, y_key in zip(x_keys, y_keys):
             self.assertIs(x_key, y_key)
-            
+
     def test_large_pickles(self):
         # Test the correctness of internal buffering routines when handling
         # large data.
@@ -1542,11 +1603,11 @@ class TestPickleUnmarshal:
         loaded = self.load(data)
         self.assertEqual(len(loaded), len(data))
         self.assertEqual(loaded, data)
-        
+
     def _check_pickling_with_opcode(self, obj, opcode, proto=4):
         unpickled = self.load(obj)
         self.assertEqual(obj, unpickled)
-        
+
     def test_appends_on_non_lists(self):
         # Issue #17720
         obj = REX_six([1, 2, 3])
@@ -1566,53 +1627,64 @@ class TestPickleUnmarshal:
         unpickled = self.load(obj)
         # More informative error message in case of failure.
         self.assertEqual([len(x) for x in obj],
-                            [len(x) for x in unpickled])
+                         [len(x) for x in unpickled])
         # Perform full equality check if the lengths match.
         self.assertEqual(obj, unpickled)
 
     def test_nested_names(self):
         global Nested
+
         class Nested:
             class A:
                 class B:
                     class C:
                         pass
+
         for obj in [Nested.A, Nested.A.B, Nested.A.B.C]:
             unpickled = self.load(obj)
             self.assertIs(obj, unpickled)
 
     def test_recursive_nested_names(self):
         global Recursive
+
         class Recursive:
             pass
+
         Recursive.mod = sys.modules[Recursive.__module__]
         Recursive.__qualname__ = 'Recursive.mod.Recursive'
         unpickled = self.load(Recursive)
         self.assertIs(unpickled, Recursive)
-        del Recursive.mod # break reference loop
+        del Recursive.mod  # break reference loop
 
     def test_py_methods(self):
         global PyMethodsTest
+
         class PyMethodsTest:
             @staticmethod
             def cheese():
                 return "cheese"
+
             @classmethod
             def wine(cls):
                 assert cls is PyMethodsTest
                 return "wine"
+
             def biscuits(self):
                 assert isinstance(self, PyMethodsTest)
                 return "biscuits"
+
             class Nested:
                 "Nested class"
+
                 @staticmethod
                 def ketchup():
                     return "ketchup"
+
                 @classmethod
                 def maple(cls):
                     assert cls is PyMethodsTest.Nested
                     return "maple"
+
                 def pie(self):
                     assert isinstance(self, PyMethodsTest.Nested)
                     return "pie"
@@ -1639,6 +1711,7 @@ class TestPickleUnmarshal:
 
     def test_c_methods(self):
         global Subclass
+
         class Subclass(tuple):
             class Nested(str):
                 pass

@@ -5,6 +5,7 @@
 @Time: 2024/3/22 10:38
 @Note: 
 """
+from importlib.util import find_spec
 import math
 from decimal import Decimal
 from time import sleep
@@ -16,10 +17,11 @@ import pytest
 from dolphindb.cep import Event, EventSender, EventClient
 from dolphindb.typing import Scalar, Vector
 from pandas._testing import assert_almost_equal
-from pandas2_testing.prepare import PANDAS_VERSION
-from pandas2_testing.utils import equalPlus
+from basic_testing.prepare import PANDAS_VERSION
+from basic_testing.utils import equalPlus
 from setup.settings import *
 from setup.utils import get_pid
+
 
 class TestCEP(object):
     conn: ddb.Session
@@ -42,7 +44,7 @@ class TestCEP(object):
     def setup_method(self):
         try:
             self.__class__.conn.run("1")
-        except:
+        except RuntimeError:
             self.__class__.conn.connect(HOST, PORT, USER, PASSWD)
         self.__class__.conn.run("""
             all_pubTables = getStreamingStat().pubTables
@@ -103,15 +105,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarBool], eventTimeFields=["eventTime"], commonFields=["s_bool"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarBool], eventTimeFields=["eventTime"],
+                             commonFields=["s_bool"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarBool], eventTimeFields=["eventTime"], commonFields=["s_bool"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((True, False, np.bool_(True), np.bool_(False), None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -192,15 +195,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarChar], eventTimeFields=["eventTime"], commonFields=["s_char"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarChar], eventTimeFields=["eventTime"],
+                             commonFields=["s_char"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarChar], eventTimeFields=["eventTime"], commonFields=["s_char"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate(
                 (0, np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7), None)):
@@ -283,15 +287,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarShort], eventTimeFields=["eventTime"], commonFields=["s_short"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarShort], eventTimeFields=["eventTime"],
+                             commonFields=["s_short"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarShort], eventTimeFields=["eventTime"], commonFields=["s_short"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate(
                 (0, np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15), None)):
@@ -374,15 +379,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarInt], eventTimeFields=["eventTime"], commonFields=["s_int"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarInt], eventTimeFields=["eventTime"],
+                             commonFields=["s_int"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarInt], eventTimeFields=["eventTime"], commonFields=["s_int"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate(
                 (0, np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31), None)):
@@ -465,15 +471,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarLong], eventTimeFields=["eventTime"], commonFields=["s_long"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarLong], eventTimeFields=["eventTime"],
+                             commonFields=["s_long"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarLong], eventTimeFields=["eventTime"], commonFields=["s_long"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate(
                 (0, np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63), None)):
@@ -486,7 +493,8 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['s_long'],[0l,0l,9223372036854775807l,-9223372036854775807l,00l,00l])")
+        assert self.__class__.conn.run(
+            "eqObj(output['s_long'],[0l,0l,9223372036854775807l,-9223372036854775807l,00l,00l])")
         # check server deserialize
         df_expect = pd.DataFrame({
             's_long': np.array([0, 0, 2 ** 63 - 1, -2 ** 63 + 1, None, None], dtype='float64'),
@@ -559,15 +567,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarDate], eventTimeFields=["eventTime"], commonFields=["s_date"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarDate], eventTimeFields=["eventTime"],
+                             commonFields=["s_date"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarDate], eventTimeFields=["eventTime"], commonFields=["s_date"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 'D'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -649,15 +658,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarMonth], eventTimeFields=["eventTime"], commonFields=["s_month"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarMonth], eventTimeFields=["eventTime"],
+                             commonFields=["s_month"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarMonth], eventTimeFields=["eventTime"], commonFields=["s_month"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 'M'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -739,15 +749,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarTime], eventTimeFields=["eventTime"], commonFields=["s_time"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarTime], eventTimeFields=["eventTime"],
+                             commonFields=["s_time"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarTime], eventTimeFields=["eventTime"], commonFields=["s_time"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 'ms'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -829,15 +840,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarMinute], eventTimeFields=["eventTime"], commonFields=["s_minute"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarMinute], eventTimeFields=["eventTime"],
+                             commonFields=["s_minute"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarMinute], eventTimeFields=["eventTime"], commonFields=["s_minute"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 'm'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -919,15 +931,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarSecond], eventTimeFields=["eventTime"], commonFields=["s_second"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarSecond], eventTimeFields=["eventTime"],
+                             commonFields=["s_second"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarSecond], eventTimeFields=["eventTime"], commonFields=["s_second"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 's'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -1009,15 +1022,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarDatetime], eventTimeFields=["eventTime"], commonFields=["s_datetime"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarDatetime], eventTimeFields=["eventTime"],
+                             commonFields=["s_datetime"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarDatetime], eventTimeFields=["eventTime"], commonFields=["s_datetime"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 's'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -1100,15 +1114,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarTimestamp], eventTimeFields=["eventTime"], commonFields=["s_timestamp"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarTimestamp], eventTimeFields=["eventTime"],
+                             commonFields=["s_timestamp"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarTimestamp], eventTimeFields=["eventTime"], commonFields=["s_timestamp"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 'ms'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -1191,15 +1206,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarNanotime], eventTimeFields=["eventTime"], commonFields=["s_nanotime"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarNanotime], eventTimeFields=["eventTime"],
+                             commonFields=["s_nanotime"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarNanotime], eventTimeFields=["eventTime"], commonFields=["s_nanotime"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 'ns'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -1282,15 +1298,17 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarNanotimestamp], eventTimeFields=["eventTime"], commonFields=["s_nanotimestamp"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarNanotimestamp], eventTimeFields=["eventTime"],
+                             commonFields=["s_nanotimestamp"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
-        client = EventClient([EventScalarNanotimestamp], eventTimeFields=["eventTime"], commonFields=["s_nanotimestamp"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client = EventClient([EventScalarNanotimestamp], eventTimeFields=["eventTime"],
+                             commonFields=["s_nanotimestamp"])
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 'ns'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -1373,15 +1391,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarDatehour], eventTimeFields=["eventTime"], commonFields=["s_datehour"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarDatehour], eventTimeFields=["eventTime"],
+                             commonFields=["s_datehour"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarDatehour], eventTimeFields=["eventTime"], commonFields=["s_datehour"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((np.datetime64(0, 'h'), pd.NaT, None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -1462,15 +1481,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarFloat], eventTimeFields=["eventTime"], commonFields=["s_float"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarFloat], eventTimeFields=["eventTime"],
+                             commonFields=["s_float"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarFloat], eventTimeFields=["eventTime"], commonFields=["s_float"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),
                                       np.float32(-3.4028235e+38), np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0],
@@ -1559,15 +1579,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarDouble], eventTimeFields=["eventTime"], commonFields=["s_double"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarDouble], eventTimeFields=["eventTime"],
+                             commonFields=["s_double"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarDouble], eventTimeFields=["eventTime"], commonFields=["s_double"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),
                                       np.float64(-1.7976931348623157e+308),
@@ -1655,15 +1676,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarString], eventTimeFields=["eventTime"], commonFields=["s_string"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarString], eventTimeFields=["eventTime"],
+                             commonFields=["s_string"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarString], eventTimeFields=["eventTime"], commonFields=["s_string"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate(("abc!@#中文 123", np.str_("abc!@#中文 123"), "", None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -1743,15 +1765,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarBlob], eventTimeFields=["eventTime"], commonFields=["s_blob"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarBlob], eventTimeFields=["eventTime"],
+                             commonFields=["s_blob"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarBlob], eventTimeFields=["eventTime"], commonFields=["s_blob"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate(("abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'),
                                       np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),
@@ -1765,7 +1788,8 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['s_blob'],blob(['abc!@#中文 123',fromUTF8('abc!@#中文 123','gbk'),'abc!@#中文 123',fromUTF8('abc!@#中文 123','gbk'),\"\",\"\"]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['s_blob'],blob(['abc!@#中文 123',fromUTF8('abc!@#中文 123','gbk'),'abc!@#中文 123',fromUTF8('abc!@#中文 123','gbk'),\"\",\"\"]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             's_blob': np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", "", ""],
@@ -1836,15 +1860,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarInt128], eventTimeFields=["eventTime"], commonFields=["s_int128"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarInt128], eventTimeFields=["eventTime"],
+                             commonFields=["s_int128"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarInt128], eventTimeFields=["eventTime"], commonFields=["s_int128"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate(('e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -1856,7 +1881,8 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['s_int128'],int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000']))")
+        assert self.__class__.conn.run(
+            "eqObj(output['s_int128'],int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000']))")
         # check server deserialize
         df_expect = pd.DataFrame({
             's_int128': np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
@@ -1925,15 +1951,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarUuid], eventTimeFields=["eventTime"], commonFields=["s_uuid"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarUuid], eventTimeFields=["eventTime"],
+                             commonFields=["s_uuid"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarUuid], eventTimeFields=["eventTime"], commonFields=["s_uuid"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate(
                 ('5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', None)):
@@ -1946,7 +1973,8 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['s_uuid'],uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000','00000000-0000-0000-0000-000000000000']))")
+        assert self.__class__.conn.run(
+            "eqObj(output['s_uuid'],uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000','00000000-0000-0000-0000-000000000000']))")
         # check server deserialize
         df_expect = pd.DataFrame({
             's_uuid': np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
@@ -2014,15 +2042,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarIpaddr], eventTimeFields=["eventTime"], commonFields=["s_ipaddr"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarIpaddr], eventTimeFields=["eventTime"],
+                             commonFields=["s_ipaddr"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarIpaddr], eventTimeFields=["eventTime"], commonFields=["s_ipaddr"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate(('127.0.0.1', '0.0.0.0', None)):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -2101,15 +2130,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarDecimal32], eventTimeFields=["eventTime"], commonFields=["s_decimal32_4"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarDecimal32], eventTimeFields=["eventTime"],
+                             commonFields=["s_decimal32_4"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarDecimal32], eventTimeFields=["eventTime"], commonFields=["s_decimal32_4"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((Decimal('0.0000'), Decimal('3.1415'), None, Decimal("nan"))):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -2191,15 +2221,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarDecimal64], eventTimeFields=["eventTime"], commonFields=["s_decimal64_12"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarDecimal64], eventTimeFields=["eventTime"],
+                             commonFields=["s_decimal64_12"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarDecimal64], eventTimeFields=["eventTime"], commonFields=["s_decimal64_12"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((Decimal('0.000000000000'), Decimal('3.141592653589'), None, Decimal("nan"))):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -2211,7 +2242,8 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['s_decimal64_12'],decimal64(['0.000000000000','3.141592653589',null,null],12))")
+        assert self.__class__.conn.run(
+            "eqObj(output['s_decimal64_12'],decimal64(['0.000000000000','3.141592653589',null,null],12))")
         # check server deserialize
         df_expect = pd.DataFrame({
             's_decimal64_12': np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],
@@ -2282,15 +2314,16 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventScalarDecimal128], eventTimeFields=["eventTime"], commonFields=["s_decimal128_26"])
+        sender = EventSender(self.__class__.conn, "input", [EventScalarDecimal128], eventTimeFields=["eventTime"],
+                             commonFields=["s_decimal128_26"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventScalarDecimal128], eventTimeFields=["eventTime"], commonFields=["s_decimal128_26"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'),
                                       None, Decimal("nan"))):
@@ -2303,7 +2336,8 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['s_decimal128_26'],decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26))")
+        assert self.__class__.conn.run(
+            "eqObj(output['s_decimal128_26'],decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26))")
         # check server deserialize
         df_expect = pd.DataFrame({
             's_decimal128_26': np.array(
@@ -2375,30 +2409,31 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorBool], eventTimeFields=["eventTime"], commonFields=["v_bool"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorBool], eventTimeFields=["eventTime"],
+                             commonFields=["v_bool"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorBool], eventTimeFields=["eventTime"], commonFields=["v_bool"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, True, False, np.bool_(True), np.bool_(False)],
-            [True,False,None,np.bool_(True), np.bool_(False)],
-            [True, False, np.bool_(True), np.bool_(False), None],
-            np.array([None, True, False, np.bool_(True), np.bool_(False)],dtype='object'),
-            np.array([True, False, None, np.bool_(True), np.bool_(False)], dtype='object'),
-            np.array([True, False, np.bool_(True), np.bool_(False), None], dtype='object'),
-            np.array([True, False, np.bool_(True), np.bool_(False)], dtype=np.bool_),
-            pd.Series([None, True, False, np.bool_(True), np.bool_(False)],dtype='object'),
-            pd.Series([True, False, None, np.bool_(True), np.bool_(False)], dtype='object'),
-            pd.Series([True, False, np.bool_(True), np.bool_(False), None], dtype='object'),
-            pd.Series([True, False, np.bool_(True), np.bool_(False)], dtype=np.bool_),
-            pd.Series([True,False,True,False],dtype=pd.BooleanDtype()),
-            [],
+                [None, True, False, np.bool_(True), np.bool_(False)],
+                [True, False, None, np.bool_(True), np.bool_(False)],
+                [True, False, np.bool_(True), np.bool_(False), None],
+                np.array([None, True, False, np.bool_(True), np.bool_(False)], dtype='object'),
+                np.array([True, False, None, np.bool_(True), np.bool_(False)], dtype='object'),
+                np.array([True, False, np.bool_(True), np.bool_(False), None], dtype='object'),
+                np.array([True, False, np.bool_(True), np.bool_(False)], dtype=np.bool_),
+                pd.Series([None, True, False, np.bool_(True), np.bool_(False)], dtype='object'),
+                pd.Series([True, False, None, np.bool_(True), np.bool_(False)], dtype='object'),
+                pd.Series([True, False, np.bool_(True), np.bool_(False), None], dtype='object'),
+                pd.Series([True, False, np.bool_(True), np.bool_(False)], dtype=np.bool_),
+                pd.Series([True, False, True, False], dtype=pd.BooleanDtype()),
+                [],
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorBool(
@@ -2409,16 +2444,25 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_bool'][0,],array(BOOL[]).append!([[00b,true,false,true,false]]))")
-        assert self.__class__.conn.run("eqObj(output['v_bool'][1,],array(BOOL[]).append!([[true,false,00b,true,false]]))")
-        assert self.__class__.conn.run("eqObj(output['v_bool'][2,],array(BOOL[]).append!([[true,false,true,false,00b]]))")
-        assert self.__class__.conn.run("eqObj(output['v_bool'][3,],array(BOOL[]).append!([[00b,true,false,true,false]]))")
-        assert self.__class__.conn.run("eqObj(output['v_bool'][4,],array(BOOL[]).append!([[true,false,00b,true,false]]))")
-        assert self.__class__.conn.run("eqObj(output['v_bool'][5,],array(BOOL[]).append!([[true,false,true,false,00b]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_bool'][0,],array(BOOL[]).append!([[00b,true,false,true,false]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_bool'][1,],array(BOOL[]).append!([[true,false,00b,true,false]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_bool'][2,],array(BOOL[]).append!([[true,false,true,false,00b]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_bool'][3,],array(BOOL[]).append!([[00b,true,false,true,false]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_bool'][4,],array(BOOL[]).append!([[true,false,00b,true,false]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_bool'][5,],array(BOOL[]).append!([[true,false,true,false,00b]]))")
         assert self.__class__.conn.run("eqObj(output['v_bool'][6,],array(BOOL[]).append!([[true,false,true,false]]))")
-        assert self.__class__.conn.run("eqObj(output['v_bool'][7,],array(BOOL[]).append!([[00b,true,false,true,false]]))")
-        assert self.__class__.conn.run("eqObj(output['v_bool'][8,],array(BOOL[]).append!([[true,false,00b,true,false]]))")
-        assert self.__class__.conn.run("eqObj(output['v_bool'][9,],array(BOOL[]).append!([[true,false,true,false,00b]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_bool'][7,],array(BOOL[]).append!([[00b,true,false,true,false]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_bool'][8,],array(BOOL[]).append!([[true,false,00b,true,false]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_bool'][9,],array(BOOL[]).append!([[true,false,true,false,00b]]))")
         assert self.__class__.conn.run("eqObj(output['v_bool'][10,],array(BOOL[]).append!([[true,false,true,false]]))")
         assert self.__class__.conn.run("eqObj(output['v_bool'][11,],array(BOOL[]).append!([[true,false,true,false]]))")
         assert self.__class__.conn.run("eqObj(output['v_bool'][12,],array(BOOL[]).append!([[00b]]))")
@@ -2525,29 +2569,37 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorChar], eventTimeFields=["eventTime"], commonFields=["v_char"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorChar], eventTimeFields=["eventTime"],
+                             commonFields=["v_char"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorChar], eventTimeFields=["eventTime"], commonFields=["v_char"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],
-            [np.int8(0), np.int8(2 ** 7 - 1), None, np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],
-            [np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7), None],
-            np.array([None, np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],dtype='object'),
-            np.array([np.int8(0), np.int8(2 ** 7 - 1), None, np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],dtype='object'),
-            np.array([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7), None],dtype='object'),
-            np.array([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],dtype=np.int8),
-            pd.Series([None, np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],dtype='object'),
-            pd.Series([np.int8(0), np.int8(2 ** 7 - 1), None, np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],dtype='object'),
-            pd.Series([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7), None],dtype='object'),
-            pd.Series([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],dtype=np.int8),
-            pd.Series([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)], dtype=pd.Int8Dtype()),
+                [None, np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],
+                [np.int8(0), np.int8(2 ** 7 - 1), None, np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],
+                [np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7), None],
+                np.array([None, np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],
+                         dtype='object'),
+                np.array([np.int8(0), np.int8(2 ** 7 - 1), None, np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],
+                         dtype='object'),
+                np.array([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7), None],
+                         dtype='object'),
+                np.array([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)], dtype=np.int8),
+                pd.Series([None, np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],
+                          dtype='object'),
+                pd.Series([np.int8(0), np.int8(2 ** 7 - 1), None, np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],
+                          dtype='object'),
+                pd.Series([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7), None],
+                          dtype='object'),
+                pd.Series([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)], dtype=np.int8),
+                pd.Series([np.int8(0), np.int8(2 ** 7 - 1), np.int8(-2 ** 7 + 1), np.int8(-2 ** 7)],
+                          dtype=pd.Int8Dtype()),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorChar(
@@ -2670,29 +2722,39 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorShort], eventTimeFields=["eventTime"], commonFields=["v_short"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorShort], eventTimeFields=["eventTime"],
+                             commonFields=["v_short"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorShort], eventTimeFields=["eventTime"], commonFields=["v_short"])
-        client.subscribe(HOST, PORT, handler, "input", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "input", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
-            [np.int16(0), np.int16(2 ** 15 - 1), None, np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
-            [np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15), None],
-            np.array([None, np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],dtype='object'),
-            np.array([np.int16(0), np.int16(2 ** 15 - 1), None, np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],dtype='object'),
-            np.array([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15), None],dtype='object'),
-            np.array([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],dtype=np.int16),
-            pd.Series([None, np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],dtype='object'),
-            pd.Series([np.int16(0), np.int16(2 ** 15 - 1), None, np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],dtype='object'),
-            pd.Series([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15), None],dtype='object'),
-            pd.Series([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],dtype=np.int16),
-            pd.Series([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)], dtype=pd.Int16Dtype()),
+                [None, np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
+                [np.int16(0), np.int16(2 ** 15 - 1), None, np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
+                [np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15), None],
+                np.array([None, np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
+                         dtype='object'),
+                np.array([np.int16(0), np.int16(2 ** 15 - 1), None, np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
+                         dtype='object'),
+                np.array([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15), None],
+                         dtype='object'),
+                np.array([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
+                         dtype=np.int16),
+                pd.Series([None, np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
+                          dtype='object'),
+                pd.Series([np.int16(0), np.int16(2 ** 15 - 1), None, np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
+                          dtype='object'),
+                pd.Series([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15), None],
+                          dtype='object'),
+                pd.Series([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
+                          dtype=np.int16),
+                pd.Series([np.int16(0), np.int16(2 ** 15 - 1), np.int16(-2 ** 15 + 1), np.int16(-2 ** 15)],
+                          dtype=pd.Int16Dtype()),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorShort(
@@ -2703,18 +2765,29 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "input", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_short'][0,],array(SHORT[]).append!([[00h,0h,32767h,-32767h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][1,],array(SHORT[]).append!([[0h,32767h,00h,-32767h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][2,],array(SHORT[]).append!([[0h,32767h,-32767h,00h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][3,],array(SHORT[]).append!([[00h,0h,32767h,-32767h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][4,],array(SHORT[]).append!([[0h,32767h,00h,-32767h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][5,],array(SHORT[]).append!([[0h,32767h,-32767h,00h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][0,],array(SHORT[]).append!([[00h,0h,32767h,-32767h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][1,],array(SHORT[]).append!([[0h,32767h,00h,-32767h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][2,],array(SHORT[]).append!([[0h,32767h,-32767h,00h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][3,],array(SHORT[]).append!([[00h,0h,32767h,-32767h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][4,],array(SHORT[]).append!([[0h,32767h,00h,-32767h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][5,],array(SHORT[]).append!([[0h,32767h,-32767h,00h,00h]]))")
         assert self.__class__.conn.run("eqObj(output['v_short'][6,],array(SHORT[]).append!([[0h,32767h,-32767h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][7,],array(SHORT[]).append!([[00h,0h,32767h,-32767h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][8,],array(SHORT[]).append!([[0h,32767h,00h,-32767h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][9,],array(SHORT[]).append!([[0h,32767h,-32767h,00h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][10,],array(SHORT[]).append!([[0h,32767h,-32767h,00h]]))")
-        assert self.__class__.conn.run("eqObj(output['v_short'][11,],array(SHORT[]).append!([[0h,32767h,-32767h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][7,],array(SHORT[]).append!([[00h,0h,32767h,-32767h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][8,],array(SHORT[]).append!([[0h,32767h,00h,-32767h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][9,],array(SHORT[]).append!([[0h,32767h,-32767h,00h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][10,],array(SHORT[]).append!([[0h,32767h,-32767h,00h]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_short'][11,],array(SHORT[]).append!([[0h,32767h,-32767h,00h]]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_short': [
@@ -2815,29 +2888,39 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorInt], eventTimeFields=["eventTime"], commonFields=["v_int"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorInt], eventTimeFields=["eventTime"],
+                             commonFields=["v_int"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorInt], eventTimeFields=["eventTime"], commonFields=["v_int"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
-            [np.int32(0), np.int32(2 ** 31 - 1), None, np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
-            [np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31), None],
-            np.array([None, np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],dtype='object'),
-            np.array([np.int32(0), np.int32(2 ** 31 - 1), None, np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],dtype='object'),
-            np.array([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31), None],dtype='object'),
-            np.array([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],dtype=np.int32),
-            pd.Series([None, np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],dtype='object'),
-            pd.Series([np.int32(0), np.int32(2 ** 31 - 1), None, np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],dtype='object'),
-            pd.Series([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31), None],dtype='object'),
-            pd.Series([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],dtype=np.int32),
-            pd.Series([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)], dtype=pd.Int32Dtype()),
+                [None, np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
+                [np.int32(0), np.int32(2 ** 31 - 1), None, np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
+                [np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31), None],
+                np.array([None, np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
+                         dtype='object'),
+                np.array([np.int32(0), np.int32(2 ** 31 - 1), None, np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
+                         dtype='object'),
+                np.array([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31), None],
+                         dtype='object'),
+                np.array([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
+                         dtype=np.int32),
+                pd.Series([None, np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
+                          dtype='object'),
+                pd.Series([np.int32(0), np.int32(2 ** 31 - 1), None, np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
+                          dtype='object'),
+                pd.Series([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31), None],
+                          dtype='object'),
+                pd.Series([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
+                          dtype=np.int32),
+                pd.Series([np.int32(0), np.int32(2 ** 31 - 1), np.int32(-2 ** 31 + 1), np.int32(-2 ** 31)],
+                          dtype=pd.Int32Dtype()),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorInt(
@@ -2848,18 +2931,30 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_int'][0,],array(INT[]).append!([[00i,0i,2147483647i,-2147483647i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][1,],array(INT[]).append!([[0i,2147483647i,00i,-2147483647i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][2,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][3,],array(INT[]).append!([[00i,0i,2147483647i,-2147483647i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][4,],array(INT[]).append!([[0i,2147483647i,00i,-2147483647i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][5,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][6,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][7,],array(INT[]).append!([[00i,0i,2147483647i,-2147483647i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][8,],array(INT[]).append!([[0i,2147483647i,00i,-2147483647i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][9,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][10,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i]]))")
-        assert self.__class__.conn.run("eqObj(output['v_int'][11,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][0,],array(INT[]).append!([[00i,0i,2147483647i,-2147483647i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][1,],array(INT[]).append!([[0i,2147483647i,00i,-2147483647i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][2,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][3,],array(INT[]).append!([[00i,0i,2147483647i,-2147483647i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][4,],array(INT[]).append!([[0i,2147483647i,00i,-2147483647i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][5,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][6,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][7,],array(INT[]).append!([[00i,0i,2147483647i,-2147483647i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][8,],array(INT[]).append!([[0i,2147483647i,00i,-2147483647i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][9,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][10,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][11,],array(INT[]).append!([[0i,2147483647i,-2147483647i,00i]]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_int': [
@@ -2960,29 +3055,39 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorLong], eventTimeFields=["eventTime"], commonFields=["v_long"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorLong], eventTimeFields=["eventTime"],
+                             commonFields=["v_long"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorLong], eventTimeFields=["eventTime"], commonFields=["v_long"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
-            [np.int64(0), np.int64(2 ** 63 - 1), None, np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
-            [np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63), None],
-            np.array([None, np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],dtype='object'),
-            np.array([np.int64(0), np.int64(2 ** 63 - 1), None, np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],dtype='object'),
-            np.array([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63), None],dtype='object'),
-            np.array([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],dtype='object'),
-            pd.Series([None, np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],dtype='object'),
-            pd.Series([np.int64(0), np.int64(2 ** 63 - 1), None, np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],dtype='object'),
-            pd.Series([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63), None],dtype='object'),
-            pd.Series([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],dtype=np.int64),
-            pd.Series([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)], dtype=pd.Int64Dtype()),
+                [None, np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
+                [np.int64(0), np.int64(2 ** 63 - 1), None, np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
+                [np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63), None],
+                np.array([None, np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
+                         dtype='object'),
+                np.array([np.int64(0), np.int64(2 ** 63 - 1), None, np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
+                         dtype='object'),
+                np.array([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63), None],
+                         dtype='object'),
+                np.array([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
+                         dtype='object'),
+                pd.Series([None, np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
+                          dtype='object'),
+                pd.Series([np.int64(0), np.int64(2 ** 63 - 1), None, np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
+                          dtype='object'),
+                pd.Series([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63), None],
+                          dtype='object'),
+                pd.Series([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
+                          dtype=np.int64),
+                pd.Series([np.int64(0), np.int64(2 ** 63 - 1), np.int64(-2 ** 63 + 1), np.int64(-2 ** 63)],
+                          dtype=pd.Int64Dtype()),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorLong(
@@ -2993,18 +3098,30 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_long'][0,],array(LONG[]).append!([[00l,0l,9223372036854775807l,-9223372036854775807l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][1,],array(LONG[]).append!([[0l,9223372036854775807l,00l,-9223372036854775807l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][2,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][3,],array(LONG[]).append!([[00l,0l,9223372036854775807l,-9223372036854775807l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][4,],array(LONG[]).append!([[0l,9223372036854775807l,00l,-9223372036854775807l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][5,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][6,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][7,],array(LONG[]).append!([[00l,0l,9223372036854775807l,-9223372036854775807l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][8,],array(LONG[]).append!([[0l,9223372036854775807l,00l,-9223372036854775807l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][9,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][10,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l]]))")
-        assert self.__class__.conn.run("eqObj(output['v_long'][10,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][0,],array(LONG[]).append!([[00l,0l,9223372036854775807l,-9223372036854775807l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][1,],array(LONG[]).append!([[0l,9223372036854775807l,00l,-9223372036854775807l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][2,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][3,],array(LONG[]).append!([[00l,0l,9223372036854775807l,-9223372036854775807l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][4,],array(LONG[]).append!([[0l,9223372036854775807l,00l,-9223372036854775807l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][5,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][6,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][7,],array(LONG[]).append!([[00l,0l,9223372036854775807l,-9223372036854775807l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][8,],array(LONG[]).append!([[0l,9223372036854775807l,00l,-9223372036854775807l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][9,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][10,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_long'][10,],array(LONG[]).append!([[0l,9223372036854775807l,-9223372036854775807l,00l]]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_long': [
@@ -3105,28 +3222,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorDate], eventTimeFields=["eventTime"], commonFields=["v_date"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorDate], eventTimeFields=["eventTime"],
+                             commonFields=["v_date"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorDate], eventTimeFields=["eventTime"], commonFields=["v_date"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 'D'), pd.NaT],
-            [np.datetime64(0, 'D'), None, pd.NaT],
-            [np.datetime64(0, 'D'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 'D'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'D'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'D'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 'D'), None], dtype='datetime64[D]'),
-            pd.Series([None, np.datetime64(0, 'D'), pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'D'), None, pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'D'), pd.NaT, None], dtype='object'),
-            pd.Series([np.datetime64(0, 'D'), pd.NaT,None], dtype='datetime64[ns]'),
+                [None, np.datetime64(0, 'D'), pd.NaT],
+                [np.datetime64(0, 'D'), None, pd.NaT],
+                [np.datetime64(0, 'D'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 'D'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'D'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'D'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 'D'), None], dtype='datetime64[D]'),
+                pd.Series([None, np.datetime64(0, 'D'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'D'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'D'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 'D'), pd.NaT, None], dtype='datetime64[ns]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorDate(
@@ -3245,28 +3363,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorMonth], eventTimeFields=["eventTime"], commonFields=["v_month"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorMonth], eventTimeFields=["eventTime"],
+                             commonFields=["v_month"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorMonth], eventTimeFields=["eventTime"], commonFields=["v_month"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 'M'), pd.NaT],
-            [np.datetime64(0, 'M'), None, pd.NaT],
-            [np.datetime64(0, 'M'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 'M'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'M'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'M'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 'M'), None], dtype='datetime64[M]'),
-            pd.Series([None, np.datetime64(0, 'M'), pd.NaT],dtype='object'),
-            pd.Series([np.datetime64(0, 'M'), None, pd.NaT],dtype='object'),
-            pd.Series([np.datetime64(0, 'M'), pd.NaT, None],dtype='object'),
-            pd.Series([np.datetime64(0, 'M'), pd.NaT, None], dtype='datetime64[ns]'),
+                [None, np.datetime64(0, 'M'), pd.NaT],
+                [np.datetime64(0, 'M'), None, pd.NaT],
+                [np.datetime64(0, 'M'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 'M'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'M'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'M'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 'M'), None], dtype='datetime64[M]'),
+                pd.Series([None, np.datetime64(0, 'M'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'M'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'M'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 'M'), pd.NaT, None], dtype='datetime64[ns]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorMonth(
@@ -3385,28 +3504,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorTime], eventTimeFields=["eventTime"], commonFields=["v_time"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorTime], eventTimeFields=["eventTime"],
+                             commonFields=["v_time"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorTime], eventTimeFields=["eventTime"], commonFields=["v_time"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 'ms'), pd.NaT],
-            [np.datetime64(0, 'ms'), None, pd.NaT],
-            [np.datetime64(0, 'ms'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 'ms'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'ms'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'ms'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 'ms'), None], dtype='datetime64[ms]'),
-            pd.Series([None, np.datetime64(0, 'ms'), pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'ms'), None, pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'ms'), pd.NaT, None], dtype='object'),
-            pd.Series([np.datetime64(0, 'ms'), pd.NaT, None], dtype='datetime64[ms]'),
+                [None, np.datetime64(0, 'ms'), pd.NaT],
+                [np.datetime64(0, 'ms'), None, pd.NaT],
+                [np.datetime64(0, 'ms'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 'ms'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'ms'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'ms'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 'ms'), None], dtype='datetime64[ms]'),
+                pd.Series([None, np.datetime64(0, 'ms'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'ms'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'ms'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 'ms'), pd.NaT, None], dtype='datetime64[ms]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorTime(
@@ -3525,28 +3645,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorMinute], eventTimeFields=["eventTime"], commonFields=["v_minute"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorMinute], eventTimeFields=["eventTime"],
+                             commonFields=["v_minute"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorMinute], eventTimeFields=["eventTime"], commonFields=["v_minute"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 'm'), pd.NaT],
-            [np.datetime64(0, 'm'), None, pd.NaT],
-            [np.datetime64(0, 'm'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 'm'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'm'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'm'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 'm'), None], dtype='datetime64[m]'),
-            pd.Series([None, np.datetime64(0, 'm'), pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'm'), None, pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'm'), pd.NaT, None], dtype='object'),
-            pd.Series([np.datetime64(0, 'm'), pd.NaT, None], dtype='datetime64[ns]'),
+                [None, np.datetime64(0, 'm'), pd.NaT],
+                [np.datetime64(0, 'm'), None, pd.NaT],
+                [np.datetime64(0, 'm'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 'm'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'm'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'm'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 'm'), None], dtype='datetime64[m]'),
+                pd.Series([None, np.datetime64(0, 'm'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'm'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'm'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 'm'), pd.NaT, None], dtype='datetime64[ns]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorMinute(
@@ -3665,28 +3786,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorSecond], eventTimeFields=["eventTime"], commonFields=["v_second"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorSecond], eventTimeFields=["eventTime"],
+                             commonFields=["v_second"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorSecond], eventTimeFields=["eventTime"], commonFields=["v_second"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 's'), pd.NaT],
-            [np.datetime64(0, 's'), None, pd.NaT],
-            [np.datetime64(0, 's'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 's'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 's'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 's'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 's'), None], dtype='datetime64[s]'),
-            pd.Series([None, np.datetime64(0, 's'), pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 's'), None, pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 's'), pd.NaT, None], dtype='object'),
-            pd.Series([np.datetime64(0, 's'), pd.NaT, None], dtype='datetime64[s]'),
+                [None, np.datetime64(0, 's'), pd.NaT],
+                [np.datetime64(0, 's'), None, pd.NaT],
+                [np.datetime64(0, 's'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 's'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 's'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 's'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 's'), None], dtype='datetime64[s]'),
+                pd.Series([None, np.datetime64(0, 's'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 's'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 's'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 's'), pd.NaT, None], dtype='datetime64[s]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorSecond(
@@ -3805,28 +3927,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorDatetime], eventTimeFields=["eventTime"], commonFields=["v_datetime"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorDatetime], eventTimeFields=["eventTime"],
+                             commonFields=["v_datetime"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorDatetime], eventTimeFields=["eventTime"], commonFields=["v_datetime"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 's'), pd.NaT],
-            [np.datetime64(0, 's'), None, pd.NaT],
-            [np.datetime64(0, 's'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 's'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 's'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 's'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 's'), None], dtype='datetime64[s]'),
-            pd.Series([None, np.datetime64(0, 's'), pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 's'), None, pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 's'), pd.NaT, None], dtype='object'),
-            pd.Series([np.datetime64(0, 's'), pd.NaT, None], dtype='datetime64[s]'),
+                [None, np.datetime64(0, 's'), pd.NaT],
+                [np.datetime64(0, 's'), None, pd.NaT],
+                [np.datetime64(0, 's'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 's'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 's'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 's'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 's'), None], dtype='datetime64[s]'),
+                pd.Series([None, np.datetime64(0, 's'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 's'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 's'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 's'), pd.NaT, None], dtype='datetime64[s]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorDatetime(
@@ -3837,17 +3960,28 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][0,],array(DATETIME[]).append!([[00D,1970.01.01T00:00:00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][1,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][2,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][3,],array(DATETIME[]).append!([[00D,1970.01.01T00:00:00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][4,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][5,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][6,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][7,],array(DATETIME[]).append!([[00D,1970.01.01T00:00:00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][8,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][9,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
-        assert self.__class__.conn.run("eqObj(output['v_datetime'][10,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][0,],array(DATETIME[]).append!([[00D,1970.01.01T00:00:00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][1,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][2,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][3,],array(DATETIME[]).append!([[00D,1970.01.01T00:00:00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][4,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][5,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][6,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][7,],array(DATETIME[]).append!([[00D,1970.01.01T00:00:00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][8,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][9,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datetime'][10,],array(DATETIME[]).append!([[1970.01.01T00:00:00D,00D,00D]]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_datetime': [
@@ -3945,28 +4079,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorTimestamp], eventTimeFields=["eventTime"], commonFields=["v_timestamp"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorTimestamp], eventTimeFields=["eventTime"],
+                             commonFields=["v_timestamp"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorTimestamp], eventTimeFields=["eventTime"], commonFields=["v_timestamp"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 'ms'), pd.NaT],
-            [np.datetime64(0, 'ms'), None, pd.NaT],
-            [np.datetime64(0, 'ms'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 'ms'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'ms'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'ms'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 'ms'), None], dtype='datetime64[ms]'),
-            pd.Series([None, np.datetime64(0, 'ms'), pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'ms'), None, pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'ms'), pd.NaT, None], dtype='object'),
-            pd.Series([np.datetime64(0, 'ms'), pd.NaT, None], dtype='datetime64[ms]'),
+                [None, np.datetime64(0, 'ms'), pd.NaT],
+                [np.datetime64(0, 'ms'), None, pd.NaT],
+                [np.datetime64(0, 'ms'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 'ms'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'ms'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'ms'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 'ms'), None], dtype='datetime64[ms]'),
+                pd.Series([None, np.datetime64(0, 'ms'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'ms'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'ms'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 'ms'), pd.NaT, None], dtype='datetime64[ms]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorTimestamp(
@@ -3977,17 +4112,28 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][0,],array(TIMESTAMP[]).append!([[00T,1970.01.01T00:00:00.000T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][1,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][2,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][3,],array(TIMESTAMP[]).append!([[00T,1970.01.01T00:00:00.000T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][4,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][5,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][6,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][7,],array(TIMESTAMP[]).append!([[00T,1970.01.01T00:00:00.000T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][8,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][9,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
-        assert self.__class__.conn.run("eqObj(output['v_timestamp'][10,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][0,],array(TIMESTAMP[]).append!([[00T,1970.01.01T00:00:00.000T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][1,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][2,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][3,],array(TIMESTAMP[]).append!([[00T,1970.01.01T00:00:00.000T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][4,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][5,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][6,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][7,],array(TIMESTAMP[]).append!([[00T,1970.01.01T00:00:00.000T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][8,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][9,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_timestamp'][10,],array(TIMESTAMP[]).append!([[1970.01.01T00:00:00.000T,00T,00T]]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_timestamp': [
@@ -4085,28 +4231,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorNanotime], eventTimeFields=["eventTime"], commonFields=["v_nanotime"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorNanotime], eventTimeFields=["eventTime"],
+                             commonFields=["v_nanotime"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorNanotime], eventTimeFields=["eventTime"], commonFields=["v_nanotime"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 'ns'), pd.NaT],
-            [np.datetime64(0, 'ns'), None, pd.NaT],
-            [np.datetime64(0, 'ns'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 'ns'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'ns'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'ns'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 'ns'), None], dtype='datetime64[ns]'),
-            pd.Series([None, np.datetime64(0, 'ns'), pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'ns'), None, pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'ns'), pd.NaT, None], dtype='object'),
-            pd.Series([np.datetime64(0, 'ns'), pd.NaT, None], dtype='datetime64[ns]'),
+                [None, np.datetime64(0, 'ns'), pd.NaT],
+                [np.datetime64(0, 'ns'), None, pd.NaT],
+                [np.datetime64(0, 'ns'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 'ns'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'ns'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'ns'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 'ns'), None], dtype='datetime64[ns]'),
+                pd.Series([None, np.datetime64(0, 'ns'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'ns'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'ns'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 'ns'), pd.NaT, None], dtype='datetime64[ns]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorNanotime(
@@ -4117,17 +4264,28 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][0,],array(NANOTIME[]).append!([[00n,00:00:00.000000000n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][1,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][2,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][3,],array(NANOTIME[]).append!([[00n,00:00:00.000000000n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][4,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][5,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][6,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][7,],array(NANOTIME[]).append!([[00n,00:00:00.000000000n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][8,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][9,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotime'][10,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][0,],array(NANOTIME[]).append!([[00n,00:00:00.000000000n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][1,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][2,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][3,],array(NANOTIME[]).append!([[00n,00:00:00.000000000n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][4,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][5,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][6,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][7,],array(NANOTIME[]).append!([[00n,00:00:00.000000000n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][8,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][9,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotime'][10,],array(NANOTIME[]).append!([[00:00:00.000000000n,00n,00n]]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_nanotime': [
@@ -4225,28 +4383,30 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorNanotimestamp], eventTimeFields=["eventTime"], commonFields=["v_nanotimestamp"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorNanotimestamp], eventTimeFields=["eventTime"],
+                             commonFields=["v_nanotimestamp"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
-        client = EventClient([EventVectorNanotimestamp], eventTimeFields=["eventTime"], commonFields=["v_nanotimestamp"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client = EventClient([EventVectorNanotimestamp], eventTimeFields=["eventTime"],
+                             commonFields=["v_nanotimestamp"])
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 'ns'), pd.NaT],
-            [np.datetime64(0, 'ns'), None, pd.NaT],
-            [np.datetime64(0, 'ns'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 'ns'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'ns'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'ns'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 'ns'), None], dtype='datetime64[ns]'),
-            pd.Series([None, np.datetime64(0, 'ns'), pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'ns'), None, pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'ns'), pd.NaT, None], dtype='object'),
-            pd.Series([np.datetime64(0, 'ns'), pd.NaT, None], dtype='datetime64[ns]'),
+                [None, np.datetime64(0, 'ns'), pd.NaT],
+                [np.datetime64(0, 'ns'), None, pd.NaT],
+                [np.datetime64(0, 'ns'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 'ns'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'ns'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'ns'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 'ns'), None], dtype='datetime64[ns]'),
+                pd.Series([None, np.datetime64(0, 'ns'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'ns'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'ns'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 'ns'), pd.NaT, None], dtype='datetime64[ns]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorNanotimestamp(
@@ -4257,17 +4417,28 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][0,],array(NANOTIMESTAMP[]).append!([[00N,1970.01.01T00:00:00.000000000N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][1,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][2,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][3,],array(NANOTIMESTAMP[]).append!([[00N,1970.01.01T00:00:00.000000000N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][4,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][5,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][6,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][7,],array(NANOTIMESTAMP[]).append!([[00N,1970.01.01T00:00:00.000000000N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][8,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][9,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
-        assert self.__class__.conn.run("eqObj(output['v_nanotimestamp'][10,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][0,],array(NANOTIMESTAMP[]).append!([[00N,1970.01.01T00:00:00.000000000N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][1,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][2,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][3,],array(NANOTIMESTAMP[]).append!([[00N,1970.01.01T00:00:00.000000000N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][4,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][5,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][6,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][7,],array(NANOTIMESTAMP[]).append!([[00N,1970.01.01T00:00:00.000000000N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][8,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][9,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_nanotimestamp'][10,],array(NANOTIMESTAMP[]).append!([[1970.01.01T00:00:00.000000000N,00N,00N]]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_nanotimestamp': [
@@ -4376,28 +4547,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorDatehour], eventTimeFields=["eventTime"], commonFields=["v_datehour"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorDatehour], eventTimeFields=["eventTime"],
+                             commonFields=["v_datehour"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorDatehour], eventTimeFields=["eventTime"], commonFields=["v_datehour"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, np.datetime64(0, 'h'), pd.NaT],
-            [np.datetime64(0, 'h'), None, pd.NaT],
-            [np.datetime64(0, 'h'), pd.NaT, None],
-            np.array([None, np.datetime64(0, 'h'), pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'h'), None, pd.NaT],dtype='object'),
-            np.array([np.datetime64(0, 'h'), pd.NaT, None],dtype='object'),
-            np.array([np.datetime64(0, 'h'), None], dtype='datetime64[h]'),
-            pd.Series([None, np.datetime64(0, 'h'), pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'h'), None, pd.NaT], dtype='object'),
-            pd.Series([np.datetime64(0, 'h'), pd.NaT, None], dtype='object'),
-            pd.Series([np.datetime64(0, 'h'), pd.NaT, None], dtype='datetime64[ns]'),
+                [None, np.datetime64(0, 'h'), pd.NaT],
+                [np.datetime64(0, 'h'), None, pd.NaT],
+                [np.datetime64(0, 'h'), pd.NaT, None],
+                np.array([None, np.datetime64(0, 'h'), pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'h'), None, pd.NaT], dtype='object'),
+                np.array([np.datetime64(0, 'h'), pd.NaT, None], dtype='object'),
+                np.array([np.datetime64(0, 'h'), None], dtype='datetime64[h]'),
+                pd.Series([None, np.datetime64(0, 'h'), pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'h'), None, pd.NaT], dtype='object'),
+                pd.Series([np.datetime64(0, 'h'), pd.NaT, None], dtype='object'),
+                pd.Series([np.datetime64(0, 'h'), pd.NaT, None], dtype='datetime64[ns]'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorDatehour(
@@ -4408,17 +4580,28 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][0,],array(DATEHOUR[]).append!([datehour([null,'1970.01.01T00',null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][1,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][2,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][3,],array(DATEHOUR[]).append!([datehour([null,'1970.01.01T00',null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][4,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][5,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][6,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][7,],array(DATEHOUR[]).append!([datehour([null,'1970.01.01T00',null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][8,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][9,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
-        assert self.__class__.conn.run("eqObj(output['v_datehour'][10,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][0,],array(DATEHOUR[]).append!([datehour([null,'1970.01.01T00',null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][1,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][2,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][3,],array(DATEHOUR[]).append!([datehour([null,'1970.01.01T00',null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][4,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][5,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][6,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][7,],array(DATEHOUR[]).append!([datehour([null,'1970.01.01T00',null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][8,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][9,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_datehour'][10,],array(DATEHOUR[]).append!([datehour(['1970.01.01T00',null,null])]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_datehour': [
@@ -4516,32 +4699,45 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorFloat], eventTimeFields=["eventTime"], commonFields=["v_float"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorFloat], eventTimeFields=["eventTime"],
+                             commonFields=["v_float"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorFloat], eventTimeFields=["eventTime"], commonFields=["v_float"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
-        data=[
-            [None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
-            [3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),None,np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
-            [3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
-            np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='object'),
-            np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),None,np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='object'),
-            np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='object'),
-            np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype=np.float32),
-            pd.Series([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='object'),
-            pd.Series([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),None,np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='object'),
-            pd.Series([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='object'),
-            pd.Series([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype=np.float32),
+        data = [
+            [None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), np.float32(-3.4028235e+38),
+             np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
+            [3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, np.float32(-3.4028235e+38),
+             np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
+            [3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), np.float32(-3.4028235e+38),
+             np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+            np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), np.float32(-3.4028235e+38),
+                      np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='object'),
+            np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, np.float32(-3.4028235e+38),
+                      np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='object'),
+            np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), np.float32(-3.4028235e+38),
+                      np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='object'),
+            np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), np.float32(-3.4028235e+38),
+                      np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype=np.float32),
+            pd.Series([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), np.float32(-3.4028235e+38),
+                       np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='object'),
+            pd.Series([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, np.float32(-3.4028235e+38),
+                       np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='object'),
+            pd.Series([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), np.float32(-3.4028235e+38),
+                       np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='object'),
+            pd.Series([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), np.float32(-3.4028235e+38),
+                       np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype=np.float32),
         ]
         if PANDAS_VERSION >= (1, 2, 0):
             data.append(
-                pd.Series([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38),np.float32(-3.4028235e+38),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype=pd.Float32Dtype()),
+                pd.Series([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), np.float32(-3.4028235e+38),
+                           np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype=pd.Float32Dtype()),
             )
         for index, data in enumerate(data):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
@@ -4568,54 +4764,84 @@ class TestCEP(object):
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_float': [
-                np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
-                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
-                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
-                np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
-                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
-                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
-                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
-                np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
-                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
-                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
-                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
+                np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
+                np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
+                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
+                np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
+                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
             ],
             'eventTime': np.array([f'2024-03-25T12:30:05.{i:03}' for i in range(11)], dtype='datetime64[ns]')
         })
         if PANDAS_VERSION >= (1, 2, 0):
-            df_expect.loc[11]=[
-                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
-                np.datetime64('2024-03-25T12:30:05.011',"ms")
+            df_expect.loc[11] = [
+                np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
+                np.datetime64('2024-03-25T12:30:05.011', "ms")
             ]
         df = self.__class__.conn.run("eventTest")
         assert equalPlus(df, df_expect)
         expect = [
-            EventVectorFloat(v_float=np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventVectorFloat(v_float=np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
-            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
-            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
-            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
-            EventVectorFloat(v_float=np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
-            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
-            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.009', 'ms')),
-            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.010', 'ms')),
+            EventVectorFloat(v_float=np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                              dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+            EventVectorFloat(v_float=np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                              dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                              dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+            EventVectorFloat(v_float=np.array([None, 3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None, None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                              dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.009', 'ms')),
+            EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                                               np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                              dtype='float32'),
+                             eventTime=np.datetime64('2024-03-25T12:30:05.010', 'ms')),
         ]
         if PANDAS_VERSION >= (1, 2, 0):
-            expect.append(EventVectorFloat(v_float=np.array([3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float32'),
-                 eventTime=np.datetime64('2024-03-25T12:30:05.011', 'ms')))
+            expect.append(EventVectorFloat(v_float=np.array(
+                [3.14, float('NaN'), np.float32(0), np.float32(3.4028235e+38), None,
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float32'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.011', 'ms')))
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
         for r, e in zip(result, expect):
@@ -4670,31 +4896,53 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorDouble], eventTimeFields=["eventTime"], commonFields=["v_double"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorDouble], eventTimeFields=["eventTime"],
+                             commonFields=["v_double"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorDouble], eventTimeFields=["eventTime"], commonFields=["v_double"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
-        data=[
-            [None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
-            [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
-            [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
-            np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='object'),
-            np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='object'),
-            np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='object'),
-            np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype=np.float64),
-            pd.Series([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='object'),
-            pd.Series([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='object'),
-            pd.Series([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='object'),
-            pd.Series([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype=np.float64),
+        data = [
+            [None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),
+             np.float64(-1.7976931348623157e+308), np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
+            [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+             np.float64(-1.7976931348623157e+308), np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
+            [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), np.float64(-1.7976931348623157e+308),
+             np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+            np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),
+                      np.float64(-1.7976931348623157e+308), np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
+                     dtype='object'),
+            np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                      np.float64(-1.7976931348623157e+308), np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
+                     dtype='object'),
+            np.array(
+                [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), np.float64(-1.7976931348623157e+308),
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='object'),
+            np.array(
+                [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), np.float64(-1.7976931348623157e+308),
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype=np.float64),
+            pd.Series([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),
+                       np.float64(-1.7976931348623157e+308), np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
+                      dtype='object'),
+            pd.Series([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                       np.float64(-1.7976931348623157e+308), np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],
+                      dtype='object'),
+            pd.Series(
+                [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), np.float64(-1.7976931348623157e+308),
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='object'),
+            pd.Series(
+                [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), np.float64(-1.7976931348623157e+308),
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype=np.float64),
         ]
         if PANDAS_VERSION >= (1, 2, 0):
-            data.append(pd.Series([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308),np.float64(-1.7976931348623157e+308),np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype=pd.Float64Dtype()),)
+            data.append(pd.Series(
+                [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), np.float64(-1.7976931348623157e+308),
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype=pd.Float64Dtype()), )
         for index, data in enumerate(data):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorDouble(
@@ -4720,54 +4968,90 @@ class TestCEP(object):
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_double': [
-                np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
-                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
-                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
-                np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
-                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
-                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
-                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
-                np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
-                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
-                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
-                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
+                np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
+                np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
+                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
+                np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
+                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
             ],
             'eventTime': np.array([f'2024-03-25T12:30:05.{i:03}' for i in range(11)], dtype='datetime64[ns]')
         })
         if PANDAS_VERSION >= (1, 2, 0):
-            df_expect.loc[11]=[
-                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
-                np.datetime64('2024-03-25T12:30:05.011',"ms")
+            df_expect.loc[11] = [
+                np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                          np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
+                np.datetime64('2024-03-25T12:30:05.011', "ms")
             ]
         df = self.__class__.conn.run("eventTest")
         assert equalPlus(df, df_expect)
         expect = [
-            EventVectorDouble(v_double=np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventVectorDouble(v_double=np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
-            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
-            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
-            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
-            EventVectorDouble(v_double=np.array([None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
-            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
-            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.009', 'ms')),
-            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.010', 'ms')),
+            EventVectorDouble(v_double=np.array(
+                [None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+            EventVectorDouble(v_double=np.array(
+                [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                                                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                                dtype='float64'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+            EventVectorDouble(v_double=np.array(
+                [None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+            EventVectorDouble(v_double=np.array(
+                [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                                                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                                dtype='float64'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                                                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                                dtype='float64'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+            EventVectorDouble(v_double=np.array(
+                [None, 3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+            EventVectorDouble(v_double=np.array(
+                [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None, None,
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0]], dtype='float64'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                                                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                                dtype='float64'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.009', 'ms')),
+            EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                                                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],
+                                                dtype='float64'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.010', 'ms')),
         ]
         if PANDAS_VERSION >= (1, 2, 0):
-            expect.append(EventVectorDouble(v_double=np.array([3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None],dtype='float64'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.011', 'ms')))
+            expect.append(EventVectorDouble(v_double=np.array(
+                [3.14, np.nan, np.float64(0), np.float64(1.7976931348623157e+308), None,
+                 np.frombuffer(b'\xff\xff\xff\xff\xff\xff\xff\x7f')[0], None], dtype='float64'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.011', 'ms')))
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
         for r, e in zip(result, expect):
@@ -4822,35 +5106,43 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorString], eventTimeFields=["eventTime"], commonFields=[])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorString], eventTimeFields=["eventTime"],
+                             commonFields=[])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorString], eventTimeFields=["eventTime"], commonFields=[])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
-        data=[
+        data = [
             [None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""],
             ["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""],
             ["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None],
-            np.array([None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""],dtype='object'),
-            np.array(["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""],dtype='object'),
-            np.array(["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None],dtype='object'),
+            np.array([None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype='object'),
+            np.array(["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""], dtype='object'),
+            np.array(["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None], dtype='object'),
             np.array(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=np.str_),
-            pd.Series([None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""],dtype='object'),
-            pd.Series(["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""],dtype='object'),
-            pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None],dtype='object'),
+            pd.Series([None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype='object'),
+            pd.Series(["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""], dtype='object'),
+            pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None], dtype='object'),
             pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=np.str_),
             pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=pd.StringDtype()),
         ]
-        if PANDAS_VERSION>=(1,3,0):
-            data.append(pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=pd.StringDtype("pyarrow")))
-            data.append(pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=pd.StringDtype("python")))
-        if PANDAS_VERSION >= (2, 1, 0):
-            data.append(pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=pd.StringDtype("pyarrow_numpy")))
+        if find_spec("pyarrow") is not None:
+            from basic_testing.prepare import PYARROW_VERSION
+            if PYARROW_VERSION >= (10, 0, 1):
+                if PANDAS_VERSION >= (1, 3, 0):
+                    data.append(
+                        pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=pd.StringDtype("pyarrow")))
+                    data.append(
+                        pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=pd.StringDtype("python")))
+                if PANDAS_VERSION >= (2, 1, 0):
+                    data.append(
+                        pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""],
+                                  dtype=pd.StringDtype("pyarrow_numpy")))
         for index, data in enumerate(data):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorString(
@@ -4868,38 +5160,44 @@ class TestCEP(object):
         # assert equalPlus(df,df_expect)
         expect = [
             EventVectorString(v_string=np.array(["", "abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
             EventVectorString(v_string=np.array(["abc!@#中文 123", "", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
             EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", "", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
             EventVectorString(v_string=np.array(["", "abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
             EventVectorString(v_string=np.array(["abc!@#中文 123", "", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
             EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", "", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
             EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
             EventVectorString(v_string=np.array(["", "abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
             EventVectorString(v_string=np.array(["abc!@#中文 123", "", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
             EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", "", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.009', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.009', 'ms')),
             EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.010', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.010', 'ms')),
             EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
                               eventTime=np.datetime64('2024-03-25T12:30:05.011', 'ms')),
         ]
-        if PANDAS_VERSION>=(1,3,0):
-            expect.append(EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                              eventTime=np.datetime64('2024-03-25T12:30:05.012', 'ms')))
-            expect.append(EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                              eventTime=np.datetime64('2024-03-25T12:30:05.013', 'ms')))
-        if PANDAS_VERSION >= (2, 1, 0):
-            expect.append(EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                              eventTime=np.datetime64('2024-03-25T12:30:05.014', 'ms')))
+        if find_spec("pyarrow") is not None:
+            from basic_testing.prepare import PYARROW_VERSION
+            if PYARROW_VERSION >= (10, 0, 1):
+                if PANDAS_VERSION >= (1, 3, 0):
+                    expect.append(
+                        EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
+                                          eventTime=np.datetime64('2024-03-25T12:30:05.012', 'ms')))
+                    expect.append(
+                        EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
+                                          eventTime=np.datetime64('2024-03-25T12:30:05.013', 'ms')))
+                if PANDAS_VERSION >= (2, 1, 0):
+                    expect.append(
+                        EventVectorString(v_string=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
+                                          eventTime=np.datetime64('2024-03-25T12:30:05.014', 'ms')))
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
         for r, e in zip(result, expect):
@@ -4959,26 +5257,42 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorBlob], eventTimeFields=["eventTime"], commonFields=[])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorBlob], eventTimeFields=["eventTime"],
+                             commonFields=[])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorBlob], eventTimeFields=["eventTime"], commonFields=[])
-        client.subscribe(HOST, PORT, handler, "input", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "input", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'),np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),b""],
-            ["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), None,np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),b""],
-            ["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'),np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),b"", None],
-            np.array([None, "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'),np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),b""],dtype='object'),
-            np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), None,np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),b""],dtype='object'),
-            np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'),np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),b"", None],dtype='object'),
-            pd.Series([None, "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'),np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),b""],dtype='object'),
-            pd.Series(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), None,np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),b""],dtype='object'),
-            pd.Series(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'),np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')),b"", None],dtype='object'),
+                [None, "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), np.bytes_("abc!@#中文 123".encode()),
+                 np.bytes_("abc!@#中文 123".encode('gbk')), b""],
+                ["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), None, np.bytes_("abc!@#中文 123".encode()),
+                 np.bytes_("abc!@#中文 123".encode('gbk')), b""],
+                ["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), np.bytes_("abc!@#中文 123".encode()),
+                 np.bytes_("abc!@#中文 123".encode('gbk')), b"", None],
+                np.array([None, "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'),
+                          np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')), b""],
+                         dtype='object'),
+                np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), None,
+                          np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')), b""],
+                         dtype='object'),
+                np.array(
+                    ["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), np.bytes_("abc!@#中文 123".encode()),
+                     np.bytes_("abc!@#中文 123".encode('gbk')), b"", None], dtype='object'),
+                pd.Series([None, "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'),
+                           np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')), b""],
+                          dtype='object'),
+                pd.Series(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), None,
+                           np.bytes_("abc!@#中文 123".encode()), np.bytes_("abc!@#中文 123".encode('gbk')), b""],
+                          dtype='object'),
+                pd.Series(
+                    ["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), np.bytes_("abc!@#中文 123".encode()),
+                     np.bytes_("abc!@#中文 123".encode('gbk')), b"", None], dtype='object'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorBlob(
@@ -4996,15 +5310,24 @@ class TestCEP(object):
         # df=self.__class__.conn.run("eventTest")
         # assert equalPlus(df,df_expect)
         expect = [
-            EventVectorBlob(v_blob=np.array(["", "abc!@#中文 123", "abc!@# 123", "abc!@#中文 123","abc!@# 123", ""], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "", "abc!@#中文 123","abc!@# 123", ""], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123","abc!@# 123", "", ""], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventVectorBlob(v_blob=np.array(["", "abc!@#中文 123", "abc!@# 123", "abc!@#中文 123","abc!@# 123", ""], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "", "abc!@#中文 123","abc!@# 123", ""], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123","abc!@# 123", "", ""], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
-            EventVectorBlob(v_blob=np.array(["", "abc!@#中文 123", "abc!@# 123", "abc!@#中文 123","abc!@# 123", ""], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "", "abc!@#中文 123","abc!@# 123", ""], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123","abc!@# 123", "", ""], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+            EventVectorBlob(v_blob=np.array(["", "abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", ""],
+                                            dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "", "abc!@#中文 123", "abc!@# 123", ""],
+                                            dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", "", ""],
+                                            dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+            EventVectorBlob(v_blob=np.array(["", "abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", ""],
+                                            dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "", "abc!@#中文 123", "abc!@# 123", ""],
+                                            dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", "", ""],
+                                            dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+            EventVectorBlob(v_blob=np.array(["", "abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", ""],
+                                            dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "", "abc!@#中文 123", "abc!@# 123", ""],
+                                            dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", "", ""],
+                                            dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
         ]
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
@@ -5060,28 +5383,29 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorSymbol], eventTimeFields=["eventTime"], commonFields=[])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorSymbol], eventTimeFields=["eventTime"],
+                             commonFields=[])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorSymbol], eventTimeFields=["eventTime"], commonFields=[])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""],
-            ["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""],
-            ["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None],
-            np.array([None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""],dtype='object'),
-            np.array(["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""],dtype='object'),
-            np.array(["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None],dtype='object'),
-            np.array(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=np.str_),
-            pd.Series([None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""],dtype='object'),
-            pd.Series(["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""],dtype='object'),
-            pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None],dtype='object'),
-            pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=np.str_),
+                [None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""],
+                ["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""],
+                ["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None],
+                np.array([None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype='object'),
+                np.array(["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""], dtype='object'),
+                np.array(["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None], dtype='object'),
+                np.array(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=np.str_),
+                pd.Series([None, "abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype='object'),
+                pd.Series(["abc!@#中文 123", None, np.str_("abc!@#中文 123"), ""], dtype='object'),
+                pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), "", None], dtype='object'),
+                pd.Series(["abc!@#中文 123", np.str_("abc!@#中文 123"), ""], dtype=np.str_),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorSymbol(
@@ -5104,27 +5428,27 @@ class TestCEP(object):
         # assert equalPlus(df, df_expect)
         expect = [
             EventVectorSymbol(v_symbol=np.array(["", "abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["abc!@#中文 123", "", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["abc!@#中文 123", "abc!@#中文 123", "", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["", "abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["abc!@#中文 123", "", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["abc!@#中文 123", "abc!@#中文 123", "", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["", "abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["abc!@#中文 123", "", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["abc!@#中文 123", "abc!@#中文 123", "", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.009', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.009', 'ms')),
             EventVectorSymbol(v_symbol=np.array(["abc!@#中文 123", "abc!@#中文 123", ""], dtype='object'),
-                eventTime=np.datetime64('2024-03-25T12:30:05.010', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.010', 'ms')),
         ]
         # assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
@@ -5180,26 +5504,33 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorInt128], eventTimeFields=["eventTime"], commonFields=["v_int128"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorInt128], eventTimeFields=["eventTime"],
+                             commonFields=["v_int128"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorInt128], eventTimeFields=["eventTime"], commonFields=["v_int128"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],
-            ['e1671797c52e15f763380b45e841ec32', None, '00000000000000000000000000000000'],
-            ['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', None],
-            np.array([None, 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],dtype='object'),
-            np.array(['e1671797c52e15f763380b45e841ec32', None, '00000000000000000000000000000000'],dtype='object'),
-            np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', None],dtype='object'),
-            pd.Series([None, 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],dtype='object'),
-            pd.Series(['e1671797c52e15f763380b45e841ec32', None, '00000000000000000000000000000000'],dtype='object'),
-            pd.Series(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', None],dtype='object'),
+                [None, 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],
+                ['e1671797c52e15f763380b45e841ec32', None, '00000000000000000000000000000000'],
+                ['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', None],
+                np.array([None, 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],
+                         dtype='object'),
+                np.array(['e1671797c52e15f763380b45e841ec32', None, '00000000000000000000000000000000'],
+                         dtype='object'),
+                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', None],
+                         dtype='object'),
+                pd.Series([None, 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],
+                          dtype='object'),
+                pd.Series(['e1671797c52e15f763380b45e841ec32', None, '00000000000000000000000000000000'],
+                          dtype='object'),
+                pd.Series(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', None],
+                          dtype='object'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorInt128(
@@ -5210,42 +5541,78 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_int128'][0,],array(INT128[]).append!([int128(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_int128'][1,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_int128'][2,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_int128'][3,],array(INT128[]).append!([int128(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_int128'][4,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_int128'][5,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_int128'][6,],array(INT128[]).append!([int128(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_int128'][7,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_int128'][8,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int128'][0,],array(INT128[]).append!([int128(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int128'][1,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int128'][2,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int128'][3,],array(INT128[]).append!([int128(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int128'][4,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int128'][5,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int128'][6,],array(INT128[]).append!([int128(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int128'][7,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int128'][8,],array(INT128[]).append!([int128(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'])]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_int128': [
-                np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],dtype='object'),
-                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'),
-                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'),
-                np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],dtype='object'),
-                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'),
-                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'),
-                np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],dtype='object'),
-                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'),
-                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'),
+                np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32',
+                          '00000000000000000000000000000000'], dtype='object'),
+                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                          '00000000000000000000000000000000'], dtype='object'),
+                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                          '00000000000000000000000000000000'], dtype='object'),
+                np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32',
+                          '00000000000000000000000000000000'], dtype='object'),
+                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                          '00000000000000000000000000000000'], dtype='object'),
+                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                          '00000000000000000000000000000000'], dtype='object'),
+                np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32',
+                          '00000000000000000000000000000000'], dtype='object'),
+                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                          '00000000000000000000000000000000'], dtype='object'),
+                np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                          '00000000000000000000000000000000'], dtype='object'),
             ],
             'eventTime': np.array([f'2024-03-25T12:30:05.{i:03}' for i in range(9)], dtype='datetime64[ns]')
         })
         df = self.__class__.conn.run("eventTest")
         assert equalPlus(df, df_expect)
         expect = [
-            EventVectorInt128(v_int128=np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventVectorInt128(v_int128=np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
-            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
-            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
-            EventVectorInt128(v_int128=np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
-            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
-            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000', '00000000000000000000000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+            EventVectorInt128(v_int128=np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32',
+                                                 '00000000000000000000000000000000'], dtype='object'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                                                 '00000000000000000000000000000000'], dtype='object'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                                                 '00000000000000000000000000000000'], dtype='object'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+            EventVectorInt128(v_int128=np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32',
+                                                 '00000000000000000000000000000000'], dtype='object'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                                                 '00000000000000000000000000000000'], dtype='object'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                                                 '00000000000000000000000000000000'], dtype='object'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+            EventVectorInt128(v_int128=np.array(['00000000000000000000000000000000', 'e1671797c52e15f763380b45e841ec32',
+                                                 '00000000000000000000000000000000'], dtype='object'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                                                 '00000000000000000000000000000000'], dtype='object'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+            EventVectorInt128(v_int128=np.array(['e1671797c52e15f763380b45e841ec32', '00000000000000000000000000000000',
+                                                 '00000000000000000000000000000000'], dtype='object'),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
         ]
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
@@ -5301,26 +5668,33 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorUuid], eventTimeFields=["eventTime"], commonFields=["v_uuid"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorUuid], eventTimeFields=["eventTime"],
+                             commonFields=["v_uuid"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorUuid], eventTimeFields=["eventTime"], commonFields=["v_uuid"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],
-            ['5d212a78-cc48-e3b1-4235-b4d91473ee87', None, '00000000-0000-0000-0000-000000000000'],
-            ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', None],
-            np.array([None, '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-            np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', None, '00000000-0000-0000-0000-000000000000'],dtype='object'),
-            np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', None],dtype='object'),
-            pd.Series([None, '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-            pd.Series(['5d212a78-cc48-e3b1-4235-b4d91473ee87', None, '00000000-0000-0000-0000-000000000000'],dtype='object'),
-            pd.Series(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', None],dtype='object'),
+                [None, '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],
+                ['5d212a78-cc48-e3b1-4235-b4d91473ee87', None, '00000000-0000-0000-0000-000000000000'],
+                ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', None],
+                np.array([None, '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],
+                         dtype='object'),
+                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', None, '00000000-0000-0000-0000-000000000000'],
+                         dtype='object'),
+                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', None],
+                         dtype='object'),
+                pd.Series([None, '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],
+                          dtype='object'),
+                pd.Series(['5d212a78-cc48-e3b1-4235-b4d91473ee87', None, '00000000-0000-0000-0000-000000000000'],
+                          dtype='object'),
+                pd.Series(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', None],
+                          dtype='object'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorUuid(
@@ -5331,42 +5705,87 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_uuid'][0,],array(UUID[]).append!([uuid(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_uuid'][1,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_uuid'][2,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_uuid'][3,],array(UUID[]).append!([uuid(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_uuid'][4,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_uuid'][5,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_uuid'][6,],array(UUID[]).append!([uuid(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_uuid'][7,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_uuid'][8,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_uuid'][0,],array(UUID[]).append!([uuid(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_uuid'][1,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_uuid'][2,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_uuid'][3,],array(UUID[]).append!([uuid(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_uuid'][4,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_uuid'][5,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_uuid'][6,],array(UUID[]).append!([uuid(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_uuid'][7,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_uuid'][8,],array(UUID[]).append!([uuid(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'])]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_uuid': [
-                np.array(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-                np.array(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-                np.array(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'),
-                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'),
+                np.array(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87',
+                          '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                          '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                          '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                np.array(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87',
+                          '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                          '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                          '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                np.array(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87',
+                          '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                          '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                          '00000000-0000-0000-0000-000000000000'], dtype='object'),
             ],
             'eventTime': np.array([f'2024-03-25T12:30:05.{i:03}' for i in range(9)], dtype='datetime64[ns]')
         })
         df = self.__class__.conn.run("eventTest")
         assert equalPlus(df, df_expect)
         expect = [
-            EventVectorUuid(v_uuid=np.array(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventVectorUuid(v_uuid=np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventVectorUuid(v_uuid=np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventVectorUuid(v_uuid=np.array(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
-            EventVectorUuid(v_uuid=np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
-            EventVectorUuid(v_uuid=np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
-            EventVectorUuid(v_uuid=np.array(['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
-            EventVectorUuid(v_uuid=np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
-            EventVectorUuid(v_uuid=np.array(['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+            EventVectorUuid(v_uuid=np.array(
+                ['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87',
+                 '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+            EventVectorUuid(v_uuid=np.array(
+                ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                 '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+            EventVectorUuid(v_uuid=np.array(
+                ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                 '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+            EventVectorUuid(v_uuid=np.array(
+                ['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87',
+                 '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+            EventVectorUuid(v_uuid=np.array(
+                ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                 '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+            EventVectorUuid(v_uuid=np.array(
+                ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                 '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+            EventVectorUuid(v_uuid=np.array(
+                ['00000000-0000-0000-0000-000000000000', '5d212a78-cc48-e3b1-4235-b4d91473ee87',
+                 '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+            EventVectorUuid(v_uuid=np.array(
+                ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                 '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+            EventVectorUuid(v_uuid=np.array(
+                ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '00000000-0000-0000-0000-000000000000',
+                 '00000000-0000-0000-0000-000000000000'], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
         ]
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
@@ -5422,26 +5841,27 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorIpaddr], eventTimeFields=["eventTime"], commonFields=["v_ipaddr"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorIpaddr], eventTimeFields=["eventTime"],
+                             commonFields=["v_ipaddr"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorIpaddr], eventTimeFields=["eventTime"], commonFields=["v_ipaddr"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, '127.0.0.1', '0.0.0.0'],
-            ['127.0.0.1', None, '0.0.0.0'],
-            ['127.0.0.1', '0.0.0.0', None],
-            np.array([None, '127.0.0.1', '0.0.0.0'],dtype='object'),
-            np.array(['127.0.0.1', None, '0.0.0.0'],dtype='object'),
-            np.array(['127.0.0.1', '0.0.0.0', None],dtype='object'),
-            pd.Series([None, '127.0.0.1', '0.0.0.0'],dtype='object'),
-            pd.Series(['127.0.0.1', None, '0.0.0.0'],dtype='object'),
-            pd.Series(['127.0.0.1', '0.0.0.0', None],dtype='object'),
+                [None, '127.0.0.1', '0.0.0.0'],
+                ['127.0.0.1', None, '0.0.0.0'],
+                ['127.0.0.1', '0.0.0.0', None],
+                np.array([None, '127.0.0.1', '0.0.0.0'], dtype='object'),
+                np.array(['127.0.0.1', None, '0.0.0.0'], dtype='object'),
+                np.array(['127.0.0.1', '0.0.0.0', None], dtype='object'),
+                pd.Series([None, '127.0.0.1', '0.0.0.0'], dtype='object'),
+                pd.Series(['127.0.0.1', None, '0.0.0.0'], dtype='object'),
+                pd.Series(['127.0.0.1', '0.0.0.0', None], dtype='object'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorIpaddr(
@@ -5453,15 +5873,24 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_ipaddr'][0,],array(IPADDR[]).append!([ipaddr(['0.0.0.0', '127.0.0.1', '0.0.0.0'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_ipaddr'][1,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_ipaddr'][2,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_ipaddr'][3,],array(IPADDR[]).append!([ipaddr(['0.0.0.0', '127.0.0.1', '0.0.0.0'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_ipaddr'][4,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_ipaddr'][5,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_ipaddr'][6,],array(IPADDR[]).append!([ipaddr(['0.0.0.0', '127.0.0.1', '0.0.0.0'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_ipaddr'][7,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
-        assert self.__class__.conn.run("eqObj(output['v_ipaddr'][8,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_ipaddr'][0,],array(IPADDR[]).append!([ipaddr(['0.0.0.0', '127.0.0.1', '0.0.0.0'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_ipaddr'][1,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_ipaddr'][2,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_ipaddr'][3,],array(IPADDR[]).append!([ipaddr(['0.0.0.0', '127.0.0.1', '0.0.0.0'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_ipaddr'][4,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_ipaddr'][5,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_ipaddr'][6,],array(IPADDR[]).append!([ipaddr(['0.0.0.0', '127.0.0.1', '0.0.0.0'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_ipaddr'][7,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_ipaddr'][8,],array(IPADDR[]).append!([ipaddr(['127.0.0.1', '0.0.0.0', '0.0.0.0'])]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_ipaddr': [
@@ -5481,23 +5910,23 @@ class TestCEP(object):
         assert equalPlus(df, df_expect)
         expect = [
             EventVectorIpaddr(v_ipaddr=np.array(['0.0.0.0', '127.0.0.1', '0.0.0.0'], dtype='object'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
             EventVectorIpaddr(v_ipaddr=np.array(['127.0.0.1', '0.0.0.0', '0.0.0.0'], dtype='object'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
             EventVectorIpaddr(v_ipaddr=np.array(['127.0.0.1', '0.0.0.0', '0.0.0.0'], dtype='object'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
             EventVectorIpaddr(v_ipaddr=np.array(['0.0.0.0', '127.0.0.1', '0.0.0.0'], dtype='object'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
             EventVectorIpaddr(v_ipaddr=np.array(['127.0.0.1', '0.0.0.0', '0.0.0.0'], dtype='object'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
             EventVectorIpaddr(v_ipaddr=np.array(['127.0.0.1', '0.0.0.0', '0.0.0.0'], dtype='object'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
             EventVectorIpaddr(v_ipaddr=np.array(['0.0.0.0', '127.0.0.1', '0.0.0.0'], dtype='object'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
             EventVectorIpaddr(v_ipaddr=np.array(['127.0.0.1', '0.0.0.0', '0.0.0.0'], dtype='object'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
             EventVectorIpaddr(v_ipaddr=np.array(['127.0.0.1', '0.0.0.0', '0.0.0.0'], dtype='object'),
-                  eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+                              eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
         ]
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
@@ -5553,26 +5982,27 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorDecimal32], eventTimeFields=["eventTime"], commonFields=["v_decimal32_4"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorDecimal32], eventTimeFields=["eventTime"],
+                             commonFields=["v_decimal32_4"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorDecimal32], eventTimeFields=["eventTime"], commonFields=["v_decimal32_4"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, Decimal('0.0000'), Decimal('3.1415'), Decimal("nan")],
-            [Decimal('0.0000'), Decimal('3.1415'), None, Decimal("nan")],
-            [Decimal('0.0000'), Decimal('3.1415'), Decimal("nan"), None],
-            np.array([None, Decimal('0.0000'), Decimal('3.1415'), Decimal("nan")],dtype='object'),
-            np.array([Decimal('0.0000'), Decimal('3.1415'), None, Decimal("nan")],dtype='object'),
-            np.array([Decimal('0.0000'), Decimal('3.1415'), Decimal("nan"), None],dtype='object'),
-            pd.Series([None, Decimal('0.0000'), Decimal('3.1415'), Decimal("nan")],dtype='object'),
-            pd.Series([Decimal('0.0000'), Decimal('3.1415'), None, Decimal("nan")],dtype='object'),
-            pd.Series([Decimal('0.0000'), Decimal('3.1415'), Decimal("nan"), None],dtype='object'),
+                [None, Decimal('0.0000'), Decimal('3.1415'), Decimal("nan")],
+                [Decimal('0.0000'), Decimal('3.1415'), None, Decimal("nan")],
+                [Decimal('0.0000'), Decimal('3.1415'), Decimal("nan"), None],
+                np.array([None, Decimal('0.0000'), Decimal('3.1415'), Decimal("nan")], dtype='object'),
+                np.array([Decimal('0.0000'), Decimal('3.1415'), None, Decimal("nan")], dtype='object'),
+                np.array([Decimal('0.0000'), Decimal('3.1415'), Decimal("nan"), None], dtype='object'),
+                pd.Series([None, Decimal('0.0000'), Decimal('3.1415'), Decimal("nan")], dtype='object'),
+                pd.Series([Decimal('0.0000'), Decimal('3.1415'), None, Decimal("nan")], dtype='object'),
+                pd.Series([Decimal('0.0000'), Decimal('3.1415'), Decimal("nan"), None], dtype='object'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorDecimal32(
@@ -5583,15 +6013,24 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_decimal32_4'][0,],array(DECIMAL32(4)[]).append!([decimal32([null,'0.0000','3.1415',null],4)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal32_4'][1,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal32_4'][2,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal32_4'][3,],array(DECIMAL32(4)[]).append!([decimal32([null,'0.0000','3.1415',null],4)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal32_4'][4,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal32_4'][5,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal32_4'][6,],array(DECIMAL32(4)[]).append!([decimal32([null,'0.0000','3.1415',null],4)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal32_4'][7,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal32_4'][8,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal32_4'][0,],array(DECIMAL32(4)[]).append!([decimal32([null,'0.0000','3.1415',null],4)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal32_4'][1,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal32_4'][2,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal32_4'][3,],array(DECIMAL32(4)[]).append!([decimal32([null,'0.0000','3.1415',null],4)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal32_4'][4,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal32_4'][5,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal32_4'][6,],array(DECIMAL32(4)[]).append!([decimal32([null,'0.0000','3.1415',null],4)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal32_4'][7,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal32_4'][8,],array(DECIMAL32(4)[]).append!([decimal32(['0.0000','3.1415',null,null],4)]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_decimal32_4': [
@@ -5610,15 +6049,33 @@ class TestCEP(object):
         df = self.__class__.conn.run("eventTest")
         assert equalPlus(df, df_expect)
         expect = [
-            EventVectorDecimal32(v_decimal32_4=np.array([None, Decimal('0.0000'), Decimal('3.1415'), None], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventVectorDecimal32(v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventVectorDecimal32(v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventVectorDecimal32(v_decimal32_4=np.array([None, Decimal('0.0000'), Decimal('3.1415'), None], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
-            EventVectorDecimal32(v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
-            EventVectorDecimal32(v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
-            EventVectorDecimal32(v_decimal32_4=np.array([None, Decimal('0.0000'), Decimal('3.1415'), None], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
-            EventVectorDecimal32(v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
-            EventVectorDecimal32(v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+            EventVectorDecimal32(
+                v_decimal32_4=np.array([None, Decimal('0.0000'), Decimal('3.1415'), None], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+            EventVectorDecimal32(
+                v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+            EventVectorDecimal32(
+                v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+            EventVectorDecimal32(
+                v_decimal32_4=np.array([None, Decimal('0.0000'), Decimal('3.1415'), None], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+            EventVectorDecimal32(
+                v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+            EventVectorDecimal32(
+                v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+            EventVectorDecimal32(
+                v_decimal32_4=np.array([None, Decimal('0.0000'), Decimal('3.1415'), None], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+            EventVectorDecimal32(
+                v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+            EventVectorDecimal32(
+                v_decimal32_4=np.array([Decimal('0.0000'), Decimal('3.1415'), None, None], dtype='object'),
+                eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
         ]
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
@@ -5674,26 +6131,27 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorDecimal64], eventTimeFields=["eventTime"], commonFields=["v_decimal64_12"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorDecimal64], eventTimeFields=["eventTime"],
+                             commonFields=["v_decimal64_12"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorDecimal64], eventTimeFields=["eventTime"], commonFields=["v_decimal64_12"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan")],
-            [Decimal('0.000000000000'), Decimal('3.141592653589'), None, Decimal("nan")],
-            [Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan"), None],
-            np.array([None, Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan")],dtype='object'),
-            np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, Decimal("nan")],dtype='object'),
-            np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan"), None],dtype='object'),
-            pd.Series([None, Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan")],dtype='object'),
-            pd.Series([Decimal('0.000000000000'), Decimal('3.141592653589'), None, Decimal("nan")],dtype='object'),
-            pd.Series([Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan"), None],dtype='object'),
+                [None, Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan")],
+                [Decimal('0.000000000000'), Decimal('3.141592653589'), None, Decimal("nan")],
+                [Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan"), None],
+                np.array([None, Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan")], dtype='object'),
+                np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, Decimal("nan")], dtype='object'),
+                np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan"), None], dtype='object'),
+                pd.Series([None, Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan")], dtype='object'),
+                pd.Series([Decimal('0.000000000000'), Decimal('3.141592653589'), None, Decimal("nan")], dtype='object'),
+                pd.Series([Decimal('0.000000000000'), Decimal('3.141592653589'), Decimal("nan"), None], dtype='object'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorDecimal64(
@@ -5704,15 +6162,24 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_decimal64_12'][0,],array(DECIMAL64(12)[]).append!([decimal64([null,'0.000000000000','3.141592653589',null],12)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal64_12'][1,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal64_12'][2,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal64_12'][3,],array(DECIMAL64(12)[]).append!([decimal64([null,'0.000000000000','3.141592653589',null],12)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal64_12'][4,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal64_12'][5,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal64_12'][6,],array(DECIMAL64(12)[]).append!([decimal64([null,'0.000000000000','3.141592653589',null],12)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal64_12'][7,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal64_12'][8,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal64_12'][0,],array(DECIMAL64(12)[]).append!([decimal64([null,'0.000000000000','3.141592653589',null],12)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal64_12'][1,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal64_12'][2,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal64_12'][3,],array(DECIMAL64(12)[]).append!([decimal64([null,'0.000000000000','3.141592653589',null],12)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal64_12'][4,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal64_12'][5,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal64_12'][6,],array(DECIMAL64(12)[]).append!([decimal64([null,'0.000000000000','3.141592653589',null],12)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal64_12'][7,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal64_12'][8,],array(DECIMAL64(12)[]).append!([decimal64(['0.000000000000','3.141592653589',null,null],12)]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_decimal64_12': [
@@ -5731,15 +6198,33 @@ class TestCEP(object):
         df = self.__class__.conn.run("eventTest")
         assert equalPlus(df, df_expect)
         expect = [
-            EventVectorDecimal64(v_decimal64_12=np.array([None, Decimal('0.000000000000'), Decimal('3.141592653589'), None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventVectorDecimal64(v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventVectorDecimal64(v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventVectorDecimal64(v_decimal64_12=np.array([None, Decimal('0.000000000000'), Decimal('3.141592653589'), None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
-            EventVectorDecimal64(v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
-            EventVectorDecimal64(v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
-            EventVectorDecimal64(v_decimal64_12=np.array([None, Decimal('0.000000000000'), Decimal('3.141592653589'), None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
-            EventVectorDecimal64(v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
-            EventVectorDecimal64(v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+            EventVectorDecimal64(
+                v_decimal64_12=np.array([None, Decimal('0.000000000000'), Decimal('3.141592653589'), None],
+                                        dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+            EventVectorDecimal64(
+                v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],
+                                        dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+            EventVectorDecimal64(
+                v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],
+                                        dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+            EventVectorDecimal64(
+                v_decimal64_12=np.array([None, Decimal('0.000000000000'), Decimal('3.141592653589'), None],
+                                        dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+            EventVectorDecimal64(
+                v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],
+                                        dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+            EventVectorDecimal64(
+                v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],
+                                        dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+            EventVectorDecimal64(
+                v_decimal64_12=np.array([None, Decimal('0.000000000000'), Decimal('3.141592653589'), None],
+                                        dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+            EventVectorDecimal64(
+                v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],
+                                        dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+            EventVectorDecimal64(
+                v_decimal64_12=np.array([Decimal('0.000000000000'), Decimal('3.141592653589'), None, None],
+                                        dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
         ]
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
@@ -5795,26 +6280,38 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventVectorDecimal128], eventTimeFields=["eventTime"], commonFields=["v_decimal128_26"])
+        sender = EventSender(self.__class__.conn, "input", [EventVectorDecimal128], eventTimeFields=["eventTime"],
+                             commonFields=["v_decimal128_26"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventVectorDecimal128], eventTimeFields=["eventTime"], commonFields=["v_decimal128_26"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
         for index, data in enumerate((
-            [None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), Decimal("nan")],
-            [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'),None, Decimal("nan")],
-            [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), Decimal("nan"),None],
-            np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), Decimal("nan")],dtype='object'),
-            np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'),None, Decimal("nan")],dtype='object'),
-            np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), Decimal("nan"),None],dtype='object'),
-            pd.Series([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), Decimal("nan")],dtype='object'),
-            pd.Series([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'),None, Decimal("nan")],dtype='object'),
-            pd.Series([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), Decimal("nan"),None],dtype='object'),
+                [None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'),
+                 Decimal("nan")],
+                [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None,
+                 Decimal("nan")],
+                [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), Decimal("nan"),
+                 None],
+                np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'),
+                          Decimal("nan")], dtype='object'),
+                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None,
+                          Decimal("nan")], dtype='object'),
+                np.array(
+                    [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), Decimal("nan"),
+                     None], dtype='object'),
+                pd.Series([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'),
+                           Decimal("nan")], dtype='object'),
+                pd.Series([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None,
+                           Decimal("nan")], dtype='object'),
+                pd.Series(
+                    [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), Decimal("nan"),
+                     None], dtype='object'),
         )):
             eventTime = f'2024-03-25T12:30:05.{index:03}'
             event = EventVectorDecimal128(
@@ -5825,42 +6322,78 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, "output", "ttt")
         # check CommonFields
-        assert self.__class__.conn.run("eqObj(output['v_decimal128_26'][0,],array(DECIMAL128(26)[]).append!([decimal128([null,'0.00000000000000000000000000','3.14159265358979323846264338',null],26)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal128_26'][1,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal128_26'][2,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal128_26'][3,],array(DECIMAL128(26)[]).append!([decimal128([null,'0.00000000000000000000000000','3.14159265358979323846264338',null],26)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal128_26'][4,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal128_26'][5,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal128_26'][6,],array(DECIMAL128(26)[]).append!([decimal128([null,'0.00000000000000000000000000','3.14159265358979323846264338',null],26)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal128_26'][7,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
-        assert self.__class__.conn.run("eqObj(output['v_decimal128_26'][8,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal128_26'][0,],array(DECIMAL128(26)[]).append!([decimal128([null,'0.00000000000000000000000000','3.14159265358979323846264338',null],26)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal128_26'][1,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal128_26'][2,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal128_26'][3,],array(DECIMAL128(26)[]).append!([decimal128([null,'0.00000000000000000000000000','3.14159265358979323846264338',null],26)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal128_26'][4,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal128_26'][5,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal128_26'][6,],array(DECIMAL128(26)[]).append!([decimal128([null,'0.00000000000000000000000000','3.14159265358979323846264338',null],26)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal128_26'][7,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
+        assert self.__class__.conn.run(
+            "eqObj(output['v_decimal128_26'][8,],array(DECIMAL128(26)[]).append!([decimal128(['0.00000000000000000000000000','3.14159265358979323846264338',null,null],26)]))")
         # check server deserialize
         df_expect = pd.DataFrame({
             'v_decimal128_26': [
-                np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],dtype='object'),
-                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'),
-                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'),
-                np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],dtype='object'),
-                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'),
-                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'),
-                np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],dtype='object'),
-                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'),
-                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'),
+                np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],
+                         dtype='object'),
+                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                         dtype='object'),
+                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                         dtype='object'),
+                np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],
+                         dtype='object'),
+                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                         dtype='object'),
+                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                         dtype='object'),
+                np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],
+                         dtype='object'),
+                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                         dtype='object'),
+                np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                         dtype='object'),
             ],
             'eventTime': np.array([f'2024-03-25T12:30:05.{i:03}' for i in range(9)], dtype='datetime64[ns]')
         })
         df = self.__class__.conn.run("eventTest")
         assert equalPlus(df, df_expect)
         expect = [
-            EventVectorDecimal128(v_decimal128_26=np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventVectorDecimal128(v_decimal128_26=np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventVectorDecimal128(v_decimal128_26=np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventVectorDecimal128(v_decimal128_26=np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
-            EventVectorDecimal128(v_decimal128_26=np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
-            EventVectorDecimal128(v_decimal128_26=np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
-            EventVectorDecimal128(v_decimal128_26=np.array([None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
-            EventVectorDecimal128(v_decimal128_26=np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
-            EventVectorDecimal128(v_decimal128_26=np.array([Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
+            EventVectorDecimal128(v_decimal128_26=np.array(
+                [None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],
+                dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+            EventVectorDecimal128(v_decimal128_26=np.array(
+                [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+            EventVectorDecimal128(v_decimal128_26=np.array(
+                [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+            EventVectorDecimal128(v_decimal128_26=np.array(
+                [None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],
+                dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+            EventVectorDecimal128(v_decimal128_26=np.array(
+                [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
+            EventVectorDecimal128(v_decimal128_26=np.array(
+                [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
+            EventVectorDecimal128(v_decimal128_26=np.array(
+                [None, Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None],
+                dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
+            EventVectorDecimal128(v_decimal128_26=np.array(
+                [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
+            EventVectorDecimal128(v_decimal128_26=np.array(
+                [Decimal('0.00000000000000000000000000'), Decimal('3.14159265358979323846264338'), None, None],
+                dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
         ]
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
@@ -6059,24 +6592,40 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventAllType])
+        sender = EventSender(self.__class__.conn, "input", [EventAllType])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
         client = EventClient([EventAllType])
-        client.subscribe(HOST, PORT, handler, "input", "ttt", offset=0, resub=False, userName="admin",password="123456")
-        event = EventAllType(s_bool=True,s_char=1,s_short=2,s_int=3,s_long=4,s_date=0,s_month=0,s_time=0,s_minute=0,s_second=0,s_datetime=0,s_timestamp=0,s_nanotime=0,s_nanotimestamp=0,s_datehour=0,s_float=3.14,s_double=3.14,s_string="123",s_blob="132",s_int128='e1671797c52e15f763380b45e841ec32',s_uuid='5d212a78-cc48-e3b1-4235-b4d91473ee87',s_ipaddr='127.0.0.1',s_decimal32_4=Decimal("3.1415"),s_decimal64_12=Decimal('3.141592653589'),s_decimal128_26=Decimal('3.14159265358979323846264338'),v_bool=[True,False],v_char=[1,2],v_short=[1,2],v_int=[1,2],v_long=[1,2],v_date=[0,0],v_month=[0,0],v_time=[0,0],v_minute=[0,0],v_second=[0,0],v_datetime=[0,0],v_timestamp=[0,0],v_nanotime=[0,0],v_nanotimestamp=[0,0],v_datehour=[0,0],v_float=[0,0],v_double=[0,0],v_string=["1","2"],v_blob=["1","2"],v_symbol=["1","2"],v_int128=['e1671797c52e15f763380b45e841ec32','e1671797c52e15f763380b45e841ec32'],v_uuid=['5d212a78-cc48-e3b1-4235-b4d91473ee87','5d212a78-cc48-e3b1-4235-b4d91473ee87'],v_ipaddr=['127.0.0.1','127.0.0.1'],v_decimal32_4=[Decimal("3.1415")],v_decimal64_12=[Decimal('3.141592653589')],v_decimal128_26=[Decimal('3.14159265358979323846264338')])
+        client.subscribe(HOST, PORT, handler, "input", "ttt", offset=0, userName="admin",
+                         password="123456")
+        event = EventAllType(s_bool=True, s_char=1, s_short=2, s_int=3, s_long=4, s_date=0, s_month=0, s_time=0,
+                             s_minute=0, s_second=0, s_datetime=0, s_timestamp=0, s_nanotime=0, s_nanotimestamp=0,
+                             s_datehour=0, s_float=3.14, s_double=3.14, s_string="123", s_blob="132",
+                             s_int128='e1671797c52e15f763380b45e841ec32', s_uuid='5d212a78-cc48-e3b1-4235-b4d91473ee87',
+                             s_ipaddr='127.0.0.1', s_decimal32_4=Decimal("3.1415"),
+                             s_decimal64_12=Decimal('3.141592653589'),
+                             s_decimal128_26=Decimal('3.14159265358979323846264338'), v_bool=[True, False],
+                             v_char=[1, 2], v_short=[1, 2], v_int=[1, 2], v_long=[1, 2], v_date=[0, 0], v_month=[0, 0],
+                             v_time=[0, 0], v_minute=[0, 0], v_second=[0, 0], v_datetime=[0, 0], v_timestamp=[0, 0],
+                             v_nanotime=[0, 0], v_nanotimestamp=[0, 0], v_datehour=[0, 0], v_float=[0, 0],
+                             v_double=[0, 0], v_string=["1", "2"], v_blob=["1", "2"], v_symbol=["1", "2"],
+                             v_int128=['e1671797c52e15f763380b45e841ec32', 'e1671797c52e15f763380b45e841ec32'],
+                             v_uuid=['5d212a78-cc48-e3b1-4235-b4d91473ee87', '5d212a78-cc48-e3b1-4235-b4d91473ee87'],
+                             v_ipaddr=['127.0.0.1', '127.0.0.1'], v_decimal32_4=[Decimal("3.1415")],
+                             v_decimal64_12=[Decimal('3.141592653589')],
+                             v_decimal128_26=[Decimal('3.14159265358979323846264338')])
         sender.sendEvent(event)
         sleep(1)
         client.unsubscribe(HOST, PORT, "input", "ttt")
 
     def test_CEP_double_events(self):
         class Event1(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime1:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime1: Scalar[keys.DT_TIMESTAMP]
 
             def __eq__(self, other):
                 if isinstance(other, Event1):
@@ -6088,7 +6637,7 @@ class TestCEP(object):
                     return False
 
         class Event2(Event):
-            s_char:Scalar[keys.DT_CHAR]
+            s_char: Scalar[keys.DT_CHAR]
             eventTime2: Scalar[keys.DT_TIMESTAMP]
 
             def __eq__(self, other):
@@ -6145,18 +6694,19 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[Event1,Event2], eventTimeFields=["eventTime1","eventTime2"])
+        sender = EventSender(self.__class__.conn, "input", [Event1, Event2],
+                             eventTimeFields=["eventTime1", "eventTime2"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
-        client = EventClient([Event1,Event2], eventTimeFields=["eventTime1","eventTime2"])
-        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, resub=False, userName="admin",
+        client = EventClient([Event1, Event2], eventTimeFields=["eventTime1", "eventTime2"])
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
                          password="123456")
-        event1=Event1(True,0)
-        event2 = Event2(0,1)
+        event1 = Event1(True, 0)
+        event2 = Event2(0, 1)
         sender.sendEvent(event1)
         sender.sendEvent(event2)
         sleep(1)
@@ -6172,13 +6722,14 @@ class TestCEP(object):
 
     def test_CEP_events_double_commonFields(self):
         class EventTest(Event):
-            s_bool1:Scalar[keys.DT_BOOL]
+            s_bool1: Scalar[keys.DT_BOOL]
             s_bool2: Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
             def __eq__(self, other):
                 if isinstance(other, EventTest):
-                    if equalPlus(self.s_bool1, other.s_bool1) and equalPlus(self.s_bool2, other.s_bool2) and self.eventTime == other.eventTime:
+                    if equalPlus(self.s_bool1, other.s_bool1) and equalPlus(self.s_bool2,
+                                                                            other.s_bool2) and self.eventTime == other.eventTime:
                         return True
                     else:
                         return False
@@ -6220,27 +6771,121 @@ class TestCEP(object):
             subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
         """
         self.__class__.conn.run(scripts)
-        sender = EventSender(self.__class__.conn, "input",[EventTest], eventTimeFields=["eventTime"],commonFields=["s_bool1","s_bool2"])
+        sender = EventSender(self.__class__.conn, "input", [EventTest], eventTimeFields=["eventTime"],
+                             commonFields=["s_bool1", "s_bool2"])
         result = []
 
-        def handler(event):
-            print(event)
-            result.append(event)
+        def handler(_event):
+            print(_event)
+            result.append(_event)
 
-        client = EventClient([EventTest], eventTimeFields=["eventTime"],commonFields=["s_bool1","s_bool2"])
-        client.subscribe(HOST, PORT, handler, "input", "ttt", offset=0, resub=False, userName="admin",
+        client = EventClient([EventTest], eventTimeFields=["eventTime"], commonFields=["s_bool1", "s_bool2"])
+        client.subscribe(HOST, PORT, handler, "input", "ttt", offset=0, userName="admin",
                          password="123456")
-        event=EventTest(True,False,0)
+        event = EventTest(True, False, 0)
         sender.sendEvent(event)
         sleep(1)
         client.unsubscribe(HOST, PORT, "input", "ttt")
         expect = [
-            EventTest(s_bool1=True,s_bool2=False,eventTime=np.datetime64('1970-01-01T00:00:00.000', 'ms')),
+            EventTest(s_bool1=True, s_bool2=False, eventTime=np.datetime64('1970-01-01T00:00:00.000', 'ms')),
         ]
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
         # check api deserialize
         for r, e in zip(result, expect):
             assert r == e
+
+    def test_CEP_vector_65535(self):
+        class EventVectorInt(Event):
+            _event_name = "EventVectorInt"
+            v_int: Vector[keys.DT_INT]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
+
+            def __eq__(self, other):
+                if isinstance(other, EventVectorInt):
+                    if equalPlus(self.v_int, other.v_int) and self.eventTime == other.eventTime:
+                        return True
+                    else:
+                        return False
+                else:
+                    return False
+
+        scripts = """
+            share table(100:0,`v_int`eventTime,[INT[],TIMESTAMP]) as `eventTest
+            class EventVectorInt{
+                v_int::INT VECTOR
+                eventTime::TIMESTAMP
+                def EventVectorInt(v_int_){
+                    v_int=v_int_
+                    eventTime=now()
+                }
+            }
+            class EventVectorIntMonitor{
+                def EventVectorIntMonitor(){}
+                def updateEventVectorInt(event){
+                    insert into eventTest values([event.v_int],event.eventTime)
+                    emitEvent(event)
+                }
+                def onload(){
+                    addEventListener(updateEventVectorInt,'EventVectorInt',,'all')
+                }
+            }
+            dummy = table(array(TIMESTAMP, 0) as eventTime, array(STRING, 0) as eventType, array(BLOB, 0) as blobs, array(INT[], 0) as v_int)
+            share streamTable(array(TIMESTAMP, 0) as eventTime, array(STRING, 0) as eventType, array(BLOB, 0) as blobs, array(INT[], 0) as v_int) as input
+            share streamTable(array(TIMESTAMP, 0) as eventTime, array(STRING, 0) as eventType, array(BLOB, 0) as blobs, array(INT[], 0) as v_int) as output
+            schema = table(1:0, `eventType`eventField`fieldType`fieldTypeId`fieldFormId, [STRING, STRING, STRING, INT[], INT[]])
+            eventField="v_int,eventTime"
+            fieldType="INT,TIMESTAMP"
+            fieldTypeId=[[INT,TIMESTAMP]]
+            fieldFormId=[[VECTOR,SCALAR]]
+            insert into schema values("EventVectorInt", eventField, fieldType,fieldTypeId,fieldFormId)
+            outputSerializer = streamEventSerializer(name=`serOutput, eventSchema=schema, outputTable=output, eventTimeField = "eventTime", commonField="v_int")
+            engine = createCEPEngine('cep1', <EventVectorIntMonitor()>, dummy, [EventVectorInt], 1, 'eventTime', 10000, outputSerializer)
+            subscribeTable(,`input, `subopt, 0, getStreamEngine('cep1'),true)
+        """
+        self.__class__.conn.run(scripts)
+        sender = EventSender(self.__class__.conn, "input", [EventVectorInt], eventTimeFields=["eventTime"],
+                             commonFields=["v_int"])
+        result = []
+
+        def handler(_event):
+            print(_event)
+            result.append(_event)
+
+        client = EventClient([EventVectorInt], eventTimeFields=["eventTime"], commonFields=["v_int"])
+        client.subscribe(HOST, PORT, handler, "output", "ttt", offset=0, userName="admin",
+                         password="123456")
+        for index, data in enumerate((
+                [i for i in range(65535)],
+        )):
+            eventTime = f'2024-03-25T12:30:05.{index:03}'
+            event = EventVectorInt(
+                v_int=data,
+                eventTime=np.datetime64(eventTime, 'ms')
+            )
+            sender.sendEvent(event)
+        sleep(1)
+        client.unsubscribe(HOST, PORT, "output", "ttt")
+        # check CommonFields
+        assert self.__class__.conn.run(
+            "eqObj(output['v_int'][0,],array(INT[]).append!([0..65534]))")
+        # check server deserialize
+        df_expect = pd.DataFrame({
+            'v_int': [
+                np.array([i for i in range(65535)], dtype=np.int32),
+            ],
+            'eventTime': np.array([f'2024-03-25T12:30:05.000'], dtype='datetime64[ns]')
+        })
+        df = self.__class__.conn.run("eventTest")
+        assert equalPlus(df, df_expect)
+        expect = [
+            EventVectorInt(v_int=np.array([i for i in range(65535)], dtype=np.int32),
+                           eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+        ]
+        assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))
+        # check api deserialize
+        for r, e in zip(result, expect):
+            assert r == e
+
 
 class TestEventSender(object):
     conn: ddb.Session
@@ -6263,7 +6908,7 @@ class TestEventSender(object):
     def setup_method(self):
         try:
             self.__class__.conn.run("1")
-        except:
+        except RuntimeError:
             self.__class__.conn.connect(HOST, PORT, USER, PASSWD)
         self.__class__.conn.run("""
             all_pubTables = getStreamingStat().pubTables
@@ -6281,85 +6926,90 @@ class TestEventSender(object):
     #     self.__class__.conn.clearAllCache()
 
     def test_EventSender_eventSchema_type_error(self):
-        with pytest.raises(TypeError,match="eventSchema must be a list of child class of Event"):
-            EventSender(self.__class__.conn, "input",1)
-        with pytest.raises(ValueError,match="The event defined must be a child class of Event"):
-            EventSender(self.__class__.conn, "input",[1])
+        with pytest.raises(TypeError, match="eventSchema must be a list of child class of Event"):
+            EventSender(self.__class__.conn, "input", 1)
+        with pytest.raises(ValueError, match="The event defined must be a child class of Event"):
+            EventSender(self.__class__.conn, "input", [1])
 
     def test_EventSender_eventSchema_empty(self):
-        with pytest.raises(RuntimeError,match='eventSchema must be non-null and non-empty'):
-            EventSender(self.__class__.conn, "input",[])
+        with pytest.raises(RuntimeError, match='eventSchema must be non-null and non-empty'):
+            EventSender(self.__class__.conn, "input", [])
 
     def test_EventSender_eventSchema_event_empty(self):
         class EventEmpty(Event):
             pass
-        with pytest.raises(RuntimeError,match="The fieldNames in eventSchema must be a non-empty string"):
-            EventSender(self.__class__.conn, "input",[EventEmpty])
+
+        with pytest.raises(RuntimeError, match="The fieldNames in eventSchema must be a non-empty string"):
+            EventSender(self.__class__.conn, "input", [EventEmpty])
 
     def test_EventSender_eventSchema_event_error_extraParam(self):
         class EventErrorExtraParam(Event):
-            s_bool:Scalar[keys.DT_BOOL,4]
+            s_bool: Scalar[keys.DT_BOOL, 4]
 
         self.__class__.conn.run("share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        sender=EventSender(self.__class__.conn, "input",[EventErrorExtraParam])
+        sender = EventSender(self.__class__.conn, "input", [EventErrorExtraParam])
         sender.sendEvent(EventErrorExtraParam(True))
 
     def test_EventSender_send_event_not_in_eventSchema(self):
         class EventSchema(Event):
-            s_bool:Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
 
         class EventSend(Event):
-            test:Scalar[keys.DT_BOOL]
+            test: Scalar[keys.DT_BOOL]
 
         self.__class__.conn.run("share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        sender=EventSender(self.__class__.conn, "input",[EventSchema])
-        with pytest.raises(RuntimeError,match="Unknown eventType EventSend"):
+        sender = EventSender(self.__class__.conn, "input", [EventSchema])
+        with pytest.raises(RuntimeError, match="Unknown eventType EventSend"):
             sender.sendEvent(EventSend(True))
 
     def test_EventSender_schema_mismatch(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
         self.__class__.conn.run("share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        with pytest.raises(RuntimeError,match="Schema mismatch: Output table contains 2cols, expected 3 cols."):
-            sender=EventSender(self.__class__.conn, "input",[EventTest],eventTimeFields="eventTime")
+        with pytest.raises(RuntimeError, match="Schema mismatch: Output table contains 2 cols, expected 3 cols."):
+            EventSender(self.__class__.conn, "input", [EventTest], eventTimeFields="eventTime")
 
     def test_EventSender_eventTimeFields_not_time(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_BLOB]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_BLOB]
 
-        self.__class__.conn.run("share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        sender=EventSender(self.__class__.conn, "input",[EventTest],eventTimeFields="eventTime")
-        with pytest.raises(RuntimeError,match="Failed to append data to column 'eventTime' with error"):
-            sender.sendEvent(EventTest(True,b""))
+        self.__class__.conn.run(
+            "share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
+        sender = EventSender(self.__class__.conn, "input", [EventTest], eventTimeFields="eventTime")
+        with pytest.raises(RuntimeError, match="Failed to append data to column 'eventTime' with error"):
+            sender.sendEvent(EventTest(True, b""))
 
     def test_EventSender_commonFields_absent(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
-        self.__class__.conn.run("share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs,array(INT,0) as a) as input")
-        with pytest.raises(RuntimeError,match="Event EventTest doesn't contain commonField a"):
-            EventSender(self.__class__.conn, "input",[EventTest],eventTimeFields="eventTime",commonFields=["a"])
+        self.__class__.conn.run(
+            "share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs,array(INT,0) as a) as input")
+        with pytest.raises(RuntimeError, match="Event EventTest doesn't contain commonField a"):
+            EventSender(self.__class__.conn, "input", [EventTest], eventTimeFields="eventTime", commonFields=["a"])
 
     def test_EventSender_connect_closed(self):
         class EventSchema(Event):
-            s_bool:Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
 
-        conn=ddb.Session(HOST,PORT,USER,PASSWD)
+        conn = ddb.Session(HOST, PORT, USER, PASSWD)
         conn.close()
         self.__class__.conn.run("share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        with pytest.raises(RuntimeError,match="Couldn't send script/function to the remote host because the connection has been closed"):
-            sender=EventSender(conn, "input",[EventSchema])
+        with pytest.raises(RuntimeError,
+                           match="Couldn't send script/function to the remote host because the connection has been closed"):
+            EventSender(conn, "input", [EventSchema])
 
     def test_EventSender_connect_table_absent(self):
         class EventSchema(Event):
-            s_bool:Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
 
-        with pytest.raises(RuntimeError,match=r"Can\'t find the object with name absent"):
-            sender=EventSender(self.__class__.conn, "absent",[EventSchema])
+        with pytest.raises(RuntimeError, match=r"Can\'t find the object with name absent"):
+            EventSender(self.__class__.conn, "absent", [EventSchema])
+
 
 class TestEventClient(object):
     conn: ddb.Session
@@ -6382,7 +7032,7 @@ class TestEventClient(object):
     def setup_method(self):
         try:
             self.__class__.conn.run("1")
-        except:
+        except RuntimeError:
             self.__class__.conn.connect(HOST, PORT, USER, PASSWD)
         self.__class__.conn.run("""
             all_pubTables = getStreamingStat().pubTables
@@ -6400,221 +7050,218 @@ class TestEventClient(object):
     #     self.__class__.conn.clearAllCache()
 
     def test_EventClient_eventSchema_type_error(self):
-        with pytest.raises(TypeError,match="eventSchema must be a list of child class of Event"):
+        with pytest.raises(TypeError, match="eventSchema must be a list of child class of Event"):
             EventClient(1)
-        with pytest.raises(ValueError,match="The event defined must be a child class of Event"):
+        with pytest.raises(ValueError, match="The event defined must be a child class of Event"):
             EventClient([1])
 
     def test_EventClient_eventSchema_empty(self):
-        with pytest.raises(RuntimeError,match='eventSchema must be non-null and non-empty'):
+        with pytest.raises(RuntimeError, match='eventSchema must be non-null and non-empty'):
             EventClient([])
 
     def test_EventClient_eventSchema_event_empty(self):
         class EventEmpty(Event):
             pass
-        with pytest.raises(RuntimeError,match="The fieldNames in eventSchema must be a non-empty string"):
+
+        with pytest.raises(RuntimeError, match="The fieldNames in eventSchema must be a non-empty string"):
             EventClient([EventEmpty])
 
     def test_EventClient_eventSchema_event_error_extraParam(self):
         class EventErrorExtraParam(Event):
-            s_bool:Scalar[keys.DT_BOOL,4]
+            s_bool: Scalar[keys.DT_BOOL, 4]
 
         self.__class__.conn.run("share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        sender=EventSender(self.__class__.conn, "input",[EventErrorExtraParam])
-        client=EventClient([EventErrorExtraParam])
-        client.subscribe(HOST,PORT,print,"input","ttt")
+        sender = EventSender(self.__class__.conn, "input", [EventErrorExtraParam])
+        client = EventClient([EventErrorExtraParam])
+        client.subscribe(HOST, PORT, print, "input", "ttt")
         sender.sendEvent(EventErrorExtraParam(True))
         sleep(1)
-        client.unsubscribe(HOST,PORT,"input","ttt")
+        client.unsubscribe(HOST, PORT, "input", "ttt")
 
     def test_EventClient_receive_event_not_in_eventSchema(self):
         class EventSchema(Event):
-            s_bool:Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
 
         class EventReceive(Event):
-            test:Scalar[keys.DT_BOOL]
+            test: Scalar[keys.DT_BOOL]
 
         self.__class__.conn.run("share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        sender=EventSender(self.__class__.conn, "input",[EventSchema])
-        client=EventClient([EventReceive])
-        client.subscribe(HOST,PORT,print,"input","ttt")
+        sender = EventSender(self.__class__.conn, "input", [EventSchema])
+        client = EventClient([EventReceive])
+        client.subscribe(HOST, PORT, print, "input", "ttt")
         sender.sendEvent(EventSchema(True))
         sleep(1)
         # todo:check
-        client.unsubscribe(HOST,PORT,"input","ttt")
+        client.unsubscribe(HOST, PORT, "input", "ttt")
 
-    # todo: bug
-    @pytest.mark.skip(reason="bug")
     def test_EventClient_schema_mismatch(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
         self.__class__.conn.run("share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        sender=EventSender(self.__class__.conn, "input",[EventTest])
-        client=EventClient([EventTest],"eventTime")
-        client.subscribe(HOST,PORT,print,"input")
-        sender.sendEvent(EventTest(True,0))
-        sleep(1)
+        client = EventClient([EventTest], "eventTime")
+        with pytest.raises(RuntimeError, match="Schema mismatch"):
+            client.subscribe(HOST, PORT, print, "input")
 
-    def test_EventSender_eventTimeFields_not_time(self):
+    def test_EventClient_eventTimeFields_not_time(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_BLOB]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_BLOB]
 
-        self.__class__.conn.run("share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs,array(BLOB, 0) as eventTime) as input")
-        sender=EventSender(self.__class__.conn, "input",[EventTest],commonFields=["eventTime"])
-        client=EventClient([EventTest],eventTimeFields="eventTime")
-        client.subscribe(HOST,PORT,print,"input")
-        sender.sendEvent(EventTest(True,b""))
+        self.__class__.conn.run(
+            "share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs,array(BLOB, 0) as eventTime) as input")
+        sender = EventSender(self.__class__.conn, "input", [EventTest], commonFields=["eventTime"])
+        client = EventClient([EventTest], commonFields=["eventTime"])
+        client.subscribe(HOST, PORT, print, "input")
+        sender.sendEvent(EventTest(True, b""))
         sleep(1)
-        client.unsubscribe(HOST,PORT,"input")
+        client.unsubscribe(HOST, PORT, "input")
 
     def test_EventSender_commonFields_Event_absent(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
-        with pytest.raises(RuntimeError,match="Event EventTest doesn't contain commonField a"):
-            client=EventClient([EventTest],eventTimeFields="eventTime",commonFields=["a"])
+        with pytest.raises(RuntimeError, match="Event EventTest doesn't contain commonField a"):
+            EventClient([EventTest], eventTimeFields="eventTime", commonFields=["a"])
 
     def test_EventSender_commonFields_table_absent(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
-        class EventTest_(Event):
+        class EventTestClass(Event):
             _event_name = "EventTest"
-            a:Scalar[keys.DT_BOOL]
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            a: Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
-        self.__class__.conn.run("share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        sender=EventSender(self.__class__.conn, "input",[EventTest],eventTimeFields="eventTime")
-        client=EventClient([EventTest_],eventTimeFields="eventTime",commonFields=["a"])
-        client.subscribe(HOST,PORT,print,"input")
-        sender.sendEvent(EventTest(True,0))
-        sleep(1)
-        # todo:check
-        client.unsubscribe(HOST,PORT,"input")
+        self.__class__.conn.run(
+            "share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
+        client = EventClient([EventTestClass], eventTimeFields="eventTime", commonFields=["a"])
+        with pytest.raises(RuntimeError, match="Schema mismatch"):
+            client.subscribe(HOST, PORT, print, "input")
 
     def test_EventClient_subscribe_host_error(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
-        client=EventClient([EventTest])
-        with pytest.raises(RuntimeError,match="Failed to connect to primary and all backup nodes"):
-            client.subscribe("192.168.0.0",8848,print,"input")
+        client = EventClient([EventTest])
+        with pytest.raises(RuntimeError, match="Subscribe Fail"):
+            client.subscribe("192.168.0.0", 8848, print, "input")
 
     def test_EventClient_subscribe_port_error(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
-        client=EventClient([EventTest])
-        with pytest.raises(RuntimeError,match="Failed to connect to primary and all backup nodes"):
-            client.subscribe("192.168.0.54",8888,print,"input")
+        client = EventClient([EventTest])
+        with pytest.raises(RuntimeError, match="Subscribe Fail"):
+            client.subscribe("192.168.0.54", 8888, print, "input")
 
     def test_EventClient_subscribe_table_absent(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
-        client=EventClient([EventTest])
-        with pytest.raises(RuntimeError,match="The publisher doesn't have the table \[absent\]"):
-            client.subscribe(HOST,PORT,print,"absent")
+        client = EventClient([EventTest])
+        with pytest.raises(RuntimeError, match=r"Can\'t find the object with name absent\'"):
+            client.subscribe(HOST, PORT, print, "absent")
 
     def test_EventClient_subscribe_action_existed(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
-            eventTime:Scalar[keys.DT_TIMESTAMP]
+            s_bool: Scalar[keys.DT_BOOL]
+            eventTime: Scalar[keys.DT_TIMESTAMP]
 
-        self.__class__.conn.run("share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
-        client=EventClient([EventTest],eventTimeFields="eventTime")
-        client.subscribe(HOST,PORT,print,"input","existed")
-        with pytest.raises(RuntimeError,match="already exists"):
+        self.__class__.conn.run(
+            "share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input")
+        client = EventClient([EventTest], eventTimeFields="eventTime")
+        client.subscribe(HOST, PORT, print, "input", "existed")
+        with pytest.raises(RuntimeError, match="already exists"):
             client.subscribe(HOST, PORT, print, "input", "existed")
 
     def test_EventClient_subscribe_twice(self):
         class EventTest1(Event):
-            s_bool:Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
 
         class EventTest2(Event):
-            v_bool:Vector[keys.DT_BOOL]
+            v_bool: Vector[keys.DT_BOOL]
 
         self.__class__.conn.run("""
             share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input1
             share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input2
         """)
-        sender1=EventSender(self.__class__.conn, "input1",[EventTest1])
-        sender2=EventSender(self.__class__.conn, "input2",[EventTest2])
-        client=EventClient([EventTest1,EventTest2])
-        client.subscribe(HOST,PORT,print,"input1","input1")
+        sender1 = EventSender(self.__class__.conn, "input1", [EventTest1])
+        sender2 = EventSender(self.__class__.conn, "input2", [EventTest2])
+        client = EventClient([EventTest1, EventTest2])
+        client.subscribe(HOST, PORT, print, "input1", "input1")
         client.subscribe(HOST, PORT, print, "input2", "input2")
         sender1.sendEvent(EventTest1(True))
         sender2.sendEvent(EventTest2([True]))
         sleep(1)
         # todo:check
-        client.unsubscribe(HOST,PORT,"input1","input1")
+        client.unsubscribe(HOST, PORT, "input1", "input1")
         client.unsubscribe(HOST, PORT, "input2", "input2")
 
     def test_EventClient_subscribe_offset_minus_two(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
 
         self.__class__.conn.run("""
             share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input
         """)
-        sender=EventSender(self.__class__.conn, "input",[EventTest])
-        client=EventClient([EventTest])
-        client.subscribe(HOST,PORT,print,"input",offset=-2)
+        sender = EventSender(self.__class__.conn, "input", [EventTest])
+        client = EventClient([EventTest])
+        client.subscribe(HOST, PORT, print, "input", offset=-2)
         sender.sendEvent(EventTest(True))
         sender.sendEvent(EventTest(False))
         sleep(1)
         # todo:check
-        client.unsubscribe(HOST,PORT,"input")
+        client.unsubscribe(HOST, PORT, "input")
 
     def test_EventClient_subscribe_offset_one(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
 
         self.__class__.conn.run("""
             share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input
         """)
-        sender=EventSender(self.__class__.conn, "input",[EventTest])
-        client=EventClient([EventTest])
+        sender = EventSender(self.__class__.conn, "input", [EventTest])
+        client = EventClient([EventTest])
         sender.sendEvent(EventTest(True))
-        client.subscribe(HOST,PORT,print,"input",offset=1)
+        client.subscribe(HOST, PORT, print, "input", offset=1)
         sender.sendEvent(EventTest(False))
         sleep(1)
         # todo:check
-        client.unsubscribe(HOST,PORT,"input")
+        client.unsubscribe(HOST, PORT, "input")
 
     def test_EventClient_unsubscribe_absent(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
 
-        client=EventClient([EventTest])
-        with pytest.raises(RuntimeError,match='not exists'):
-            client.unsubscribe(HOST,PORT,"absent")
+        client = EventClient([EventTest])
+        with pytest.raises(RuntimeError, match='not exists'):
+            client.unsubscribe(HOST, PORT, "absent")
 
     def test_EventClient_getSubscriptionTopics(self):
         class EventTest(Event):
-            s_bool:Scalar[keys.DT_BOOL]
+            s_bool: Scalar[keys.DT_BOOL]
 
         self.__class__.conn.run("""
             share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as input
         """)
-        sender=EventSender(self.__class__.conn, "input",[EventTest])
-        client=EventClient([EventTest])
+        sender = EventSender(self.__class__.conn, "input", [EventTest])
+        client = EventClient([EventTest])
         sender.sendEvent(EventTest(True))
-        client.subscribe(HOST,PORT,print,"input")
+        client.subscribe(HOST, PORT, print, "input")
         sender.sendEvent(EventTest(False))
-        assert client.getSubscriptionTopics()==[HOST+"/"+str(PORT)+"/input/"]
+        assert client.getSubscriptionTopics() == [HOST + "/" + str(PORT) + "/input/"]
         sleep(1)
         # todo:check
-        client.unsubscribe(HOST,PORT,"input")
+        client.unsubscribe(HOST, PORT, "input")
+
 
 class TestEvent(object):
     conn: ddb.Session
@@ -6637,33 +7284,33 @@ class TestEvent(object):
     def setup_method(self):
         try:
             self.__class__.conn.run("1")
-        except:
+        except RuntimeError:
             self.__class__.conn.connect(HOST, PORT, USER, PASSWD)
 
     def test_Event_array_vector(self):
-        with pytest.raises(ValueError,match="ArrayVector is not supported"):
+        with pytest.raises(ValueError, match="ArrayVector is not supported"):
             class EventArrayVector(Event):
-                test:Vector[keys.DT_BOOL_ARRAY]
+                test: Vector[keys.DT_BOOL_ARRAY]
 
     def test_Event_error_form(self):
-        with pytest.raises(ValueError,match="Invalid data form"):
+        with pytest.raises(ValueError, match="Invalid data form"):
             class EventErrorType(Event):
-                test:str
+                test: str
 
     def test_Event_scalar_type_not_support(self):
-        with pytest.raises(ValueError,match="Invalid data type"):
+        with pytest.raises(ValueError, match="Invalid data type"):
             class EventScalarTypeNotSupport(Event):
-                test:Scalar[keys.DT_ANY]
+                test: Scalar[keys.DT_ANY]
 
     def test_Event_vector_type_not_support(self):
-        with pytest.raises(ValueError,match="Invalid data type"):
+        with pytest.raises(ValueError, match="Invalid data type"):
             class EventVectorTypeNotSupport(Event):
-                test:Vector[keys.DT_ANY]
+                test: Vector[keys.DT_ANY]
 
     def test_Event_scalar_decimal_miss_precision(self):
-        with pytest.raises(ValueError,match="Must specify exparam for DECIMAL"):
+        with pytest.raises(ValueError, match="Must specify exparam for DECIMAL"):
             class Decimal32MissPrecision(Event):
-                s_decimal32:Scalar[keys.DT_DECIMAL32]
+                s_decimal32: Scalar[keys.DT_DECIMAL32]
         with pytest.raises(ValueError, match="Must specify exparam for DECIMAL"):
             class Decimal64MissPrecision(Event):
                 s_decimal64: Scalar[keys.DT_DECIMAL64]
@@ -6672,9 +7319,9 @@ class TestEvent(object):
                 s_decimal128: Scalar[keys.DT_DECIMAL128]
 
     def test_Event_vector_decimal_miss_precision(self):
-        with pytest.raises(ValueError,match="Must specify exparam for DECIMAL"):
+        with pytest.raises(ValueError, match="Must specify exparam for DECIMAL"):
             class Decimal32MissPrecision(Event):
-                v_decimal32:Vector[keys.DT_DECIMAL32]
+                v_decimal32: Vector[keys.DT_DECIMAL32]
         with pytest.raises(ValueError, match="Must specify exparam for DECIMAL"):
             class Decimal64MissPrecision(Event):
                 v_decimal64: Vector[keys.DT_DECIMAL64]

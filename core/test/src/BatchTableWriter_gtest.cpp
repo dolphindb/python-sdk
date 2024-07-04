@@ -1,3 +1,5 @@
+#include "config.h"
+
 namespace{
 	class BatchTableWriterTest:public testing::Test
 	{
@@ -22,13 +24,21 @@ namespace{
 		virtual void SetUp()
 		{
 			cout<<"check connect...";
-			ConstantSP res = conn.run("1+1");
-			
-        cout<<"ok"<<endl;
+			try
+			{
+				ConstantSP res = conn.run("1+1");
+			}
+			catch(const std::exception& e)
+			{
+				conn.connect(hostName, port, "admin", "123456");
+			}
+
+			cout<<"ok"<<endl;
+			CLEAR_ENV(conn);
 		}
 		virtual void TearDown()
 		{
-			conn.run("undef all;");
+			CLEAR_ENV(conn);
 		}
 	};
 
@@ -329,6 +339,10 @@ namespace{
 
 	static void test_batchTableWriter_insert_thread_fuction(int id, BatchTableWriter &btw, string dbName, string tableName,
 		TableSP data) {
+		if (tableName == "") {
+			tableName = dbName;
+			dbName = "";
+		}
 		DBConnection connNew;
 		connNew.connect(hostName, port, "admin", "123456");
 		size_t dataRow = data->rows();
@@ -541,7 +555,13 @@ namespace{
 	static void batchTableWriter_thread_getStatus(BatchTableWriter &bts, string dbName, string tableName) {
 		while (!stopFlag) {
 			this_thread::sleep_for(chrono::milliseconds(10000));
-			std::tuple<int, bool, bool> t = bts.getStatus(dbName, tableName);
+			if (tableName == "") {
+				std::tuple<int, bool, bool> t = bts.getStatus(tableName, dbName);
+			}
+			else {
+				std::tuple<int, bool, bool> t = bts.getStatus(dbName, tableName);
+			}
+			
 		}
 	}
 
@@ -762,7 +782,10 @@ namespace{
 			"share table(100:0,`id`dbbool `dbchar `dbshort `dbstring `dblong `dbnanotime `dbnanotimestamp `dbtimestamp `dbfloat `dbdouble `dbint `dbdate `dbmonth `dbtime `dbsecond `dbminute `dbdatetime `dbdatehour `iid, [INT, BOOL, CHAR, SHORT, STRING, LONG, NANOTIME, NANOTIMESTAMP, TIMESTAMP, FLOAT, DOUBLE, INT, DATE, MONTH, TIME, SECOND, MINUTE, DATETIME, DATEHOUR, INT]) as " +
 			dbName + ";";
 		connNew.run(script);
-		btw.addTable(dbName, tableName);
+		if (tableName == "")
+			btw.addTable(tableName, dbName);
+		else
+			btw.addTable(dbName, tableName);
 		string tableLocation = tableName != "" ? "loadTable('" + dbName + "', '" + tableName + "')" : dbName;
 		connNew.run("testRow = " + to_string(testRow) + ";"
 			"data = table(\n"
@@ -895,7 +918,7 @@ namespace{
 
 	TEST_F(BatchTableWriterTest,test_batchTableWriter_insert_multithread_one_dfsTable){
 		BatchTableWriter btw(hostName, port, "admin", "123456", true);
-		test_batchTableWriter_insert_multithread(ref(btw), "dfs://test_batchTableWriter", "batchTableWriter", true,
+		test_batchTableWriter_insert_multithread(ref(btw), "dfs://batchTableWriter", "batchTableWriter", true,
 			"test_batchTableWriter_insert_multithread_one_dfsTable", 100000);
 		ConstantSP ret = conn.run("flag = array(BOOL, 0, 10);"
 			"login(\"admin\",\"123456\");"
@@ -909,7 +932,7 @@ namespace{
 
 	TEST_F(BatchTableWriterTest,test_batchTableWriter_insert_multithread_one_memoryTable){
 		BatchTableWriter btw(hostName, port, "admin", "123456", true);
-		test_batchTableWriter_insert_multithread(ref(btw), "test_batchTableWriter_insert_multithread_one_memoryTable", "batchTableWriter", true,
+		test_batchTableWriter_insert_multithread(ref(btw), "batchTableWriter", "", true,
 			"test_batchTableWriter_insert_multithread_one_memoryTable", 100000);
 		ConstantSP ret = conn.run("flag = array(BOOL, 0, 10);"
 			"login(\"admin\",\"123456\");"
@@ -971,7 +994,7 @@ namespace{
 		BatchTableWriter btw(hostName, port, "admin", "123456", true);
 		thread threadVec[4];
 		for (int i = 0; i < 4; ++i) {
-			threadVec[i] = thread(test_batchTableWriter_insert_multithread, ref(btw), "dfs://test_btw"+ to_string(i), "batchTableWriter" + to_string(i),
+			threadVec[i] = thread(test_batchTableWriter_insert_multithread, ref(btw), "batchTableWriter" + to_string(i), "",
 				true, "test_batchTableWriter_insert_multithread_memoryTable" + to_string(i), 100000);
 		}
 		for (int i = 0; i < 4; ++i) {

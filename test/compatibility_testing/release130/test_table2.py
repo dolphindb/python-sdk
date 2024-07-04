@@ -31,7 +31,6 @@ class TestTable2:
         except:
             self.conn.connect(HOST, PORT, USER, PASSWD)
             stript = r'''
-                login("admin", "123456")
                 share_tabs = (select name from objs(true) where shared = true)[`name]
                 if(not `shareTrade in share_tabs and not `shareQuote in share_tabs){
                     time1=10:01:01 join 10:01:03 join 10:01:05 join 10:01:05
@@ -938,7 +937,7 @@ class TestTable2:
         self.conn.run("undef", tbName)
 
     def test_runFile(self):
-        file_path = DATA_DIR+"/run_data.txt"
+        file_path = LOCAL_DATA_DIR+"/run_data.txt"
         s = self.conn
         s.runFile(file_path)
         t1 = s.table(data="t1")
@@ -1079,7 +1078,6 @@ class TestTable2:
 
     def test_table_dropPartition_loadtable_tmp_variable(self):
         self.conn.run("""
-                login(`admin, `123456)
                 dbName = "dfs://PTA1_test"
                 tbName = "pt"
                 if(existsDatabase(dbName)) {dropDatabase(dbName)}

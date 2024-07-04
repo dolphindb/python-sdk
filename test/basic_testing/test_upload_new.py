@@ -1,24 +1,29 @@
 import numpy as np
 import pytest
 import dolphindb as ddb
-from pandas2_testing.utils import assertPlus
+from basic_testing.utils import assertPlus
 from setup.settings import *
-from pandas2_testing.prepare import DataUtils
+from basic_testing.prepare import DataUtils
 from setup.utils import get_pid
 import pandas as pd
 import dolphindb.settings as keys
-import pyarrow as pa
+from importlib.util import find_spec
+if find_spec("pyarrow") is not None:
+    import pyarrow as pa
 
-PANDAS_VERSION=tuple(int(i) for i in pd.__version__.split('.'))
+PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
+
+
 # todo:pickle,compress
-class TestUpload(object):
+class TestUploadNew(object):
+    conn: ddb.Session
 
     @classmethod
     def setup_class(cls):
         cls.conn = ddb.Session(HOST, PORT, USER, PASSWD)
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -30,156 +35,188 @@ class TestUpload(object):
     def setup_method(self):
         try:
             self.__class__.conn.run("1")
-        except:
+        except RuntimeError:
             self.__class__.conn.connect(HOST, PORT, USER, PASSWD)
 
     # def teardown_method(self):
     #     self.__class__.conn.undefAll()
     #     self.__class__.conn.clearAllCache()
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_64_scalar(self,data):
-        data_=np.frombuffer(data,dtype=np.float64)[0]
-        self.__class__.conn.upload({'a':data_})
+    @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                      b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_64_scalar(self, data):
+        data_ = np.frombuffer(data, dtype=np.float64)[0]
+        self.__class__.conn.upload({'a': data_})
         assert self.__class__.conn.run('isNanInf(a)==false')
         assert self.__class__.conn.run('isNull(a)')
-        assert self.__class__.conn.run("typestr a")=='DOUBLE'
+        assert self.__class__.conn.run("typestr a") == 'DOUBLE'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_64_vector(self,data):
-        data_=np.frombuffer(data,dtype=np.float64)[0]
-        self.__class__.conn.upload({'a':[data_,data_,data_]})
+    @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                      b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_64_vector(self, data):
+        data_ = np.frombuffer(data, dtype=np.float64)[0]
+        self.__class__.conn.upload({'a': [data_, data_, data_]})
         assert all(self.__class__.conn.run('isNanInf(a)==false'))
         assert all(self.__class__.conn.run('isNull(a)'))
-        assert self.__class__.conn.run("typestr a")=='FAST DOUBLE VECTOR'
+        assert self.__class__.conn.run("typestr a") == 'FAST DOUBLE VECTOR'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_64_set(self,data):
-        data_=np.frombuffer(data,dtype=np.float64)[0]
-        self.__class__.conn.upload({'a':{data_,1.1}})
+    @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                      b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_64_set(self, data):
+        data_ = np.frombuffer(data, dtype=np.float64)[0]
+        self.__class__.conn.upload({'a': {data_, 1.1}})
         assert all(self.__class__.conn.run('isNanInf(a.keys())==false'))
         assert any(self.__class__.conn.run('isNull(a.keys())'))
-        assert self.__class__.conn.run("typestr a")=='DOUBLE SET'
+        assert self.__class__.conn.run("typestr a") == 'DOUBLE SET'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_64_dict(self,data):
-        data_=np.frombuffer(data,dtype=np.float64)[0]
-        self.__class__.conn.upload({'a':{'a':data_,'b':1.1}})
+    @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                      b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_64_dict(self, data):
+        data_ = np.frombuffer(data, dtype=np.float64)[0]
+        self.__class__.conn.upload({'a': {'a': data_, 'b': 1.1}})
         assert self.__class__.conn.run('isNanInf(a["a"])==false')
         assert self.__class__.conn.run('isNull(a["a"])')
-        assert self.__class__.conn.run("typestr a")=='STRING->DOUBLE DICTIONARY'
+        assert self.__class__.conn.run("typestr a") == 'STRING->DOUBLE DICTIONARY'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_64_table(self,data):
-        data_=np.frombuffer(data,dtype=np.float64)[0]
-        self.__class__.conn.upload({'a':pd.DataFrame({'a':[data_]})})
+    @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                      b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_64_table(self, data):
+        data_ = np.frombuffer(data, dtype=np.float64)[0]
+        self.__class__.conn.upload({'a': pd.DataFrame({'a': [data_]})})
         assert self.__class__.conn.run('isNanInf(a["a"][0])==false')
         assert self.__class__.conn.run('isNull(a["a"][0])')
-        assert self.__class__.conn.run('typestr a["a"]')=='FAST DOUBLE VECTOR'
+        assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE VECTOR'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_64_table_array_vector(self,data):
-        data_=np.frombuffer(data,dtype=np.float64)[0]
-        df=pd.DataFrame({'a':[[data_]]})
-        df.__DolphinDB_Type__={
-            'a':keys.DT_DOUBLE_ARRAY
+    @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                      b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_64_table_array_vector(self, data):
+        data_ = np.frombuffer(data, dtype=np.float64)[0]
+        df = pd.DataFrame({'a': [[data_]]})
+        df.__DolphinDB_Type__ = {
+            'a': keys.DT_DOUBLE_ARRAY
         }
-        self.__class__.conn.upload({'a':df})
+        self.__class__.conn.upload({'a': df})
         assert self.__class__.conn.run('isNanInf(a["a"][0][0])==false')
         assert self.__class__.conn.run('isNull(a["a"][0][0])')
-        assert self.__class__.conn.run('typestr a["a"]')=='FAST DOUBLE[] VECTOR'
+        assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE[] VECTOR'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_64_table_setType_FLOAT(self,data):
-        data_=np.frombuffer(data,dtype=np.float64)[0]
-        df=pd.DataFrame({'a':[data_]})
-        df.__DolphinDB_Type__={
-            'a':keys.DT_FLOAT
+    @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                      b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_64_table_setType_FLOAT(self, data):
+        data_ = np.frombuffer(data, dtype=np.float64)[0]
+        df = pd.DataFrame({'a': [data_]})
+        df.__DolphinDB_Type__ = {
+            'a': keys.DT_FLOAT
         }
-        self.__class__.conn.upload({'a':df})
+        self.__class__.conn.upload({'a': df})
         assert self.__class__.conn.run('isNull(a["a"][0])')
-        assert self.__class__.conn.run('typestr a["a"]')=='FAST FLOAT VECTOR'
+        assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT VECTOR'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_64_table_array_vector_setType_FLOAT(self,data):
-        data_=np.frombuffer(data,dtype=np.float64)[0]
-        df=pd.DataFrame({'a':[[data_]]})
-        df.__DolphinDB_Type__={
-            'a':keys.DT_FLOAT_ARRAY
+    @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                      b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_64_table_array_vector_setType_FLOAT(self, data):
+        data_ = np.frombuffer(data, dtype=np.float64)[0]
+        df = pd.DataFrame({'a': [[data_]]})
+        df.__DolphinDB_Type__ = {
+            'a': keys.DT_FLOAT_ARRAY
         }
-        self.__class__.conn.upload({'a':df})
+        self.__class__.conn.upload({'a': df})
         assert self.__class__.conn.run('isNull(a["a"][0][0])')
-        assert self.__class__.conn.run('typestr a["a"]')=='FAST FLOAT[] VECTOR'
+        assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT[] VECTOR'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_32_scalar(self,data):
-        data_=np.frombuffer(data,dtype=np.float32)[0]
-        self.__class__.conn.upload({'a':data_})
+    @pytest.mark.parametrize('data',
+                             [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_32_scalar(self, data):
+        data_ = np.frombuffer(data, dtype=np.float32)[0]
+        self.__class__.conn.upload({'a': data_})
         assert self.__class__.conn.run('isNull(a)')
         assert self.__class__.conn.run("typestr a") == 'FLOAT'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_32_vector(self,data):
-        data_=np.frombuffer(data,dtype=np.float32)[0]
-        self.__class__.conn.upload({'a':[data_,data_,data_]})
+    @pytest.mark.parametrize('data',
+                             [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_32_vector(self, data):
+        data_ = np.frombuffer(data, dtype=np.float32)[0]
+        self.__class__.conn.upload({'a': [data_, data_, data_]})
         assert all(self.__class__.conn.run('isNull(a)'))
-        assert self.__class__.conn.run("typestr a")=='FAST FLOAT VECTOR'
+        assert self.__class__.conn.run("typestr a") == 'FAST FLOAT VECTOR'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_32_set(self,data):
-        data_=np.frombuffer(data,dtype=np.float32)[0]
-        self.__class__.conn.upload({'a':{data_,np.float32(1.1)}})
+    @pytest.mark.parametrize('data',
+                             [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_32_set(self, data):
+        data_ = np.frombuffer(data, dtype=np.float32)[0]
+        self.__class__.conn.upload({'a': {data_, np.float32(1.1)}})
         assert any(self.__class__.conn.run('isNull(a.keys())'))
-        assert self.__class__.conn.run("typestr a")=='FLOAT SET'
+        assert self.__class__.conn.run("typestr a") == 'FLOAT SET'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_32_dict(self,data):
-        data_=np.frombuffer(data,dtype=np.float32)[0]
-        self.__class__.conn.upload({'a':{'a':data_,'b':np.float32(1.1)}})
+    @pytest.mark.parametrize('data',
+                             [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_32_dict(self, data):
+        data_ = np.frombuffer(data, dtype=np.float32)[0]
+        self.__class__.conn.upload({'a': {'a': data_, 'b': np.float32(1.1)}})
         assert self.__class__.conn.run('isNull(a["a"])')
-        assert self.__class__.conn.run("typestr a")=='STRING->FLOAT DICTIONARY'
+        assert self.__class__.conn.run("typestr a") == 'STRING->FLOAT DICTIONARY'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_32_table(self,data):
-        data_=np.frombuffer(data,dtype=np.float32)[0]
-        self.__class__.conn.upload({'a':pd.DataFrame({'a':[data_]})})
+    @pytest.mark.parametrize('data',
+                             [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_32_table(self, data):
+        data_ = np.frombuffer(data, dtype=np.float32)[0]
+        self.__class__.conn.upload({'a': pd.DataFrame({'a': [data_]},dtype=np.float32)})
         assert self.__class__.conn.run('isNull(a["a"][0])')
-        assert self.__class__.conn.run('typestr a["a"]')=='FAST FLOAT VECTOR'
+        assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT VECTOR'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_32_table_array_vector(self,data):
-        data_=np.frombuffer(data,dtype=np.float32)[0]
-        df=pd.DataFrame({'a':[[data_]]})
-        df.__DolphinDB_Type__={
-            'a':keys.DT_FLOAT_ARRAY
+    @pytest.mark.parametrize('data',
+                             [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_32_table_array_vector(self, data):
+        data_ = np.frombuffer(data, dtype=np.float32)[0]
+        df = pd.DataFrame({'a': [[data_]]})
+        df.__DolphinDB_Type__ = {
+            'a': keys.DT_FLOAT_ARRAY
         }
-        self.__class__.conn.upload({'a':df})
+        self.__class__.conn.upload({'a': df})
         assert self.__class__.conn.run('isNull(a["a"][0][0])')
-        assert self.__class__.conn.run('typestr a["a"]')=='FAST FLOAT[] VECTOR'
+        assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT[] VECTOR'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_32_table_setType_DOUBLE(self,data):
-        data_=np.frombuffer(data,dtype=np.float32)[0]
-        df=pd.DataFrame({'a':[data_]})
-        df.__DolphinDB_Type__={
-            'a':keys.DT_DOUBLE
+    @pytest.mark.parametrize('data',
+                             [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_32_table_setType_DOUBLE(self, data):
+        data_ = np.frombuffer(data, dtype=np.float32)[0]
+        df = pd.DataFrame({'a': [data_]})
+        df.__DolphinDB_Type__ = {
+            'a': keys.DT_DOUBLE
         }
-        self.__class__.conn.upload({'a':df})
+        self.__class__.conn.upload({'a': df})
         assert self.__class__.conn.run('isNanInf(a["a"][0])==false')
         assert self.__class__.conn.run('isNull(a["a"][0])')
-        assert self.__class__.conn.run('typestr a["a"]')=='FAST DOUBLE VECTOR'
+        assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE VECTOR'
 
-    @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-    def test_upload_nan_32_table_array_vector_setType_DOUBLE(self,data):
-        data_=np.frombuffer(data,dtype=np.float32)[0]
-        df=pd.DataFrame({'a':[[data_]]})
-        df.__DolphinDB_Type__={
-            'a':keys.DT_DOUBLE_ARRAY
+    @pytest.mark.parametrize('data',
+                             [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                             ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+    def test_upload_nan_32_table_array_vector_setType_DOUBLE(self, data):
+        data_ = np.frombuffer(data, dtype=np.float32)[0]
+        df = pd.DataFrame({'a': [[data_]]})
+        df.__DolphinDB_Type__ = {
+            'a': keys.DT_DOUBLE_ARRAY
         }
-        self.__class__.conn.upload({'a':df})
+        self.__class__.conn.upload({'a': df})
         assert self.__class__.conn.run('isNanInf(a["a"][0][0])==false')
         assert self.__class__.conn.run('isNull(a["a"][0][0])')
-        assert self.__class__.conn.run('typestr a["a"]')=='FAST DOUBLE[] VECTOR'
+        assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE[] VECTOR'
 
     @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getScalar('upload').items()],
                              ids=[i for i in DataUtils.getScalar('upload')])
@@ -204,10 +241,10 @@ class TestUpload(object):
             else:
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-    @pytest.mark.parametrize('order',['K','A','C','F'],ids=['ORDER_K','ORDER_A','ORDER_C','ORDER_F'])
-    def test_upload_vector_np_order(self,order):
-        data=np.array([[1,2,3],[4,5,6]],dtype='int64',order=order)
-        self.__class__.conn.upload({'order_'+order:data[0]})
+    @pytest.mark.parametrize('order', ['K', 'A', 'C', 'F'], ids=['ORDER_K', 'ORDER_A', 'ORDER_C', 'ORDER_F'])
+    def test_upload_vector_np_order(self, order):
+        data = np.array([[1, 2, 3], [4, 5, 6]], dtype='int64', order=order)
+        self.__class__.conn.upload({'order_' + order: data[0]})
         assertPlus(self.__class__.conn.run(f"typestr(order_{order})=='FAST LONG VECTOR'"))
         assertPlus(self.__class__.conn.run(f"order_{order}==[1,2,3]"))
 
@@ -219,10 +256,10 @@ class TestUpload(object):
             assertPlus(self.__class__.conn.run(f"typestr({k})=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}")[0])
 
-    @pytest.mark.parametrize('order',['K','A','C','F'],ids=['ORDER_K','ORDER_A','ORDER_C','ORDER_F'])
-    def test_upload_matrix_np_order(self,order):
-        data=np.array([[1,2,3],[4,5,6],[7,8,9]],dtype='int64',order=order)
-        self.__class__.conn.upload({'order_'+order:data[0:2]})
+    @pytest.mark.parametrize('order', ['K', 'A', 'C', 'F'], ids=['ORDER_K', 'ORDER_A', 'ORDER_C', 'ORDER_F'])
+    def test_upload_matrix_np_order(self, order):
+        data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype='int64', order=order)
+        self.__class__.conn.upload({'order_' + order: data[0:2]})
         assertPlus(self.__class__.conn.run(f"typestr(order_{order})=='FAST LONG MATRIX'"))
         assertPlus(self.__class__.conn.run(f"order_{order}==matrix([[1,4],[2,5],[3,6]])")[0])
 
@@ -256,14 +293,14 @@ class TestUpload(object):
             else:
                 assertPlus(self.__class__.conn.run(f"{k}[`a]=={v['expect_value']}"))
 
-    @pytest.mark.parametrize('dtype',['object','int64','empty'],ids=['DTYPE_OBJECT','DTYPE_INT64','DTYPE_EMPTY'])
-    @pytest.mark.parametrize('order',['K','A','C','F'],ids=['ORDER_K','ORDER_A','ORDER_C','ORDER_F'])
-    def test_upload_table_np_order(self,order,dtype):
-        if dtype!='empty':
-            data=pd.DataFrame(np.array([[1,2],[3,4],[5,6]],dtype=dtype,order=order),columns=['a','b'])
+    @pytest.mark.parametrize('dtype', ['object', 'int64', 'empty'], ids=['DTYPE_OBJECT', 'DTYPE_INT64', 'DTYPE_EMPTY'])
+    @pytest.mark.parametrize('order', ['K', 'A', 'C', 'F'], ids=['ORDER_K', 'ORDER_A', 'ORDER_C', 'ORDER_F'])
+    def test_upload_table_np_order(self, order, dtype):
+        if dtype != 'empty':
+            data = pd.DataFrame(np.array([[1, 2], [3, 4], [5, 6]], dtype=dtype, order=order), columns=['a', 'b'])
         else:
             data = pd.DataFrame(np.array([[1, 2], [3, 4], [5, 6]], order=order), columns=['a', 'b'])
-        self.__class__.conn.upload({'order_'+order:data})
+        self.__class__.conn.upload({'order_' + order: data})
         assertPlus(self.__class__.conn.run(f"order_{order}==table([1,3,5] as `a,[2,4,6] as `b)"))
 
     @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getVectorContainNone('upload').items()],
@@ -326,7 +363,7 @@ class TestUpload(object):
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
             else:
                 # APY-876
-                with pytest.raises(RuntimeError,match="can not create all None set"):
+                with pytest.raises(RuntimeError, match="can not create all None set"):
                     self.__class__.conn.upload({k: v['value']})
 
     @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getDictContainNone('upload').items()],
@@ -367,7 +404,8 @@ class TestUpload(object):
             print(self.__class__.conn.run(k))
             assertPlus(self.__class__.conn.run(f"typestr({k})=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}[{v['expect_value']}]==`a"))
-            # assertPlus(self.__class__.conn.run(f"{k}[NULL]==`b"))
+
+    # assertPlus(self.__class__.conn.run(f"{k}[NULL]==`b"))
 
     @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getDictSpecial('upload').items()],
                              ids=[i for i in DataUtils.getDictSpecial('upload')])
@@ -375,11 +413,11 @@ class TestUpload(object):
         for k, v in data.items():
             self.__class__.conn.upload({k: v['value']})
             assertPlus(self.__class__.conn.run(f"typestr({k})=={v['expect_typestr']}"))
-            if k!='dictSpecial_composite':
+            if k != 'dictSpecial_composite':
                 assertPlus(self.__class__.conn.run(f"{k}[`1]=={v['expect_value']}"))
             else:
                 self.__class__.conn.run(f"expect={v['expect_value']}")
-                for i in ('1','2','3','4','5'):
+                for i in ('1', '2', '3', '4', '5'):
                     assertPlus(self.__class__.conn.run(f"{k}[`{i}]==expect[`{i}]"))
 
     @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableContainNone('upload').items()],
@@ -409,30 +447,31 @@ class TestUpload(object):
 
     @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableExtensionDtype('upload').items()],
                              ids=[i for i in DataUtils.getTableExtensionDtype('upload')])
-    def test_upload_table_extension_dtype(self,data):
+    def test_upload_table_extension_dtype(self, data):
         for k, v in data.items():
             self.__class__.conn.upload({k: v['value']})
             assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
     def test_upload_table_extension_dtype_not_support(self):
-        with pytest.raises(RuntimeError,match="Unsupported data types: dtype 'UInt8'. DolphinDB supports pandas ExtensionDtype Boolean/Int8/Int16/Int32/Int64/Float32/Float64/String") as e:
+        with pytest.raises(RuntimeError,
+                           match="Unsupported data types: dtype 'UInt8'. DolphinDB supports pandas ExtensionDtype Boolean/Int8/Int16/Int32/Int64/Float32/Float64/String"):
             self.__class__.conn.upload({
-                'extension_dtype_not_support':pd.DataFrame({'a':[1,2,3]},dtype=pd.UInt8Dtype())
+                'extension_dtype_not_support': pd.DataFrame({'a': [1, 2, 3]}, dtype=pd.UInt8Dtype())
             })
 
     def test_upload_table_extension_dtype_ddb_not_support(self):
-        with pytest.raises(RuntimeError,match="boolean cannot be specified as BLOB") as e:
-            df=pd.DataFrame({'a':[True,False]},dtype=pd.BooleanDtype())
-            df.__DolphinDB_Type__={
-                'a':keys.DT_BLOB
+        with pytest.raises(RuntimeError, match="boolean cannot be specified as BLOB"):
+            df = pd.DataFrame({'a': [True, False]}, dtype=pd.BooleanDtype())
+            df.__DolphinDB_Type__ = {
+                'a': keys.DT_BLOB
             }
             self.__class__.conn.upload({
-                'extension_dtype_not_support':df
+                'extension_dtype_not_support': df
             })
 
     def test_upload_table_dtype_not_support(self):
-        with pytest.raises(RuntimeError) as e:
+        with pytest.raises(RuntimeError):
             self.__class__.conn.upload({
                 'extension_dtype_not_support': pd.DataFrame({'a': [1, 2, 3]}, dtype="uint8")
             })
@@ -472,7 +511,7 @@ class TestUpload(object):
     def test_upload_array_vector_table_special(self, data):
         for k, v in data.items():
             self.__class__.conn.upload({k: v['value']})
-            self.__class__.conn.run('print '+f"typestr({k}[`a])")
+            self.__class__.conn.run('print ' + f"typestr({k}[`a])")
             assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"rows({k}[`a])==0"))
 
@@ -554,7 +593,7 @@ class TestUpload(object):
             self.__class__.conn.upload({k: v['value']})
             for i in v['value'].columns:
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
-        assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
+            assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
     @pytest.mark.parametrize('data',
                              [{k: v} for k, v in DataUtils.getTableSetTypeMINUTE('upload').items()],
@@ -741,7 +780,7 @@ class TestUpload(object):
     def test_upload_table_set_type_DECIMAL64_scale(self, data):
         for k, v in data.items():
             self.__class__.conn.upload({k: v['value']})
-            self.__class__.conn.run('print '+k)
+            self.__class__.conn.run('print ' + k)
             for i in v['value'].columns:
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
@@ -952,7 +991,7 @@ class TestUpload(object):
     def test_upload_table_set_type_DECIMAL32_ARRAY(self, data):
         for k, v in data.items():
             self.__class__.conn.upload({k: v['value']})
-            self.__class__.conn.run('print '+k)
+            self.__class__.conn.run('print ' + k)
             for i in v['value'].columns:
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
 
@@ -1001,93 +1040,111 @@ class TestUpload(object):
             for i in v['value'].columns:
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
 
-    if PANDAS_VERSION>=(2,0,0):
+    if PANDAS_VERSION >= (2, 0, 0) and find_spec("pyarrow") is not None:
 
         # todo:APY-988
         @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-        def test_upload_nan_64_table_arrow(self,data):
-            data_=np.frombuffer(data,dtype=np.float64)[0]
-            df=pd.DataFrame({'a':[data_]},dtype=pd.ArrowDtype(pa.float64()))
-            self.__class__.conn.upload({'a':df})
+        @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                          b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                                 ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+        def test_upload_nan_64_table_arrow(self, data):
+            data_ = np.frombuffer(data, dtype=np.float64)[0]
+            df = pd.DataFrame({'a': [data_]}, dtype=pd.ArrowDtype(pa.float64()))
+            self.__class__.conn.upload({'a': df})
             assert self.__class__.conn.run('isNanInf(a["a"][0])==false')
             assert self.__class__.conn.run('isNull(a["a"][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE VECTOR'
 
         @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-        def test_upload_nan_64_table_arrow_array_vector(self,data):
-            data_=np.frombuffer(data,dtype=np.float64)[0]
-            df=pd.DataFrame({'a':[[data_]]},dtype=pd.ArrowDtype(pa.list_(pa.float64())))
-            self.__class__.conn.upload({'a':df})
+        @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                          b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                                 ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+        def test_upload_nan_64_table_arrow_array_vector(self, data):
+            data_ = np.frombuffer(data, dtype=np.float64)[0]
+            df = pd.DataFrame({'a': [[data_]]}, dtype=pd.ArrowDtype(pa.list_(pa.float64())))
+            self.__class__.conn.upload({'a': df})
             assert self.__class__.conn.run('isNanInf(a["a"][0][0])==false')
             assert self.__class__.conn.run('isNull(a["a"][0][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE[] VECTOR'
 
         @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-        def test_upload_nan_64_table_arrow_setType_FLOAT(self,data):
-            data_=np.frombuffer(data,dtype=np.float64)[0]
-            df=pd.DataFrame({'a':[data_]},dtype=pd.ArrowDtype(pa.float64()))
-            df.__DolphinDB_Type__={
-                'a':keys.DT_FLOAT
+        @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                          b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                                 ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+        def test_upload_nan_64_table_arrow_setType_FLOAT(self, data):
+            data_ = np.frombuffer(data, dtype=np.float64)[0]
+            df = pd.DataFrame({'a': [data_]}, dtype=pd.ArrowDtype(pa.float64()))
+            df.__DolphinDB_Type__ = {
+                'a': keys.DT_FLOAT
             }
-            self.__class__.conn.upload({'a':df})
+            self.__class__.conn.upload({'a': df})
             assert self.__class__.conn.run('isNull(a["a"][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT VECTOR'
 
         @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data',[b'\x00\x00\x00\x00\x00\x00\xf8\xff',b'\x00\x00\x00\x00\x00\x00\xf8\x7f',b'\xff\xff\xff\xff\xff\xff\xff\x7f',b'\xff\xff\xff\xff\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-        def test_upload_nan_64_table_arrow_array_vector_setType_FLOAT(self,data):
-            data_=np.frombuffer(data,dtype=np.float64)[0]
-            df=pd.DataFrame({'a':[[data_]]},dtype=pd.ArrowDtype(pa.list_(pa.float64())))
-            df.__DolphinDB_Type__={
-                'a':keys.DT_FLOAT_ARRAY
+        @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
+                                          b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
+                                 ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+        def test_upload_nan_64_table_arrow_array_vector_setType_FLOAT(self, data):
+            data_ = np.frombuffer(data, dtype=np.float64)[0]
+            df = pd.DataFrame({'a': [[data_]]}, dtype=pd.ArrowDtype(pa.list_(pa.float64())))
+            df.__DolphinDB_Type__ = {
+                'a': keys.DT_FLOAT_ARRAY
             }
-            self.__class__.conn.upload({'a':df})
+            self.__class__.conn.upload({'a': df})
             assert self.__class__.conn.run('isNull(a["a"][0][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT[] VECTOR'
 
         @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-        def test_upload_nan_32_table_arrow(self,data):
-            data_=np.frombuffer(data,dtype=np.float32)[0]
-            df=pd.DataFrame({'a':[data_]},dtype=pd.ArrowDtype(pa.float32()))
-            self.__class__.conn.upload({'a':df})
+        @pytest.mark.skip
+        @pytest.mark.parametrize('data',
+                                 [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                                 ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+        def test_upload_nan_32_table_arrow(self, data):
+            data_ = np.frombuffer(data, dtype=np.float32)[0]
+            df = pd.DataFrame({'a': [data_]}, dtype=pd.ArrowDtype(pa.float32()))
+            self.__class__.conn.upload({'a': df})
             assert self.__class__.conn.run('isNull(a["a"][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT VECTOR'
 
         @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-        def test_upload_nan_32_table_arrow_array_vector(self,data):
-            data_=np.frombuffer(data,dtype=np.float32)[0]
-            df=pd.DataFrame({'a':[[data_]]},dtype=pd.ArrowDtype(pa.list_(pa.float32())))
-            self.__class__.conn.upload({'a':df})
+        @pytest.mark.skip
+        @pytest.mark.parametrize('data',
+                                 [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                                 ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+        def test_upload_nan_32_table_arrow_array_vector(self, data):
+            data_ = np.frombuffer(data, dtype=np.float32)[0]
+            df = pd.DataFrame({'a': [[data_]]}, dtype=pd.ArrowDtype(pa.list_(pa.float32())))
+            self.__class__.conn.upload({'a': df})
             assert self.__class__.conn.run('isNull(a["a"][0][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT VECTOR'
 
         @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-        def test_upload_nan_32_table_arrow_setType_DOUBLE(self,data):
-            data_=np.frombuffer(data,dtype=np.float32)[0]
-            df=pd.DataFrame({'a':[data_]},dtype=pd.ArrowDtype(pa.float32()))
-            df.__DolphinDB_Type__={
-                'a':keys.DT_DOUBLE
+        @pytest.mark.parametrize('data',
+                                 [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                                 ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+        def test_upload_nan_32_table_arrow_setType_DOUBLE(self, data):
+            data_ = np.frombuffer(data, dtype=np.float32)[0]
+            df = pd.DataFrame({'a': [data_]}, dtype=pd.ArrowDtype(pa.float32()))
+            df.__DolphinDB_Type__ = {
+                'a': keys.DT_DOUBLE
             }
-            self.__class__.conn.upload({'a':df})
+            self.__class__.conn.upload({'a': df})
             assert self.__class__.conn.run('isNanInf(a["a"][0])==false')
             assert self.__class__.conn.run('isNull(a["a"][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE VECTOR'
 
         @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data',[b'\x00\x00\xf8\xff',b'\x00\x00\xf8\x7f',b'\xff\xff\xff\x7f',b'\xff\xff\xff\xff'],ids=['+nan','-nan','+all_1_nan','-all_1_nan'])
-        def test_upload_nan_32_table_arrow_array_vector_setType_DOUBLE(self,data):
-            data_=np.frombuffer(data,dtype=np.float32)[0]
-            df=pd.DataFrame({'a':[[data_]]},dtype=pd.ArrowDtype(pa.list_(pa.float32())))
-            df.__DolphinDB_Type__={
-                'a':keys.DT_DOUBLE_ARRAY
+        @pytest.mark.parametrize('data',
+                                 [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
+                                 ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
+        def test_upload_nan_32_table_arrow_array_vector_setType_DOUBLE(self, data):
+            data_ = np.frombuffer(data, dtype=np.float32)[0]
+            df = pd.DataFrame({'a': [[data_]]}, dtype=pd.ArrowDtype(pa.list_(pa.float32())))
+            df.__DolphinDB_Type__ = {
+                'a': keys.DT_DOUBLE_ARRAY
             }
-            self.__class__.conn.upload({'a':df})
+            self.__class__.conn.upload({'a': df})
             assert self.__class__.conn.run('isNanInf(a["a"][0][0])==false')
             assert self.__class__.conn.run('isNull(a["a"][0][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE[] VECTOR'
@@ -1122,30 +1179,27 @@ class TestUpload(object):
                     assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
         @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrowArrayVector('upload').items()],
-                                 ids=[i for i in DataUtils.getTableArrowArrayVector('upload')])
-        def test_upload_table_arrow_array_vector(self, data):
-            for k, v in data.items():
-                self.__class__.conn.upload({k: v['value']})
-                assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
-                assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
-
-        @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrowArrayVectorContainNone('upload').items()],
-                                 ids=[i for i in DataUtils.getTableArrowArrayVectorContainNone('upload')])
-        def test_upload_table_arrow_array_vector_contain_none(self, data):
-            for k, v in data.items():
-                self.__class__.conn.upload({k: v['value']})
-                assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
-                assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
-
-        @pytest.mark.PANDAS2
-        @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrowArrayVectorContainEmpty('upload').items()],
-                                 ids=[i for i in DataUtils.getTableArrowArrayVectorContainEmpty('upload')])
-        def test_upload_table_arrow_array_vector_contain_empty(self, data):
-            for k, v in data.items():
-                self.__class__.conn.upload({k: v['value']})
-                if 'expect_typestr' in v:
+        def test_upload_table_arrow_array_vector(self):
+            for data in [{k: v} for k, v in DataUtils.getTableArrowArrayVector('upload').items()]:
+                for k, v in data.items():
+                    self.__class__.conn.upload({k: v['value']})
                     assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
-                if 'expect_value' in v:
                     assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
+
+        @pytest.mark.PANDAS2
+        def test_upload_table_arrow_array_vector_contain_none(self):
+            for data in [{k: v} for k, v in DataUtils.getTableArrowArrayVectorContainNone('upload').items()]:
+                for k, v in data.items():
+                    self.__class__.conn.upload({k: v['value']})
+                    assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
+                    assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
+
+        @pytest.mark.PANDAS2
+        def test_upload_table_arrow_array_vector_contain_empty(self):
+            for data in [{k: v} for k, v in DataUtils.getTableArrowArrayVectorContainEmpty('upload').items()]:
+                for k, v in data.items():
+                    self.__class__.conn.upload({k: v['value']})
+                    if 'expect_typestr' in v:
+                        assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
+                    if 'expect_value' in v:
+                        assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))

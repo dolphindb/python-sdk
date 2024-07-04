@@ -3,24 +3,19 @@
 #include <functional>
 #include <string>
 #include <vector>
+
+#include "Exports.h"
 #include "Concurrent.h"
-#include "TableImp.h"
-#include "DolphinDB.h"
-#include "EventHandler.h"
 #include "Util.h"
-#ifdef _MSC_VER
-	#ifdef _USRDLL	
-		#define EXPORT_DECL _declspec(dllexport)
-	#else
-		#define EXPORT_DECL __declspec(dllimport)
-	#endif
-#else
-	#define EXPORT_DECL 
-#endif
+#include "Dictionary.h"
+#include "EventHandler.h"
+
+using std::pair;
+using std::set;
+using std::unordered_map;
+
 namespace dolphindb {
-
-#define DLOG true?DLogger::GetMinLevel() : DLogger::Info
-
+class DBConnection;
 class EXPORT_DECL Message : public ConstantSP {
 public:
 	Message() {
@@ -86,17 +81,18 @@ class StreamingClientImpl;
 class EXPORT_DECL StreamDeserializer {
 public:
 	//symbol->[dbPath,tableName], dbPath can be empty for table in memory.
-	StreamDeserializer(const unordered_map<string, pair<string, string>> &sym2tableName, DBConnection *pconn = nullptr);
-	StreamDeserializer(const unordered_map<string, DictionarySP> &sym2schema);
-	// do not use this constructor if there are decimal or decimal-array columns (need schema to get decimal scale)
-	StreamDeserializer(const unordered_map<string, vector<DATA_TYPE>> &symbol2col);
+	StreamDeserializer(const std::unordered_map<string, std::pair<string, string>> &sym2tableName, DBConnection *pconn = nullptr);
+	StreamDeserializer(const std::unordered_map<string, DictionarySP> &sym2schema);
+    // do not use this constructor if there are decimal or decimal-array columns (need schema to get decimal scale)
+	StreamDeserializer(const std::unordered_map<string, vector<DATA_TYPE>> &symbol2col);
+	virtual ~StreamDeserializer() = default;
 	bool parseBlob(const ConstantSP &src, vector<VectorSP> &rows, vector<string> &symbols, ErrorCodeInfo &errorInfo);
 private:
 	void create(DBConnection &conn);
-	void parseSchema(const unordered_map<string, DictionarySP> &sym2schema);
-	unordered_map<string, pair<string, string>> sym2tableName_;
-	unordered_map<string, vector<DATA_TYPE>> symbol2col_;
-	unordered_map<string, vector<int>> symbol2scale_;
+	void parseSchema(const std::unordered_map<string, DictionarySP> &sym2schema);
+	std::unordered_map<string, std::pair<string, string>> sym2tableName_;
+	std::unordered_map<string, vector<DATA_TYPE>> symbol2col_;
+    std::unordered_map<string, vector<int>> symbol2scale_;
 	Mutex mutex_;
 	friend class StreamingClientImpl;
 };
@@ -259,9 +255,9 @@ protected:
     SmartPointer<StreamingClientImpl> impl_;
 };
 
-class EventClient : public StreamingClient{
+class EXPORT_DECL EventClient : public StreamingClient{
 public:
-    EventClient(const std::vector<EventSchema>& eventSchemes, const std::vector<std::string>& eventTimeKeys, const std::vector<std::string>& commonKeys);
+    EventClient(const std::vector<EventSchema>& eventSchema, const std::vector<std::string>& eventTimeFields, const std::vector<std::string>& commonFields);
     ThreadSP subscribe(const string& host, int port, const EventMessageHandler &handler, const string& tableName, const string& actionName = DEFAULT_ACTION_NAME, int64_t offset = -1,
         bool resub = true, const string& userName="", const string& password="");
     void unsubscribe(const string& host, int port, const string& tableName, const string& actionName = DEFAULT_ACTION_NAME);
@@ -269,7 +265,6 @@ public:
 private:
     EventHandler      eventHandler_;
 };
-
 
 class EXPORT_DECL ThreadedClient : public StreamingClient {
 public:

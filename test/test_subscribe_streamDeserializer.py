@@ -8,11 +8,12 @@
 import numpy as np
 import pandas as pd
 import pytest
-from pandas2_testing.utils import equalPlus
+from basic_testing.utils import equalPlus
 from setup.settings import *
 import dolphindb as ddb
 from setup.utils import get_pid
 from time import sleep
+from basic_testing.prepare import PANDAS_VERSION
 
 
 def handlerDataframe(df1: pd.DataFrame, df2: pd.DataFrame):
@@ -31,7 +32,7 @@ class TestSubscribeStreamDeserializer(object):
     def setup_method(self):
         try:
             self.conn.run("1")
-        except:
+        except RuntimeError:
             self.conn.connect(HOST, PORT, USER, PASSWD)
         try:
             self.conn.enableStreaming()
@@ -62,23 +63,25 @@ class TestSubscribeStreamDeserializer(object):
                 f.write(cls.__name__ + ' finished.\n')
 
     def test_streamDeserializer_error(self):
-        with pytest.raises(RuntimeError,match='<Exception> in StreamDeserializer: tuple size must be 2'):
-            sd = ddb.streamDeserializer({
-                "msg1": ("", "pub_t1",""),
+        with pytest.raises(RuntimeError, match='<Exception> in StreamDeserializer: tuple size must be 2'):
+            ddb.streamDeserializer({
+                "msg1": ("", "pub_t1", ""),
                 "msg2": ("", "pub_t2"),
             }, session=self.conn)
-        with pytest.raises(RuntimeError, match='<Exception> in StreamDeserializer: unsupported type in dict, support string, list and tuple.'):
-            sd = ddb.streamDeserializer({
-                "msg1": {"","pub_t1"},
+        with pytest.raises(RuntimeError,
+                           match='<Exception> in StreamDeserializer: unsupported type in dict, support string, list and tuple.'):
+            ddb.streamDeserializer({
+                "msg1": {"", "pub_t1"},
                 "msg2": {"", "pub_t2"},
             }, session=self.conn)
 
-    # decimal bug:APY-853,pandas 1.1.5 replace bug
     @pytest.mark.parametrize('dataType',
                              ["BOOL", "CHAR", "SHORT", "INT", "LONG", "DATE", "MONTH", "TIME", "MINUTE", "SECOND",
                               "DATETIME", "TIMESTAMP", "NANOTIME", "NANOTIMESTAMP", "FLOAT", "DOUBLE", "STRING",
                               "UUID", "DATEHOUR", "IPADDR", "INT128", "BLOB", "DECIMAL32", "DECIMAL64", "DECIMAL128"])
     def test_streamDeserializer_single(self, dataType):
+        if dataType in ("STRING","UUID", "IPADDR", "INT128", "BLOB") and PANDAS_VERSION < (1,4,0):
+            pytest.skip("pandas bug")
         dtype = {
             'BOOL': 'object',
             'CHAR': np.float64,
@@ -147,7 +150,7 @@ class TestSubscribeStreamDeserializer(object):
         df1 = pd.DataFrame(columns=['timestampv', 'dataType'], dtype='object')
         df2 = pd.DataFrame(columns=['timestampv', 'dataType'], dtype='object')
         self.conn.subscribe(host=HOST, port=PORT, handler=handlerDataframe(df1, df2), tableName="outTables",
-                            actionName="action", offset=0, resub=False, msgAsTable=False, streamDeserializer=sd,
+                            actionName="action", offset=0, streamDeserializer=sd,
                             userName=USER, password=PASSWD)
         sleep(1)
         self.conn.unsubscribe(HOST, PORT, "outTables", "action")
@@ -169,7 +172,6 @@ class TestSubscribeStreamDeserializer(object):
         assert equalPlus(df1, df_expect)
         assert equalPlus(df2, df_expect)
 
-    # decimal bug:APY-853
     @pytest.mark.parametrize('dataType',
                              ["BOOL", "CHAR", "SHORT", "INT", "LONG", "DATE", "MONTH", "TIME", "MINUTE", "SECOND",
                               "DATETIME", "TIMESTAMP", "NANOTIME", "NANOTIMESTAMP", "FLOAT", "DOUBLE",
@@ -214,7 +216,7 @@ class TestSubscribeStreamDeserializer(object):
         df1 = pd.DataFrame(columns=['timestampv', 'dataType'], dtype='object')
         df2 = pd.DataFrame(columns=['timestampv', 'dataType'], dtype='object')
         self.conn.subscribe(host=HOST, port=PORT, handler=handlerDataframe(df1, df2), tableName="outTables",
-                            actionName="action", offset=0, resub=False, msgAsTable=False, streamDeserializer=sd,
+                            actionName="action", offset=0, streamDeserializer=sd,
                             userName=USER, password=PASSWD)
         sleep(1)
         self.conn.unsubscribe(HOST, PORT, "outTables", "action")
@@ -224,6 +226,6 @@ class TestSubscribeStreamDeserializer(object):
         assert equalPlus(df1["timestampv"], df_expect["timestampv"])
         assert equalPlus(df2["timestampv"], df_expect["timestampv"])
         # arrayvector bug:APY-891
-        for index,i in enumerate(df1["dataType"]):
-            assert equalPlus(df1["dataType"][index][0],df_expect["dataType"][index])
+        for index, i in enumerate(df1["dataType"]):
+            assert equalPlus(df1["dataType"][index][0], df_expect["dataType"][index])
             assert equalPlus(df2["dataType"][index][0], df_expect["dataType"][index])

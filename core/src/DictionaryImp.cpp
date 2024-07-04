@@ -9,6 +9,8 @@
 #include "DictionaryImp.h"
 #include "ConstantImp.h"
 
+using std::unordered_map;
+
 namespace dolphindb {
 
 void stringU8VectorReader(const ConstantSP& value, int start, int count, U8* output){
@@ -19,7 +21,7 @@ void stringU8VectorReader(const ConstantSP& value, int start, int count, U8* out
 	char** buf=(char**)output;
 #endif
 	char** pbuf;
-	int len;
+	std::size_t len;
 	pbuf=value->getStringConst(start,count,buf);
 	for(int i=0;i<count;++i){
 		len=strlen(pbuf[i])+1;
@@ -203,75 +205,75 @@ void AbstractDictionary::init(){
     switch (internalType_)
     {
     case DT_BOOL: {
-		vreader_=&boolU8VectorReader;
+        vreader_=&boolU8VectorReader;
         sreader_=&boolU8ScalarReader;
         vwriter_=&boolU8VectorWriter;
         swriter_=&boolU8ScalarWriter;
         nullVal_.charVal=Constant::void_->getBool();
-		break;
-	}
+        break;
+    }
     case DT_CHAR: {
-		vreader_=&charU8VectorReader;
+        vreader_=&charU8VectorReader;
         sreader_=&charU8ScalarReader;
         vwriter_=&charU8VectorWriter;
         swriter_=&charU8ScalarWriter;
         nullVal_.charVal=Constant::void_->getChar();
-		break;
-	}
+        break;
+    }
     case DT_SHORT: {
-		vreader_=&shortU8VectorReader;
+        vreader_=&shortU8VectorReader;
         sreader_=&shortU8ScalarReader;
         vwriter_=&shortU8VectorWriter;
         swriter_=&shortU8ScalarWriter;
         nullVal_.shortVal=Constant::void_->getShort();
-		break;
-	}
+        break;
+    }
     case DT_INT: {
-		vreader_=&intU8VectorReader;
+        vreader_=&intU8VectorReader;
         sreader_=&intU8ScalarReader;
         vwriter_=&intU8VectorWriter;
         swriter_=&intU8ScalarWriter;
         nullVal_.intVal=Constant::void_->getInt();
-		break;
-	}
+        break;
+    }
     case DT_LONG: {
-		vreader_=&longU8VectorReader;
+        vreader_=&longU8VectorReader;
         sreader_=&longU8ScalarReader;
         vwriter_=&longU8VectorWriter;
         swriter_=&longU8ScalarWriter;
         nullVal_.longVal=Constant::void_->getLong();
         break;
-	}
+    }
     case DT_FLOAT: {
-		vreader_=&floatU8VectorReader;
+        vreader_=&floatU8VectorReader;
         sreader_=&floatU8ScalarReader;
         vwriter_=&floatU8VectorWriter;
         swriter_=&floatU8ScalarWriter;
         nullVal_.floatVal=Constant::void_->getFloat();
         break;
-	}
+    }
     case DT_DOUBLE: {
-		vreader_=&doubleU8VectorReader;
+        vreader_=&doubleU8VectorReader;
         sreader_=&doubleU8ScalarReader;
         vwriter_=&doubleU8VectorWriter;
         swriter_=&doubleU8ScalarWriter;
         nullVal_.doubleVal=Constant::void_->getDouble();
         break;
-	}
+    }
     case DT_STRING:
     case DT_BLOB: {
-		vreader_=&stringU8VectorReader;
+        vreader_=&stringU8VectorReader;
         sreader_=&stringU8ScalarReader;
         vwriter_=&stringU8VectorWriter;
         swriter_=&stringU8ScalarWriter;
         nullVal_.pointer=(char*)(Constant::EMPTY.c_str());
         break;
-	}
+    }
     case DT_ANY:
         break;
     default:
         throw RuntimeException("Not Support create this internalType dictionary " + Util::getDataTypeString(internalType_));
-	}
+    }
 }
 
 ConstantSP AbstractDictionary::createValues(const ConstantSP& keys) const{
@@ -356,7 +358,7 @@ bool IntDictionary::set(const ConstantSP& key, const ConstantSP& value){
 		U8 tmp[bufSize];
 		int start=0;
 		int count;
-		unsigned int dictSize=dict_.size();
+		std::size_t dictSize=dict_.size();
 		while(start<len){
 			count=((std::min))(len-start,bufSize);
 			pbuf=newKey->getIntConst(start,count,buf);
@@ -598,7 +600,7 @@ bool CharDictionary::set(const ConstantSP& key, const ConstantSP& value){
 		U8 tmp[bufSize];
 		int start=0;
 		int count;
-		unsigned int dictSize=dict_.size();
+		std::size_t dictSize=dict_.size();
 		while(start<len){
 			count=((std::min))(len-start,bufSize);
 			pbuf=key->getCharConst(start,count,buf);
@@ -834,7 +836,7 @@ bool ShortDictionary::set(const ConstantSP& key, const ConstantSP& value){
 		U8 tmp[bufSize];
 		int start=0;
 		int count;
-		unsigned int dictSize=dict_.size();
+		std::size_t dictSize=dict_.size();
 		while(start<len){
 			count=((std::min))(len-start,bufSize);
 			pbuf=key->getShortConst(start,count,buf);
@@ -1076,7 +1078,7 @@ bool LongDictionary::set(const ConstantSP& key, const ConstantSP& value){
 		U8 tmp[bufSize];
 		int start=0;
 		int count;
-		unsigned int dictSize=dict_.size();
+		std::size_t dictSize=dict_.size();
 		while(start<len){
 			count=(std::min)(len-start,bufSize);
 			pbuf=newKey->getLongConst(start,count,buf);
@@ -1318,7 +1320,7 @@ bool FloatDictionary::set(const ConstantSP& key, const ConstantSP& value){
 		U8 tmp[bufSize];
 		int start=0;
 		int count;
-		unsigned int dictSize=dict_.size();
+		std::size_t dictSize=dict_.size();
 		while(start<len){
 			count=(std::min)(len-start,bufSize);
 			pbuf=key->getFloatConst(start,count,buf);
@@ -1554,7 +1556,7 @@ bool DoubleDictionary::set(const ConstantSP& key, const ConstantSP& value){
 		U8 tmp[bufSize];
 		int start=0;
 		int count;
-		unsigned int dictSize=dict_.size();
+		std::size_t dictSize=dict_.size();
 		while(start<len){
 			count=(std::min)(len-start,bufSize);
 			pbuf=key->getDoubleConst(start,count,buf);
@@ -1801,7 +1803,7 @@ bool StringDictionary::set(const ConstantSP& key, const ConstantSP& value){
 		U8 tmp[bufSize];
 		int start=0;
 		int count;
-		unsigned int dictSize=dict_.size();
+		std::size_t dictSize=dict_.size();
 		while(start<len){
 			count=(std::min)(len-start,bufSize);
 			pbuf=key->getStringConst(start,count,buf);
@@ -1838,7 +1840,7 @@ ConstantSP StringDictionary::getMember(const string& key) const {
 
 ConstantSP StringDictionary::getMember(const ConstantSP& key) const {
 	if(key->getCategory() != LITERAL && key->getType() != DT_BLOB)
-		throw RuntimeException("Key data type incompatible. Expecting literal data");
+		throw RuntimeException("Key data type incompatible. Expecting LITERAL/BLOB data");
 	ConstantSP result=createValues(key);
 	if(key->isScalar()){
 		unordered_map<string,U8>::const_iterator it=dict_.find(key->getStringRef());
@@ -2574,7 +2576,7 @@ string FloatAnyDictionary::getString() const{
     ConstantSP key=Util::createConstant(keyType_);
     auto it = dict_.begin();
     while(count < len){
-        key->setLong(it->first);
+        key->setFloat(it->first);
         content.append(key->getString());
         content.append("->");
         DATA_FORM form = it->second->getForm();
@@ -2775,7 +2777,7 @@ string DoubleAnyDictionary::getString() const{
     ConstantSP key=Util::createConstant(keyType_);
     auto it = dict_.begin();
     while(count < len){
-        key->setLong(it->first);
+        key->setDouble(it->first);
         content.append(key->getString());
         content.append("->");
         DATA_FORM form = it->second->getForm();
@@ -3100,7 +3102,7 @@ bool Int128Dictionary::set(const ConstantSP& key, const ConstantSP& value){
 		std::unique_ptr<U8> tmp(new U8[bufSize]); //U8 tmp[bufSize];
 		int start=0;
 		int count;
-		unsigned int dictSize=dict_.size();
+		std::size_t dictSize=dict_.size();
 		while(start<len){
 			count=std::min(len-start,bufSize);
 			pbuf=(const Guid*)key->getBinaryConst(start,count,16,buf.get());

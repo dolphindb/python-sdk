@@ -293,6 +293,7 @@ bool DeltaBufferRead::readBits(int bits, unsigned long long *value) {
 	}
 	else {
 		// This word and next one, no more (max bits is 64)
+		if(bitsAvailable_ < 1) return false;
 		*value = (*b_) & m.MASK_ARRAY[bitsAvailable_ - 1]; // Read what's left first
 		bits -= bitsAvailable_;
 		if (!flipByte()) {
@@ -453,7 +454,7 @@ int DeltaCompressor<T>::writeData(const T *data, int DataSize, long long *buf, i
 	blockData_ = (long long)data[count];
 
 	write_.writeBits(1, 1);
-	writeHeaderData(blockData_);
+	writeHeaderData(static_cast<T>(blockData_));
 
 	count++;
 	while (count<DataSize) {
@@ -596,7 +597,7 @@ IO_ERR CompressDeltaofDelta::decode(DataInputStreamSP compressSrc, DataOutputStr
 	int count;
 	size_t actualRead;
 	IO_ERR ret;
-	// DATA_TYPE type = (DATA_TYPE)header.dataType;
+	//DATA_TYPE type = (DATA_TYPE)header.dataType;
 	bool calcChecksum = (checksum != -1) && !compressSrc->isIntegerReversed();
 	unsigned int cksum = 0;
 	bool containLSN;
@@ -697,9 +698,9 @@ IO_ERR CompressDeltaofDelta::encodeContent(const VectorSP &vec, const DataOutput
 	IO_ERR ret = OK;
 	bool lsnFlag = false;
 	long long *compressedBuf = (long long*)newBuffer(maxCompressedSize_ + sizeof(int));
-	// int compressedBufSize = maxCompressedSize_ / sizeof(long long);
+	//int compressedBufSize = maxCompressedSize_ / sizeof(long long);
 	char *decompressedBuf = newBuffer(maxDecompressedSize_);
-	// int decompressedBufSize = maxDecompressedSize_ / header.unitLength;
+	//int decompressedBufSize = maxDecompressedSize_ / header.unitLength;
 	unsigned int cksum = 0;
 	INDEX start = 0;
 	{
@@ -708,7 +709,7 @@ IO_ERR CompressDeltaofDelta::encodeContent(const VectorSP &vec, const DataOutput
 		int offset;
 		int blockSize;
 		char* blockBuf;
-		// size_t actualWritten, actualLength;
+		//size_t actualWritten, actualLength;
 		CheckSum checkSum;
 		while (start < len) {
 			int count = std::min(maxDecompressedSize_ / header.unitLength, len - start);
@@ -784,9 +785,9 @@ CompressLZ4::~CompressLZ4() {
 IO_ERR CompressLZ4::decode(DataInputStreamSP compressSrc, DataOutputStreamSP &uncompressResult, const CompressionFactory::Header &header) {
 	int unitLength = header.unitLength;
 	long long fileCursor = 20;
-	// long long lsn = -1;
+	//long long lsn = -1;
 	long long byteSize = header.byteSize;
-	// bool calcChecksum = false;
+	//bool calcChecksum = false;
 	INDEX start = 0;
 	INDEX len = header.elementCount;
 	int blockSize;
@@ -794,12 +795,12 @@ IO_ERR CompressLZ4::decode(DataInputStreamSP compressSrc, DataOutputStreamSP &un
 	size_t actualRead;
 	IO_ERR ret = OK;
 	DATA_TYPE type = (DATA_TYPE)header.dataType;
-	// bool containLSN;
+	//bool containLSN;
 	
 	char *compressedBuf = newBuffer(MAX_COMPRESSED_SIZE);
 	bool isMappingMode = (!compressSrc->isIntegerReversed() && type != DT_STRING && type != DT_BLOB && type < ARRAY_TYPE_BASE);
 	
-	// int pattial = 0;
+	//int pattial = 0;
 	BufferWriter<DataOutputStreamSP> out(uncompressResult);
 	ret = writeVectorMetaValue(header, out);
 	if (ret != OK)
@@ -811,11 +812,11 @@ IO_ERR CompressLZ4::decode(DataInputStreamSP compressSrc, DataOutputStreamSP &un
 		if (ret != OK)
 			return ret;
 		if (blockSize < 0) {
-			// containLSN = true;
+			//containLSN = true;
 			blockSize = blockSize & 2147483647;
 		}
-		// else
-		// 	containLSN = false;
+		//else
+		//	containLSN = false;
 		fileCursor += 4;
 		if (ret != OK || blockSize <= 0 || blockSize > MAX_COMPRESSED_SIZE || fileCursor + blockSize > byteSize) {
 			std::cout << "Failed to decode. blockSize=" + std::to_string(blockSize) + " fileCursor=" +
@@ -861,7 +862,7 @@ IO_ERR CompressLZ4::decode(DataInputStreamSP compressSrc, DataOutputStreamSP &un
 				return INVALIDDATA;
 			}
 			if ((DATA_TYPE)header.dataType == DT_SYMBOL) {
-				// int *buf = (int*)decompressedBuf;
+				//int *buf = (int*)decompressedBuf;
 				count = bytes / unitLength;
 
 				bool done = false;
@@ -909,7 +910,7 @@ IO_ERR CompressLZ4::encodeContent(const VectorSP &vec, const DataOutputStreamSP 
 		INDEX len = header.elementCount;
 		int offset = 0;
 		int blockSize;
-		// size_t actualWritten, actualLength;
+		//size_t actualWritten, actualLength;
 		CheckSum checkSum;
 		bool lsnFlag = false;
 		if (type != DT_SYMBOL) {

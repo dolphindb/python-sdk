@@ -6,13 +6,14 @@ from numpy.testing import *
 from pandas.testing import *
 from setup.utils import get_pid
 
+
 class TestDownloadBasicDataTypes:
     conn = ddb.session()
 
     def setup_method(self):
         try:
             self.conn.run("1")
-        except:
+        except RuntimeError:
             self.conn.connect(HOST, PORT, USER, PASSWD)
 
     # def teardown_method(self):
@@ -23,7 +24,7 @@ class TestDownloadBasicDataTypes:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -78,8 +79,8 @@ class TestDownloadBasicDataTypes:
         for s, p in tmp_p:
             res = conn.run(s)
             # print(res)
-            for i in [1, 2]:
-                assert_array_equal(res[i], p[i])
+            for _i in [1, 2]:
+                assert_array_equal(res[_i], p[_i])
             if data_type in [DATATYPE.DT_FLOAT, DATATYPE.DT_DOUBLE] and p[0] is not None:
                 assert_array_almost_equal(res[0], p[0])
             else:
@@ -98,12 +99,12 @@ class TestDownloadBasicDataTypes:
         for s, p in tmp_p:
             res = conn.run(s)
             if data_type in [DATATYPE.DT_FLOAT, DATATYPE.DT_DOUBLE] and p is not None:
-                assert len(res)==len(p)
-                for i in res:
-                    if i is None:
-                        assert i in p
+                assert len(res) == len(p)
+                for _i in res:
+                    if _i is None:
+                        assert _i in p
                     else:
-                        assert round(i,2) in p
+                        assert round(_i, 2) in p
             else:
                 assert_array_equal(res, p)
         conn.undefAll()
@@ -152,15 +153,15 @@ class TestDownloadBasicDataTypes:
         conn.run(tmp_s)
         for s, p in tmp_p:
             if pickle and data_type == DATATYPE.DT_BLOB:
-                with pytest.raises(RuntimeError,match="not support BLOB"):
-                    res = conn.run(s)
+                with pytest.raises(RuntimeError, match="not support BLOB"):
+                    conn.run(s)
             else:
                 res = conn.run(s)
                 # todo:pickle
-                if data_type==DATATYPE.DT_MONTH and not pickle:
-                    p['month_0']=p['month_0'].astype('datetime64[ns]')
-                    p['month_1']=p['month_1'].astype('datetime64[ns]')
-                    p['month_2']=p['month_2'].astype('datetime64[ns]')
+                if data_type == DATATYPE.DT_MONTH and not pickle:
+                    p['month_0'] = p['month_0'].astype('datetime64[ns]')
+                    p['month_1'] = p['month_1'].astype('datetime64[ns]')
+                    p['month_2'] = p['month_2'].astype('datetime64[ns]')
                 assert_frame_equal(res, p)
         conn.undefAll()
         conn.close()
@@ -199,19 +200,20 @@ class TestDownloadBasicDataTypes:
         conn.undefAll()
         conn.close()
 
+
 @pytest.mark.v130221
 class TestDownloadHugeData:
     # expect string value
     tmp = "abcd中文123"
     ex = ""
     for _ in range(100000):
-        ex = ex+tmp
+        ex += tmp
     conn = ddb.session()
 
     def setup_method(self):
         try:
             self.conn.run("1")
-        except:
+        except RuntimeError:
             self.conn.connect(HOST, PORT, USER, PASSWD)
 
     def teardown_method(self):
@@ -222,7 +224,7 @@ class TestDownloadHugeData:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -283,13 +285,13 @@ class TestDownloadHugeData:
         if data_type in ['string', 'symbol']:
             try:
                 conn1.run(
-                    "table("+data_type + """([concat(take(`abcd中文123,100000))]) as col1)""")
+                    "table(" + data_type + """([concat(take(`abcd中文123,100000))]) as col1)""")
             except Exception as err:
                 assert 'IO error type 4' in str(err)
 
         elif not pickle:
             tab = conn1.run(
-                "table("+data_type + """([concat(take(`abcd中文123,100000))]) as col1)""")
+                "table(" + data_type + """([concat(take(`abcd中文123,100000))]) as col1)""")
             assert tab.size == 1
             assert tab['col1'].size == 1
             assert tab['col1'][0] == self.ex
@@ -304,8 +306,9 @@ class TestDownloadHugeData:
                             compress=compress, enablePickle=pickle)
         if data_type in ['string', 'symbol']:
             try:
-                conn1.run("""{}([concat(take(`abcd中文123,100000))])[0]:{}([concat(take(`abcd中文123,100000))])[0]""".format(
-                    data_type, data_type))
+                conn1.run(
+                    """{}([concat(take(`abcd中文123,100000))])[0]:{}([concat(take(`abcd中文123,100000))])[0]""".format(
+                        data_type, data_type))
             except Exception as err:
                 assert 'IO error type 4' in str(err)
         else:
@@ -332,8 +335,7 @@ class TestDownloadHugeData:
                 assert 'IO error type 4' in str(err)
 
         else:
-            print(compress, pickle)
-            dct = conn1.run(
+            conn1.run(
                 """dict([1],{}([concat(take(`abcd中文123,100000))]))""".format(data_type))
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
@@ -351,7 +353,7 @@ class TestDownloadHugeData:
                 assert 'IO error type 4' in str(err)
 
         else:
-            st = conn1.run(
+            conn1.run(
                 """set({}([concat(take(`abcd中文123,100000))]))""".format(data_type))
 
 

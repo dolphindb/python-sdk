@@ -1,5 +1,7 @@
 import uuid
 
+from typing import List, Union
+
 
 def _generate_tablename(tableName=None):
     if tableName is None:
@@ -30,6 +32,54 @@ def _isVariableCandidate(word: str) -> bool:
         if not cur.isalpha() and not cur.isdigit() and cur != '_':
             return False
     return True
+
+
+def __raise_or_not(errMsg: str = ""):
+    if errMsg != "":
+        raise TypeError(errMsg)
+
+
+def _convertToConstant(value: str, errMsg: str = ""):
+    if not isinstance(value, str):
+        __raise_or_not(errMsg)
+    return str(value)
+
+
+def _convertToString(value: str, errMsg: str = ""):
+    if not isinstance(value, str):
+        __raise_or_not(errMsg)
+    return f"`{value}"
+
+
+def _convertToStringVector(value: List[str], errMsg: str = ""):
+    if not isinstance(value, list):
+        __raise_or_not(errMsg)
+    if len(value) == 0:
+        return "string([])"
+    return "`" + "`".join(value)
+
+
+def _convertToStringOrStringVector(value: Union[str, List[str]], errMsg: str = ""):
+    if isinstance(value, str):
+        return _convertToString(value)
+    elif isinstance(value, list):
+        return _convertToStringVector(value)
+    __raise_or_not(errMsg)
+
+
+def _convertToDict(value: dict, keyConverter: callable, valConverter: callable, errMsg: str = ""):
+    if not isinstance(value, dict):
+        __raise_or_not(errMsg)
+    items = []
+    for key, val in value.items():
+        items.append(f"{keyConverter(key, errMsg=errMsg)}:{valConverter(val, errMsg=errMsg)}")
+    return "{" + ",".join(items) + "}"
+
+
+def _convertToBool(value: bool, errMsg: str = ""):
+    if not isinstance(value, bool):
+        __raise_or_not(errMsg)
+    return str(bool(value)).lower()
 
 
 class month(object):

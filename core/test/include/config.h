@@ -1,5 +1,5 @@
-// #pragma once
-
+#pragma once
+#include "gtest/gtest.h"
 #include "DolphinDB.h"
 #include "Util.h"
 #include "BatchTableWriter.h"
@@ -10,6 +10,12 @@
 #include "TableImp.h"
 #include "ConstantFactory.h"
 #include "Format.h"
+#include "DFSChunkMeta.h"
+#include "Logger.h"
+// #include "Database.h"
+// #include "Utility.h"
+// #include "DBTable.h"
+// #include "QueryWrapper.h"
 #include <vector>
 #include <string>
 #include <climits>
@@ -37,40 +43,38 @@ extern string alphas;
 extern int pass, fail;
 extern bool assertObj;
 extern int vecSize;
-extern vector<int> usedPorts;
+extern unordered_set<int> usedPorts;
 
 extern int const INDEX_MAX_1;
 extern int const INDEX_MIN_2;
 
 extern vector<string> sites;
+extern vector<string> backupSites;
 extern string raftsGroup;
 extern vector<string> nodeNames;
 
-using namespace std::chrono;
-
-
-string hostName = "127.0.0.1";
-string errCode = "0";
-int port = 13902;
-int ctl_port = 13900;
-string table = "trades";
-vector<int> listenPorts = { 18901,18902,18903,18904,18905,18906,18907,18908,18909,18910 };
-vector<int> usedPorts = {};
-string alphas = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-int pass, fail;
-bool assertObj = true;
-int vecSize = 20;
-
-int const INDEX_MAX_1 = 1;
-int const INDEX_MIN_2 = -1;
-
-vector<string> sites = {"127.0.0.1:13902:datanode1", "127.0.0.1:13903:datanode2", "127.0.0.1:13904:datanode3"};
-string raftsGroup = "11";
-vector<string> nodeNames = {"datanode1", "datanode2", "datanode3"};
-
-static DBConnection conn(false, false);
-static DBConnection connReconn(false, false);
-static DBConnection conn_compress(false, false, 7200, true);
+extern DBConnection conn;
+extern DBConnection connReconn;
+extern DBConnection conn_compress;
+extern DBConnectionSP connsp;
 
 // check server version
-bool isNewVersion = true;
+bool isNewServer(DBConnection &conn, const int &major, const int &minor, const int &revision);
+
+void checkAPIVersion();
+string getRandString(int len);
+TableSP AnyVectorToTable(VectorSP vec);
+
+// clear all memory variables and database in DolphinDB
+#define CLEAR_ENV(_session) \
+    _session.run("\
+        for (name in (exec name from objs(true) where shared=true))\
+        {\
+            try{dropStreamTable(name, true)}catch(ex){};go;\
+            try{undef(name, SHARED)}catch(ex){};go;\
+        };\
+        for(db in getClusterDFSDatabases())\
+        {\
+            dropDatabase(db);\
+        };\
+        undef all;go");

@@ -7,29 +7,25 @@ from setup.utils import get_pid
 
 class TestPermission:
     conn = ddb.session()
-    TEST_USER_NAMES = ['table_write_user', 'table_insert_user',
-                       'table_update_user', 'db_write_user',
-                       'db_insert_user', 'db_update_user', 'db_owner_user']
-    TEST_USER_PERMISSIONS = ['TABLE_WRITE', 'TABLE_INSERT',
-                             'TABLE_UPDATE', 'DB_WRITE',
-                             'DB_INSERT', 'DB_UPDATE', 'DB_OWNER']
+    TEST_USER_NAMES = ['table_write_user', 'table_insert_user', 'table_update_user', 'db_write_user', 'db_insert_user',
+                       'db_update_user', 'db_owner_user']
+    TEST_USER_PERMISSIONS = ['TABLE_WRITE', 'TABLE_INSERT', 'TABLE_UPDATE', 'DB_WRITE', 'DB_INSERT', 'DB_UPDATE',
+                             'DB_OWNER']
     TEST_DB = 'dfs://test_permission_db'
     TEST_TABLE = 'test_permission_table'
 
     def setup_method(self):
         try:
             self.conn.run("1")
-        except:
+        except RuntimeError:
             self.conn.connect(HOST, PORT, USER, PASSWD)
-
         if not self.conn.existsDatabase(self.TEST_DB):
             db = self.conn.database(dbName="db_value", partitionType=keys.VALUE, partitions=[1, 2, 3, 4],
                                     dbPath=self.TEST_DB, engine="OLAP")
             df = self.conn.run("table(1 2 3 as c1, `a`b`c as c2, 2023.07.01..2023.07.03 as c3)")
             t = self.conn.table(data=df)
-            db.createPartitionedTable(t,self.TEST_TABLE,'c1')
+            db.createPartitionedTable(t, self.TEST_TABLE, 'c1')
         self.conn.run(f"delete from loadTable('{self.TEST_DB}','{self.TEST_TABLE}')")
-
         activeUsers = self.conn.run("getUserList()")
         if not all(user in activeUsers for user in self.TEST_USER_NAMES):
             for user in self.TEST_USER_NAMES:
@@ -181,7 +177,6 @@ class TestPermission:
             'c2': ['a', 'b', 'c'],
             'c3': np.array(["2023-07-01", "2023-07-02", "2023-07-03"], dtype='datetime64[ns]'),
         })
-
         upserter.upsert(df)
         res = conn1.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
@@ -206,7 +201,6 @@ class TestPermission:
             'c2': ['a', 'b', 'c'],
             'c3': np.array(["2023-07-01", "2023-07-02", "2023-07-03"], dtype='datetime64[D]'),
         })
-
         with pytest.raises(RuntimeError, match="<NoPrivilege>Not granted to write data to table"):
             upserter.upsert(df)
 
@@ -329,7 +323,6 @@ class TestPermission:
             'c2': ['a', 'b', 'c'],
             'c3': np.array(["2023-07-01", "2023-07-02", "2023-07-03"], dtype='datetime64[ns]'),
         })
-
         for i in range(df.shape[0]):
             mtwriter.insert(df.iloc[i][0], df.iloc[i][1], df.iloc[i][2].to_numpy().astype('datetime64'))
         mtwriter.waitForThreadCompletion()
@@ -364,7 +357,6 @@ class TestPermission:
         status = mtwriter.getStatus()
         assert status.hasError()
         assert "<NoPrivilege>Not granted to write data to table" in status.errorInfo
-
         res = self.conn.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert res.shape[0] == 0
 
@@ -428,11 +420,5 @@ class TestPermission:
         status = mtwriter.getStatus()
         assert status.hasError()
         assert "<NoPrivilege>Not granted to write data to table" in status.errorInfo
-
         res = self.conn.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert res.shape[0] == 0
-
-
-if __name__ == '__main__':
-    pytest.main(['-s', '-v', 'test_permission.py'])
-

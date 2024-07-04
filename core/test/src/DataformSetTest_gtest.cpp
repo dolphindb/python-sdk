@@ -1,3 +1,5 @@
+#include "config.h"
+
 class DataformSetTest:public testing::Test
 {
 protected:
@@ -31,10 +33,11 @@ protected:
 		}
 
         cout<<"ok"<<endl;
+		CLEAR_ENV(conn);
     }
     virtual void TearDown()
     {
-        conn.run("undef all;");
+		CLEAR_ENV(conn);
     }
 };
 

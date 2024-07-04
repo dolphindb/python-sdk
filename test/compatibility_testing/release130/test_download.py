@@ -66,7 +66,6 @@ class TestDownloadBasicDataTypes:
         conn.undefAll()
         conn.close()
 
-    # pickle 130server问题
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
@@ -78,8 +77,6 @@ class TestDownloadBasicDataTypes:
         conn.run(tmp_s)
         for s, p in tmp_p:
             res = conn.run(s)
-            print(res)
-            print(s)
             for i in [1, 2]:
                 assert_array_equal(res[i], p[i])
             if data_type in [DATATYPE.DT_FLOAT, DATATYPE.DT_DOUBLE] and p[0] is not None:

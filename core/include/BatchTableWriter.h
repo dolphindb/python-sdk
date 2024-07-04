@@ -1,11 +1,13 @@
 #ifndef BATCHTABLEWRITER_H_
 #define BATCHTABLEWRITER_H_
 
+#include "Exports.h"
 #include "Concurrent.h"
-#include "DolphinDB.h"
-#include "Util.h"
 #include "Types.h"
 #include "Exceptions.h"
+#include "Constant.h"
+#include "Dictionary.h"
+#include "Table.h"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -14,22 +16,17 @@
 #include <tuple>
 #include <cassert>
 
-#ifdef _MSC_VER
-	#define EXPORT_DECL _declspec(dllexport)
-#else
-	#define EXPORT_DECL 
-#endif
-
-
 namespace dolphindb{
-class EXPORT_DECL  BatchTableWriter {
+
+class DBConnection;
+class EXPORT_DECL BatchTableWriter {
 public:
     /**
      * If fail to connect to the specified DolphinDB server, this function throw an exception.
      */
     BatchTableWriter(const std::string& hostName, int port, const std::string& userId, const std::string& password, bool acquireLock=true);
 
-    ~BatchTableWriter();
+    virtual ~BatchTableWriter();
 
     BatchTableWriter(const BatchTableWriter&) = delete;
 
@@ -76,6 +73,7 @@ public:
      */
     template<typename... Targs>
     void insert(const string& dbName, const string& tableName, Targs... Fargs){
+        //RECORDTIME("BTW::insert");
         SmartPointer<DestTable> destTable;
         {
             RWLockGuard<RWLock> _(&rwLock, false, acquireLock_);

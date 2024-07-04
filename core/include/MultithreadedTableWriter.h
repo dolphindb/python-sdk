@@ -1,8 +1,8 @@
 #ifndef MUTITHREADEDTABLEWRITER_H_
 #define MUTITHREADEDTABLEWRITER_H_
 
+#include "Exports.h"
 #include "Concurrent.h"
-#include "DolphinDB.h"
 #include "Util.h"
 #include "Types.h"
 #include "Exceptions.h"
@@ -15,25 +15,13 @@
 #include <cassert>
 #include <unordered_map>
 
-#ifdef _MSC_VER
-	#ifdef _USRDLL	
-		#define EXPORT_DECL _declspec(dllexport)
-	#else
-		#define EXPORT_DECL __declspec(dllimport)
-	#endif
-#else
-	#define EXPORT_DECL 
-#endif
-
-#ifndef RECORDTIME
-#undef RECORDTIME
-#endif
-#define RECORDTIME //RecordTime _recordTime
 
 namespace dolphindb{
 
+class DBConnection;
+
 class PytoDdbRowPool;
-class EXPORT_DECL  MultithreadedTableWriter {
+class EXPORT_DECL MultithreadedTableWriter {
 public:
     enum Mode{
         M_Append,
@@ -66,42 +54,43 @@ public:
 							const vector<COMPRESS_METHOD> *pCompressMethods = nullptr, Mode mode = M_Append,
                             vector<string> *pModeOption = nullptr);
 
-    ~MultithreadedTableWriter();
+    virtual ~MultithreadedTableWriter();
 
-	template<typename... TArgs>
-	bool insert(ErrorCodeInfo &errorInfo, TArgs... args) {
-		if (hasError_.load()) {
-			throw RuntimeException("Thread is exiting.");
-		}
-		{
-			auto argSize = sizeof...(args);
-			if (argSize != colTypes_.size()) {
-				errorInfo.set(ErrorCodeInfo::EC_InvalidParameter, "Column counts don't match " + std::to_string(argSize));
-				return false;
-			}
-		}
-		{
-			errorInfo.clearError();
-			int colIndex1 = 0, colIndex2 = 0;
-			ConstantSP result[] = { Util::createObject(getColDataType(colIndex1++), args, &errorInfo, colExtras_[colIndex2++])... };
-			if (errorInfo.hasError())
-				return false;
-			std::vector<ConstantSP>* prow;
-			if (!unusedQueue_.pop(prow)) {
-				prow = new std::vector<ConstantSP>;
-			}
-			prow->resize(colIndex1);
-			for (int i = 0; i < colIndex1; i++) {
-				prow->at(i) = result[i];
-			}
-			return insert(&prow, 1, errorInfo);
-		}
-	}
+    template<typename... TArgs>
+    bool insert(ErrorCodeInfo &errorInfo, TArgs... args) {
+        if (hasError_.load()) {
+            throw RuntimeException("Thread is exiting.");
+        }
+        {
+            auto argSize = sizeof...(args);
+            if (argSize != colTypes_.size()) {
+                errorInfo.set(ErrorCodeInfo::EC_InvalidParameter, "Column counts don't match " + std::to_string(argSize));
+                return false;
+            }
+        }
+        {
+            errorInfo.clearError();
+            int colIndex1 = 0, colIndex2 = 0;
+            ConstantSP result[] = { Util::createObject(getColDataType(colIndex1++), args, &errorInfo, colExtras_[colIndex2++])... };
+            if (errorInfo.hasError()){
+                return false;
+            }
+            std::vector<ConstantSP>* prow;
+            if (!unusedQueue_.pop(prow)) {
+                prow = new std::vector<ConstantSP>;
+            }
+            prow->resize(colIndex1);
+            for (int i = 0; i < colIndex1; i++) {
+                prow->at(i) = result[i];
+            }
+            return insert(&prow, 1, errorInfo);
+        }
+    }
 
 	void waitForThreadCompletion();
     void getStatus(Status &status);
     void getUnwrittenData(std::vector<std::vector<ConstantSP>*> &unwrittenData);
-	bool insertUnwrittenData(std::vector<std::vector<ConstantSP>*> &records, ErrorCodeInfo &errorInfo) { return insert(records.data(), records.size(), errorInfo); }
+	bool insertUnwrittenData(std::vector<std::vector<ConstantSP>*> &records, ErrorCodeInfo &errorInfo) { return insert(records.data(), static_cast<int>(records.size()), errorInfo); }
     
 	bool isExit(){ return hasError_; }
     const DATA_TYPE* getColType(){ return colTypes_.data(); }
@@ -158,7 +147,7 @@ private:
     std::vector<string> colNames_,colTypeString_;
     std::vector<DATA_TYPE> colTypes_;
     std::vector<int> colExtras_;
-	std::vector<COMPRESS_METHOD> compressMethods_;
+    std::vector<COMPRESS_METHOD> compressMethods_;
     //Following parameters only valid in multithread mode
     SmartPointer<Domain> partitionDomain_;
     int partitionColumnIdx_;

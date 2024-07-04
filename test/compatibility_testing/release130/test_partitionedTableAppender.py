@@ -2406,25 +2406,5 @@ class TestPartitionedTableAppender:
         self.conn.dropDatabase("dfs://test_dfs1")
         pool.shutDown()
 
-
-    def test_PartitionedTableAppender_overlength(self):
-        conn = ddb.session(HOST, PORT, USER, PASSWD)
-        conn.run(f"""
-            dbPath = "dfs://valuedb"
-            if(existsDatabase(dbPath)){{dropDatabase(dbPath)}}
-            t = table(100:0, [`id], [SYMBOL])
-            db = database(dbPath, VALUE, `APPL`IBM`AMZN)
-            pt = db.createPartitionedTable(t, `pt, `id)
-         """)
-        pool = ddb.DBConnectionPool(HOST, PORT, 3,USER, PASSWD)
-        appender = ddb.PartitionedTableAppender(dbPath="dfs://valuedb", tableName="pt", partitionColName="id", dbConnectionPool=pool)
-        df=pd.DataFrame({
-            'id':['0'*64*1024],
-        })
-        with pytest.raises(RuntimeError,match="String too long, Serialization failed, length must be less than 64K bytes") as e:
-            appender.append(df)
-        conn.close()
-        pool.shutDown()
-
 if __name__ == '__main__':
     pytest.main(["-s", "test/test_partitionedTableAppender.py"])

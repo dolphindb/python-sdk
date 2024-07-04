@@ -1,18 +1,14 @@
 import subprocess
 import warnings
-
-import pyarrow
 import pytest
 from setup.settings import *
 from setup.utils import get_pid, random_string
-
 import dolphindb as ddb
 import numpy as np
 import pandas as pd
 from numpy.testing import *
 from pandas.testing import *
 import dolphindb.settings as keys
-
 import time
 import sys
 import threading
@@ -116,12 +112,6 @@ class TestSession:
 
         conn1.run("undef(`tab,SHARED)")
         conn1.close()
-
-    # TODO: original case error
-    @pytest.mark.SESSION
-    @pytest.mark.BIGCASE
-    def test_session_init_keepAliveTime(self):
-        pass
 
     @pytest.mark.SESSION
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
@@ -257,14 +247,6 @@ class TestSession:
     def test_session_connect_close(self, _compress, _pickle):
         conn1 = ddb.session(HOST, PORT, USER, PASSWD,
                             compress=_compress, enablePickle=_pickle)
-        # conn1.run("""
-        #         getSessionMemoryStat()
-        #         closeSessions(getSessionMemoryStat().sessionId)
-        #         """)
-        # time.sleep(3)
-        # c2 = conn1.isClosed()
-        # assert(c2 == True)
-
         ans = conn1.run("1+2")
         assert (ans == 3)
         c3 = conn1.isClosed()
@@ -274,16 +256,6 @@ class TestSession:
             conn1.run("1+2")
         c4 = conn1.isClosed()
         assert (c4 == True)
-
-    # TODO: HA CASE
-    @pytest.mark.SESSION
-    def test_session_connect_HA(self):
-        pass
-
-    # TODO: original case has error
-    @pytest.mark.SESSION
-    def test_session_connect_keepAliveTime(self):
-        pass
 
     # TODO: NO PARAM python
     @pytest.mark.SESSION
@@ -375,72 +347,6 @@ class TestSession:
         else:
             with pytest.raises(RuntimeError) as e:
                 conn1.login(user, passwd)
-
-    @pytest.mark.SESSION
-    @pytest.mark.skip(reason="Invalid Param enableEncryption")
-    def test_session_login_enableEncryption(self):
-        pass
-
-    @pytest.mark.SESSION
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    @pytest.mark.parametrize('_pickle', [True, False], ids=["PICKLE_OPEN", "PICKLE_CLOSE"])
-    def test_session_runFile(self, _compress, _pickle):
-        conn1 = ddb.session(HOST, PORT, compress=_compress,
-                            enablePickle=_pickle)
-        undef = '''
-            login(`admin,`123456)
-            try{unsubscribeTable(,"t_share","sub_1");}catch(ex){}
-            try{dropAggregator("test1");}catch(ex){}
-            if(existsDatabase("dfs://test")){
-                dropDatabase("dfs://test")
-            }
-            try{undef((exec name from objs(true) where shared=1),SHARED);}catch(ex){}
-        '''
-        conn1.run(undef)
-
-        file_dir = DATA_DIR+"/session_runFile.txt"
-        tab = conn1.runFile(file_dir, clearMemory=False,
-                            pickleTableToList=True)
-        assert (type(tab) == list)
-        expect_df = conn1.run("select * from loadTable(dbpath, `dfs_tab)")
-        expect_tab = conn1.table(data=expect_df)
-        assert_array_equal(tab, expect_tab.toList())
-
-        tab2 = conn1.runFile(file_dir, clearMemory=False,
-                             pickleTableToList=False)
-        assert (type(tab2) == pd.DataFrame)
-        expect_df2 = conn1.run("select * from loadTable(dbpath, `dfs_tab)")
-        expect_tab2 = conn1.table(data=expect_df2)
-        assert_frame_equal(tab2, expect_tab2.toDF())
-
-        file_path = DATA_DIR+"/run_data.txt"
-
-        conn1.runFile(file_path)
-        time.sleep(3)
-        t1 = conn1.table(data="t1")
-        re1 = conn1.table(data="re1")
-        exec1 = conn1.run('''select stdp(value) from t1''')
-        assert_frame_equal(re1.toDF(), exec1)
-
-        re2 = conn1.table(data="re2")
-        exec2 = conn1.run('''select sum(value) from t1''')
-        assert_frame_equal(re2.toDF(), exec2)
-
-        pt1 = conn1.loadTable(dbPath="dfs://test", tableName="pt1")
-        pt1.append(t1)
-        assert_frame_equal(pt1.sort(bys='time').toDF(),
-                           t1.sort(bys="time").toDF())
-
-        t_share = conn1.table(data="t_share")
-        t_share.append(t1)
-        output = conn1.table(data="output1")
-        size3 = len(output.toDF())
-        assert size3 > 0
-
-        conn1.runFile(file_dir, clearMemory=True)
-        assert (len(conn1.run("objs()")) == 0)
-
-        conn1.run(undef)
 
     @pytest.mark.SESSION
     def test_session_func_loadTableBySQL_when_define_a_para_called_db(self):
@@ -587,8 +493,8 @@ class TestSession:
     @pytest.mark.SESSION
     def test_run_with_para_priority_parallelism(self):
         def run_and_assert(conn:ddb.session, expect, priority = None, parallelism = None):
-            s = """
-                sessionid = exec sessionid from getSessionMemoryStat() where userId=`admin;
+            s = f"""
+                sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
                 priority = exec priority from getConsoleJobs() where sessionId=sessionid;
                 parallelism = exec parallelism from getConsoleJobs() where sessionId=sessionid;
                 [priority[0], parallelism[0]]

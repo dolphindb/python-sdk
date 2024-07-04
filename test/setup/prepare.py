@@ -8,7 +8,7 @@ from numpy import matrix
 import uuid
 
 
-def _generate_uuid(prefix=None):
+def generate_uuid(prefix=None):
     if prefix is not None:
         return prefix + uuid.uuid4().hex[:8]
     return uuid.uuid4().hex[:8]
@@ -22,7 +22,7 @@ class DATAFORM(Enum):
     DF_MATRIX = keys.DF_MATRIX
     DF_DICTIONARY = keys.DF_DICTIONARY
     DF_TABLE = keys.DF_TABLE
-    # DF_CHART        = keys.DF_CHART
+# DF_CHART        = keys.DF_CHART
 
 
 ARRAY_TYPE_BASE = keys.ARRAY_TYPE_BASE
@@ -478,15 +478,13 @@ def get_Vector(*args, n=100, **kwargs):
     prefix = "v_n = {}\n".format(n)
     prefix += tmp_s
 
-    pythons = {}
-    pythons[DATATYPE.DT_VOID] = {
+    pythons = {DATATYPE.DT_VOID: {
         # NO way to create a VOID Vector
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_BOOL] = {
+    }, DATATYPE.DT_BOOL: {
         "scripts": """
             v_bool_0 = take([s_bool_1, s_bool_2], v_n)
             v_bool_1 = take([s_bool_1, s_bool_2, s_bool_n], v_n)
@@ -521,8 +519,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_bool_3", np.tile(np.array([None, True, False], dtype="object"), ceil(n / 3))[:n]),
             ("v_bool_n", np.tile(np.array([None], dtype="object"), n)),
         ],
-    }
-    pythons[DATATYPE.DT_CHAR] = {
+    }, DATATYPE.DT_CHAR: {
         "scripts": """
             v_char_0 = take([s_char_1, s_char_2], v_n)
             v_char_1 = take([s_char_1, s_char_2, s_char_n], v_n)
@@ -550,8 +547,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_char_3", np.tile(np.array([np.nan, 19, 65]), ceil(n / 3))[:n]),
             ("v_char_n", np.tile(np.array([np.nan], dtype="float64"), n)),
         ],
-    }
-    pythons[DATATYPE.DT_SHORT] = {
+    }, DATATYPE.DT_SHORT: {
         "scripts": """
             v_short_0 = take([s_short_1, s_short_2], v_n)
             v_short_1 = take([s_short_1, s_short_2, s_short_n], v_n)
@@ -579,8 +575,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_short_3", np.tile(np.array([np.nan, 1, 0]), ceil(n / 3))[:n]),
             ("v_short_n", np.tile(np.array([np.nan], dtype="float64"), n)),
         ],
-    }
-    pythons[DATATYPE.DT_INT] = {
+    }, DATATYPE.DT_INT: {
         "scripts": """
             v_int_0 = take([s_int_1, s_int_2], v_n)
             v_int_1 = take([s_int_1, s_int_2, s_int_n], v_n)
@@ -608,8 +603,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_int_3", np.tile(np.array([np.nan, 1, 0]), ceil(n / 3))[:n]),
             ("v_int_n", np.tile(np.array([np.nan], dtype="float64"), n)),
         ],
-    }
-    pythons[DATATYPE.DT_LONG] = {
+    }, DATATYPE.DT_LONG: {
         "scripts": """
             v_long_0 = take([s_long_1, s_long_2], v_n)
             v_long_1 = take([s_long_1, s_long_2, s_long_n], v_n)
@@ -660,8 +654,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_long_3", np.tile(np.array([np.nan, 1, 0]), ceil(n / 3))[:n]),
             ("v_long_n", np.tile(np.array([np.nan], dtype="float64"), n)),
         ],
-    }
-    pythons[DATATYPE.DT_DATE] = {
+    }, DATATYPE.DT_DATE: {
         "scripts": """
             v_date_0 = take([s_date_1, s_date_2], v_n)
             v_date_1 = take([s_date_1, s_date_2, s_date_n], v_n)
@@ -730,8 +723,7 @@ def get_Vector(*args, n=100, **kwargs):
              np.tile(np.array([None, "2022-01-01 12:30:56.123456789", 0], dtype="datetime64[D]"), ceil(n / 3))[:n]),
             ("v_date_n", np.tile(np.array([None], dtype="datetime64[D]"), n))
         ],
-    }
-    pythons[DATATYPE.DT_MONTH] = {
+    }, DATATYPE.DT_MONTH: {
         "scripts": """
             v_month_0 = take([s_month_1, s_month_2], v_n)
             v_month_1 = take([s_month_1, s_month_2, s_month_n], v_n)
@@ -790,8 +782,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_month_n", np.tile(np.array([None, "2022-01-01 12:30:56.123456789", "1970-01-01 12:30:56.123456789"],
                                            dtype="datetime64[M]"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_TIME] = {
+    }, DATATYPE.DT_TIME: {
         "scripts": """
             v_time_0 = take([s_time_1, s_time_2], v_n)
             v_time_1 = take([s_time_1, s_time_2, s_time_n], v_n)
@@ -811,8 +802,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_time_n",
              np.tile(np.array([None, "1970-01-01 12:30:56.123456789", 0], dtype="datetime64[ms]"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_MINUTE] = {
+    }, DATATYPE.DT_MINUTE: {
         "scripts": """
             v_minute_0 = take([s_minute_1, s_minute_2], v_n)
             v_minute_1 = take([s_minute_1, s_minute_2, s_minute_n], v_n)
@@ -832,8 +822,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_minute_n",
              np.tile(np.array([None, "1970-01-01 12:30:56.123456789", 0], dtype="datetime64[m]"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_SECOND] = {
+    }, DATATYPE.DT_SECOND: {
         "scripts": """
             v_second_0 = take([s_second_1, s_second_2], v_n)
             v_second_1 = take([s_second_1, s_second_2, s_second_n], v_n)
@@ -853,8 +842,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_second_n",
              np.tile(np.array([None, "1970-01-01 12:30:56.123456789", 0], dtype="datetime64[s]"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_DATETIME] = {
+    }, DATATYPE.DT_DATETIME: {
         "scripts": """
             v_datetime_0 = take([s_datetime_1, s_datetime_2], v_n)
             v_datetime_1 = take([s_datetime_1, s_datetime_2, s_datetime_n], v_n)
@@ -921,8 +909,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_datetime_n",
              np.tile(np.array([None, "2022-01-01 12:30:56.123456789", 0], dtype="datetime64[s]"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_TIMESTAMP] = {
+    }, DATATYPE.DT_TIMESTAMP: {
         "scripts": """
             v_timestamp_0 = take([s_timestamp_1, s_timestamp_2], v_n)
             v_timestamp_1 = take([s_timestamp_1, s_timestamp_2, s_timestamp_n], v_n)
@@ -995,8 +982,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_timestamp_n",
              np.tile(np.array([None, "2022-01-01 12:30:56.123456789", 0], dtype="datetime64[ms]"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIME] = {
+    }, DATATYPE.DT_NANOTIME: {
         "scripts": """
             v_nanotime_0 = take([s_nanotime_1, s_nanotime_2], v_n)
             v_nanotime_1 = take([s_nanotime_1, s_nanotime_2, s_nanotime_n], v_n)
@@ -1016,8 +1002,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_nanotime_n",
              np.tile(np.array([None, "1970-01-01 12:30:56.123456789", 0], dtype="datetime64[ns]"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIMESTAMP] = {
+    }, DATATYPE.DT_NANOTIMESTAMP: {
         "scripts": """
             v_nanotimestamp_0 = take([s_nanotimestamp_1, s_nanotimestamp_2], v_n)
             v_nanotimestamp_1 = take([s_nanotimestamp_1, s_nanotimestamp_2, s_nanotimestamp_n], v_n)
@@ -1091,8 +1076,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_nanotimestamp_n",
              np.tile(np.array([None, "2022-01-01 12:30:56.123456789", 0], dtype="datetime64[ns]"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_FLOAT] = {
+    }, DATATYPE.DT_FLOAT: {
         "scripts": """
             v_float_0 = take([s_float_1, s_float_2], v_n)
             v_float_1 = take([s_float_1, s_float_2, s_float_n], v_n)
@@ -1117,8 +1101,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_float_2", np.tile(np.array([0.0, np.nan, 1.11], dtype="float32"), ceil(n / 3))[:n]),
             ("v_float_n", np.tile(np.array([np.nan, 1.11, 0.0], dtype="float32"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_DOUBLE] = {
+    }, DATATYPE.DT_DOUBLE: {
         "scripts": """
             v_double_0 = take([s_double_1, s_double_2], v_n)
             v_double_1 = take([s_double_1, s_double_2, s_double_n], v_n)
@@ -1154,9 +1137,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_double_2", np.tile(np.array([0., np.nan, 1.11], dtype="float64"), ceil(n / 3))[:n]),
             ("v_double_n", np.tile(np.array([np.nan, 1.11, 0.], dtype="float64"), ceil(n / 3))[:n]),
         ],
-    }
-    # NO SYMBOL Vector
-    pythons[DATATYPE.DT_SYMBOL] = {
+    }, DATATYPE.DT_SYMBOL: {
         "scripts": """
             v_symbol_0 = symbol(take(["AAPL", string()], v_n))
             v_symbol_1 = symbol(take([string(), "AAPL"], v_n))
@@ -1168,8 +1149,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_symbol_0", np.tile(np.array(["AAPL", ""], dtype="str"), ceil(n / 2))[:n]),
             ("v_symbol_1", np.tile(np.array(["", "AAPL"], dtype="str"), ceil(n / 2))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_STRING] = {
+    }, DATATYPE.DT_STRING: {
         "scripts": """
             v_string_0 = take([s_string_1, s_string_2], v_n)
             v_string_1 = take([s_string_2, s_string_1], v_n)
@@ -1184,8 +1164,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_string_0", np.tile(np.array(["abc123测试", ""], dtype="str"), ceil(n / 2))[:n]),
             ("v_string_1", np.tile(np.array(["", "abc123测试"], dtype="str"), ceil(n / 2))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_UUID] = {
+    }, DATATYPE.DT_UUID: {
         "scripts": """
             v_uuid_0 = take([s_uuid_1, s_uuid_2], v_n)
             v_uuid_1 = take([s_uuid_2, s_uuid_1], v_n)
@@ -1201,8 +1180,7 @@ def get_Vector(*args, n=100, **kwargs):
                 np.array(["00000000-0000-0000-0000-000000000000", "5d212a78-cc48-e3b1-4235-b4d91473ee87"], dtype="str"),
                 ceil(n / 2))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_DATEHOUR] = {
+    }, DATATYPE.DT_DATEHOUR: {
         "scripts": """
             v_datehour_0 = take([s_datehour_1, s_datehour_2], v_n)
             v_datehour_1 = take([s_datehour_1, s_datehour_2, s_datehour_n], v_n)
@@ -1270,8 +1248,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_datehour_n",
              np.tile(np.array([None, "2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]"), ceil(n / 3))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_IPADDR] = {
+    }, DATATYPE.DT_IPADDR: {
         "scripts": """
             v_ip_0 = take([s_ip_1, s_ip_2], v_n)
             v_ip_1 = take([s_ip_2, s_ip_1], v_n)
@@ -1283,8 +1260,7 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_ip_0", np.tile(np.array(["192.168.1.135", "0.0.0.0"], dtype="str"), ceil(n / 2))[:n]),
             ("v_ip_1", np.tile(np.array(["0.0.0.0", "192.168.1.135"], dtype="str"), ceil(n / 2))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_INT128] = {
+    }, DATATYPE.DT_INT128: {
         "scripts": """
             v_int128_0 = take([s_int128_1, s_int128_2], v_n)
             v_int128_1 = take([s_int128_2, s_int128_1], v_n)
@@ -1300,8 +1276,7 @@ def get_Vector(*args, n=100, **kwargs):
              np.tile(np.array(["00000000000000000000000000000000", "e1671797c52e15f763380b45e841ec32"], dtype="str"),
                      ceil(n / 2))[:n]),
         ],
-    }
-    pythons[DATATYPE.DT_BLOB] = {
+    }, DATATYPE.DT_BLOB: {
         "scripts": """
             v_blob_0 = take([s_blob_1, s_blob_2], v_n)
             v_blob_1 = take([s_blob_2, s_blob_1], v_n)
@@ -1313,25 +1288,24 @@ def get_Vector(*args, n=100, **kwargs):
             ("v_blob_0", np.tile(np.array(["hello", ""], dtype="str"), ceil(n / 2))[:n]),
             ("v_blob_1", np.tile(np.array(["", "hello"], dtype="str"), ceil(n / 2))[:n]),
         ],
-    }
+    }, DATATYPE.DT_DECIMAL32: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }, DATATYPE.DT_DECIMAL64: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }}
+    # NO SYMBOL Vector
     # TODO: python decimal32
-    pythons[DATATYPE.DT_DECIMAL32] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
     # TODO: python decimal64
-    pythons[DATATYPE.DT_DECIMAL64] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
 
     for x in DATATYPE:
         prefix += str(pythons[x]["scripts"])
@@ -1356,22 +1330,19 @@ def get_Set(*args, n=20, **kwargs):
     prefix = "v_n = {}\n".format(n)
     prefix += tmp_s
 
-    pythons = {}
-    pythons[DATATYPE.DT_VOID] = {
+    pythons = {DATATYPE.DT_VOID: {
         # NO way to create a VOID Set
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_BOOL] = {
+    }, DATATYPE.DT_BOOL: {
         # NO way to create a BOOL Set
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_CHAR] = {
+    }, DATATYPE.DT_CHAR: {
         "scripts": """
             set_char_0 = set([s_char_1,s_char_2])
             set_char_1 = set([s_char_1,s_char_2,s_char_n])
@@ -1397,8 +1368,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_char_2", {65, None, 19}),
             ("set_char_n", {None, 19, 65}),
         ],
-    }
-    pythons[DATATYPE.DT_SHORT] = {
+    }, DATATYPE.DT_SHORT: {
         "scripts": """
             set_short_0 = set([s_short_1,s_short_2])
             set_short_1 = set([s_short_1,s_short_2,s_short_n])
@@ -1424,8 +1394,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_short_2", {0, None, 1}),
             ("set_short_n", {None, 1, 0}),
         ],
-    }
-    pythons[DATATYPE.DT_INT] = {
+    }, DATATYPE.DT_INT: {
         "scripts": """
             set_int_0 = set([s_int_1,s_int_2])
             set_int_1 = set([s_int_1,s_int_2,s_int_n])
@@ -1451,8 +1420,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_int_2", {0, None, 1}),
             ("set_int_n", {None, 1, 0}),
         ],
-    }
-    pythons[DATATYPE.DT_LONG] = {
+    }, DATATYPE.DT_LONG: {
         "scripts": """
             set_long_0 = set([s_long_1,s_long_2])
             set_long_1 = set([s_long_1,s_long_2,s_long_n])
@@ -1471,16 +1439,16 @@ def get_Set(*args, n=20, **kwargs):
             ("set_long_2", {0, pd.NaT, 1}),
             ("set_long_n", {pd.NaT, 1, 0}),
 
-            ("set_long_0", set((1, 0))),
-            ("set_long_1", set((1, 0, None))),
-            ("set_long_2", set((0, None, 1))),
-            ("set_long_n", set((None, 1, 0))),
-            ("set_long_1", set((1, 0, np.nan))),
-            ("set_long_2", set((0, np.nan, 1))),
-            ("set_long_n", set((np.nan, 1, 0))),
-            ("set_long_1", set((1, 0, pd.NaT))),
-            ("set_long_2", set((0, pd.NaT, 1))),
-            ("set_long_n", set((pd.NaT, 1, 0))),
+            ("set_long_0", {1, 0}),
+            ("set_long_1", {1, 0, None}),
+            ("set_long_2", {0, None, 1}),
+            ("set_long_n", {None, 1, 0}),
+            ("set_long_1", {1, 0, np.nan}),
+            ("set_long_2", {0, np.nan, 1}),
+            ("set_long_n", {np.nan, 1, 0}),
+            ("set_long_1", {1, 0, pd.NaT}),
+            ("set_long_2", {0, pd.NaT, 1}),
+            ("set_long_n", {pd.NaT, 1, 0}),
 
             ("set_long_0", set(np.array([1, 0], dtype="int64"))),
             # error
@@ -1511,8 +1479,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_long_2", {0, None, 1}),
             ("set_long_n", {None, 1, 0}),
         ],
-    }
-    pythons[DATATYPE.DT_DATE] = {
+    }, DATATYPE.DT_DATE: {
         "scripts": """
             set_date_0 = set([s_date_1,s_date_2])
             set_date_1 = set([s_date_1,s_date_2,s_date_n])
@@ -1541,8 +1508,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_date_2", {np.datetime64('1970-01-01'), np.datetime64('2022-01-01'), None}),
             ("set_date_n", {np.datetime64('1970-01-01'), np.datetime64('2022-01-01'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_MONTH] = {
+    }, DATATYPE.DT_MONTH: {
         "scripts": """
             set_month_0 = set([s_month_1,s_month_2])
             set_month_1 = set([s_month_1,s_month_2,s_month_n])
@@ -1578,8 +1544,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_month_2", {np.datetime64('2022-01'), np.datetime64('1970-01'), None}),
             ("set_month_n", {np.datetime64('2022-01'), np.datetime64('1970-01'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_TIME] = {
+    }, DATATYPE.DT_TIME: {
         "scripts": """
             set_time_0 = set([s_time_1,s_time_2])
             set_time_1 = set([s_time_1,s_time_2,s_time_n])
@@ -1595,8 +1560,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_time_2", {np.datetime64('1970-01-01T00:00:00.000'), np.datetime64('1970-01-01T12:30:56.123'), None}),
             ("set_time_n", {np.datetime64('1970-01-01T00:00:00.000'), np.datetime64('1970-01-01T12:30:56.123'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_MINUTE] = {
+    }, DATATYPE.DT_MINUTE: {
         "scripts": """
             set_minute_0 = set([s_minute_1,s_minute_2])
             set_minute_1 = set([s_minute_1,s_minute_2,s_minute_n])
@@ -1612,8 +1576,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_minute_2", {np.datetime64('1970-01-01T00:00'), np.datetime64('1970-01-01T12:30'), None}),
             ("set_minute_n", {np.datetime64('1970-01-01T00:00'), np.datetime64('1970-01-01T12:30'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_SECOND] = {
+    }, DATATYPE.DT_SECOND: {
         "scripts": """
             set_second_0 = set([s_second_1,s_second_2])
             set_second_1 = set([s_second_1,s_second_2,s_second_n])
@@ -1629,8 +1592,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_second_2", {np.datetime64('1970-01-01T12:30:56'), np.datetime64('1970-01-01T00:00:00'), None}),
             ("set_second_n", {np.datetime64('1970-01-01T12:30:56'), np.datetime64('1970-01-01T00:00:00'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_DATETIME] = {
+    }, DATATYPE.DT_DATETIME: {
         "scripts": """
             set_datetime_0 = set([s_datetime_1,s_datetime_2])
             set_datetime_1 = set([s_datetime_1,s_datetime_2,s_datetime_n])
@@ -1659,8 +1621,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_datetime_2", {np.datetime64('2022-01-01T12:30:56'), np.datetime64('1970-01-01T00:00:00'), None}),
             ("set_datetime_n", {np.datetime64('2022-01-01T12:30:56'), np.datetime64('1970-01-01T00:00:00'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_TIMESTAMP] = {
+    }, DATATYPE.DT_TIMESTAMP: {
         "scripts": """
             set_timestamp_0 = set([s_timestamp_1,s_timestamp_2])
             set_timestamp_1 = set([s_timestamp_1,s_timestamp_2,s_timestamp_n])
@@ -1692,8 +1653,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_timestamp_n",
              {np.datetime64('1970-01-01T00:00:00.000'), np.datetime64('2022-01-01T12:30:56.123'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIME] = {
+    }, DATATYPE.DT_NANOTIME: {
         "scripts": """
             set_nanotime_0 = set([s_nanotime_1,s_nanotime_2])
             set_nanotime_1 = set([s_nanotime_1,s_nanotime_2,s_nanotime_n])
@@ -1713,8 +1673,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_nanotime_n",
              {np.datetime64('1970-01-01T00:00:00.000000000'), np.datetime64('1970-01-01T12:30:56.123456789'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIMESTAMP] = {
+    }, DATATYPE.DT_NANOTIMESTAMP: {
         "scripts": """
             set_nanotimestamp_0 = set([s_nanotimestamp_1,s_nanotimestamp_2])
             set_nanotimestamp_1 = set([s_nanotimestamp_1,s_nanotimestamp_2,s_nanotimestamp_n])
@@ -1747,8 +1706,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_nanotimestamp_n",
              {np.datetime64('1970-01-01T00:00:00.000000000'), np.datetime64('2022-01-01T12:30:56.123456789'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_FLOAT] = {
+    }, DATATYPE.DT_FLOAT: {
         "scripts": """
             set_float_0 = set([s_float_1,s_float_2])
             set_float_1 = set([s_float_1,s_float_2,s_float_n])
@@ -1772,8 +1730,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_float_2", {0.0, None, 1.11}),
             ("set_float_n", {None, 1.11, 0.0}),
         ],
-    }
-    pythons[DATATYPE.DT_DOUBLE] = {
+    }, DATATYPE.DT_DOUBLE: {
         "scripts": """
             set_double_0 = set([s_double_1,s_double_2])
             set_double_1 = set([s_double_1,s_double_2,s_double_n])
@@ -1809,9 +1766,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_double_2", {0.0, None, 1.11}),
             ("set_double_n", {None, 1.11, 0.0}),
         ],
-    }
-    # NO SYMBOL Set
-    pythons[DATATYPE.DT_SYMBOL] = {
+    }, DATATYPE.DT_SYMBOL: {
         "scripts": """
             set_symbol_0 = set(symbol(["AAPL", string()]))
             set_symbol_1 = set(symbol([string(), "AAPL"]))
@@ -1823,8 +1778,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_symbol_0", {"AAPL", None}),
             ("set_symbol_1", {None, "AAPL"}),
         ],
-    }
-    pythons[DATATYPE.DT_STRING] = {
+    }, DATATYPE.DT_STRING: {
         "scripts": """
             set_string_0 = set([s_string_1, s_string_2])
             set_string_1 = set([s_string_2, s_string_1])
@@ -1844,8 +1798,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_string_0", {"abc123测试", None}),
             ("set_string_1", {None, "abc123测试"}),
         ],
-    }
-    pythons[DATATYPE.DT_UUID] = {
+    }, DATATYPE.DT_UUID: {
         "scripts": """
             set_uuid_0 = set([s_uuid_1, s_uuid_2])
             set_uuid_1 = set([s_uuid_2, s_uuid_1])
@@ -1857,8 +1810,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_uuid_0", {"5d212a78-cc48-e3b1-4235-b4d91473ee87", None}),
             ("set_uuid_1", {None, "5d212a78-cc48-e3b1-4235-b4d91473ee87"}),
         ],
-    }
-    pythons[DATATYPE.DT_DATEHOUR] = {
+    }, DATATYPE.DT_DATEHOUR: {
         "scripts": """
             set_datehour_0 = set([s_datehour_1,s_datehour_2])
             set_datehour_1 = set([s_datehour_1,s_datehour_2,s_datehour_n])
@@ -1887,8 +1839,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_datehour_2", {np.datetime64('1970-01-01T00', 'h'), np.datetime64('2022-01-01T12', 'h'), None}),
             ("set_datehour_n", {np.datetime64('1970-01-01T00', 'h'), np.datetime64('2022-01-01T12', 'h'), None}),
         ],
-    }
-    pythons[DATATYPE.DT_IPADDR] = {
+    }, DATATYPE.DT_IPADDR: {
         "scripts": """
             set_ip_0 = set([s_ip_1, s_ip_2])
             set_ip_1 = set([s_ip_2, s_ip_1])
@@ -1900,8 +1851,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_ip_0", {"192.168.1.135", None}),
             ("set_ip_1", {None, "192.168.1.135"}),
         ],
-    }
-    pythons[DATATYPE.DT_INT128] = {
+    }, DATATYPE.DT_INT128: {
         "scripts": """
             set_int128_0 = set([s_int128_1, s_int128_2])
             set_int128_1 = set([s_int128_2, s_int128_1])
@@ -1913,8 +1863,7 @@ def get_Set(*args, n=20, **kwargs):
             ("set_int128_0", {"e1671797c52e15f763380b45e841ec32", None}),
             ("set_int128_1", {None, "e1671797c52e15f763380b45e841ec32"}),
         ],
-    }
-    pythons[DATATYPE.DT_BLOB] = {
+    }, DATATYPE.DT_BLOB: {
         "scripts": """
             set_blob_0 = set([s_blob_1, s_blob_2])
             set_blob_1 = set([s_blob_2, s_blob_1])
@@ -1926,25 +1875,24 @@ def get_Set(*args, n=20, **kwargs):
             # ("set_blob_0", {"hello", None}),
             # ("set_blob_1", {None, "hello"}),
         ],
-    }
+    }, DATATYPE.DT_DECIMAL32: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }, DATATYPE.DT_DECIMAL64: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }}
+    # NO SYMBOL Set
     # TODO: python decimal32
-    pythons[DATATYPE.DT_DECIMAL32] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
     # TODO: python decimal64
-    pythons[DATATYPE.DT_DECIMAL64] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
 
     for x in DATATYPE:
         prefix += str(pythons[x]["scripts"])
@@ -2008,24 +1956,21 @@ def get_Dictionary(*args, **kwargs):
         scripts = "v_{} = {}\n".format(str(key).split('_')[-1].lower(), value_datatypes[key])
         prefix += scripts
 
-    pythons = {}
-    pythons[DATATYPE.DT_VOID] = {
+    pythons = {DATATYPE.DT_VOID: {
         # void can't be keytype
         "scripts": [
             # NO way to create a VOID Dict
         ],
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_BOOL] = {
+    }, DATATYPE.DT_BOOL: {
         # bool can't be keytype
         "scripts": """
 
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_CHAR] = {
+    }, DATATYPE.DT_CHAR: {
         "scripts": """
             dict_char_bool = dict(v_char, v_bool)
             dict_char_char = dict(v_char, v_char)
@@ -2106,8 +2051,7 @@ def get_Dictionary(*args, **kwargs):
                                             np.array(["2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]")))),
             ("dict_char_blob", dict(zip(np.array([19, 65], dtype="int8"), np.array(["hello", None], dtype="object")))),
         ],
-    }
-    pythons[DATATYPE.DT_SHORT] = {
+    }, DATATYPE.DT_SHORT: {
         "scripts": """
             dict_short_bool = dict(v_short, v_bool)
             dict_short_char = dict(v_short, v_char)
@@ -2179,8 +2123,7 @@ def get_Dictionary(*args, **kwargs):
                                              np.array(["2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]")))),
             ("dict_short_blob", dict(zip(np.array([1, 0], dtype="int16"), np.array(["hello", None], dtype="object")))),
         ],
-    }
-    pythons[DATATYPE.DT_INT] = {
+    }, DATATYPE.DT_INT: {
         "scripts": """
             dict_int_bool = dict(v_int, v_bool)
             dict_int_char = dict(v_int, v_char)
@@ -2252,8 +2195,7 @@ def get_Dictionary(*args, **kwargs):
                                            np.array(["2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]")))),
             ("dict_int_blob", dict(zip(np.array([1, 0], dtype="int32"), np.array(["hello", None], dtype="object")))),
         ],
-    }
-    pythons[DATATYPE.DT_LONG] = {
+    }, DATATYPE.DT_LONG: {
         "scripts": """
             dict_long_bool = dict(v_long, v_bool)
             dict_long_char = dict(v_long, v_char)
@@ -2325,71 +2267,61 @@ def get_Dictionary(*args, **kwargs):
                                             np.array(["2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]")))),
             ("dict_long_blob", dict(zip(np.array([1, 0], dtype="int64"), np.array(["hello", None], dtype="object")))),
         ],
-    }
-    pythons[DATATYPE.DT_DATE] = {
+    }, DATATYPE.DT_DATE: {
         # TODO date don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_MONTH] = {
+    }, DATATYPE.DT_MONTH: {
         # TODO month don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_TIME] = {
+    }, DATATYPE.DT_TIME: {
         # TODO time don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_MINUTE] = {
+    }, DATATYPE.DT_MINUTE: {
         # TODO minute don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_SECOND] = {
+    }, DATATYPE.DT_SECOND: {
         # TODO second don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_DATETIME] = {
+    }, DATATYPE.DT_DATETIME: {
         # TODO datetime don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_TIMESTAMP] = {
+    }, DATATYPE.DT_TIMESTAMP: {
         # TODO timestamp don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_NANOTIME] = {
+    }, DATATYPE.DT_NANOTIME: {
         # TODO nanotime don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_NANOTIMESTAMP] = {
+    }, DATATYPE.DT_NANOTIMESTAMP: {
         # TODO nanotimestamp don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_FLOAT] = {
+    }, DATATYPE.DT_FLOAT: {
         # TODO float don't supported as keytype temporarily
         "scripts": """
         """,
@@ -2397,8 +2329,7 @@ def get_Dictionary(*args, **kwargs):
         ],
         "download": [
         ],
-    }
-    pythons[DATATYPE.DT_DOUBLE] = {
+    }, DATATYPE.DT_DOUBLE: {
         # TODO double don't supported as keytype temporarily
         "scripts": """
         """,
@@ -2406,17 +2337,14 @@ def get_Dictionary(*args, **kwargs):
         ],
         "download": [
         ],
-    }
-    # NO SYMBOL Dictionary
-    pythons[DATATYPE.DT_SYMBOL] = {
+    }, DATATYPE.DT_SYMBOL: {
         "scripts": """
         """,
         "upload": [
         ],
         "download": [
         ],
-    }
-    pythons[DATATYPE.DT_STRING] = {
+    }, DATATYPE.DT_STRING: {
         "scripts": """
             dict_string_bool = dict(v_string, v_bool)
             dict_string_char = dict(v_string, v_char)
@@ -2497,8 +2425,7 @@ def get_Dictionary(*args, **kwargs):
             ("dict_string_blob",
              dict(zip(np.array(["abc123测试", ""], dtype="str"), np.array(["hello", None], dtype="object")))),
         ],
-    }
-    pythons[DATATYPE.DT_UUID] = {
+    }, DATATYPE.DT_UUID: {
         # TODO Dictionary dont supporte uuid
         "scripts": """
         """,
@@ -2507,15 +2434,13 @@ def get_Dictionary(*args, **kwargs):
         ],
         "download": [
         ],
-    }
-    pythons[DATATYPE.DT_DATEHOUR] = {
+    }, DATATYPE.DT_DATEHOUR: {
         # TODO datehour don't supported as keytype temporarily
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_IPADDR] = {
+    }, DATATYPE.DT_IPADDR: {
         # TODO Dictionary dont supporte ipaddr
         "scripts": """
         """,
@@ -2524,8 +2449,7 @@ def get_Dictionary(*args, **kwargs):
         ],
         "download": [
         ],
-    }
-    pythons[DATATYPE.DT_INT128] = {
+    }, DATATYPE.DT_INT128: {
         # TODO Dictionary dont supporte int128
         "scripts": """
         """,
@@ -2534,8 +2458,7 @@ def get_Dictionary(*args, **kwargs):
         ],
         "download": [
         ],
-    }
-    pythons[DATATYPE.DT_BLOB] = {
+    }, DATATYPE.DT_BLOB: {
         # TODO Dictionary dont supporte blob
         "scripts": """
         """,
@@ -2544,25 +2467,24 @@ def get_Dictionary(*args, **kwargs):
         ],
         "download": [
         ],
-    }
+    }, DATATYPE.DT_DECIMAL32: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }, DATATYPE.DT_DECIMAL64: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }}
+    # NO SYMBOL Dictionary
     # TODO: python decimal32
-    pythons[DATATYPE.DT_DECIMAL32] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
     # TODO: python decimal64
-    pythons[DATATYPE.DT_DECIMAL64] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
 
     for x in DATATYPE:
         prefix += str(pythons[x]["scripts"])
@@ -2678,8 +2600,8 @@ def get_Matrix(*args, types=None, names=None, r=100, c=100, **kwargs):
             ("m_bool_n",
              list([np.transpose(np.array([([None, True, False] * ceil(c / 3))[:c]] * r, dtype='object')), None, None])),
             ("m_bool_3", list([np.transpose(np.array([([True, False] * ceil(c / 2))[:c]] * r, dtype='object')),
-                               np.array([i for i in range(1, r + 1)], dtype='int32'),
-                               np.array([i for i in range(1, c + 1)], dtype='int32')])),
+                               np.array([_i for _i in range(1, r + 1)], dtype='int32'),
+                               np.array([_i for _i in range(1, c + 1)], dtype='int32')])),
         ],
     }
 
@@ -2753,8 +2675,8 @@ def get_Matrix(*args, types=None, names=None, r=100, c=100, **kwargs):
                 "m_char_n",
                 list([np.transpose(np.array([([np.nan, 1, 2, 105, 123] * ceil(c / 5))[:c]] * r)), None, None])),
             ("m_char_3", list([np.transpose(np.array([([1, 2, 105, 123] * ceil(c / 4))[:c]] * r)),
-                               np.array([i for i in range(1, r + 1)], dtype='int32'),
-                               np.array([i for i in range(1, c + 1)], dtype='int32')])),
+                               np.array([_i for _i in range(1, r + 1)], dtype='int32'),
+                               np.array([_i for _i in range(1, c + 1)], dtype='int32')])),
         ]
     }
 
@@ -3968,10 +3890,7 @@ def get_Matrix(*args, types=None, names=None, r=100, c=100, **kwargs):
 
 @data_wrapper
 def get_Pair(*args, **kwargs):
-    pythons = {}
-
-    # all type no way to upload
-    pythons[DATATYPE.DT_VOID] = {
+    pythons = {DATATYPE.DT_VOID: {
         "scripts":
             '''
             p_void_0 = pair(,)
@@ -3982,9 +3901,7 @@ def get_Pair(*args, **kwargs):
             # ('p_void_0', np.array([None, None], dtype = 'object')),
             ('p_void_0', list([None, None])),
         ],
-    }
-
-    pythons[DATATYPE.DT_BOOL] = {
+    }, DATATYPE.DT_BOOL: {
         "scripts":
             '''
             p_bool_0 = pair(true,false)
@@ -4004,9 +3921,7 @@ def get_Pair(*args, **kwargs):
             ('p_bool_1', list([True, None])),
             ('p_bool_2', list([None, False])),
         ],
-    }
-
-    pythons[DATATYPE.DT_CHAR] = {
+    }, DATATYPE.DT_CHAR: {
         "scripts":
             '''
             p_char_0 = pair(1c,2c)
@@ -4024,9 +3939,7 @@ def get_Pair(*args, **kwargs):
             ('p_char_1', list([1, None])),
             ('p_char_2', list([None, 2])),
         ],
-    }
-
-    pythons[DATATYPE.DT_SHORT] = {
+    }, DATATYPE.DT_SHORT: {
         "scripts":
             '''
             p_short_0 = pair(1,2)
@@ -4044,9 +3957,7 @@ def get_Pair(*args, **kwargs):
             ('p_short_1', list([1, None])),
             ('p_short_2', list([None, 2])),
         ],
-    }
-
-    pythons[DATATYPE.DT_INT] = {
+    }, DATATYPE.DT_INT: {
         "scripts":
             '''
             p_int_0 = pair(1,2)
@@ -4064,9 +3975,7 @@ def get_Pair(*args, **kwargs):
             ('p_int_1', list([1, None])),
             ('p_int_2', list([None, 2])),
         ],
-    }
-
-    pythons[DATATYPE.DT_LONG] = {
+    }, DATATYPE.DT_LONG: {
         "scripts":
             '''
             p_long_0 = pair(1l,2l)
@@ -4084,9 +3993,7 @@ def get_Pair(*args, **kwargs):
             ('p_long_1', list([1, None])),
             ('p_long_2', list([None, 2])),
         ],
-    }
-
-    pythons[DATATYPE.DT_DATE] = {
+    }, DATATYPE.DT_DATE: {
         "scripts":
             '''
             p_date_0 = pair(2022.11.09, 2001.01.31)
@@ -4106,9 +4013,7 @@ def get_Pair(*args, **kwargs):
             ('p_date_1', list([np.datetime64('2022-11-09', 'D'), None])),
             ('p_date_2', list([None, np.datetime64('2001-01-31', 'D')])),
         ],
-    }
-
-    pythons[DATATYPE.DT_MONTH] = {
+    }, DATATYPE.DT_MONTH: {
         "scripts":
             '''
             p_month_0 = pair(2022.11M, 2001.01M)
@@ -4128,9 +4033,7 @@ def get_Pair(*args, **kwargs):
             ('p_month_1', list([np.datetime64('2022-11', 'M'), None])),
             ('p_month_2', list([None, np.datetime64('2001-01', 'M')])),
         ],
-    }
-
-    pythons[DATATYPE.DT_TIME] = {
+    }, DATATYPE.DT_TIME: {
         "scripts":
             '''
             p_time_0 = pair(13:10:10.008, 22:25:45.007)
@@ -4151,9 +4054,7 @@ def get_Pair(*args, **kwargs):
             ('p_time_1', list([np.datetime64('1970-01-01T13:10:10.008', 'ms'), None])),
             ('p_time_2', list([None, np.datetime64('1970-01-01T22:25:45.007', 'ms')])),
         ],
-    }
-
-    pythons[DATATYPE.DT_MINUTE] = {
+    }, DATATYPE.DT_MINUTE: {
         "scripts":
             '''
             p_minute_0 = pair(13:10m, 22:25m)
@@ -4173,9 +4074,7 @@ def get_Pair(*args, **kwargs):
             ('p_minute_1', list([np.datetime64('1970-01-01T13:10', 'm'), None])),
             ('p_minute_2', list([None, np.datetime64('1970-01-01T22:25', 'm')])),
         ],
-    }
-
-    pythons[DATATYPE.DT_SECOND] = {
+    }, DATATYPE.DT_SECOND: {
         "scripts":
             '''
             p_second_0 = pair(13:10:10, 22:25:45)
@@ -4197,9 +4096,7 @@ def get_Pair(*args, **kwargs):
             ('p_second_1', list([np.datetime64('1970-01-01T13:10:10', 's'), None])),
             ('p_second_2', list([None, np.datetime64('1970-01-01T22:25:45', 's')])),
         ],
-    }
-
-    pythons[DATATYPE.DT_DATETIME] = {
+    }, DATATYPE.DT_DATETIME: {
         "scripts":
             '''
             p_datetime_0 = pair(2022.11.09T13:30:10, 2001.01.31T15:32:17)
@@ -4220,9 +4117,7 @@ def get_Pair(*args, **kwargs):
             ('p_datetime_1', list([np.datetime64('2022-11-09T13:30:10', 's'), None])),
             ('p_datetime_2', list([None, np.datetime64('2001-01-31T15:32:17', 's')])),
         ],
-    }
-
-    pythons[DATATYPE.DT_TIMESTAMP] = {
+    }, DATATYPE.DT_TIMESTAMP: {
         "scripts":
             '''
             p_timestamp_0 = pair(2022.11.09T13:30:10.001, 2001.01.31T15:32:17.005)
@@ -4243,9 +4138,7 @@ def get_Pair(*args, **kwargs):
             ('p_timestamp_1', list([np.datetime64('2022-11-09T13:30:10.001', 'ms'), None])),
             ('p_timestamp_2', list([None, np.datetime64('2001-01-31T15:32:17.005', 'ms')])),
         ],
-    }
-
-    pythons[DATATYPE.DT_NANOTIME] = {
+    }, DATATYPE.DT_NANOTIME: {
         "scripts":
             '''
             p_nanotime_0 = pair(13:10:10.123456789, 22:25:45.789456123)
@@ -4266,9 +4159,7 @@ def get_Pair(*args, **kwargs):
             ('p_nanotime_1', list([np.datetime64('1970-01-01T13:10:10.123456789', 'ns'), None])),
             ('p_nanotime_2', list([None, np.datetime64('1970-01-01T22:25:45.789456123', 'ns')])),
         ],
-    }
-
-    pythons[DATATYPE.DT_NANOTIMESTAMP] = {
+    }, DATATYPE.DT_NANOTIMESTAMP: {
         "scripts":
             '''
             p_nanotimestamp_0 = pair(2022.11.09T13:30:10.123456789, 2001.01.31T15:32:17.789456123)
@@ -4289,9 +4180,7 @@ def get_Pair(*args, **kwargs):
             ('p_nanotimestamp_1', list([np.datetime64('2022-11-09T13:30:10.123456789', 'ns'), None])),
             ('p_nanotimestamp_2', list([None, np.datetime64('2001-01-31T15:32:17.789456123', 'ns')])),
         ],
-    }
-
-    pythons[DATATYPE.DT_FLOAT] = {
+    }, DATATYPE.DT_FLOAT: {
         "scripts":
             '''
             p_float_0 = pair(1f,2f)
@@ -4309,9 +4198,7 @@ def get_Pair(*args, **kwargs):
             ('p_float_1', list([1.0, None])),
             ('p_float_2', list([None, 2.0])),
         ],
-    }
-
-    pythons[DATATYPE.DT_DOUBLE] = {
+    }, DATATYPE.DT_DOUBLE: {
         "scripts":
             '''
             p_double_0 = pair(1F,2F)
@@ -4329,18 +4216,14 @@ def get_Pair(*args, **kwargs):
             ('p_double_1', list([1.0, None])),
             ('p_double_2', list([None, 2.0])),
         ],
-    }
-
-    pythons[DATATYPE.DT_SYMBOL] = {
+    }, DATATYPE.DT_SYMBOL: {
         "scripts": ''''''
         # no way to create a symbol pair
         ,
         "upload": [],
         "download": [
         ],
-    }
-
-    pythons[DATATYPE.DT_STRING] = {
+    }, DATATYPE.DT_STRING: {
         "scripts":
             '''
             p_string_0 = pair("sas","sahska")
@@ -4357,10 +4240,7 @@ def get_Pair(*args, **kwargs):
             ('p_string_1', list(["sas", None])),
             ('p_string_2', list([None, "sahska"])),
         ],
-    }
-
-    # TODO some problem in the return value of uuid("")
-    pythons[DATATYPE.DT_UUID] = {
+    }, DATATYPE.DT_UUID: {
         "scripts":
             '''
             p_uuid_0 = pair(uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"), uuid(""))
@@ -4377,9 +4257,7 @@ def get_Pair(*args, **kwargs):
             ('p_uuid_1', list(['5d212a78-cc48-e3b1-4235-b4d91473ee87', None])),
             ('p_uuid_2', list([None, None])),
         ],
-    }
-
-    pythons[DATATYPE.DT_DATEHOUR] = {
+    }, DATATYPE.DT_DATEHOUR: {
         "scripts":
             '''
             p_timestamp_0 = pair(datehour(2022.11.09T13:30:10.001), datehour(2001.01.31T15:32:17.005))
@@ -4399,10 +4277,7 @@ def get_Pair(*args, **kwargs):
             ('p_timestamp_1', list([np.datetime64('2022-11-09T13', 'h'), None])),
             ('p_timestamp_2', list([None, np.datetime64('2001-01-31T15', 'h')])),
         ],
-    }
-
-    # TODO some problem in the return value of ippadr("")
-    pythons[DATATYPE.DT_IPADDR] = {
+    }, DATATYPE.DT_IPADDR: {
         "scripts":
             '''
             p_ipaddr_0 = pair(ipaddr("192.168.1.13"), ipaddr(""))
@@ -4419,19 +4294,14 @@ def get_Pair(*args, **kwargs):
             ('p_ipaddr_1', list(["192.168.1.13", None])),
             ('p_ipaddr_2', list([None, None])),
         ],
-    }
-
-    # TODO some problem in the return value of INT128("")
-    pythons[DATATYPE.DT_INT128] = {
+    }, DATATYPE.DT_INT128: {
         "scripts": ''''''
         # can not create a matrix of INT128
 
         ,
         "upload": [],
         "download": [],
-    }
-
-    pythons[DATATYPE.DT_BLOB] = {
+    }, DATATYPE.DT_BLOB: {
         "scripts":
             '''
             p_blob_0 = pair(blob("test"), blob("123456"))
@@ -4448,23 +4318,27 @@ def get_Pair(*args, **kwargs):
             ('p_blob_1', list(['test', None])),
             ('p_blob_2', list([None, None])),
         ],
-    }
-
-    pythons[DATATYPE.DT_DECIMAL32] = {
+    }, DATATYPE.DT_DECIMAL32: {
         "scripts": ''''''
         # not support in this version
         ,
         "upload": [],
         "download": [],
-    }
-
-    pythons[DATATYPE.DT_DECIMAL64] = {
+    }, DATATYPE.DT_DECIMAL64: {
         "scripts": ''''''
         # not support in this version
         ,
         "upload": [],
         "download": [],
-    }
+    }}
+
+    # all type no way to upload
+
+    # TODO some problem in the return value of uuid("")
+
+    # TODO some problem in the return value of ippadr("")
+
+    # TODO some problem in the return value of INT128("")
 
     def get_script(*args, types=None, **kwargs):
         res = pythons[types]["scripts"]
@@ -4486,7 +4360,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
     """typeTable: [table, streamTable, indexedTable, keyedTable]"""
     prefix, _ = get_Vector(n=n)
 
-    if isShare == False:
+    if not isShare:
         testTypeTable = typeTable
     else:
         testTypeTable = "share_" + typeTable
@@ -4725,8 +4599,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
         share test_table_blob_3 as test_share_table_blob_3
     """.replace("table", typeTable)
 
-    pythons = {}
-    pythons[DATATYPE.DT_VOID] = {
+    pythons = {DATATYPE.DT_VOID: {
         # NO way to create a VOID Vector
         "scripts": """
         """,
@@ -4734,8 +4607,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_BOOL] = {
+    }, DATATYPE.DT_BOOL: {
 
         # 分类：table_0:正常值， 部分空值， 全部空值 , table_1:只有一列, table_2:只有一行， table_3:空表
         "scripts": """
@@ -4805,8 +4677,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                               "bool_2": np.array([], dtype="bool")
                                                               })),
         ],
-    }
-    pythons[DATATYPE.DT_CHAR] = {
+    }, DATATYPE.DT_CHAR: {
         "scripts": """
             table_char_0 = table(1..v_n as index, v_char_0 as char_0, v_char_1 as char_1, take([s_char_n, s_char_n, s_char_n], v_n) as char_2)
             table_char_1 = table(1..v_n as index, v_char_0 as char_0)
@@ -4873,8 +4744,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                               "char_2": np.array([], dtype=np.int8)
                                                               })),
         ],
-    }
-    pythons[DATATYPE.DT_SHORT] = {
+    }, DATATYPE.DT_SHORT: {
         "scripts": """
             table_short_0 = table(1..v_n as index, v_short_0 as short_0, v_short_1 as short_1, take([s_short_n, s_short_n, s_short_n], v_n) as short_2)
             table_short_1 = table(1..v_n as index, v_short_0 as short_0)
@@ -4941,8 +4811,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                "short_2": np.array([], dtype=np.int16)
                                                                })),
         ],
-    }
-    pythons[DATATYPE.DT_INT] = {
+    }, DATATYPE.DT_INT: {
         "scripts": """
             table_int_0 = table(1..v_n as index, v_int_0 as int_0, v_int_1 as int_1, take([s_int_n, s_int_n, s_int_n], v_n) as int_2)
             table_int_1 = table(1..v_n as index, v_int_0 as int_0)
@@ -5008,8 +4877,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                              "int_2": np.array([], dtype=np.int32)
                                                              })),
         ],
-    }
-    pythons[DATATYPE.DT_LONG] = {
+    }, DATATYPE.DT_LONG: {
         "scripts": """
             table_long_0 = table(1..v_n as index, v_long_0 as long_0, v_long_1 as long_1, take([s_long_n, s_long_n, s_long_n], v_n) as long_2)
             table_long_1 = table(1..v_n as index, v_long_0 as long_0)
@@ -5075,8 +4943,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                               "long_2": np.array([], dtype=np.int64)
                                                               })),
         ],
-    }
-    pythons[DATATYPE.DT_DATE] = {
+    }, DATATYPE.DT_DATE: {
         "scripts": """
             table_date_0 = table(1..v_n as index, v_date_0 as date_0, v_date_1 as date_1, take([s_date_n, s_date_n, s_date_n], v_n) as date_2)
             table_date_1 = table(1..v_n as index, v_date_0 as date_0)
@@ -5155,8 +5022,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                               "date_2": np.array([], dtype="datetime64[ns]")
                                                               })),
         ],
-    }
-    pythons[DATATYPE.DT_MONTH] = {
+    }, DATATYPE.DT_MONTH: {
         "scripts": """
             table_month_0 = table(1..v_n as index, v_month_0 as month_0, v_month_1 as month_1, take([s_month_n, s_month_n, s_month_n], v_n) as month_2)
             table_month_1 = table(1..v_n as index, v_month_0 as month_0,v_month_0 as month_1,v_month_0 as month_2)
@@ -5247,8 +5113,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                "month_2": np.array([], dtype="datetime64[M]")
                                                                })),
         ],
-    }
-    pythons[DATATYPE.DT_TIME] = {
+    }, DATATYPE.DT_TIME: {
         "scripts": """
             table_time_0 = table(1..v_n as index, v_time_0 as time_0, v_time_1 as time_1, take([s_time_n, s_time_n, s_time_n], v_n) as time_2)
             table_time_1 = table(1..v_n as index, v_time_0 as time_0)
@@ -5301,8 +5166,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                               "time_2": np.array([], dtype="datetime64[ns]")
                                                               })),
         ],
-    }
-    pythons[DATATYPE.DT_MINUTE] = {
+    }, DATATYPE.DT_MINUTE: {
         "scripts": """
             table_minute_0 = table(1..v_n as index, v_minute_0 as minute_0, v_minute_1 as minute_1, take([s_minute_n, s_minute_n, s_minute_n], v_n) as minute_2)
             table_minute_1 = table(1..v_n as index, v_minute_0 as minute_0)
@@ -5355,8 +5219,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                 "minute_2": np.array([], dtype="datetime64[ns]")
                                                                 })),
         ],
-    }
-    pythons[DATATYPE.DT_SECOND] = {
+    }, DATATYPE.DT_SECOND: {
         "scripts": """
             table_second_0 = table(1..v_n as index, v_second_0 as second_0, v_second_1 as second_1, take([s_second_n, s_second_n, s_second_n], v_n) as second_2)
             table_second_1 = table(1..v_n as index, v_second_0 as second_0)
@@ -5409,8 +5272,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                 "second_2": np.array([], dtype="datetime64[ns]")
                                                                 })),
         ],
-    }
-    pythons[DATATYPE.DT_DATETIME] = {
+    }, DATATYPE.DT_DATETIME: {
         "scripts": """
             table_datetime_0 = table(1..v_n as index, v_datetime_0 as datetime_0, v_datetime_1 as datetime_1, take([s_datetime_n, s_datetime_n, s_datetime_n], v_n) as datetime_2)
             table_datetime_1 = table(1..v_n as index, v_datetime_0 as datetime_0)
@@ -5493,8 +5355,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                   "datetime_2": np.array([], dtype="datetime64[ns]")
                                                                   })),
         ],
-    }
-    pythons[DATATYPE.DT_TIMESTAMP] = {
+    }, DATATYPE.DT_TIMESTAMP: {
         "scripts": """
             table_timestamp_0 = table(1..v_n as index, v_timestamp_0 as timestamp_0, v_timestamp_1 as timestamp_1, take([s_timestamp_n, s_timestamp_n, s_timestamp_n], v_n) as timestamp_2)
             table_timestamp_1 = table(1..v_n as index, v_timestamp_0 as timestamp_0)
@@ -5581,8 +5442,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                    "timestamp_2": np.array([], dtype="datetime64[ns]")
                                                                    })),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIME] = {
+    }, DATATYPE.DT_NANOTIME: {
         "scripts": """
             table_nanotime_0 = table(1..v_n as index, v_nanotime_0 as nanotime_0, v_nanotime_1 as nanotime_1, take([s_nanotime_n, s_nanotime_n, s_nanotime_n], v_n) as nanotime_2)
             table_nanotime_1 = table(1..v_n as index, v_nanotime_0 as nanotime_0)
@@ -5638,8 +5498,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                   "nanotime_2": np.array([], dtype="datetime64[ns]")
                                                                   })),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIMESTAMP] = {
+    }, DATATYPE.DT_NANOTIMESTAMP: {
         "scripts": """
             table_nanotimestamp_0 = table(1..v_n as index, v_nanotimestamp_0 as nanotimestamp_0, v_nanotimestamp_1 as nanotimestamp_1, take([s_nanotimestamp_n, s_nanotimestamp_n, s_nanotimestamp_n], v_n) as nanotimestamp_2)
             table_nanotimestamp_1 = table(1..v_n as index, v_nanotimestamp_0 as nanotimestamp_0)
@@ -5732,8 +5591,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                                                    dtype="datetime64[ns]")
                                                                        })),
         ],
-    }
-    pythons[DATATYPE.DT_FLOAT] = {
+    }, DATATYPE.DT_FLOAT: {
         "scripts": """
             table_float_0 = table(1..v_n as index, v_float_0 as float_0, v_float_1 as float_1, take([s_float_n, s_float_n, s_float_n], v_n) as float_2)
             table_float_1 = table(1..v_n as index, v_float_0 as float_0)
@@ -5810,8 +5668,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                "float_2": np.array([], dtype="float32")
                                                                })),
         ],
-    }
-    pythons[DATATYPE.DT_DOUBLE] = {
+    }, DATATYPE.DT_DOUBLE: {
         "scripts": """
             table_double_0 = table(1..v_n as index, v_double_0 as double_0, v_double_1 as double_1, take([s_double_n, s_double_n, s_double_n], v_n) as double_2)
             table_double_1 = table(1..v_n as index, v_double_0 as double_0)
@@ -5888,8 +5745,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                 "double_2": np.array([], dtype="float64")
                                                                 })),
         ],
-    }
-    pythons[DATATYPE.DT_SYMBOL] = {
+    }, DATATYPE.DT_SYMBOL: {
         "scripts": """
             table_symbol_0 = table(1..v_n as index, take(symbol(["hello", "world"]), v_n) as symbol_0, take(symbol(["hello", NULL]), v_n) as symbol_1)
             table_symbol_1 = table(1..v_n as index, take(symbol(["hello", "world"]), v_n) as symbol_0)
@@ -5937,8 +5793,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                 "symbol_2": np.array([], dtype="str")
                                                                 })),
         ],
-    }
-    pythons[DATATYPE.DT_STRING] = {
+    }, DATATYPE.DT_STRING: {
         "scripts": """
             table_string_0 = table(1..v_n as index, v_string_0 as string_0, v_string_1 as string_1, take([s_string_2, s_string_2], v_n) as string_2)
             table_string_1 = table(1..v_n as index, v_string_0 as string_0)
@@ -6011,8 +5866,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                 "string_2": np.array([""], dtype="str")
                                                                 })),
         ],
-    }
-    pythons[DATATYPE.DT_UUID] = {
+    }, DATATYPE.DT_UUID: {
         "scripts": """
             table_uuid_0 = table(1..v_n as index, v_uuid_0 as uuid_0, v_uuid_1 as uuid_1, take([s_uuid_2, s_uuid_2], v_n) as uuid_2)
             table_uuid_1 = table(1..v_n as index, v_uuid_0 as uuid_0)
@@ -6076,8 +5930,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                   ['00000000-0000-0000-0000-000000000000'], dtype="str")
                                                               })),
         ],
-    }
-    pythons[DATATYPE.DT_DATEHOUR] = {
+    }, DATATYPE.DT_DATEHOUR: {
         "scripts": """
             table_datehour_0 = table(1..v_n as index, v_datehour_0 as datehour_0, v_datehour_1 as datehour_1, take([s_datehour_n, s_datehour_n, s_datehour_n], v_n) as datehour_2)
             table_datehour_1 = table(1..v_n as index, v_datehour_0 as datehour_0)
@@ -6158,8 +6011,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                   "datehour_2": np.array([], dtype="datetime64[ns]")
                                                                   })),
         ],
-    }
-    pythons[DATATYPE.DT_IPADDR] = {
+    }, DATATYPE.DT_IPADDR: {
         "scripts": """
             table_ip_0 = table(1..v_n as index, v_ip_0 as ip_0, v_ip_1 as ip_1, take([s_ip_2, s_ip_2], v_n) as ip_2)
             table_ip_1 = table(1..v_n as index, v_ip_0 as ip_0)
@@ -6210,8 +6062,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                             "ip_2": np.array(['0.0.0.0'], dtype="str")
                                                             })),
         ],
-    }
-    pythons[DATATYPE.DT_INT128] = {
+    }, DATATYPE.DT_INT128: {
         "scripts": """
             table_int128_0 = table(1..v_n as index, v_int128_0 as int128_0, v_int128_1 as int128_1, take([s_int128_2, s_int128_2], v_n) as int128_2)
             table_int128_1 = table(1..v_n as index, v_int128_0 as int128_0)
@@ -6271,8 +6122,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                                     ['00000000000000000000000000000000'], dtype="str")
                                                                 })),
         ],
-    }
-    pythons[DATATYPE.DT_BLOB] = {
+    }, DATATYPE.DT_BLOB: {
         "scripts": """
             table_blob_0 = table(1..v_n as index, v_blob_0 as blob_0, v_blob_1 as blob_1, take([s_blob_2, s_blob_2], v_n) as blob_2)
             table_blob_1 = table(1..v_n as index, v_blob_0 as blob_0)
@@ -6319,29 +6169,27 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
                                                               "blob_2": np.array([""], dtype="str")
                                                               })),
         ],
-    }
+    }, DATATYPE.DT_DECIMAL32: {
+        "scripts": """
+        """,
+        "keyScripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }, DATATYPE.DT_DECIMAL64: {
+        "scripts": """
+        """,
+        "keyScripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }}
     # TODO: python decimal32
-    pythons[DATATYPE.DT_DECIMAL32] = {
-        "scripts": """
-        """,
-        "keyScripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
     # TODO: python decimal64
-    pythons[DATATYPE.DT_DECIMAL64] = {
-        "scripts": """
-        """,
-        "keyScripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
 
     for x in DATATYPE:
         if typeTable in ["keyedTable", "indexedTable"]:
@@ -6372,19 +6220,14 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
     prefix1 = "a_r = {}\n".format(r)
     prefix2 = "a_c = {}\n".format(c)
     prefix3 = "a_s = {}\n".format(size)
-    pythons = {}
-
-    # all type no way to upload
-    pythons[DATATYPE.DT_VOID] = {
+    pythons = {DATATYPE.DT_VOID: {
         # no way to create a void array vector
         "scripts": ''''''
         ,
         "upload": [],
         "download": [
         ],
-    }
-
-    pythons[DATATYPE.DT_BOOL] = {
+    }, DATATYPE.DT_BOOL: {
         "scripts":
             '''
             x = array(BOOL[], 0, a_s)
@@ -6418,9 +6261,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
             ('a_bool_n', np.array([([None] * ceil(c))[:c]] * r)),
 
         ],
-    }
-
-    pythons[DATATYPE.DT_CHAR] = {
+    }, DATATYPE.DT_CHAR: {
         "scripts":
             '''
             x = array(CHAR[], 0, a_s)
@@ -6453,9 +6294,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
             ('a_char_3', np.array([([np.nan, 1, 2, 105, 123] * ceil(c / 5))[:c]] * r)),
             ('a_char_n', np.array([([np.nan] * ceil(c))[:c]] * r)),
         ],
-    }
-
-    pythons[DATATYPE.DT_SHORT] = {
+    }, DATATYPE.DT_SHORT: {
         "scripts":
             '''
             x = array(SHORT[], 0, a_s)
@@ -6488,9 +6327,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
             ('a_short_3', np.array([([np.nan, 1, 2] * ceil(c / 3))[:c]] * r)),
             ('a_short_n', np.array([([np.nan] * ceil(c))[:c]] * r)),
         ],
-    }
-
-    pythons[DATATYPE.DT_INT] = {
+    }, DATATYPE.DT_INT: {
         "scripts":
             '''
             x = array(INT[], 0, a_s)
@@ -6523,9 +6360,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
             ('a_int_3', np.array([([np.nan, 1, 2] * ceil(c / 3))[:c]] * r)),
             ('a_int_n', np.array([([np.nan] * ceil(c))[:c]] * r)),
         ],
-    }
-
-    pythons[DATATYPE.DT_LONG] = {
+    }, DATATYPE.DT_LONG: {
         "scripts":
             '''
             x = array(LONG[], 0, a_s)
@@ -6558,9 +6393,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
             ('a_long_3', np.array([([np.nan, 1, 2] * ceil(c / 3))[:c]] * r)),
             ('a_long_n', np.array([([np.nan] * ceil(c))[:c]] * r)),
         ],
-    }
-
-    pythons[DATATYPE.DT_DATE] = {
+    }, DATATYPE.DT_DATE: {
         "scripts":
             '''
             x = array(DATE[], 0, a_s)
@@ -6593,9 +6426,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
             ('a_date_3', np.array([([None, '2022-01-31', '2001-01-31'] * ceil(c / 3))[:c]] * r, dtype='datetime64[D]')),
             ('a_date_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[D]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_MONTH] = {
+    }, DATATYPE.DT_MONTH: {
         "scripts":
             '''
             x = array(MONTH[], 0, a_s)
@@ -6634,9 +6465,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                 np.array([([None, '2022-01-31', '2001-01-31'] * ceil(c / 3))[:c]] * r, dtype='datetime64[M]')),
             ('a_month_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[M]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_TIME] = {
+    }, DATATYPE.DT_TIME: {
         "scripts":
             '''
             x = array(TIME[], 0, a_s)
@@ -6677,9 +6506,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                 dtype='datetime64[ms]')),
             ('a_time_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[ms]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_MINUTE] = {
+    }, DATATYPE.DT_MINUTE: {
         "scripts":
             '''
             x = array(MINUTE[], 0, a_s)
@@ -6720,9 +6547,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                 dtype='datetime64[m]')),
             ('a_minute_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[m]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_SECOND] = {
+    }, DATATYPE.DT_SECOND: {
         "scripts":
             '''
             x = array(SECOND[], 0, a_s)
@@ -6759,9 +6584,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                                     dtype='datetime64[s]')),
             ('a_second_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[s]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_DATETIME] = {
+    }, DATATYPE.DT_DATETIME: {
         "scripts":
             '''
             x = array(DATETIME[], 0, a_s)
@@ -6798,9 +6621,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                                       dtype='datetime64[s]')),
             ('a_datetime_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[s]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_TIMESTAMP] = {
+    }, DATATYPE.DT_TIMESTAMP: {
         "scripts":
             '''
             x = array(TIMESTAMP[], 0, a_s)
@@ -6840,9 +6661,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                       dtype='datetime64[ms]')),
             ('a_timestamp_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[ms]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_NANOTIME] = {
+    }, DATATYPE.DT_NANOTIME: {
         "scripts":
             '''
             x = array(NANOTIME[], 0, a_s)
@@ -6883,9 +6702,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                 dtype='datetime64[ns]')),
             ('a_nanotime_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[ns]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_NANOTIMESTAMP] = {
+    }, DATATYPE.DT_NANOTIMESTAMP: {
         "scripts":
             '''
             x = array(NANOTIMESTAMP[], 0, a_s)
@@ -6926,9 +6743,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                 dtype='datetime64[ns]')),
             ('a_nanotimestamp_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[ns]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_FLOAT] = {
+    }, DATATYPE.DT_FLOAT: {
         "scripts":
             '''
             x = array(FLOAT[], 0, a_s)
@@ -6961,9 +6776,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
             ('a_float_3', np.array([([np.nan, 1.0, 2.0] * ceil(c / 3))[:c]] * r)),
             ('a_float_n', np.array([([np.nan] * ceil(c))[:c]] * r)),
         ],
-    }
-
-    pythons[DATATYPE.DT_DOUBLE] = {
+    }, DATATYPE.DT_DOUBLE: {
         "scripts":
             '''
             x = array(DOUBLE[], 0, a_s)
@@ -6996,10 +6809,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
             ('a_double_3', np.array([([np.nan, 1.0, 2.0] * ceil(c / 3))[:c]] * r)),
             ('a_double_n', np.array([([np.nan] * ceil(c))[:c]] * r)),
         ],
-    }
-
-    # can not create a array vector of symbol
-    pythons[DATATYPE.DT_SYMBOL] = {
+    }, DATATYPE.DT_SYMBOL: {
         "scripts":
             '''   
             '''
@@ -7007,19 +6817,14 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
         "upload": [],
         "download": [
         ],
-    }
-
-    # can not create a array vector of string
-    pythons[DATATYPE.DT_STRING] = {
+    }, DATATYPE.DT_STRING: {
         "scripts":
             '''
             '''
         ,
         "upload": [],
         "download": [],
-    }
-
-    pythons[DATATYPE.DT_UUID] = {
+    }, DATATYPE.DT_UUID: {
         "scripts":
             '''
             x = array(UUID[], 0, a_s)
@@ -7056,9 +6861,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                                      "6b212a78-cc48-e3b1-4545-b4d91473ee79"] * ceil(c / 3))[:c]] * r)),
             ('a_uuid_n', np.array([(["00000000-0000-0000-0000-000000000000"] * ceil(c))[:c]] * r)),
         ],
-    }
-
-    pythons[DATATYPE.DT_DATEHOUR] = {
+    }, DATATYPE.DT_DATEHOUR: {
         "scripts":
             '''
             x = array(DATEHOUR[], 0, a_s)
@@ -7095,9 +6898,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                                       dtype='datetime64[h]')),
             ('a_datehour_n', np.array([([None] * ceil(c))[:c]] * r, dtype='datetime64[h]')),
         ],
-    }
-
-    pythons[DATATYPE.DT_IPADDR] = {
+    }, DATATYPE.DT_IPADDR: {
         "scripts":
             '''
             x = array(IPADDR[], 0, a_s)
@@ -7130,9 +6931,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
             ('a_ipaddr_3', np.array([(["0.0.0.0", "192.168.1.13", "193.169.0.13"] * ceil(c / 3))[:c]] * r)),
             ('a_ipaddr_n', np.array([(["0.0.0.0"] * ceil(c))[:c]] * r)),
         ],
-    }
-
-    pythons[DATATYPE.DT_INT128] = {
+    }, DATATYPE.DT_INT128: {
         "scripts":
             '''
             x = array(INT128[], 0, a_s)
@@ -7169,10 +6968,7 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
                                        "e5795797c52e15f763380b45e841ec32"] * ceil(c / 3))[:c]] * r)),
             ('a_int128_n', np.array([(["00000000000000000000000000000000"] * ceil(c))[:c]] * r)),
         ],
-    }
-
-    # can not create a array vector of BLOB
-    pythons[DATATYPE.DT_BLOB] = {
+    }, DATATYPE.DT_BLOB: {
         "scripts":
             '''
             '''
@@ -7180,23 +6976,27 @@ def get_ArrayVector(*args, r=10, c=10, size=1000, **kwargs):
         "upload": [],
         "download": [
         ],
-    }
-
-    pythons[DATATYPE.DT_DECIMAL32] = {
+    }, DATATYPE.DT_DECIMAL32: {
         "scripts": ''''''
         # not support in this version
         ,
         "upload": [],
         "download": [],
-    }
-
-    pythons[DATATYPE.DT_DECIMAL64] = {
+    }, DATATYPE.DT_DECIMAL64: {
         "scripts": ''''''
         # not support in this version
         ,
         "upload": [],
         "download": [],
-    }
+    }}
+
+    # all type no way to upload
+
+    # can not create a array vector of symbol
+
+    # can not create a array vector of string
+
+    # can not create a array vector of BLOB
 
     def get_script(*args, types=None, **kwargs):
         res = prefix1 + prefix2 + prefix3 + pythons[types]["scripts"]
@@ -7218,7 +7018,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
     # tabletype: [table, streamTable]
     prefix = "v_n = {}\n".format(n)
 
-    if isShare == False:
+    if not isShare:
         testTypeTable = typeTable
     else:
         testTypeTable = "share_" + typeTable
@@ -7259,15 +7059,13 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
         share table_datehour_0 as share_table_datehour_0
     """.replace("table", typeTable)
 
-    pythons = {}
-    pythons[DATATYPE.DT_VOID] = {
+    pythons = {DATATYPE.DT_VOID: {
         # NO way to create a VOID Table
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_BOOL] = {
+    }, DATATYPE.DT_BOOL: {
         "scripts": """
             bool_0 = array(BOOL[], 0, v_n).append!([true false, NULL true false, true NULL false, true false NULL, NULL])
             table_bool_0 = table(bool_0)
@@ -7286,8 +7084,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                                                                          np.array([True, False, None], dtype="object"),
                                                                          np.array([None], dtype="object")]})),
         ],
-    }
-    pythons[DATATYPE.DT_CHAR] = {
+    }, DATATYPE.DT_CHAR: {
         "scripts": """BOOL
             char_0 = array(CHAR[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_char_0 = table(char_0)
@@ -7302,8 +7099,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                                                                          np.array([1, 0, np.nan]),
                                                                          np.array([np.nan])]})),
         ],
-    }
-    pythons[DATATYPE.DT_SHORT] = {
+    }, DATATYPE.DT_SHORT: {
         "scripts": """
             short_0 = array(SHORT[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_short_0 = table(short_0)
@@ -7318,8 +7114,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                                                                            np.array([1, 0, np.nan]),
                                                                            np.array([np.nan])]})),
         ],
-    }
-    pythons[DATATYPE.DT_INT] = {
+    }, DATATYPE.DT_INT: {
         "scripts": """
             int_0 = array(INT[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_int_0 = table(int_0)
@@ -7333,8 +7128,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                                                                        np.array([1, np.nan, 0]),
                                                                        np.array([1, 0, np.nan]), np.array([np.nan])]})),
         ],
-    }
-    pythons[DATATYPE.DT_LONG] = {
+    }, DATATYPE.DT_LONG: {
         "scripts": """
             long_0 = array(LONG[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_long_0 = table(long_0)
@@ -7349,8 +7143,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                                                                          np.array([1, 0, np.nan]),
                                                                          np.array([np.nan])]})),
         ],
-    }
-    pythons[DATATYPE.DT_DATE] = {
+    }, DATATYPE.DT_DATE: {
         "scripts": """
             date_0 = array(DATE[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_date_0 = table(date_0)
@@ -7371,8 +7164,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['1970-01-02', '1970-01-01', None], dtype="datetime64[D]"),
                 np.array([None], dtype="datetime64[D]")]})),
         ],
-    }
-    pythons[DATATYPE.DT_MONTH] = {
+    }, DATATYPE.DT_MONTH: {
         "scripts": """
             month_0 = array(MONTH[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_month_0 = table(month_0)
@@ -7393,8 +7185,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['0000-02', '0000-01', None], dtype="datetime64[M]"),
                 np.array([None], dtype="datetime64[M]")]})),
         ],
-    }
-    pythons[DATATYPE.DT_TIME] = {
+    }, DATATYPE.DT_TIME: {
         "scripts": """
             time_0 = array(TIME[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_time_0 = table(time_0)
@@ -7410,8 +7201,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['1970-01-01 00:00:00.001', '1970-01-01 00:00:00.000', None], dtype="datetime64[ms]"),
                 np.array([None], dtype="datetime64[ms]")]})),
         ],
-    }
-    pythons[DATATYPE.DT_MINUTE] = {
+    }, DATATYPE.DT_MINUTE: {
         "scripts": """
             minute_0 = array(MINUTE[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_minute_0 = table(minute_0)
@@ -7427,8 +7217,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['1970-01-01 00:01', '1970-01-01 00:00', None], dtype="datetime64[m]"),
                 np.array([None], dtype="datetime64[m]")]})),
         ],
-    }
-    pythons[DATATYPE.DT_SECOND] = {
+    }, DATATYPE.DT_SECOND: {
         "scripts": """
             second_0 = array(SECOND[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_second_0 = table(second_0)
@@ -7444,8 +7233,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['1970-01-01 00:00:01', '1970-01-01 00:00:00', None], dtype="datetime64[s]"),
                 np.array([None], dtype="datetime64[s]")]})),
         ],
-    }
-    pythons[DATATYPE.DT_DATETIME] = {
+    }, DATATYPE.DT_DATETIME: {
         "scripts": """
             datetime_0 = array(DATETIME[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_datetime_0 = table(datetime_0)
@@ -7466,8 +7254,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['1970-01-01 00:00:01', '1970-01-01 00:00:00', None], dtype="datetime64[s]"),
                 np.array([None], dtype="datetime64[s]")]})),
         ],
-    }
-    pythons[DATATYPE.DT_TIMESTAMP] = {
+    }, DATATYPE.DT_TIMESTAMP: {
         "scripts": """
             timestamp_0 = array(TIMESTAMP[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_timestamp_0 = table(timestamp_0)
@@ -7488,8 +7275,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['1970-01-01 00:00:00.001', '1970-01-01 00:00:00.000', None], dtype="datetime64[ms]"),
                 np.array([None], dtype="datetime64[ms]")]})),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIME] = {
+    }, DATATYPE.DT_NANOTIME: {
         "scripts": """
             nanotime_0 = array(NANOTIME[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_nanotime_0 = table(nanotime_0)
@@ -7507,8 +7293,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['1970-01-01 00:00:00.000000001', '1970-01-01 00:00:00.000000000', None],
                          dtype="datetime64[ns]"), np.array([None], dtype="datetime64[ns]")]})),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIMESTAMP] = {
+    }, DATATYPE.DT_NANOTIMESTAMP: {
         "scripts": """
             nanotimestamp_0 = array(NANOTIMESTAMP[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_nanotimestamp_0 = table(nanotimestamp_0)
@@ -7533,8 +7318,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['1970-01-01 00:00:00.000000001', '1970-01-01 00:00:00.000000000', None],
                          dtype="datetime64[ns]"), np.array([None], dtype="datetime64[ns]")]})),
         ],
-    }
-    pythons[DATATYPE.DT_FLOAT] = {
+    }, DATATYPE.DT_FLOAT: {
         "scripts": """
             float_0 = array(FLOAT[], 0, v_n).append!([1.11 0.0, NULL 1.11 0.0, 1.11 NULL 0.0, 1.11 0.0 NULL, NULL])
             table_float_0 = table(float_0)
@@ -7552,8 +7336,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                                                                                     dtype="float32"),
                                                                            np.array([np.nan], dtype="float32")]})),
         ],
-    }
-    pythons[DATATYPE.DT_DOUBLE] = {
+    }, DATATYPE.DT_DOUBLE: {
         "scripts": """
             double_0 = array(DOUBLE[], 0, v_n).append!([1.11 0.0, NULL 1.11 0.0, 1.11 NULL 0.0, 1.11 0.0 NULL, NULL])
             table_double_0 = table(double_0)
@@ -7578,35 +7361,28 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                                                                                       dtype="float64"),
                                                                              np.array([np.nan], dtype="float64")]})),
         ],
-    }
-    # NO SYMBOL TABLE
-    pythons[DATATYPE.DT_SYMBOL] = {
+    }, DATATYPE.DT_SYMBOL: {
         "scripts": """
         """,
         "upload": [
         ],
         "download": [
         ],
-    }
-    # NO STRING TABLE
-    pythons[DATATYPE.DT_STRING] = {
+    }, DATATYPE.DT_STRING: {
         "scripts": """
         """,
         "upload": [
         ],
         "download": [
         ],
-    }
-    # NO UUID TABLE
-    pythons[DATATYPE.DT_UUID] = {
+    }, DATATYPE.DT_UUID: {
         "scripts": """
         """,
         "upload": [
         ],
         "download": [
         ],
-    }
-    pythons[DATATYPE.DT_DATEHOUR] = {
+    }, DATATYPE.DT_DATEHOUR: {
         "scripts": """
             datehour_0 = array(DATEHOUR[], 0, v_n).append!([1 0, NULL 1 0, 1 NULL 0, 1 0 NULL, NULL])
             table_datehour_0 = table(datehour_0)
@@ -7627,52 +7403,50 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                 np.array(['1970-01-01 01', '1970-01-01 00', None], dtype="datetime64[h]"),
                 np.array([None], dtype="datetime64[h]")]})),
         ],
-    }
+    }, DATATYPE.DT_IPADDR: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }, DATATYPE.DT_INT128: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }, DATATYPE.DT_BLOB: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }, DATATYPE.DT_DECIMAL32: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }, DATATYPE.DT_DECIMAL64: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }}
+    # NO SYMBOL TABLE
+    # NO STRING TABLE
+    # NO UUID TABLE
     # NO IPADDR TABLE
-    pythons[DATATYPE.DT_IPADDR] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
     # NO INT128 TABLE
-    pythons[DATATYPE.DT_INT128] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
     # NO BLOB TABLE
-    pythons[DATATYPE.DT_BLOB] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
     # TODO: python decimal32
-    pythons[DATATYPE.DT_DECIMAL32] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
     # TODO: python decimal64
-    pythons[DATATYPE.DT_DECIMAL64] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
 
     for x in DATATYPE:
         prefix += str(pythons[x]["scripts"])
@@ -7698,15 +7472,13 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
 def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
     # tabletype: [table, streamTable, indexedTable, keyedTable]
 
-    pythons = {}
-    pythons[DATATYPE.DT_VOID] = {
+    pythons = {DATATYPE.DT_VOID: {
         # NO way to create a VOID PartitionedTable
         "scripts": """
         """,
         "upload": [],
         "download": [],
-    }
-    pythons[DATATYPE.DT_BOOL] = {
+    }, DATATYPE.DT_BOOL: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://bool'
@@ -7768,8 +7540,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       "bool_2": np.array([], dtype="bool")
                                                       })),
         ],
-    }
-    pythons[DATATYPE.DT_CHAR] = {
+    }, DATATYPE.DT_CHAR: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://char'
@@ -7831,9 +7602,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       "char_2": np.array([], dtype=np.int8)
                                                       })),
         ],
-    }
-
-    pythons[DATATYPE.DT_SHORT] = {
+    }, DATATYPE.DT_SHORT: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://short'
@@ -7895,8 +7664,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                        "short_2": np.array([], dtype=np.int16)
                                                        })),
         ],
-    }
-    pythons[DATATYPE.DT_INT] = {
+    }, DATATYPE.DT_INT: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://int'
@@ -7958,9 +7726,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                      })),
 
         ],
-    }
-
-    pythons[DATATYPE.DT_LONG] = {
+    }, DATATYPE.DT_LONG: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://long'
@@ -8022,8 +7788,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       "long_2": np.array([], dtype="int64")
                                                       })),
         ],
-    }
-    pythons[DATATYPE.DT_DATE] = {
+    }, DATATYPE.DT_DATE: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://date'
@@ -8098,8 +7863,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       "date_2": np.array([], dtype="datetime64[D]")
                                                       })),
         ],
-    }
-    pythons[DATATYPE.DT_MONTH] = {
+    }, DATATYPE.DT_MONTH: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://month'
@@ -8180,8 +7944,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                        "month_2": np.array([], dtype="datetime64[M]")
                                                        })),
         ],
-    }
-    pythons[DATATYPE.DT_TIME] = {
+    }, DATATYPE.DT_TIME: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://time'
@@ -8230,8 +7993,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       "time_2": np.array([], dtype="datetime64[ms]")
                                                       })),
         ],
-    }
-    pythons[DATATYPE.DT_MINUTE] = {
+    }, DATATYPE.DT_MINUTE: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://minute'
@@ -8280,8 +8042,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         "minute_2": np.array([], dtype="datetime64[m]")
                                                         })),
         ],
-    }
-    pythons[DATATYPE.DT_SECOND] = {
+    }, DATATYPE.DT_SECOND: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://second'
@@ -8330,8 +8091,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         "second_2": np.array([], dtype="datetime64[s]")
                                                         })),
         ],
-    }
-    pythons[DATATYPE.DT_DATETIME] = {
+    }, DATATYPE.DT_DATETIME: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://datetime'
@@ -8406,8 +8166,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                           "datetime_2": np.array([], dtype="datetime64[s]")
                                                           })),
         ],
-    }
-    pythons[DATATYPE.DT_TIMESTAMP] = {
+    }, DATATYPE.DT_TIMESTAMP: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://timestamp'
@@ -8482,8 +8241,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                            "timestamp_2": np.array([], dtype="datetime64[ms]")
                                                            })),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIME] = {
+    }, DATATYPE.DT_NANOTIME: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://nanotime'
@@ -8532,8 +8290,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                           "nanotime_2": np.array([], dtype="datetime64[ns]")
                                                           })),
         ],
-    }
-    pythons[DATATYPE.DT_NANOTIMESTAMP] = {
+    }, DATATYPE.DT_NANOTIMESTAMP: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://nanotimestamp'
@@ -8612,8 +8369,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                                "nanotimestamp_2": np.array([], dtype="datetime64[ns]")
                                                                })),
         ],
-    }
-    pythons[DATATYPE.DT_FLOAT] = {
+    }, DATATYPE.DT_FLOAT: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://float'
@@ -8678,8 +8434,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                        "float_2": np.array([], dtype="float32")
                                                        })),
         ],
-    }
-    pythons[DATATYPE.DT_DOUBLE] = {
+    }, DATATYPE.DT_DOUBLE: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://double'
@@ -8748,8 +8503,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         "double_2": np.array([], dtype="float64")
                                                         })),
         ],
-    }
-    pythons[DATATYPE.DT_SYMBOL] = {
+    }, DATATYPE.DT_SYMBOL: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://symbol'
@@ -8790,8 +8544,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         "symbol_2": np.array([], dtype="str")
                                                         })),
         ],
-    }
-    pythons[DATATYPE.DT_STRING] = {
+    }, DATATYPE.DT_STRING: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://string'
@@ -8854,8 +8607,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         "string_2": np.array([""], dtype="str")
                                                         })),
         ],
-    }
-    pythons[DATATYPE.DT_UUID] = {
+    }, DATATYPE.DT_UUID: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://uuid'
@@ -8911,8 +8663,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                                          dtype="str")
                                                       })),
         ],
-    }
-    pythons[DATATYPE.DT_DATEHOUR] = {
+    }, DATATYPE.DT_DATEHOUR: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://datehour'
@@ -8987,8 +8738,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                           "datehour_2": np.array([], dtype="datetime64[h]")
                                                           })),
         ],
-    }
-    pythons[DATATYPE.DT_IPADDR] = {
+    }, DATATYPE.DT_IPADDR: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://ip'
@@ -9031,8 +8781,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                     "ip_2": np.array(["0.0.0.0"], dtype="str")
                                                     })),
         ],
-    }
-    pythons[DATATYPE.DT_INT128] = {
+    }, DATATYPE.DT_INT128: {
         "scripts": """
             login("admin", "123456")
             dbPath='dfs://int128'
@@ -9088,8 +8837,7 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                                              dtype="str")
                                                         })),
         ],
-    }
-    pythons[DATATYPE.DT_BLOB] = {
+    }, DATATYPE.DT_BLOB: {
         # OLAP engine doesn't support BLOB or array type.
         "scripts": """
         """,
@@ -9098,25 +8846,24 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
         ],
         "download": [
         ],
-    }
+    }, DATATYPE.DT_DECIMAL32: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }, DATATYPE.DT_DECIMAL64: {
+        "scripts": """
+        """,
+        "upload": [
+        ],
+        "download": [
+        ],
+    }}
+
     # TODO: python decimal32
-    pythons[DATATYPE.DT_DECIMAL32] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
     # TODO: python decimal64
-    pythons[DATATYPE.DT_DECIMAL64] = {
-        "scripts": """
-        """,
-        "upload": [
-        ],
-        "download": [
-        ],
-    }
 
     def get_script(script_type="all", *args, **kwargs):
         prefix, _ = get_Table(n=n, typeTable="table", isShare=False)

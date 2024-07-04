@@ -4,6 +4,9 @@
 #include "ScalarImp.h"
 #include "Util.h"
 
+#ifdef DLOG
+    #undef DLOG
+#endif
 #define DLOGPRINT true?dolphindb::DLogger::GetMinLevel():dolphindb::DLogger::Info
 
 std::string PyType2String(PyObject *obj);

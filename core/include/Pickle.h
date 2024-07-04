@@ -6,6 +6,7 @@
 #define __PICKLE_H
 #include "Python.h"
 #include "DolphinDB.h"
+#include "Logger.h"
 #include "SysIO.h"
 
 struct UnpicklerObject;

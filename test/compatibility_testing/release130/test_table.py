@@ -1,7 +1,7 @@
 from locale import atoi
 from operator import add, and_, eq, floordiv, ge, gt, le, lshift, lt, mul, ne, or_, rshift, sub, truediv, mod
 import pytest
-from setup.prepare import _generate_uuid, get_TableData, get_scripts, eval_table_with_data, eval_sql_with_data
+from setup.prepare import generate_uuid, get_TableData, get_scripts, eval_table_with_data, eval_sql_with_data
 
 from setup.settings import *
 
@@ -421,7 +421,7 @@ class TestTable:
     def test_session_table_tableAliasName_data_bydataframe_bydict(self, python_data):
 
         for data, name in zip(python_data, SharedTable):
-            alias = _generate_uuid("tmp_")
+            alias = generate_uuid("tmp_")
             tmp = self.conn.table(data=data, tableAliasName=alias)
             res = self.conn.run(get_scripts("checkEqual").format(tableA=alias, tableB=name))
             assert_equal(res, [True, True, True, True, True])
@@ -440,7 +440,7 @@ class TestTable:
             self.conn.run(tableName[0])
             tableName = tableName[1:]
         for data, name in zip(python_data, tableName):
-            alias = _generate_uuid("tmp_")
+            alias = generate_uuid("tmp_")
             tmp = self.conn.table(data=name, tableAliasName=alias)
             assert_frame_equal(tmp.toDF(), data)
             with pytest.raises(RuntimeError) as e:
@@ -449,7 +449,7 @@ class TestTable:
     def test_session_table_tableAliasName_dbPath_data(self):
 
         for name in PartitionedTable[3:]:
-            alias = _generate_uuid("tmp_")
+            alias = generate_uuid("tmp_")
             tmp = self.conn.table(PartitionedTable[0], name, tableAliasName=alias)
             res = self.conn.run('select * from loadTable("{}", `{})'.format(PartitionedTable[0], name))
             assert_frame_equal(tmp.toDF(), res)
@@ -1251,7 +1251,7 @@ class TestTable:
 
 
         def test_rename(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
-            new_name = _generate_uuid("rename_")
+            new_name = generate_uuid("rename_")
             tb1.rename(new_name)
             assert tb1._Table__tableName == new_name
             assert tb1.tableName() == new_name
@@ -1350,7 +1350,7 @@ class TestTable:
 
 
         def test_executeAs(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
-            new_name = _generate_uuid("tmp_")
+            new_name = generate_uuid("tmp_")
             re = conntmp.run(get_scripts("objExist").format(tableName=new_name))
             assert re == False
 
@@ -1380,7 +1380,7 @@ class TestTable:
 
 
         def test_drop(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, cols, partitioned:bool=False):
-            new_name = _generate_uuid("tmp_")
+            new_name = generate_uuid("tmp_")
             conntmp.run("""
                 {} = {}
             """.format(new_name, tb1._Table__tableName))
@@ -1421,13 +1421,13 @@ class TestTable:
 
 
         def test_append(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
-            new_name = _generate_uuid("tmp_")
+            new_name = generate_uuid("tmp_")
             conntmp.run("""
                 {} = {}
             """.format(new_name, tb1._Table__tableName))
             tbtmp = conntmp.table(data=new_name)
 
-            data_name = _generate_uuid("tmp_")
+            data_name = generate_uuid("tmp_")
             conntmp.run("""
                 {} = select * from {}
             """.format(data_name, tb1._Table__tableName))
@@ -1750,7 +1750,7 @@ class TestTableUpdate:
             assert tb1._Table__ref.val() == 2
             assert tbtmp1._TableUpdate__t._Table__ref.val() == 2
             re = tbtmp1.execute().toDF()
-            new_name = _generate_uuid("tmp_")
+            new_name = generate_uuid("tmp_")
             conntmp.upload({new_name: df1})
             conntmp.run("update {} set price=price*10".format(new_name))
             ex = conntmp.run("select * from {}".format(new_name))
@@ -1832,7 +1832,7 @@ class TestTableUpdate:
             sql = tb1.update(["price"], ["price*10"]).where("symbol=`X")._TableUpdate__executesql()
             assert sql == f"update {tb1.tableName()} set price=price*10 where symbol=`X"
             re = tb1.toDF()
-            new_name = _generate_uuid("tmp_")
+            new_name = generate_uuid("tmp_")
             conntmp.upload({new_name: df1})
             conntmp.run("update {} set price=price*10 where symbol=`X".format(new_name))
             ex = conntmp.run("select * from {}".format(new_name))
@@ -1851,7 +1851,7 @@ class TestTableUpdate:
             sql = tb1.update(["price"], ["price*10"]).where("symbol=`X or symbol=`Z").where("price > 50 and price <= 100").where("index%10=0")._TableUpdate__executesql()
             assert sql == f"update {tb1.tableName()} set price=price*10 where (symbol=`X or symbol=`Z) and (price > 50 and price <= 100) and (index%10=0)"
             re = tb1.toDF()
-            new_name = _generate_uuid("tmp_")
+            new_name = generate_uuid("tmp_")
             conntmp.upload({new_name: df1})
             conntmp.run("update {} set price=price*10 where (symbol=`X or symbol=`Z) and (price > 50 and price <= 100) and (index%10 =0)".format(new_name))
             ex = conntmp.run("select * from {}".format(new_name))
@@ -2037,7 +2037,7 @@ class TestTablePivotBy:
 
         n = 100
         def test_pivotby_executeAs(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
-            new_name = _generate_uuid("tmp_")
+            new_name = generate_uuid("tmp_")
             tbtmp1 = tb1.pivotby("price", "symbol", "index,time,size").executeAs(new_name)
             re = conntmp.run("select * from {}".format(new_name))
             ex = conntmp.run("select index,time,size from {} pivot by price, symbol".format(tb1.tableName()))
@@ -2142,7 +2142,7 @@ class TestTableGroupby:
 
         n = 100
         def test_groupby_executeAs(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
-            new_name = _generate_uuid("tmp_")
+            new_name = generate_uuid("tmp_")
             tb1.select(["max(size)"]).groupby(["symbol"]).executeAs(new_name)
             re = conntmp.run("select * from {}".format(new_name))
             ex = conntmp.run("select max(size) from {} group by symbol".format(tb1.tableName()))
@@ -2741,7 +2741,7 @@ class TestTableContextby:
 
         n = 100
         def test_contextby_executeAs(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
-            new_name = _generate_uuid("tmp_")
+            new_name = generate_uuid("tmp_")
             tb1.contextby(["symbol"]).executeAs(new_name)
             re = conntmp.run("select * from {}".format(new_name))
             ex = conntmp.run("select * from {} context by symbol".format(tb1.tableName()))

@@ -882,7 +882,7 @@ class Session(object):
             partitionType : partition type. Defaults to None.
             partitions : describes how the partitions are created. Partitions is usually a list or np.array, with type char/int/np.datetime64. Defaults to None.
             dbPath : database path. Defaults to None.
-            engine: storage engine, can be 'OLAP' or 'TSDB'. Defaults to None, meaning to "OLAP".
+            engine: storage engine, can be 'OLAP', 'TSDB' or 'PKEY'. Defaults to None, meaning to "OLAP".
             atomic : indicates at which level the atomicity is guaranteed for a write transaction. It can be 'TRANS' or 'CHUNK'. Defaults to None, meaning to "TRANS".
             chunkGranularity : the chunk granularity, can be 'TABLE' or 'DATABASE'. Defaults to None.
 

@@ -2,6 +2,7 @@
 #include "ConstantMarshall.h"
 #include "ConstantImp.h"
 #include "DolphinDB.h"
+#include "ErrorCodeInfo.h"
 #include "Exceptions.h"
 #include "Types.h"
 #include "Util.h"
@@ -29,6 +30,7 @@ IO_ERR FastArrayAttributeSerializer::serialize(const ConstantSP &attribute, Data
         outStream->write((char*)&tCnt, sizeof(short));
         return OK;
     }
+
     unsigned short arrayRows = 1;
     unsigned char curCountBytes = 1;
     char reserved = 0;
@@ -210,12 +212,15 @@ EventHandler::EventHandler(const std::vector<EventSchema>& eventSchemas, const s
     }
     std::vector<EventSchema> expandEventSchemas = eventSchemas;
     for(auto& event : expandEventSchemas){
+        if(event.eventType_.empty()){
+            throw RuntimeException("The eventType in eventSchema must be a non-empty string.");
+        }
         unsigned length = event.fieldNames_.size();
         if(event.fieldExtraParams_.empty()){
             event.fieldExtraParams_.resize(length, 0);
         }
         if(length == 0){
-            throw RuntimeException("The fieldNames in eventSchema must be a non-empty string");
+            throw RuntimeException("The fieldNames in eventSchema must be a non-empty string vector.");
         }
         if(length != event.fieldExtraParams_.size() || length != event.fieldForms_.size() || length != event.fieldTypes_.size()){
             throw RuntimeException("fieldNames, fieldTypes, fieldForms and fieldExtraParams must have the same length");
@@ -324,7 +329,7 @@ bool EventHandler::serializeEvent(const std::string& eventType, const std::vecto
             ", but now it is " + Util::getDataFormString(attributes[i]->getForm());
             return false;
         }
-        if(attributes[i]->getCategory() == DENARY){
+        if(Util::getCategory(attributes[i]->getRawType()) == DENARY){
             if(info.eventSchema_->schema_.fieldExtraParams_[i] != attributes[i]->getExtraParamForType()){
                 errMsg = "Expected extraParams for the field " + info.eventSchema_->schema_.fieldNames_[i] + " of " + eventType + " : " + std::to_string(info.eventSchema_->schema_.fieldExtraParams_[i]) +
                 ", but now it is " + std::to_string(attributes[i]->getExtraParamForType());
@@ -367,7 +372,7 @@ bool EventHandler::serializeEvent(const std::string& eventType, const std::vecto
 bool EventHandler::checkOutputTable(TableSP outputTable, std::string& errMsg){
     outputColNums_ = isNeedEventTime_ ? (3 + commonKeySize_) : (2 + commonKeySize_);
     if(outputColNums_ != outputTable->columns()){
-        errMsg = "Schema mismatch: Output table contains " + std::to_string(outputTable->columns()) + "cols, expected " + std::to_string(outputColNums_) + " cols.";
+        errMsg = "Schema mismatch: Output table contains " + std::to_string(outputTable->columns()) + " cols, expected " + std::to_string(outputColNums_) + " cols.";
         return false;
     }
     int colIdx = 0;
@@ -397,6 +402,9 @@ bool EventHandler::checkOutputTable(TableSP outputTable, std::string& errMsg){
 EventSender::EventSender(DBConnection &conn, const std::string& tableName, const std::vector<EventSchema>& eventSchema, const std::vector<std::string>& eventTimeFields, const std::vector<std::string>& commonFields)
     : eventHandler_(eventSchema, eventTimeFields, commonFields), conn_(conn)
 {
+    if(tableName.empty()){
+        throw RuntimeException("tableName must not be empty.");
+    }
     std::string sql = "select top 0 * from " + tableName;
     std::string errMsg;
     ConstantSP outputTable = conn_.run(sql);

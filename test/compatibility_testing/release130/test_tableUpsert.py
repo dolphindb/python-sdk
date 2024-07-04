@@ -1481,7 +1481,7 @@ class TesttableUpsert:
         conn1.dropDatabase("dfs://test_dfs1")
         conn1.close()
 
-    def test_TableUpserter_overlength(self):
+    def test_TableUpserter_over_length(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         tbname = 't_' + random_string(5)
         conn.run(f"""

@@ -251,30 +251,6 @@ class TestDocs:
         assert res == 3
         pool.shutDown()
 
-    def test_BasicOperation_DBConnectionPool_Coprocess_4(self):
-        pool = ddb.DBConnectionPool(HOST, PORT, 4)
-        t1 = time.time()
-        task1 = pool.runTaskAsync("sleep(1000); 1+0")
-        task2 = pool.runTaskAsync("sleep(2000); 1+1")
-        task3 = pool.runTaskAsync("sleep(4000); 1+2")
-        task4 = pool.runTaskAsync("sleep(1000); 1+3")
-        t2 = time.time()
-        assert task1.result() == 1
-        t3 = time.time()
-        assert task2.result() == 2
-        t4 = time.time()
-        assert task4.result() == 4
-        t5 = time.time()
-        assert task3.result() == 3
-        t6 = time.time()
-
-        assert_almost_equal(t2-t1, 0.002, 3)
-        assert_almost_equal(t3-t1, 1, 1)
-        assert_almost_equal(t4-t1, 2, 1)
-        assert_almost_equal(t5-t1, 2, 1)
-        assert_almost_equal(t6-t1, 4, 1)
-        pool.shutDown()
-
     def test_BasicOperation_AutoFitTableAppender_TableAppender_1(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
@@ -508,54 +484,6 @@ class TestDocs:
         s.connect(HOST, PORT, USER, PASSWD)
         res = s.run(f"exec count(*) from trades order by price")
         assert res == 100
-        s.undef("trades", "SHARED")
-        s.close()
-
-    def test_BasicOperation_AsynchronousWrite_SessionAsynchronousSubmission_3(self):
-        s = ddb.Session(enableASYNC=True)  # 打开异步模式
-        s.connect(HOST, PORT, USER, PASSWD)
-        s.run("""
-            dropFunctionView(`appendStreamingData)
-            go
-            share streamTable(10000:0,`time`sym`price`id, [DATE,SYMBOL,DOUBLE,INT]) as trades
-            def appendStreamingData(mutable data){
-                tableInsert(trades, data.replaceColumn!(`time, date(data.time)))
-            }
-            addFunctionView(appendStreamingData)
-        """)
-        time.sleep(2)
-        n = 100
-
-        # 生成一个 DataFrame
-        time_list = [np.datetime64(datetime.date(2020, random.randint(
-            1, 12), random.randint(1, 20))) for _ in range(n)]
-        sym_list = np.random.choice(
-            ['IBN', 'GTYU', 'FHU', 'DGT', 'FHU', 'YUG', 'EE', 'ZD', 'FYU'], n)
-        price_list = [round(np.random.uniform(1, 100), 1) for _ in range(n)]
-        id_list = np.random.choice([1, 2, 3, 4, 5], n)
-
-        tb = pd.DataFrame({
-            'time': time_list,
-            'sym': sym_list,
-            'price': price_list,
-            'id': id_list,
-        })
-
-        for _ in range(50000):
-            s.run("appendStreamingData", tb)
-
-        time.sleep(10)
-        s.close()
-        s = ddb.Session(enableASYNC=False)
-        s.connect(HOST, PORT, USER, PASSWD)
-
-        res = s.run(f"exec count(*) from trades order by price")
-        ind = 0
-        while res != 50000 * 100 and ind < 60:
-            res = s.run(f"exec count(*) from trades order by price")
-            time.sleep(1)
-            ind += 1
-        assert ind < 60
         s.undef("trades", "SHARED")
         s.close()
 

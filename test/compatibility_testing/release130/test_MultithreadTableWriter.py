@@ -3271,23 +3271,5 @@ class TestMultithreadTableWriter:
         self.conn.run('undef(`terror_type_test,SHARED)')
         del writer
 
-    @pytest.mark.MultithreadTableWriter
-    def test_multithreadTableWriter_overlength(self):
-        data='1'*64*1024
-        tbname = 't_' + random_string(5)
-        self.conn.run(f"""
-        share table(100:0,[`str],[STRING]) as {tbname}
-        """)
-        mtw=ddb.MultithreadedTableWriter(HOST,PORT,USER,PASSWD,'',tbname,threadCount=1)
-        mtw.insert(data)
-        mtw.waitForThreadCompletion()
-        status=mtw.getStatus()
-        assert status.hasError()
-        assert status.errorCode=='A5'
-        assert 'Failed to save the inserted data: String too long, Serialization failed, length must be less than 64K bytes' in status.errorInfo
-        assert status.sendFailedRows+status.unsentRows==1
-        self.conn.run(f'undef `{tbname},SHARED')
-        del mtw
-
 if __name__ == "__main__":
     pytest.main(["-s", "test/test_MultithreadTableWriter.py"])

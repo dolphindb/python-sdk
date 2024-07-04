@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SmartPointer.h"
+#include "ErrorCodeInfo.h"
 #include "SysIO.h"
 #include "Types.h"
 #include "DolphinDB.h"
@@ -10,7 +11,7 @@
 #include <vector>
 namespace dolphindb {
 
-struct EventSchema{
+struct EXPORT_DECL EventSchema{
     std::string                 eventType_;
     std::vector<std::string>    fieldNames_;
     std::vector<DATA_TYPE>      fieldTypes_;
@@ -18,9 +19,9 @@ struct EventSchema{
     std::vector<int>            fieldExtraParams_;
 };
 
-struct EventSchemaEx{
-    EventSchema         schema_;
-    int                 timeIndex_;
+struct EXPORT_DECL EventSchemaEx{
+    EventSchema     schema_;
+    int             timeIndex_;
     std::vector<int>    commonKeyIndex_;
 };
 
@@ -89,7 +90,7 @@ private:
     int commonKeySize_;
 };
 
-class EventSender{
+class EXPORT_DECL EventSender{
 public:
     EventSender(
         DBConnection&                   conn,

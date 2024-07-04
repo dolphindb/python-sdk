@@ -1,6 +1,6 @@
 import pytest
-from setup.prepare import get_Scalar, DATATYPE, TIMETYPE, _generate_uuid, get_Vector, get_Matrix, get_Set, \
-    get_Dictionary, get_Pair, get_Table, get_Table_arrayVetcor, get_PartitionedTable_Append_Upsert
+from setup.prepare import get_Scalar, DATATYPE, TIMETYPE, generate_uuid, get_Vector, get_Matrix, get_Set, \
+    get_Dictionary, get_Table, get_Table_arrayVetcor, get_PartitionedTable_Append_Upsert
 from setup.settings import *
 from setup.utils import get_pid
 import dolphindb as ddb
@@ -18,13 +18,13 @@ for x in DATATYPE:
     test_type.append({'type': x})
 
 
-class TestUploadBasicDataTypes:
+class TestUpload:
     conn = ddb.session()
 
     def setup_method(self):
         try:
             self.conn.run("1")
-        except Exception:
+        except RuntimeError:
             self.conn.connect(HOST, PORT, USER, PASSWD)
 
     # def teardown_method(self):
@@ -44,7 +44,6 @@ class TestUploadBasicDataTypes:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
 
-    # TODO: some failed is about upload VOID [12 failed]
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
@@ -53,14 +52,14 @@ class TestUploadBasicDataTypes:
         conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
-            upstr = _generate_uuid('tmp_s_')
+            upstr = generate_uuid('tmp_s_')
             conn.upload({upstr: p})
-            res = conn.run("{} == ".format(upstr) + s)
-            assert res == True
-            res_type = conn.run("type({}) == ".format(upstr) + 'type(' + s + ')')
-            assert res_type == True
-            res_typestr = conn.run("typestr({}) == ".format(upstr) + 'typestr(' + s + ')')
-            assert res_typestr == True
+            res = conn.run(f"eqObj({upstr},{s})")
+            assert res
+            res_type = conn.run(f"type({upstr})==type({s})")
+            assert res_type
+            res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
+            assert res_typestr
         conn.undefAll()
         conn.close()
 
@@ -72,14 +71,14 @@ class TestUploadBasicDataTypes:
         conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
-            upstr = _generate_uuid('tmp_v_')
+            upstr = generate_uuid('tmp_v_')
             conn.upload({upstr: p})
-            res = conn.run("eqObj({}, {})".format(upstr, s))
-            assert res == True
-            res_type = conn.run("type({}) == ".format(upstr) + 'type(' + s + ')')
-            assert res_type == True
-            res_typestr = conn.run("typestr({}) == ".format(upstr) + 'typestr(' + s + ')')
-            assert res_typestr == True
+            res = conn.run(f"eqObj({upstr},{s})")
+            assert res
+            res_type = conn.run(f"type({upstr})==type({s})")
+            assert res_type
+            res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
+            assert res_typestr
         conn.undefAll()
         conn.close()
 
@@ -91,14 +90,14 @@ class TestUploadBasicDataTypes:
         conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
-            upstr = _generate_uuid('tmp_m_')
+            upstr = generate_uuid('tmp_m_')
             conn.upload({upstr: p})
-            res_value = conn.run("eqObj({}, ".format(upstr) + s + ')')
-            assert res_value == True
-            res_type = conn.run("type({}) == ".format(upstr) + 'type(' + s + ')')
-            assert res_type == True
-            res_typestr = conn.run("typestr({}) == ".format(upstr) + 'typestr(' + s + ')')
-            assert res_typestr == True
+            res_value = conn.run(f"eqObj({upstr},{s})")
+            assert res_value
+            res_type = conn.run(f"type({upstr})==type({s})")
+            assert res_type
+            res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
+            assert res_typestr
         conn.undefAll()
         conn.close()
 
@@ -110,14 +109,14 @@ class TestUploadBasicDataTypes:
         conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
-            upstr = _generate_uuid('tmp_set_')
+            upstr = generate_uuid('tmp_set_')
             conn.upload({upstr: p})
-            res_value = conn.run("{} == ".format(upstr) + s)
-            assert res_value == True
-            res_type = conn.run("type({}) == ".format(upstr) + 'type(' + s + ')')
-            assert res_type == True
-            res_typestr = conn.run("typestr({}) == ".format(upstr) + 'typestr(' + s + ')')
-            assert res_typestr == True
+            res_value = conn.run(f"{upstr}=={s}")
+            assert res_value
+            res_type = conn.run(f"type({upstr})==type({s})")
+            assert res_type
+            res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
+            assert res_typestr
         conn.undefAll()
         conn.close()
 
@@ -129,36 +128,19 @@ class TestUploadBasicDataTypes:
         conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
-            upstr = _generate_uuid('tmp_d_')
+            upstr = generate_uuid('tmp_d_')
             conn.upload({upstr: p})
-            conn.run('print ' + s)
-            conn.run('print ' + upstr)
             re1 = conn.run(f"""
                 x=[]
                 for (i in {upstr}.keys()){{ x.append!({upstr}[i]=={s}[i])}}
                 for (i in {s}.keys()){{ x.append!({upstr}[i]=={s}[i])}};
                 all(x)
             """)
-            assert re1 == True
-            res_type = conn.run("type({}) == ".format(upstr) + 'type(' + s + ')')
-            assert res_type == True
-            res_typestr = conn.run("typestr({}) == ".format(upstr) + 'typestr(' + s + ')')
-            assert res_typestr == True
-        conn.undefAll()
-        conn.close()
-
-    @pytest.mark.skip(reason="No way to upload Pair.")
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
-    @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Pair(self, data_type, pickle, compress):
-        tmp_s, tmp_p = get_Pair(types=data_type, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
-        conn.run(tmp_s)
-        for s, p in tmp_p:
-            upstr = _generate_uuid('tmp_s_')
-            conn.upload({upstr: p})
-            conn.run("{} == ".format(upstr) + s)
+            assert re1
+            res_type = conn.run(f"type({upstr})==type({s})")
+            assert res_type
+            res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
+            assert res_typestr
         conn.undefAll()
         conn.close()
 
@@ -172,31 +154,28 @@ class TestUploadBasicDataTypes:
         conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
-            upstr = _generate_uuid('tmp_t_')
+            upstr = generate_uuid('tmp_t_')
             conn.upload({upstr: p})
-            res_value = conn.run("each(eqObj, {}.values(), {}.values())".format(upstr, s))
-            conn.run('print ' + upstr)
-            conn.run('print ' + s)
+            res_value = conn.run(f"each(eqObj, {upstr}.values(), {s}.values())")
             if data_type in [DATATYPE.DT_DATE, DATATYPE.DT_DATEHOUR, DATATYPE.DT_MONTH] and p is not None:
-                assert res_value.all() == False
+                assert not res_value.all()
             elif data_type in [DATATYPE.DT_DATETIME, DATATYPE.DT_TIMESTAMP] and p is not None and PANDAS_VERSION < (
-            2, 0, 0):
-                assert res_value.all() == False
+                    2, 0, 0):
+                assert not res_value.all()
             else:
-                assert res_value.all() == True
-            res_type = conn.run("type({}) == type({})".format(upstr, s))
-            assert res_type == True
-            res_typestr = conn.run("typestr({}) == typestr({})".format(upstr, s))
-            assert res_typestr == True
-            res_schema = conn.run(
-                "each(eqObj, schema({})['colDefs'].values(), schema({})['colDefs'].values())".format(upstr, s))
+                assert res_value.all()
+            res_type = conn.run(f"type({upstr})==type({s})")
+            assert res_type
+            res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
+            assert res_typestr
+            res_schema = conn.run(f"each(eqObj, schema({upstr})['colDefs'].values(), schema({s})['colDefs'].values())")
             if data_type in [DATATYPE.DT_DATE, DATATYPE.DT_DATEHOUR, DATATYPE.DT_MONTH] and p is not None:
-                assert res_schema.all() == False
+                assert not res_schema.all()
             elif data_type in [DATATYPE.DT_DATETIME, DATATYPE.DT_TIMESTAMP] and p is not None and PANDAS_VERSION < (
-            2, 0, 0):
-                assert res_value.all() == False
+                    2, 0, 0):
+                assert not res_value.all()
             else:
-                assert res_schema.all() == True
+                assert res_schema.all()
         conn.undefAll()
         conn.close()
 
@@ -206,22 +185,21 @@ class TestUploadBasicDataTypes:
     @pytest.mark.parametrize('table_type', ['table'], ids=['table'])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
     def test_upload_TableArrayVector(self, data_type, pickle, compress, table_type, isShare):
-        tmp_s, tmp_p = get_Table_arrayVetcor(types=data_type, n=100, typeTable=table_type, isShare=isShare,
+        tmp_s, tmp_p = get_Table_arrayVetcor(types=data_type, typeTable=table_type, isShare=isShare,
                                              names="upload")
         conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
-            upstr = _generate_uuid('tmp_at_')
+            upstr = generate_uuid('tmp_at_')
             conn.upload({upstr: p})
-            res_value = conn.run("each(eqObj, {}.values(), {}.values())".format(upstr, s))
-            assert res_value.all() == True
-            res_type = conn.run("type({}) == type({})".format(upstr, s))
-            assert res_type == True
-            res_typestr = conn.run("typestr({}) == typestr({})".format(upstr, s))
-            assert res_typestr == True
-            res_schema = conn.run(
-                "each(eqObj, schema({})['colDefs'].values(), schema({})['colDefs'].values())".format(upstr, s))
-            assert res_schema.all() == True
+            res_value = conn.run(f"each(eqObj, {upstr}.values(), {s}.values())")
+            assert res_value.all()
+            res_type = conn.run(f"type({upstr})==type({s})")
+            assert res_type
+            res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
+            assert res_typestr
+            res_schema = conn.run(f"each(eqObj, schema({upstr})['colDefs'].values(), schema({s})['colDefs'].values())")
+            assert res_schema.all()
         conn.undefAll()
         conn.close()
 
@@ -236,19 +214,17 @@ class TestUploadBasicDataTypes:
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = "test_" + s
-            res_len_before = conn.run("size(select * from {}) == 0".format(upstr))
-            assert res_len_before == True
+            res_len_before = conn.run(f"size(select * from {upstr}) == 0")
+            assert res_len_before
             appender = ddb.tableAppender(tableName=upstr, ddbSession=conn)
             appender.append(p)
-            res_value = conn.run(
-                "each(eqObj, (select * from {}).values(), (select * from {}).values())".format(upstr, s))
-            assert res_value.all() == True
-            res_len_after = conn.run("size(select * from {}) == size(select * from {})".format(upstr, s))
-            assert res_len_after == True
+            res_value = conn.run(f"each(eqObj, (select * from {upstr}).values(), (select * from {s}).values())")
+            assert res_value.all()
+            res_len_after = conn.run(f"size(select * from {upstr}) == size(select * from {s})")
+            assert res_len_after
         conn.undefAll()
         conn.close()
 
-    @pytest.mark.NOW
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('isShare', [True, False], ids=["enshare", "unshare"])
@@ -260,15 +236,14 @@ class TestUploadBasicDataTypes:
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = "test_" + s
-            res_len_before = conn.run("size(select * from {}) == 0".format(upstr))
-            assert res_len_before == True
+            res_len_before = conn.run(f"size(select * from {upstr}) == 0")
+            assert res_len_before
             upsert = ddb.tableUpsert(tableName=upstr, ddbSession=conn)
             upsert.upsert(p)
-            res_value = conn.run(
-                "each(eqObj, (select * from {}).values(), (select * from {}).values())".format(upstr, s))
-            assert res_value.all() == True
-            res_len_after = conn.run("size(select * from {}) == size(select * from {})".format(upstr, s))
-            assert res_len_after == True
+            res_value = conn.run(f"each(eqObj, (select * from {upstr}).values(), (select * from {s}).values())")
+            assert res_value.all()
+            res_len_after = conn.run(f"size(select * from {upstr}) == size(select * from {s})")
+            assert res_len_after
         conn.undefAll()
         conn.close()
 
@@ -284,14 +259,14 @@ class TestUploadBasicDataTypes:
             dbpath = 'dfs://' + s.split('_')[1]
             appender = ddb.TableAppender(dbPath=dbpath, tableName=upstr, ddbSession=conn)
             appender.append(p)
-            res_value = conn.run("eqObj((select * from {}).values(), (select * from {}).values())".format(upstr, s))
-            res_type = conn.run("type({}) == ".format(upstr) + 'type(' + s + ')')
+            res_value = conn.run(f"eqObj((select * from {upstr}).values(), (select * from {s}).values())")
+            res_type = conn.run(f"type({upstr})==type({s})")
             if data_type in [DATATYPE.DT_TIMESTAMP, DATATYPE.DT_DATE, DATATYPE.DT_DATEHOUR, DATATYPE.DT_DATETIME,
                              DATATYPE.DT_MONTH] and p is not None:
                 continue
             else:
-                assert res_value == True
-                assert res_type == True
+                assert res_value
+                assert res_type
         conn.undefAll()
         conn.close()
 
@@ -309,14 +284,14 @@ class TestUploadBasicDataTypes:
             upsert = ddb.TableUpserter(dbPath=dbpath, tableName=upstr, ddbSession=conn, ignoreNull=ignoreNull,
                                        keyColNames=["index"])
             upsert.upsert(p)
-            res_value = conn.run("eqObj((select * from {}).values(), (select * from {}).values())".format(upstr, s))
-            res_type = conn.run("type({}) == ".format(upstr) + 'type(' + s + ')')
+            res_value = conn.run(f"eqObj((select * from {upstr}).values(), (select * from {s}).values())")
+            res_type = conn.run(f"type({upstr})==type({s})")
             if data_type in [DATATYPE.DT_TIMESTAMP, DATATYPE.DT_DATE, DATATYPE.DT_DATEHOUR, DATATYPE.DT_DATETIME,
                              DATATYPE.DT_MONTH] and p is not None:
                 continue
             else:
-                assert res_value == True
-                assert res_type == True
+                assert res_value
+                assert res_type
         conn.undefAll()
         conn.close()
 
@@ -345,9 +320,9 @@ class TestUploadBasicDataTypes:
         elif data_type == 'NANOTIME':
             data_type = 'NANOTIMESTAMP'
         if data_type == 'MONTH':
-            ex_s = "v1 = array(MONTH, 0);v1.append!(1970.01M NULL 2053.05M)"""
+            ex_s = "v1 = array(MONTH, 0);v1.append!(1970.01M NULL 2053.05M)"
         else:
-            ex_s = f"""v1 = array({data_type}, 0);v1.append!(0 NULL 1000)"""
+            ex_s = f"v1 = array({data_type}, 0);v1.append!(0 NULL 1000)"
         conn.upload(np_dict)
         conn.run(ex_s)
         assert conn.run("eqObj(v1, a)")
@@ -370,7 +345,6 @@ class TestUploadBasicDataTypes:
         [[np.nan, np.nan, np.nan], ["", "", ""], [np.nan, np.nan, np.nan]],
     ]
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_upload_allNone_tables_with_numpyArray(self, val, valstr, valdecimal):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
@@ -429,7 +403,7 @@ class TestUploadBasicDataTypes:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({"tab": df})
-        assert conn.run(r"""res = bool([]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};all(res)""")
+        assert conn.run(r"res = bool([]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};all(res)")
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'FLOAT',
@@ -483,7 +457,6 @@ class TestUploadBasicDataTypes:
          [True, True, True]],
     ]
 
-    @pytest.mark.v130223
     @pytest.mark.parametrize('val, valip, valuuid, valint128, valdecimal, ex', test_dataArray,
                              ids=[str(x[0]) for x in test_dataArray])
     def test_upload_tables_arrayVector(self, val, valip, valuuid, valint128, valdecimal, ex):
@@ -532,7 +505,7 @@ class TestUploadBasicDataTypes:
                 conn.upload({"tab": df})
             return
         conn.upload({"tab": df})
-        res = conn.run("""res = array(BOOL[]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};res""")
+        res = conn.run("res = array(BOOL[]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};res")
         for row_res in res:
             assert_array_equal(row_res, ex)
         schema = conn.run("schema(tab).colDefs[`typeString]")
@@ -621,7 +594,7 @@ class TestUploadBasicDataTypes:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({"tab": df})
-        assert conn.run(r"""res = bool([]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};all(res)""")
+        assert conn.run(r"res = bool([]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};all(res)")
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'FLOAT',
@@ -631,7 +604,6 @@ class TestUploadBasicDataTypes:
         conn.undefAll()
         conn.close()
 
-    @pytest.mark.v130221
     def test_upload_exceptions(self):
         df = pd.DataFrame({
             1: [1, 2, 3],
@@ -663,8 +635,6 @@ class TestUploadBasicDataTypes:
                            match=r"Table columns must be vectors \(np.array, series, tuple, or list\) for upload"):
             self.conn.upload({'a': df})
 
-    # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
@@ -687,8 +657,6 @@ class TestUploadBasicDataTypes:
                         "e1671797c52e15f763380b45e841ec32", decimal.Decimal('-2.11'), decimal.Decimal('0.00000000000'),
                         decimal.Decimal('-1.100000000000000000000000000000000000')]
             data.append(row_data)
-        # 包含None的话char列默认转成float64类型，上传时会报错
-        # data.append([10, None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None])
         if _python_list:
             df = pd.DataFrame(data, columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
                                              'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp',
@@ -737,9 +705,11 @@ class TestUploadBasicDataTypes:
                 tableInsert(t1, i, false, i,i,i,i,i,i+23640,i,i,i,i,i,i,i,i,i,i, 'sym','str', 'blob', ipaddr("1.1.1.1"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),int128("e1671797c52e15f763380b45e841ec32"), decimal32('-2.11', 2), decimal64('0.0', 11), decimal128('-1.1', 36))
             }
         """)
-        res = conn1.run("""ex = select * from t1;
-                           res = select * from t;
-                           all(each(eqObj, ex.values(), res.values()))""")
+        res = conn1.run("""
+            ex = select * from t1;
+            res = select * from t;
+            all(each(eqObj, ex.values(), res.values()))"""
+                        )
         assert res
         tys = conn1.run("schema(t).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
@@ -749,12 +719,10 @@ class TestUploadBasicDataTypes:
         assert_array_equal(tys, ex_types)
         conn1.close()
 
-    # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
-    def test_upload_dataframe_arrayVector_with_numpy_order(self, _compress, _order, _python_list):
+    def test_upload_dataframe_array_vector_with_numpy_order(self, _compress, _order, _python_list):
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         for i in range(10):
@@ -767,7 +735,6 @@ class TestUploadBasicDataTypes:
         data.append(
             [10, [None], [None], [None], [None], [None], [None], [None], [None], [None], [None], [None], [None], [None],
              [None], [None], [None], [None], [None], [None], [None], [None], [None], [None]])
-
         if _python_list:
             df = pd.DataFrame(data, columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
                                              'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp',
@@ -814,9 +781,11 @@ class TestUploadBasicDataTypes:
             }
             tableInsert(t1, 10, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
         """)
-        res = conn1.run("""ex = select * from t1;
-                           res = select * from t;
-                           all(each(eqObj, ex.values(), res.values()))""")
+        res = conn1.run("""
+            ex = select * from t1;
+            res = select * from t;
+            all(each(eqObj, ex.values(), res.values()))
+        """)
         assert res
         tys = conn1.run("schema(t).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
@@ -826,8 +795,6 @@ class TestUploadBasicDataTypes:
         assert_array_equal(tys, ex_types)
         conn1.close()
 
-    # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
@@ -837,7 +804,6 @@ class TestUploadBasicDataTypes:
         origin_nulls = [None, np.nan, pd.NaT]
         for i in range(7):
             row_data = random.choices(origin_nulls, k=26)
-            print(f'row {i}:', row_data)
             data.append([i, *row_data])
         data.append([7] + [None] * 26)
         data.append([8] + [pd.NaT] * 26)
@@ -891,9 +857,11 @@ class TestUploadBasicDataTypes:
                 tableInsert(t1, i, NULL, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
             }
         """)
-        res = conn1.run("""ex = select * from t1;
-                           res = select * from t;
-                           all(each(eqObj, ex.values(), res.values()))""")
+        res = conn1.run("""
+            ex = select * from t1;
+            res = select * from t;
+            all(each(eqObj, ex.values(), res.values()))
+        """)
         assert res
         tys = conn1.run("schema(t).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
@@ -903,18 +871,15 @@ class TestUploadBasicDataTypes:
         assert_array_equal(tys, ex_types)
         conn1.close()
 
-    # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
-    def test_upload_null_dataframe_arrayVector_with_numpy_order(self, _compress, _order, _python_list):
+    def test_upload_null_dataframe_array_vector_with_numpy_order(self, _compress, _order, _python_list):
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         origin_nulls = [[None], [np.nan], [pd.NaT]]
         for i in range(7):
             row_data = random.choices(origin_nulls, k=23)
-            print(f'row {i}:', row_data)
             data.append([i, *row_data])
         data.append([7] + [[None]] * 23)
         data.append([8] + [[pd.NaT]] * 23)
@@ -964,9 +929,11 @@ class TestUploadBasicDataTypes:
                 tableInsert(t1, i, NULL, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
             }
         """)
-        res = conn1.run("""ex = select * from t1;
-                           res = select * from t;
-                           all(each(eqObj, ex.values(), res.values()))""")
+        res = conn1.run("""
+            ex = select * from t1;
+            res = select * from t;
+            all(each(eqObj, ex.values(), res.values()))
+       """)
         assert res
         tys = conn1.run("schema(t).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
@@ -977,63 +944,63 @@ class TestUploadBasicDataTypes:
         conn1.close()
 
     @pytest.mark.parametrize('data_type', ['string'], ids=['string'])
-    def test_upload_scalar_overlength(self, data_type):
+    def test_upload_scalar_over_length(self, data_type):
         data = {
-            f'test_scalar_{data_type}': '1' * 4 * 64 * 1024
+            f'test_scalar_{data_type}': '1' * 256 * 1024
         }
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         with pytest.raises(RuntimeError,
-                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+                           match="String too long, Serialization failed, length must be less than 256K bytes"):
             conn.upload(data)
         conn.close()
 
     @pytest.mark.parametrize('data_type', ['string'], ids=['string'])
-    def test_upload_vector_overlength(self, data_type):
+    def test_upload_vector_over_length(self, data_type):
         data = {
-            f'test_vector_{data_type}': np.array(['1' * 4 * 64 * 1024, ""], dtype="str")
+            f'test_vector_{data_type}': np.array(['1' * 256 * 1024, ""], dtype="str")
         }
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         with pytest.raises(RuntimeError,
-                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+                           match="String too long, Serialization failed, length must be less than 256K bytes"):
             conn.upload(data)
         conn.close()
 
     @pytest.mark.parametrize('data_type', ['string'], ids=['string'])
-    def test_upload_set_overlength(self, data_type):
+    def test_upload_set_over_length(self, data_type):
         data = {
-            f'test_set_{data_type}': {'1' * 4 * 64 * 1024, ""}
+            f'test_set_{data_type}': {'1' * 256 * 1024, ""}
         }
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         with pytest.raises(RuntimeError,
-                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+                           match="String too long, Serialization failed, length must be less than 256K bytes"):
             conn.upload(data)
         conn.close()
 
     @pytest.mark.parametrize('data_type', ['string'], ids=['string'])
-    def test_upload_dictionary_overlength(self, data_type):
+    def test_upload_dictionary_over_length(self, data_type):
         data = {
-            f'test_dictionary_{data_type}': {'a': '1' * 4 * 64 * 1024}
+            f'test_dictionary_{data_type}': {'a': '1' * 256 * 1024}
         }
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         with pytest.raises(RuntimeError,
-                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+                           match="String too long, Serialization failed, length must be less than 256K bytes"):
             conn.upload(data)
         conn.close()
 
     @pytest.mark.parametrize('data_type', ['string'], ids=['string'])
-    def test_upload_table_overlength_string(self, data_type):
+    def test_upload_table_over_length_string(self, data_type):
         data = {
-            f'test_table_{data_type}': pd.DataFrame({'a': [1, 2, 3], 'b': ['1' * 4 * 64 * 1024, '2', '3']})
+            f'test_table_{data_type}': pd.DataFrame({'a': [1, 2, 3], 'b': ['1' * 256 * 1024, '2', '3']})
         }
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         with pytest.raises(RuntimeError,
-                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+                           match="String too long, Serialization failed, length must be less than 256K bytes"):
             conn.upload(data)
         conn.close()
 
     @pytest.mark.parametrize('data_type', ['symbol'], ids=['symbol'])
-    def test_upload_table_overlength_symbol(self, data_type):
-        df = pd.DataFrame({'a': [1, 2, 3], 'b': ['1' * 4 * 64 * 1024, '2', '3']})
+    def test_upload_table_over_length_symbol(self, data_type):
+        df = pd.DataFrame({'a': [1, 2, 3], 'b': ['1' * 256 * 1024, '2', '3']})
         df.__DolphinDB_Type__ = {
             'b': keys.DT_SYMBOL
         }
@@ -1042,13 +1009,13 @@ class TestUploadBasicDataTypes:
         }
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         with pytest.raises(RuntimeError,
-                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+                           match="String too long, Serialization failed, length must be less than 256K bytes"):
             conn.upload(data)
         conn.close()
 
     @pytest.mark.parametrize('data_type', ['blob'], ids=['blob'])
-    def test_upload_table_overlength_blob(self, data_type):
-        df = pd.DataFrame({'a': [1, 2, 3], 'b': ['1' * 4 * 64 * 1024, '2', '3']})
+    def test_upload_table_over_length_blob(self, data_type):
+        df = pd.DataFrame({'a': [1, 2, 3], 'b': ['1' * 256 * 1024, '2', '3']})
         df.__DolphinDB_Type__ = {
             'b': keys.DT_BLOB
         }
@@ -1058,7 +1025,3 @@ class TestUploadBasicDataTypes:
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.upload(data)
         conn.close()
-
-
-if __name__ == '__main__':
-    pytest.main(["-s", "test/test_upload.py"])

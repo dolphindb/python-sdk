@@ -660,12 +660,11 @@ class TestLoadTable:
         tbName1 = DBInfo.table1
         create_disk_range_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_hash(self):
         dbPath = DBInfo.diskDBName
@@ -689,11 +688,11 @@ class TestLoadTable:
         create_disk_hash_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
 
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_value(self):
         dbPath = DBInfo.diskDBName
@@ -717,11 +716,11 @@ class TestLoadTable:
         create_disk_value_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
 
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_list(self):
         dbPath = DBInfo.diskDBName
@@ -745,11 +744,11 @@ class TestLoadTable:
         create_disk_list_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
 
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_compo_range_range(self):
         dbPath = DBInfo.diskDBName
@@ -775,11 +774,11 @@ class TestLoadTable:
         create_disk_compo_range_range_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
 
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_compo_range_hash(self):
         dbPath = DBInfo.diskDBName
@@ -805,11 +804,11 @@ class TestLoadTable:
         create_disk_compo_range_hash_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
 
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_compo_range_value(self):
         dbPath = DBInfo.diskDBName
@@ -835,11 +834,11 @@ class TestLoadTable:
         create_disk_compo_range_value_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
 
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_compo_range_list(self):
         dbPath = DBInfo.diskDBName
@@ -865,11 +864,11 @@ class TestLoadTable:
         create_disk_compo_range_list_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
 
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_compo_range_hash_list(self):
         dbPath = DBInfo.diskDBName
@@ -895,11 +894,11 @@ class TestLoadTable:
         create_disk_compo_range_hash_list_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
 
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_compo_range_value_list(self):
         dbPath = DBInfo.diskDBName
@@ -925,11 +924,11 @@ class TestLoadTable:
         create_disk_compo_range_value_list_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
 
-        before = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        before = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.conn.run("exec memSize from getSessionMemoryStat()"))
+        after = list(self.conn.run(f"exec memSize from getSessionMemoryStat() where userId='{USER}'"))
         assert_frame_equal(tmp.toDF(), rs)
-        assert_array_equal(after >= before, repeat(True, 4))
+        assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_value_partition_string_scalar(self):
         myDBName=WORK_DIR+"/db1"

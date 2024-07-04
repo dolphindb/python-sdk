@@ -25,17 +25,10 @@
     #include <sys/syscall.h>
 	#include <semaphore.h>
 #endif
+
+#include "Exports.h"
 #include "SmartPointer.h"
 
-#ifdef _MSC_VER
-	#ifdef _USRDLL	
-		#define EXPORT_DECL _declspec(dllexport)
-	#else
-		#define EXPORT_DECL __declspec(dllimport)
-	#endif
-#else
-	#define EXPORT_DECL 
-#endif
 namespace dolphindb {
 
 class Thread;
@@ -109,17 +102,17 @@ private:
 #endif
 };
 
-class EXPORT_DECL RWSpinLock{
-public:
-	RWSpinLock(){};
-	~RWSpinLock(){};
-	void acquireRead(){}
-	void acquireWrite(){}
-	void releaseRead(){}
-	void releaseWrite(){}
-private:
+// class EXPORT_DECL RWSpinLock{
+// public:
+// 	RWSpinLock(){};
+// 	~RWSpinLock(){};
+// 	void acquireRead(){}
+// 	void acquireWrite(){}
+// 	void releaseRead(){}
+// 	void releaseWrite(){}
+// private:
 
-};
+// };
 
 class EXPORT_DECL ConditionalVariable{
 public:
@@ -140,7 +133,7 @@ private:
 
 
 template<class T>
-class LockGuard{
+class EXPORT_DECL LockGuard{
 public:
 	LockGuard(T* res, bool acquireLock = true):res_(res){
 		if(acquireLock)
@@ -182,7 +175,7 @@ private:
 };
 
 template<class T>
-class RWLockGuard{
+class EXPORT_DECL RWLockGuard{
 public:
 	RWLockGuard(T* res, bool exclusive, bool acquireLock = true):res_(res), exclusive_(exclusive), acquireLock_(acquireLock){
 		if(res != NULL && acquireLock_){
@@ -431,7 +424,7 @@ public:
 		return true;
 	}
 
-	int size(){
+	std::size_t size(){
 		LockGuard<Mutex> guard(&mutex_);
 		return items_.size();
 	}
@@ -572,7 +565,7 @@ public:
         : buf_(new T[maxItems]), capacity_(maxItems), batchSize_(1), size_(0), head_(0), tail_(0) {}
     explicit BlockingQueue(size_t maxItems, size_t batchSize)
         : buf_(new T[maxItems]), capacity_(maxItems), batchSize_(batchSize), size_(0), head_(0), tail_(0) {}
-	int size(){
+	std::size_t size(){
 		LockGuard<Mutex> guard(&lock_);
 		return size_;
 	}
@@ -631,9 +624,9 @@ public:
         }
         if(size_ == 0)
             return false;
-        int n = std::min(batchSize_, size_);
+        std::size_t n = std::min(batchSize_, size_);
         items.resize(n);
-        for(int i = 0; i < n; i++){
+        for(std::size_t i = 0; i < n; i++){
             items[i] = std::move(buf_[head_]);
             buf_[head_] = T();
             head_ = (head_ + 1) % capacity_;

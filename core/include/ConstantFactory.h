@@ -83,7 +83,7 @@ public:
 	}
 
 	DATA_TYPE getDataType(const string& type) const {
-		unordered_map<string,DATA_TYPE>::const_iterator it=typeMap_.find(type);
+		std::unordered_map<string,DATA_TYPE>::const_iterator it=typeMap_.find(type);
 		if(it==typeMap_.end())
 			return DT_VOID;
 		else
@@ -91,7 +91,7 @@ public:
 	}
 
 	DATA_FORM getDataForm(const string& form) const {
-		unordered_map<string,DATA_FORM>::const_iterator it=formMap_.find(form);
+		std::unordered_map<string,DATA_FORM>::const_iterator it=formMap_.find(form);
 		if(it==formMap_.end())
 			return (DATA_FORM)-1;
 		else
@@ -128,8 +128,7 @@ public:
 	}
 
 	Dictionary* createDictionary(DATA_TYPE keyInternalType, DATA_TYPE keyType, DATA_TYPE valueType){
-		if (valueType > DT_STRING
-			&& (valueType != DT_DATEHOUR && valueType != DT_DATEMINUTE && valueType!= DT_BLOB)) {
+		if (valueType > DT_STRING && (valueType!= DT_BLOB && valueType != DT_DATEHOUR && valueType != DT_DATEMINUTE)) {
 			valueType = DT_ANY;
 		}
 		if(valueType != DT_ANY){
@@ -151,9 +150,9 @@ public:
 				case DT_CHAR :
 				case DT_SHORT :
 				case DT_INT : return new IntAnyDictionary(keyType);
+				case DT_LONG : return new LongAnyDictionary(keyType);
 				case DT_FLOAT: return new FloatAnyDictionary(keyType);
 				case DT_DOUBLE: return new DoubleAnyDictionary(keyType);
-				case DT_LONG : return new LongAnyDictionary(keyType);
 				case DT_INT128 : return new Int128AnyDictionary(keyType);
 				case DT_STRING :
 				case DT_BLOB : return new AnyDictionary();
@@ -170,8 +169,10 @@ public:
 			case DT_LONG : return new LongSet(keyType, capacity);
 			case DT_FLOAT : return new FloatSet(capacity);
 			case DT_DOUBLE : return new DoubleSet(capacity);
-			case DT_STRING : return new StringSet(capacity);
+			case DT_SYMBOL : return new StringSet(capacity, false, true);
+			case DT_STRING : return new StringSet(capacity, false);
 			case DT_INT128 : return new Int128Set(keyType, capacity);
+			case DT_BLOB : return new StringSet(capacity, true);
 			default : return NULL;
 		}
 	}
@@ -275,7 +276,8 @@ private:
 	Constant* createDecima128(int extraParam) { return new Decimal128(extraParam); }
 
 	Vector* createVoidVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
-		throw RuntimeException("Not allowed to create void vector");
+		// throw RuntimeException("Not allowed to create void vector");
+		return new FastVoidVector(size, capacity, (char*)data, containNull);
 	}
 
 	Vector* createBoolVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
@@ -510,127 +512,128 @@ private:
 	}
 
 	Vector* createBoolArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<char>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<char>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_BOOL + ARRAY_TYPE_BASE), (INDEX *)pindex);
 
 	}
 	Vector* createCharArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex,  void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<char>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<char>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_CHAR + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createShortArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<short>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<short>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_SHORT + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createIntArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_INT + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createLongArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_LONG + ARRAY_TYPE_BASE), (INDEX *)pindex);
 
 	}
 	Vector* createFloatArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<float>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<float>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_FLOAT + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createDoubleArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<double>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<double>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DOUBLE + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createDateArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DATE + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createTimestampArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_TIMESTAMP + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createDateHourArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DATEHOUR + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createDatetimeArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DATETIME + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createTimeArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_TIME + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createMinuteArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_MINUTE + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createMonthArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_MONTH + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createSecondArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_SECOND + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createNanotimeArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_NANOTIME + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createNanoTimestampArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
-		// if(data == NULL && dataSegment == NULL){
-		// 	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if(data == NULL && dataSegment == NULL){
+		//	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_NANOTIMESTAMP + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createUuidArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
-		// if (data == NULL && dataSegment == NULL) {
-		// 	allocate<Guid>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if (data == NULL && dataSegment == NULL) {
+		//	allocate<Guid>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_UUID + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createInt128ArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
-		// if (data == NULL && dataSegment == NULL) {
-		// 	allocate<Int128>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if (data == NULL && dataSegment == NULL) {
+		//	allocate<Int128>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_INT128 + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 	Vector* createIpArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
-		// if (data == NULL && dataSegment == NULL) {
-		// 	allocate<IPAddr>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
-		// }
+		//if (data == NULL && dataSegment == NULL) {
+		//	allocate<IPAddr>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
+		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_IP + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
+
 	Vector* createDecimal32ArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DECIMAL32 + ARRAY_TYPE_BASE), (INDEX *)pindex, extraParam);
 	}
@@ -910,46 +913,46 @@ private:
 		arrConstMatrixFactory[DT_DICTIONARY]=NULL;
 		arrConstMatrixFactory[DT_ANY]=NULL;
 
-		typeMap_.insert(pair<string,DATA_TYPE>("void",DT_VOID));
-		typeMap_.insert(pair<string,DATA_TYPE>("bool",DT_BOOL));
-		typeMap_.insert(pair<string,DATA_TYPE>("char",DT_CHAR));
-		typeMap_.insert(pair<string,DATA_TYPE>("short",DT_SHORT));
-		typeMap_.insert(pair<string,DATA_TYPE>("int",DT_INT));
-		typeMap_.insert(pair<string,DATA_TYPE>("long",DT_LONG));
-		typeMap_.insert(pair<string,DATA_TYPE>("float",DT_FLOAT));
-		typeMap_.insert(pair<string,DATA_TYPE>("double",DT_DOUBLE));
-		typeMap_.insert(pair<string,DATA_TYPE>("date",DT_DATE));
-		typeMap_.insert(pair<string,DATA_TYPE>("month",DT_MONTH));
-		typeMap_.insert(pair<string,DATA_TYPE>("datetime",DT_DATETIME));
-		typeMap_.insert(pair<string,DATA_TYPE>("datehour",DT_DATEHOUR));
-		typeMap_.insert(pair<string,DATA_TYPE>("time",DT_TIME));
-		typeMap_.insert(pair<string,DATA_TYPE>("nanotime",DT_NANOTIME));
-		typeMap_.insert(pair<string,DATA_TYPE>("timestamp",DT_TIMESTAMP));
-		typeMap_.insert(pair<string,DATA_TYPE>("nanotimestamp",DT_NANOTIMESTAMP));
-		typeMap_.insert(pair<string,DATA_TYPE>("minute",DT_MINUTE));
-		typeMap_.insert(pair<string,DATA_TYPE>("second",DT_SECOND));
-		typeMap_.insert(pair<string,DATA_TYPE>("symbol",DT_SYMBOL));
-		typeMap_.insert(pair<string,DATA_TYPE>("string",DT_STRING));
-		typeMap_.insert(pair<string,DATA_TYPE>("any",DT_ANY));
-		typeMap_.insert(pair<string,DATA_TYPE>("int128",DT_INT128));
-		typeMap_.insert(pair<string,DATA_TYPE>("uuid",DT_UUID));
-		typeMap_.insert(pair<string,DATA_TYPE>("ipaddr",DT_IP));
-		typeMap_.insert(pair<string,DATA_TYPE>("dictionary",DT_DICTIONARY));
-		typeMap_.insert(pair<string,DATA_TYPE>("decimal32", DT_DECIMAL32));
-		typeMap_.insert(pair<string, DATA_TYPE>("decimal64", DT_DECIMAL64));
-		typeMap_.insert(pair<string, DATA_TYPE>("decimal128", DT_DECIMAL128));
-		typeMap_.insert(pair<string, DATA_TYPE>("object", DT_OBJECT));
-		typeMap_.insert(pair<string, DATA_TYPE>("unknown", DATA_TYPE::DT_UNK));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("void",DT_VOID));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("bool",DT_BOOL));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("char",DT_CHAR));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("short",DT_SHORT));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("int",DT_INT));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("long",DT_LONG));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("float",DT_FLOAT));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("double",DT_DOUBLE));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("date",DT_DATE));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("month",DT_MONTH));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("datetime",DT_DATETIME));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("datehour",DT_DATEHOUR));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("time",DT_TIME));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("nanotime",DT_NANOTIME));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("timestamp",DT_TIMESTAMP));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("nanotimestamp",DT_NANOTIMESTAMP));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("minute",DT_MINUTE));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("second",DT_SECOND));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("symbol",DT_SYMBOL));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("string",DT_STRING));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("any",DT_ANY));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("int128",DT_INT128));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("uuid",DT_UUID));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("ipaddr",DT_IP));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("dictionary",DT_DICTIONARY));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("decimal32", DT_DECIMAL32));
+		typeMap_.insert(std::pair<string, DATA_TYPE>("decimal64", DT_DECIMAL64));
+		typeMap_.insert(std::pair<string, DATA_TYPE>("decimal128", DT_DECIMAL128));
+		typeMap_.insert(std::pair<string, DATA_TYPE>("object", DT_OBJECT));
+		typeMap_.insert(std::pair<string, DATA_TYPE>("unknown", DATA_TYPE::DT_UNK));
 
-		formMap_.insert(pair<string,DATA_FORM>("scalar",DF_SCALAR));
-		formMap_.insert(pair<string,DATA_FORM>("pair",DF_PAIR));
-		formMap_.insert(pair<string,DATA_FORM>("vector",DF_VECTOR));
-		formMap_.insert(pair<string,DATA_FORM>("matrix",DF_MATRIX));
-		formMap_.insert(pair<string,DATA_FORM>("set",DF_SET));
-		formMap_.insert(pair<string,DATA_FORM>("dictionary",DF_DICTIONARY));
-		formMap_.insert(pair<string,DATA_FORM>("table",DF_TABLE));
-		formMap_.insert(pair<string,DATA_FORM>("chart",DF_CHART));
-		formMap_.insert(pair<string,DATA_FORM>("chunk",DF_CHUNK));
+		formMap_.insert(std::pair<string,DATA_FORM>("scalar",DF_SCALAR));
+		formMap_.insert(std::pair<string,DATA_FORM>("pair",DF_PAIR));
+		formMap_.insert(std::pair<string,DATA_FORM>("vector",DF_VECTOR));
+		formMap_.insert(std::pair<string,DATA_FORM>("matrix",DF_MATRIX));
+		formMap_.insert(std::pair<string,DATA_FORM>("set",DF_SET));
+		formMap_.insert(std::pair<string,DATA_FORM>("dictionary",DF_DICTIONARY));
+		formMap_.insert(std::pair<string,DATA_FORM>("table",DF_TABLE));
+		formMap_.insert(std::pair<string,DATA_FORM>("chart",DF_CHART));
+		formMap_.insert(std::pair<string,DATA_FORM>("chunk",DF_CHUNK));
 
 		arrTypeSymbol[DT_VOID]=' ';
 		arrTypeSymbol[DT_BOOL]='b';
@@ -990,31 +993,35 @@ private:
 		arrTypeStr[DT_SHORT]="SHORT";
 		arrTypeStr[DT_INT]="INT";
 		arrTypeStr[DT_LONG]="LONG";
-		arrTypeStr[DT_FLOAT]="FLOAT";
-		arrTypeStr[DT_DOUBLE]="DOUBLE";
 		arrTypeStr[DT_DATE]="DATE";
 		arrTypeStr[DT_MONTH]="MONTH";
-		arrTypeStr[DT_DATETIME]="DATETIME";
-		arrTypeStr[DT_DATEHOUR]="DATEHOUR";
 		arrTypeStr[DT_TIME]="TIME";
+		arrTypeStr[DT_MINUTE]="MINUTE";
+		arrTypeStr[DT_SECOND]="SECOND";
+		arrTypeStr[DT_DATETIME]="DATETIME";
 		arrTypeStr[DT_TIMESTAMP]="TIMESTAMP";
 		arrTypeStr[DT_NANOTIME]="NANOTIME";
 		arrTypeStr[DT_NANOTIMESTAMP]="NANOTIMESTAMP";
-		arrTypeStr[DT_MINUTE]="MINUTE";
-		arrTypeStr[DT_SECOND]="SECOND";
+		arrTypeStr[DT_FLOAT]="FLOAT";
+		arrTypeStr[DT_DOUBLE]="DOUBLE";
 		arrTypeStr[DT_SYMBOL]="SYMBOL";
 		arrTypeStr[DT_STRING]="STRING";
+		arrTypeStr[DT_UUID]="UUID";
 		arrTypeStr[DT_FUNCTIONDEF]="FUNCTIONDEF";
 		arrTypeStr[DT_HANDLE]="HANDLE";
+		arrTypeStr[DT_CODE]="CODE";
 		arrTypeStr[DT_DATASOURCE]="DATASOURCE";
 		arrTypeStr[DT_RESOURCE]="RESOURCE";
 		arrTypeStr[DT_ANY]="ANY";
-		arrTypeStr[DT_INT128]="INT128";
-		arrTypeStr[DT_UUID]="UUID";
-		arrTypeStr[DT_IP]="IPADDR";
+		arrTypeStr[DT_COMPRESS] = "COMPRESS";
 		arrTypeStr[DT_DICTIONARY]="DICTIONARY";
-		arrTypeStr[DT_CODE]="CODE";
-		arrTypeStr[DT_BLOB]="BLOB";
+		arrTypeStr[DT_DATEHOUR]="DATEHOUR";
+		arrTypeStr[DT_IP]="IPADDR";
+		arrTypeStr[DT_INT128]="INT128";
+		arrTypeStr[DT_BLOB] = "BLOB";
+		arrTypeStr[DT_COMPLEX] = "COMPLEX";
+		arrTypeStr[DT_POINT] = "POINT";
+		arrTypeStr[DT_DURATION] = "DURATION";
 		arrTypeStr[DT_DECIMAL32] = "DECIMAL32";
 		arrTypeStr[DT_DECIMAL64] = "DECIMAL64";
 		arrTypeStr[DT_DECIMAL128] = "DECIMAL128";
@@ -1067,8 +1074,8 @@ private:
 	ConstantVectorFunc arrConstVectorFactory[TYPE_COUNT];
 	ConstantArrayVectorFunc arrConstArrayVectorFactory[TYPE_COUNT];
 	ConstantMatrixFunc arrConstMatrixFactory[TYPE_COUNT];
-	unordered_map<string,DATA_TYPE> typeMap_;
-	unordered_map<string,DATA_FORM> formMap_;
+	std::unordered_map<string,DATA_TYPE> typeMap_;
+	std::unordered_map<string,DATA_FORM> formMap_;
 	char arrTypeSymbol[TYPE_COUNT];
 	string arrTypeStr[TYPE_COUNT];
 	string arrFormStr[9];

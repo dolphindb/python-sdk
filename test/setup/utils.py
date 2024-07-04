@@ -1,14 +1,14 @@
-import sys
 import os
 import threading
-import time
-import string, random
+import string
+import random
 import inspect
 import paramiko
 from tqdm import tqdm
 from stat import S_ISDIR as isdir
 
-class CountBatchDownLatch():
+
+class CountBatchDownLatch:
     def __init__(self, count):
         self.count = count
         self.lock = threading.Lock()
@@ -23,7 +23,7 @@ class CountBatchDownLatch():
     def countDown(self, count):
         with self.lock:
             self.count -= count
-            if (self.count == 0):
+            if self.count == 0:
                 self.semp.release()
 
     def getCount(self):
@@ -34,16 +34,19 @@ class CountBatchDownLatch():
         with self.lock:
             self.count = count
 
+
 def random_string(length):
     characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for i in range(length))
+    return ''.join(random.choice(characters) for _ in range(length))
+
 
 def get_pid():
     return str(os.getpid())
 
 
 def get_init_args(obj) -> dict:
-    init_args = inspect.getmembers(obj, lambda x: inspect.ismethod(x) and x.__func__.__name__ == '__init__')[0][1].__annotations__
+    init_args = inspect.getmembers(obj, lambda x: inspect.ismethod(x) and x.__func__.__name__ == '__init__')[0][
+        1].__annotations__
     return {k: getattr(obj, k.lower()) for k in init_args.keys()}
 
 
@@ -56,18 +59,19 @@ def get_sliding_window_data(data, start, length, window_size, step_size):
     result = []
     i = start
     while i + window_size <= length:
-        window = data.iloc[i:i+window_size]
+        window = data.iloc[i:i + window_size]
         # print(window)
         result.append(window.values.tolist())
         i += step_size
 
     return result
 
+
 class SSHConnection(object):
 
-    def __init__(self, host:str, port:int, username:str, pwd:str):
-        self._ssh : paramiko.SSHClient = self._connect(host, port, username, pwd)
-        self._sftp : paramiko.SFTPClient = self._ssh.open_sftp()
+    def __init__(self, host: str, port: int, username: str, pwd: str):
+        self._ssh: paramiko.SSHClient = self._connect(host, port, username, pwd)
+        self._sftp: paramiko.SFTPClient = self._ssh.open_sftp()
 
     def _connect(self, host, port, user, pwd):
         ssh = paramiko.SSHClient()
@@ -78,12 +82,12 @@ class SSHConnection(object):
     def disconnect(self):
         self._ssh.close()
 
-    def upload(self,local_file,remote_file):
-        self._sftp.put(local_file,remote_file)
+    def upload(self, local_file, remote_file):
+        self._sftp.put(local_file, remote_file)
         return True
 
-    def download(self,remote_file,local_file):
-        self._sftp.get(remote_file,local_file)
+    def download(self, remote_file, local_file):
+        self._sftp.get(remote_file, local_file)
         return True
 
     def uploadfolder(self, local_path, remote_path):
@@ -122,7 +126,6 @@ class SSHConnection(object):
                     self._sftp.get(item_path, local_item_path)
                     pbar.update(1)
 
-
     def cmd(self, command, printFlag=True):
         (stdin, stdout, stderr) = self._ssh.exec_command(command)
 
@@ -133,7 +136,7 @@ class SSHConnection(object):
         if not stdout.readlines():
             return None
 
-        res = [x.replace('\n','') for x in stdout.readlines()]
+        res = [x.replace('\n', '') for x in stdout.readlines()]
         if printFlag:
             for i in res:
                 # 打印执行反馈结果

@@ -6,7 +6,9 @@ import math
 from decimal import Decimal
 import pandas as pd
 import dolphindb.settings as keys
-import pyarrow as pa
+from importlib.util import find_spec
+if find_spec("pyarrow") is not None:
+    import pyarrow as pa
 
 PANDAS_VERSION=tuple(int(i) for i in pd.__version__.split('.'))
 PYTHON_VERSION=tuple(int(i) for i in platform.python_version().split('.'))
@@ -1044,8 +1046,8 @@ class DataUtils(object):
         #     },
         # },
     }
-
-    DATA_UPLOAD_ARROW={
+    if find_spec("pyarrow") is not None:
+        DATA_UPLOAD_ARROW={
         'data_arrow_int8_0':{
             'value':0,
             'dtype_arrow':pa.int8(),
@@ -6142,96 +6144,97 @@ class DataUtils(object):
             else:
                 return {}
 
-        @classmethod
-        def getTableArrowArrayVector(cls, _type):
-            """
-            _type:upload or download
-            """
-            if _type.lower() == 'upload':
-                rtn = {k.replace('data', 'tableArrayVector'): {
-                        'value': pd.DataFrame({'a': [[v['value'],v['value'],v['value']],[v['value'],v['value'],v['value']]]}, dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
-                        'expect_typestr':v['expect_typestr'][:-8]+'[]'+v['expect_typestr'][-8:],
-                        'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)" if
-                        v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
-                        f"table(array(DECIMAL128(2)[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)"
-                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
-                    if k not in (
-                        'data_arrow_string',
-                        'data_arrow_bytes_utf8',
-                        'data_arrow_bytes_gbk',
-                        'data_arrow_symbol',
-                    )
-                }
-                rtn['tableArrayVector_arrow_uuid']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_UUID_ARRAY,
-                }
-                rtn['tableArrayVector_arrow_int128']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_INT128_ARRAY,
-                }
-                return rtn
-            else:
-                return {}
+        if find_spec("pyarrow") is not None:
+            @classmethod
+            def getTableArrowArrayVector(cls, _type):
+                """
+                _type:upload or download
+                """
+                if _type.lower() == 'upload':
+                    rtn = {k.replace('data', 'tableArrayVector'): {
+                            'value': pd.DataFrame({'a': [[v['value'],v['value'],v['value']],[v['value'],v['value'],v['value']]]}, dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
+                            'expect_typestr':v['expect_typestr'][:-8]+'[]'+v['expect_typestr'][-8:],
+                            'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)" if
+                            v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
+                            f"table(array(DECIMAL128(2)[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)"
+                        } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                        if k not in (
+                            'data_arrow_string',
+                            'data_arrow_bytes_utf8',
+                            'data_arrow_bytes_gbk',
+                            'data_arrow_symbol',
+                        )
+                    }
+                    rtn['tableArrayVector_arrow_uuid']['value'].__DolphinDB_Type__={
+                        'a':keys.DT_UUID_ARRAY,
+                    }
+                    rtn['tableArrayVector_arrow_int128']['value'].__DolphinDB_Type__={
+                        'a':keys.DT_INT128_ARRAY,
+                    }
+                    return rtn
+                else:
+                    return {}
 
-        # todo:None
-        @classmethod
-        def getTableArrowArrayVectorContainNone(cls, _type):
-            """
-            _type:upload or download
-            """
-            if _type.lower() == 'upload':
-                rtn = {k.replace('data', 'tableArrayVectorContainNone'): {
-                        'value': pd.DataFrame({'a': [[None,None,None],[v['value'],None,v['value']],[v['value']]]}, dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
-                        'expect_typestr':v['expect_typestr'][:-8]+'[]'+v['expect_typestr'][-8:],
-                        'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL)],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
-                        v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
-                        f"table(array(DECIMAL128(2)[],0,3).append!([[decimal128(NULL,2),decimal128(NULL,2),decimal128(NULL,2)],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
-                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
-                    if k not in (
-                        'data_arrow_string',
-                        'data_arrow_bytes_utf8',
-                        'data_arrow_bytes_gbk',
-                        'data_arrow_symbol',
-                    )
-                }
-                rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value']=rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value'].replace('uuid(NULL)',"uuid('00000000-0000-0000-0000-000000000000')")
-                rtn['tableArrayVectorContainNone_arrow_int128']['expect_value']=rtn['tableArrayVectorContainNone_arrow_int128']['expect_value'].replace('int128(NULL)',"int128('00000000000000000000000000000000')")
-                rtn['tableArrayVectorContainNone_arrow_uuid']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_UUID_ARRAY,
-                }
-                rtn['tableArrayVectorContainNone_arrow_int128']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_INT128_ARRAY,
-                }
-                return rtn
-            else:
-                return {}
+            # todo:None
+            @classmethod
+            def getTableArrowArrayVectorContainNone(cls, _type):
+                """
+                _type:upload or download
+                """
+                if _type.lower() == 'upload':
+                    rtn = {k.replace('data', 'tableArrayVectorContainNone'): {
+                            'value': pd.DataFrame({'a': [[None,None,None],[v['value'],None,v['value']],[v['value']]]}, dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
+                            'expect_typestr':v['expect_typestr'][:-8]+'[]'+v['expect_typestr'][-8:],
+                            'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL)],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
+                            v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
+                            f"table(array(DECIMAL128(2)[],0,3).append!([[decimal128(NULL,2),decimal128(NULL,2),decimal128(NULL,2)],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
+                        } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                        if k not in (
+                            'data_arrow_string',
+                            'data_arrow_bytes_utf8',
+                            'data_arrow_bytes_gbk',
+                            'data_arrow_symbol',
+                        )
+                    }
+                    rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value']=rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value'].replace('uuid(NULL)',"uuid('00000000-0000-0000-0000-000000000000')")
+                    rtn['tableArrayVectorContainNone_arrow_int128']['expect_value']=rtn['tableArrayVectorContainNone_arrow_int128']['expect_value'].replace('int128(NULL)',"int128('00000000000000000000000000000000')")
+                    rtn['tableArrayVectorContainNone_arrow_uuid']['value'].__DolphinDB_Type__={
+                        'a':keys.DT_UUID_ARRAY,
+                    }
+                    rtn['tableArrayVectorContainNone_arrow_int128']['value'].__DolphinDB_Type__={
+                        'a':keys.DT_INT128_ARRAY,
+                    }
+                    return rtn
+                else:
+                    return {}
 
-        @classmethod
-        def getTableArrowArrayVectorContainEmpty(cls, _type):
-            """
-            _type:upload or download
-            """
-            if _type.lower() == 'upload':
-                rtn = {k.replace('data', 'tableArrayVectorContainEmpty'): {
-                        'value': pd.DataFrame({'a': [[],[v['value'],None,v['value']],[v['value']]]}, dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
-                        'expect_typestr':v['expect_typestr'][:-8]+'[]'+v['expect_typestr'][-8:],
-                        # todo: why
-                        # 'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
-                        # v['expect_typestr'] != "'FAST DECIMAL64 VECTOR'" else
-                        # f"table(array(DECIMAL64(2)[],0,3).append!([[],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
-                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
-                    if k not in (
-                        'data_arrow_string',
-                        'data_arrow_bytes_utf8',
-                        'data_arrow_bytes_gbk',
-                        'data_arrow_symbol',
-                    )
-                }
-                rtn['tableArrayVectorContainEmpty_arrow_uuid']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_UUID_ARRAY,
-                }
-                rtn['tableArrayVectorContainEmpty_arrow_int128']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_INT128_ARRAY,
-                }
-                return rtn
-            else:
-                return {}
+            @classmethod
+            def getTableArrowArrayVectorContainEmpty(cls, _type):
+                """
+                _type:upload or download
+                """
+                if _type.lower() == 'upload':
+                    rtn = {k.replace('data', 'tableArrayVectorContainEmpty'): {
+                            'value': pd.DataFrame({'a': [[],[v['value'],None,v['value']],[v['value']]]}, dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
+                            'expect_typestr':v['expect_typestr'][:-8]+'[]'+v['expect_typestr'][-8:],
+                            # todo: why
+                            # 'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
+                            # v['expect_typestr'] != "'FAST DECIMAL64 VECTOR'" else
+                            # f"table(array(DECIMAL64(2)[],0,3).append!([[],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
+                        } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                        if k not in (
+                            'data_arrow_string',
+                            'data_arrow_bytes_utf8',
+                            'data_arrow_bytes_gbk',
+                            'data_arrow_symbol',
+                        )
+                    }
+                    rtn['tableArrayVectorContainEmpty_arrow_uuid']['value'].__DolphinDB_Type__={
+                        'a':keys.DT_UUID_ARRAY,
+                    }
+                    rtn['tableArrayVectorContainEmpty_arrow_int128']['value'].__DolphinDB_Type__={
+                        'a':keys.DT_INT128_ARRAY,
+                    }
+                    return rtn
+                else:
+                    return {}

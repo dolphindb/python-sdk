@@ -1084,7 +1084,7 @@ class Table(object):
         if not isinstance(table, Table):
             raise RuntimeError("Only DolphinDB Table object is accepted")
 
-        runstr = "%s.append!(%s)" % (self.tableName(), table.tableName())
+        runstr = f"tableInsert({self.tableName()}, {table.tableName()})"
         self.__session.run(runstr)
         return self
 

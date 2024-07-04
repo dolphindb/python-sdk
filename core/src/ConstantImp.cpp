@@ -6,6 +6,8 @@
  */
 #include "ConstantImp.h"
 
+using std::deque;
+
 namespace dolphindb {
 
 StringVector::StringVector(INDEX size, INDEX capacity, bool blob) : blob_(blob){
@@ -23,7 +25,7 @@ StringVector::StringVector(const vector<string>& data, INDEX capacity, bool cont
 
 INDEX StringVector::reserve(INDEX capacity){
 	data_.reserve(capacity);
-	return data_.capacity();
+	return static_cast<INDEX>(data_.capacity());
 }
 
 IO_ERR StringVector::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
@@ -170,13 +172,13 @@ bool StringVector::assign(const ConstantSP& value){
 INDEX StringVector::search(const string& val){
 	vector<string>::iterator it=std::find(data_.begin(),data_.end(),val);
 	if(it!=data_.end())
-		return it-data_.begin();
+		return static_cast<INDEX>(it-data_.begin());
 	else
 		return -1;
 }
 
 ConstantSP StringVector::getValue() const {
-	Vector* copy = new StringVector(data_, data_.size(), containNull_, blob_);
+	Vector* copy = new StringVector(data_, static_cast<INDEX>(data_.size()), containNull_, blob_);
 	copy->setForm(getForm());
 	return copy;
 }
@@ -196,7 +198,7 @@ ConstantSP StringVector::getSubVector(INDEX start, INDEX length, INDEX capacity)
 }
 
 ConstantSP StringVector::get(const ConstantSP& index) const {
-	UINDEX size=data_.size();
+	UINDEX size=static_cast<UINDEX>(data_.size());
 	if(index->isVector()){
 		INDEX len=index->size();
 		StringVector* p=new StringVector(len, len, blob_);
@@ -282,26 +284,6 @@ bool StringVector::appendString(char** buf, int len){
 	return true;
 }
 
-bool StringVector::appendString(string* buf, int len, INDEX& ind){
-	size_t newSize;
-	if((newSize = data_.size() + len) > data_.capacity())
-		data_.reserve(newSize);
-
-	for(int i=0;i<len;i++)
-		data_.push_back(buf[i]);
-	return true;
-}
-
-bool StringVector::appendString(char** buf, int len, INDEX& ind){
-	size_t newSize;
-	if((newSize = data_.size() + len) > data_.capacity())
-		data_.reserve(newSize);
-
-	for(int i=0;i<len;i++)
-		data_.push_back(buf[i]);
-	return true;
-}
-
 bool StringVector::remove(INDEX count){
 	bool fromHead=(count<0);
 	count=((std::min))(size(),abs(count));
@@ -314,7 +296,7 @@ bool StringVector::remove(INDEX count){
 
 bool StringVector::remove(const ConstantSP& index){
 	INDEX size = index->size();
-	INDEX invSize = data_.size() - size;
+	INDEX invSize = static_cast<INDEX>(data_.size() - size);
 	if(invSize <= 0){
 		data_.clear();
 		containNull_ = false;
@@ -347,7 +329,7 @@ bool StringVector::remove(const ConstantSP& index){
 		j = 0;
 	}
 
-	INDEX total = data_.size();
+	INDEX total = static_cast<INDEX>(data_.size());
 	for(INDEX k = prevIndex + 1; k<total; ++k)
 		data_[cursor++] = data_[k];
 
@@ -450,7 +432,7 @@ int StringVector::serialize(char* buf, int bufSize, INDEX indexStart, int offset
             if (str.size() >= 262144) {
                 throw RuntimeException("String too long, Serialization failed, length must be less than 256K bytes.");
             }
-            int len = str.size() + 1 - offset;
+            int len = static_cast<int>(str.size() + 1 - offset);
             if (bufSize >= len) {
                 memcpy(buf, str.c_str() + offset, len);
                 buf += len;
@@ -467,7 +449,7 @@ int StringVector::serialize(char* buf, int bufSize, INDEX indexStart, int offset
         const int lenBytes = sizeof(int);
         while (bufSize > 0 && indexStart < size_) {
             const string& str = data_[indexStart];
-            int len = str.size();
+            int len = static_cast<int>(str.size());
             if (LIKELY(offset == 0)) {
                 if (UNLIKELY(bufSize < lenBytes)) {
                     partial = 0;
@@ -533,7 +515,7 @@ void StringVector::replace(const ConstantSP& oldVal, const ConstantSP& newVal){
 }
 
 long long StringVector::getAllocatedMemory() const{
-	INDEX size = data_.size();
+	INDEX size = static_cast<INDEX>(data_.size());
 	long long bytes =sizeof(StringVector)+sizeof(string)*size;
 	if(size <= 0)
 		return bytes;
@@ -541,7 +523,7 @@ long long StringVector::getAllocatedMemory() const{
 	double sampleBytes = 0;
 	for(INDEX i=0;i<len;++i)
 		sampleBytes += data_[i].length() + 1;
-	return bytes + sampleBytes / len * size;
+	return static_cast<long long>(bytes + sampleBytes / len * size);
 }
 
 long long StringVector::getAllocatedMemory(INDEX size) const {
@@ -552,7 +534,7 @@ long long StringVector::getAllocatedMemory(INDEX size) const {
 	double sampleBytes = 0;
 	for(INDEX i=0;i<len;++i)
 		sampleBytes += data_[i].length() + 1;
-	return bytes + sampleBytes / len * size;
+	return static_cast<long long>(bytes + sampleBytes / len * size);
 }
 
 void AnyVector::clear(){
@@ -870,7 +852,7 @@ ConstantSP AnyVector::getSubVector(INDEX start, INDEX length) const {
 }
 
 ConstantSP AnyVector::get(const ConstantSP& index) const {
-	UINDEX size=data_.size();
+	UINDEX size = static_cast<UINDEX>(data_.size());
 	if(index->isVector()){
 		INDEX len=index->size();
 		ConstantSP result = Util::createVector(DT_ANY, len);
@@ -899,7 +881,7 @@ ConstantSP AnyVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return idx<size ? data_[idx] : Constant::void_;
+		return idx < size ? data_[idx] : nullptr;
 	}
 }
 
@@ -943,7 +925,7 @@ ConstantSP AnyVector::convertToRegularVector() const {
 	DATA_TYPE type;
 	if(!isHomogeneousScalar(type))
 		return Constant::void_;
-	VectorSP tmp = Util::createVector(type, data_.size());
+	VectorSP tmp = Util::createVector(type, static_cast<INDEX>(data_.size()));
 	deque<ConstantSP>::const_iterator it = data_.begin();
 	deque<ConstantSP>::const_iterator end = data_.end();
 	int cursor = 0;
@@ -1008,7 +990,7 @@ ConstantSP FastBoolVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Bool(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Bool(data_[idx]) : nullptr;
 	}
 }
 
@@ -1026,8 +1008,7 @@ void FastBoolVector::fill(INDEX start, INDEX length, const ConstantSP& value){
 }
 
 bool FastBoolVector::append(const ConstantSP value, INDEX start, INDEX appendSize) {
-	if(!checkCapacity(appendSize))
-		return false;
+	checkCapacity(appendSize);
 
 	if(appendSize==1)
 		data_[size_] = value->getBool(0);
@@ -1090,7 +1071,7 @@ ConstantSP FastCharVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Char(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Char(data_[idx]) : nullptr;
 	}
 }
 
@@ -1108,8 +1089,7 @@ void FastCharVector::fill(INDEX start, INDEX length, const ConstantSP& value){
 }
 
 bool FastCharVector::append(const ConstantSP value, INDEX start, INDEX appendSize) {
-	if(!checkCapacity(appendSize))
-		return false;
+	checkCapacity(appendSize);
 
 	if(appendSize==1)
 		data_[size_] = value->getChar(0);
@@ -1200,7 +1180,7 @@ ConstantSP FastShortVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Short(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Short(data_[idx]) : nullptr;
 	}
 }
 
@@ -1218,8 +1198,7 @@ void FastShortVector::fill(INDEX start, INDEX length, const ConstantSP& value){
 }
 
 bool FastShortVector::append(const ConstantSP value, INDEX start, INDEX appendSize) {
-	if(!checkCapacity(appendSize))
-		return false;
+	checkCapacity(appendSize);
 
 	if(appendSize==1)
 		data_[size_] = value->getShort(0);
@@ -1296,7 +1275,7 @@ ConstantSP  FastIntVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Int(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Int(data_[idx]) : nullptr;
 	}
 }
 
@@ -1314,8 +1293,7 @@ void  FastIntVector::fill(INDEX start, INDEX length, const ConstantSP& value){
 }
 
 bool  FastIntVector::append(const ConstantSP value, INDEX start, INDEX appendSize) {
-	if(!checkCapacity(appendSize))
-		return false;
+	checkCapacity(appendSize);
 
 	if(appendSize == 1)
 		data_[size_] = value->getInt(0);
@@ -1392,7 +1370,7 @@ ConstantSP FastLongVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Long(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Long(data_[idx]) : nullptr;
 	}
 }
 
@@ -1410,8 +1388,7 @@ void FastLongVector::fill(INDEX start, INDEX length, const ConstantSP& value){
 }
 
 bool FastLongVector::append(const ConstantSP value, INDEX start, INDEX appendSize) {
-	if(!checkCapacity(appendSize))
-		return false;
+	checkCapacity(appendSize);
 
 	if(appendSize==1)
 		data_[size_] = value->getLong(0);
@@ -1493,7 +1470,7 @@ ConstantSP FastFloatVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Float(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Float(data_[idx]) : nullptr;
 	}
 }
 
@@ -1511,8 +1488,7 @@ void FastFloatVector::fill(INDEX start, INDEX length, const ConstantSP& value){
 }
 
 bool FastFloatVector::append(const ConstantSP value, INDEX start, INDEX appendSize) {
-	if(!checkCapacity(appendSize))
-		return false;
+	checkCapacity(appendSize);
 
 	if(appendSize==1)
 		data_[size_] = value->getFloat(0);
@@ -1580,7 +1556,7 @@ ConstantSP FastDoubleVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Double(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Double(data_[idx]) : nullptr;
 	}
 }
 
@@ -1598,8 +1574,7 @@ void FastDoubleVector::fill(INDEX start, INDEX length, const ConstantSP& value){
 }
 
 bool FastDoubleVector::append(const ConstantSP value, INDEX start, INDEX appendSize) {
-	if(!checkCapacity(appendSize))
-		return false;
+	checkCapacity(appendSize);
 	if(appendSize==1)
 		data_[size_] = value->getDouble(0);
 	else if(!value->getDouble(start, appendSize, data_+size_))
@@ -1655,7 +1630,7 @@ ConstantSP FastDateVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Date(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Date(data_[idx]) : nullptr;
 	}
 }
 
@@ -1687,7 +1662,7 @@ ConstantSP FastDateVector::castTemporal(DATA_TYPE expectType){
 	else if(expectType == DT_DATETIME){
 		int *pbuf = (int*)res->getDataArray();
 		for(int i = 0; i < size_; i++){
-			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] * ratio;
+			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] * ratio);
 		}
 	}
 	else{
@@ -1711,7 +1686,7 @@ ConstantSP FastDateTimeVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new DateTime(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new DateTime(data_[idx]) : nullptr;
 	}
 }
 
@@ -1743,7 +1718,7 @@ ConstantSP FastDateTimeVector::castTemporal(DATA_TYPE expectType){
 		ratio = -ratio;
 		for(int i = 0; i < size_; i++){
 			int tail = (data_[i] < 0) && (data_[i] % ratio);
-			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] / ratio - tail;
+			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / ratio - tail);
 		}
 	}
 	else if(expectType == DT_MONTH){
@@ -1771,14 +1746,14 @@ ConstantSP FastDateTimeVector::castTemporal(DATA_TYPE expectType){
 		if(ratio > 0){
 			for(int i = 0; i < size_; i++){
 				int remainder = data_[i] % 86400;
-				data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = (remainder + ((data_[i] < 0) && remainder) * 86400) * ratio;
+				data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>((remainder + ((data_[i] < 0) && remainder) * 86400) * ratio);
 			}
 		}
 		else{
 			ratio = -ratio;
 			for(int i = 0; i < size_; i++){
 				int remainder = data_[i] % 86400;
-				data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = (remainder + ((data_[i] < 0) && remainder) * 86400) / ratio;
+				data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>((remainder + ((data_[i] < 0) && remainder) * 86400) / ratio);
 			}
 		}
 	}
@@ -1791,7 +1766,7 @@ ConstantSP FastDateHourVector::get(const ConstantSP& index) const {
     }
     else{
         UINDEX idx=(UINDEX)index->getIndex();
-        return ConstantSP(new DateHour(idx<(UINDEX)size_?data_[idx]:nullVal_));
+        return idx < (UINDEX)size_ ? new DateHour(data_[idx]) : nullptr;
     }
 }
 
@@ -1819,7 +1794,7 @@ ConstantSP FastDateHourVector::castTemporal(DATA_TYPE expectType){
     else if(expectType == DT_DATE){
         int *pbuf = (int*)res->getDataArray();
         for(int i = 0; i < size_; i++){
-            data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] * 3600 / (-ratio) ;
+            data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] * 3600 / (-ratio));
         }
     }
     else if(expectType == DT_MONTH){
@@ -1845,12 +1820,12 @@ ConstantSP FastDateHourVector::castTemporal(DATA_TYPE expectType){
         int *pbuf = (int*)res->getDataArray();
         if(ratio > 0){
             for(int i = 0; i < size_; i++){
-                data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] * 3600 % 86400 * ratio;
+                data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] * 3600 % 86400 * ratio);
             }
         }
         else{
             for(int i = 0; i < size_; i++){
-                data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] * 3600 % 86400 / (-ratio);
+                data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] * 3600 % 86400 / (-ratio));
             }
         }
     }
@@ -1863,7 +1838,7 @@ ConstantSP FastMonthVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Month(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Month(data_[idx]) : nullptr;
 	}
 }
 
@@ -1873,7 +1848,7 @@ ConstantSP FastTimeVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Time(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Time(data_[idx]) : nullptr;
 	}
 }
 
@@ -1908,7 +1883,7 @@ ConstantSP FastTimeVector::castTemporal(DATA_TYPE expectType){
 	else{
 		int *pbuf = (int*)res->getDataArray();
 		for(int i = 0; i < size_; i++){
-			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] / (-ratio);
+			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / (-ratio));
 		}
 	}
 	return res;
@@ -1920,7 +1895,7 @@ ConstantSP FastMinuteVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Minute(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Minute(data_[idx]) : nullptr;
 	}
 }
 
@@ -1955,7 +1930,7 @@ ConstantSP FastMinuteVector::castTemporal(DATA_TYPE expectType){
 	else{
 		int *pbuf = (int*)res->getDataArray();
 		for(int i = 0; i < size_; i++){
-			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] * ratio;
+			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] * ratio);
 		}
 	}
 	return res;
@@ -1967,7 +1942,7 @@ ConstantSP FastSecondVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Second(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Second(data_[idx]) : nullptr;
 	}
 }
 
@@ -2002,13 +1977,13 @@ ConstantSP FastSecondVector::castTemporal(DATA_TYPE expectType){
 	else if(expectType == DT_TIME){
 		int *pbuf = (int*)res->getDataArray();
 		for(int i = 0; i < size_; i++){
-			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] * ratio;
+			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] * ratio);
 		}
 	}
 	else{
 		int *pbuf = (int*)res->getDataArray();
 		for(int i = 0; i < size_; i++){
-			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] / (-ratio);
+			data_[i] == INT_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / (-ratio));
 		}
 	}
 	return res;
@@ -2020,7 +1995,7 @@ ConstantSP FastNanoTimeVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new NanoTime(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new NanoTime(data_[idx]) : nullptr;
 	}
 }
 
@@ -2049,7 +2024,7 @@ ConstantSP FastNanoTimeVector::castTemporal(DATA_TYPE expectType){
 
 	int *pbuf = (int*)res->getDataArray();
 	for(int i = 0; i < size_; i++){
-		data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] / (-ratio);
+		data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / (-ratio));
 	}
 	return res;
 }
@@ -2060,7 +2035,7 @@ ConstantSP FastTimestampVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new Timestamp(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new Timestamp(data_[idx]) : nullptr;
 	}
 }
 
@@ -2076,7 +2051,7 @@ ConstantSP FastTimestampVector::castTemporal(DATA_TYPE expectType){
         int *pbuf = (int*)res->getDataArray();
         for(int i = 0; i < size_; i++){
 			int tail = (data_[i] < 0) && (data_[i] % 3600);
-            data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] / 3600000LL - tail;
+            data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / 3600000LL - tail);
         }
         return res;
 	}
@@ -2092,7 +2067,7 @@ ConstantSP FastTimestampVector::castTemporal(DATA_TYPE expectType){
 		ratio = -ratio;
 		for(int i = 0; i < size_; i++){
 			int tail = (data_[i] < 0) && (data_[i] % ratio);
-			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] / ratio - tail;		
+			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / ratio - tail);		
 		}
 	}
 	else if(expectType == DT_MONTH){
@@ -2103,7 +2078,7 @@ ConstantSP FastTimestampVector::castTemporal(DATA_TYPE expectType){
 				continue;
 			}
 			int year, month, day;
-			Util::parseDate(data_[i] / 86400000, year, month, day);
+			Util::parseDate(static_cast<int>(data_[i] / 86400000), year, month, day);
 			pbuf[i] = year*12+month-1;
 		}
 	}
@@ -2120,7 +2095,7 @@ ConstantSP FastTimestampVector::castTemporal(DATA_TYPE expectType){
 		if(ratio < 0) ratio = -ratio;
 		for(int i = 0; i < size_; i++){
 			int remainder = data_[i] % 86400000;
-			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = (remainder + ((data_[i] < 0) && remainder) * 86400000) / ratio;
+			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>((remainder + ((data_[i] < 0) && remainder) * 86400000) / ratio);
 		}
 	}
 	return res;
@@ -2132,7 +2107,7 @@ ConstantSP FastNanoTimestampVector::get(const ConstantSP& index) const {
 	}
 	else{
 		UINDEX idx=(UINDEX)index->getIndex();
-		return ConstantSP(new NanoTimestamp(idx<(UINDEX)size_?data_[idx]:nullVal_));
+		return idx < (UINDEX)size_ ? new NanoTimestamp(data_[idx]) : nullptr;
 	}
 }
 
@@ -2148,7 +2123,7 @@ ConstantSP FastNanoTimestampVector::castTemporal(DATA_TYPE expectType){
         int *pbuf = (int*)res->getDataArray();
         for(int i = 0; i < size_; i++){
 			int tail = (data_[i] < 0) && (data_[i] % 3600000000000ll);
-            data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] / 3600000000000ll - tail;
+            data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / 3600000000000ll - tail);
         }
         return res;
 	}
@@ -2164,7 +2139,7 @@ ConstantSP FastNanoTimestampVector::castTemporal(DATA_TYPE expectType){
 		int *pbuf = (int*)res->getDataArray();
 		for(int i = 0; i < size_; i++){
 			int tail = (data_[i] < 0) && (data_[i] % ratio);
-			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = data_[i] / ratio - tail;
+			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / ratio - tail);
 		}
 	}
 	else if(expectType == DT_MONTH){
@@ -2175,7 +2150,7 @@ ConstantSP FastNanoTimestampVector::castTemporal(DATA_TYPE expectType){
 				continue;
 			}
 			int year, month, day;
-			Util::parseDate(data_[i] / 86400000000000ll, year, month, day);
+			Util::parseDate(static_cast<int>(data_[i] / 86400000000000ll), year, month, day);
 			pbuf[i] = year*12+month-1;
 		}
 	}
@@ -2192,7 +2167,7 @@ ConstantSP FastNanoTimestampVector::castTemporal(DATA_TYPE expectType){
 		ratio = -ratio;
 		for(int i = 0; i < size_; i++){
 			long long remainder = data_[i] % 86400000000000ll;
-			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] =(remainder + (data_[i] < 0 && remainder) * 86400000000000ll) / ratio;
+			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>((remainder + (data_[i] < 0 && remainder) * 86400000000000ll) / ratio);
 		}
 	}
 	return res;
@@ -2259,7 +2234,7 @@ int FastArrayVector::serializeFixedLength(char* buf, int bufSize, INDEX indexSta
 		while (curCount > maxCount) {
 			bytesRequired += i * curCountBytes;
 			curCountBytes *= 2;
-			maxCount = std::min((long long)INT_MAX, (1ll << (8 * curCountBytes)) - 1);
+			maxCount = static_cast<int>(std::min((long long)INT_MAX, (1ll << (8 * curCountBytes)) - 1));
 		}
 		bytesRequired += curCountBytes + curCount * baseUnitLength_;
 
@@ -2565,57 +2540,72 @@ void FastArrayVector::fill(INDEX start, INDEX length, const ConstantSP& value) {
 	if (size_ < start + length)
 		throw RuntimeException("The length of the array vector was shorter than expected.");
 	if (value->isScalar()) {
-		if (valueSize_ != vStart + length)
-			value_->resize(vStart + length);
-		value_->fill(vStart, length, value);
-		valueSize_ = vStart + length;
-		for (int i = 0; i<length; ++i)
-			pindex[start + i] = vStart + i + 1;
+		INDEX coveredSize = 0;
+		for(INDEX i = 0; i < length; ++i){
+			INDEX index = start + i;
+			coveredSize += (index == 0 ? pindex[index] : (pindex[index] - pindex[index - 1]));
+		}
+		INDEX newValueSize = valueSize_ - coveredSize + length;
+		VectorSP newValue = value_->getSubVector(0, vStart, newValueSize);
+		newValue->append(value, length);
+		INDEX indexNextToCovered =  pindex[start + length - 1];
+		INDEX lastPartSize = valueSize_ - indexNextToCovered;
+		if (lastPartSize > 0) {
+			newValue->append(value_->getSubVector(indexNextToCovered, lastPartSize));
+		}
+		for(INDEX i = 0; i < length; ++i){
+			INDEX index = start + i;
+			pindex[index] = index == 0 ? 1 : pindex[index - 1] + 1;
+		}
+		INDEX diff = length - coveredSize;
+		for (INDEX i = start + length; i < size_; ++i) {
+			pindex[i] += diff;
+		}
+		valueSize_ += diff;
+		value_ = newValue;
 	}
 	else if (value->isTuple()) {
 		if (length > value->rows()) {
 			throw RuntimeException("The length of the any vector was shorter than expected.");
 		}
-		
-		for (int i = 0; i<length; ++i) {
-			ConstantSP cur = value->get(i);
-			if (UNLIKELY(cur->size() == 0))
-				cur = Constant::void_;
-			int curSize = cur->size();
-			value_->fill(vStart, curSize, cur);
-			pindex[start + i] = vStart + curSize;
-			vStart = pindex[start + i];
-			if (!containNull_ && curSize == 1 && cur->isNull(0))
+		INDEX oldIndexNextToCovered =  pindex[start + length - 1];
+		VectorSP newValue = value_->getSubVector(0, vStart);
+		for(INDEX i = 0; i < length; ++i){
+			ConstantSP element = value->get(i);
+			INDEX elementLength = element->size();
+			if(elementLength == 0){
+				element = Constant::void_;
+			}
+			newValue->append(element);
+			INDEX index = start + i;
+			pindex[index] = index == 0 ? elementLength : pindex[index - 1] + elementLength;
+			if (!containNull_ && elementLength == 1 && element->isNull(0)){
 				containNull_ = true;
+			}
 		}
+		INDEX newIndexNextToCovered =  pindex[start + length - 1];
+		INDEX lastPartSize = valueSize_ - oldIndexNextToCovered;
+		if (lastPartSize > 0) {
+			newValue->append(value_->getSubVector(oldIndexNextToCovered, lastPartSize));
+		}
+		INDEX diff = newIndexNextToCovered - oldIndexNextToCovered;
+		for (INDEX i = start + length; i < size_; ++i) {
+			pindex[i] += diff;
+		}
+		valueSize_ += diff;
+		value_ = newValue;
 	}
 	else if (value->isArray()) {
 		if (length > value->rows()) {
 			throw RuntimeException("The length of the copy array vector was shorter than expected.");
 		}
-		VECTOR_TYPE vecType = ((Vector*)value.get())->getVectorType();
-		FastArrayVector* copy = (FastArrayVector*)value.get();
-		INDEX copyStart = 0;
-		if (vecType == VECTOR_TYPE::SUBVECTOR) {
-			//SubVector* subVec = (SubVector*)value.get();
-			//vecType = subVec->getSourceVector()->getVectorType();
-			//copy = (FastArrayVector*)subVec->getSourceVector().get();
-			//copyStart = subVec->getSubVectorStart();
+		if (UNLIKELY(((Vector*)value.get())->getVectorType() != VECTOR_TYPE::ARRAYVECTOR))
 			throw RuntimeException("The value to fill must be a scalar, a tuple or an array vector.");
+		VectorSP tuple = Util::createVector(DT_ANY, 0, length);
+		for(INDEX i = 0; i < length; ++i){
+			tuple->append(value->get(i));
 		}
-		if (UNLIKELY(vecType != VECTOR_TYPE::ARRAYVECTOR))
-			throw RuntimeException("The value to fill must be a scalar, a tuple or an array vector.");
-
-		INDEX* pindexCopy = copy->index_->getIndexArray();
-		INDEX valueStart = copyStart == 0 ? 0 : pindexCopy[copyStart - 1];
-		INDEX valueCount = pindexCopy[copyStart + length - 1] - valueStart;
-		value_->fill(valueStart, valueCount, copy->value_);
-
-		INDEX inc = vStart - valueStart;
-		for (int i = 0; i<length; ++i)
-			pindex[start + i] = pindexCopy[copyStart + i] + inc;
-		if (!containNull_ && copy->getNullFlag())
-			containNull_ = true;
+		return fill(start, length, tuple);
 	}
 	else
 		throw RuntimeException("The value to fill must be a scalar, a tuple or an array vector.");
@@ -2750,9 +2740,10 @@ string FastArrayVector::getString(INDEX index) const {
 
 string FastArrayVector::getString() const {
 	string str("[");
+	int len = (std::min)(Util::DISPLAY_ROWS, size_);
 	int maxLen = Util::DISPLAY_ROWS, lastStart = 0;
 	INDEX *pindex = index_->getIndexArray();
-	for (int i = 0; i < size_; i++) {
+	for (int i = 0; i < len; i++) {
 		if (i != 0) {
 			str.append(",");
 		}
@@ -2770,7 +2761,10 @@ string FastArrayVector::getString() const {
 		}
 		lastStart = pindex[i];
 	}
+	if (size_ > len)
+		str.append("...");
 	str.append("]");
+	
 	return str;
 };
 
@@ -2888,9 +2882,11 @@ bool FastArrayVector::append(const ConstantSP& value, INDEX count) {
 	return append(value, 0, count);
 }
 
-bool FastArrayVector::append(const ConstantSP& value, INDEX start, INDEX len) {
+bool FastArrayVector::append(const ConstantSP value, INDEX start, INDEX len) {
 	if(value->isTuple()){
-		int len = value->size();
+		if(start + len > value->size()) {
+			return false;
+		}
 		try{
 			index_->resize(size_ + len);
 			INDEX* pindex = index_->getIndexArray();
@@ -3215,7 +3211,7 @@ ConstantSP FastArrayVector::sliceColumnRange(int colStart, int colEnd, INDEX row
 	ConstantSP newIndex = Util::createIndexVector(rows, true);
 	INDEX* pnewIndex = newIndex->getIndexArray();
 
-	ConstantSP valueIndex = Util::createIndexVector(valueCellCount, true);
+	ConstantSP valueIndex = Util::createIndexVector(static_cast<INDEX>(valueCellCount), true);
 	INDEX* pvalueIndex = valueIndex->getIndexArray();
 	INDEX cursor = 0;
 	for(INDEX i=rowStart; i<rowEnd; ++i){
@@ -3384,7 +3380,7 @@ ConstantSP FastArrayVector::getSubVector(INDEX start, INDEX length, INDEX capaci
 		valueCellCount = pindex[start + length - 1] - offset;
 		valueCapacity = valueCellCount;
 		if(capacity > length)
-			valueCapacity = capacity/(double)length * valueCellCount;
+			valueCapacity = capacity/length * valueCellCount;
 		if(valueCapacity < valueCellCount)
 			valueCapacity = valueCellCount;
 	}
@@ -4378,16 +4374,15 @@ void FastFixedLengthVector::getDataArray(INDEX start, INDEX length, unsigned cha
 	}
 }
 
-bool FastFixedLengthVector::checkCapacity(int appendSize){
+void FastFixedLengthVector::checkCapacity(int appendSize){
 	if(size_+appendSize>capacity_){
-		INDEX newCapacity= (size_+appendSize)*1.2;
+		INDEX newCapacity= static_cast<INDEX>((size_+appendSize)*1.2);
 		unsigned char* newData = new unsigned char[newCapacity * fixedLength_];
 		memcpy(newData,data_,size_ * fixedLength_);
 		delete[] data_;
 		capacity_=newCapacity;
 		data_=newData;
 	}
-	return true;
 }
 
 ConstantSP FastFixedLengthVector::getSubVector(INDEX start, INDEX length, INDEX capacity) const {
@@ -4404,14 +4399,13 @@ ConstantSP FastFixedLengthVector::getSubVector(INDEX start, INDEX length, INDEX 
 IO_ERR FastFixedLengthVector::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
 	IO_ERR ret=OK;
 	INDEX end = indexStart + targetNumElement;
-	if(end > capacity_ && !checkCapacity(end - size_))
-		return NOSPACE;
+	checkCapacity(end - size_);
 	INDEX i=indexStart;
 	size_t unitLength = fixedLength_;
 	if(!in->isIntegerReversed()){
 		size_t actualLength;
 		ret = in->readBytes((char*)(data_ + i*fixedLength_), unitLength,  targetNumElement, actualLength);
-		i += actualLength;
+		i += static_cast<INDEX>(actualLength);
 	}
 	else{
 		for(; i<end; ++i){
@@ -4518,8 +4512,7 @@ void FastFixedLengthVector::fill(INDEX start, INDEX length, const ConstantSP& va
 }
 
 bool FastFixedLengthVector::append(const ConstantSP value, INDEX start, INDEX appendSize) {
-	if (!checkCapacity(appendSize))
-		return false;
+	checkCapacity(appendSize);
 	if (!value->getBinary(start, appendSize, fixedLength_, data_ + size_ * fixedLength_))
 		return false;
 	size_ += appendSize;
@@ -4529,8 +4522,7 @@ bool FastFixedLengthVector::append(const ConstantSP value, INDEX start, INDEX ap
 }
 
 bool FastFixedLengthVector::append(const ConstantSP& value, INDEX appendSize){
-	if(!checkCapacity(appendSize))
-		return false;
+	checkCapacity(appendSize);
 
 	if(!value->getBinary(0,appendSize,fixedLength_,data_ + size_ * fixedLength_))
 		return false;
@@ -4836,4 +4828,5 @@ bool FastSymbolVector::set(const ConstantSP& index, const ConstantSP& value){
 		containNull_=true;
 	return true;
 }
+
 };

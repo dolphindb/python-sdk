@@ -6,6 +6,7 @@
 #include "ScalarImp.h"
 #include "Util.h"
 #include "Pickle.h"
+#include "Set.h"
 #include "MultithreadedTableWriter.h"
 #include "Wrappers.h"
 #include "WideInteger.h"
@@ -17,20 +18,20 @@ namespace dolphindb {
 #ifdef DLOG
     #undef DLOG
 #endif
-#define DLOG //DLogger::Info
+#define DLOG    //DLogger::Info
 
-
+#define RECORDTIME(name) //RecordTime _##name(name)
 
 Type Scalar2DolphinDBType(const py::object &obj, bool &isNull, int &nullpri, CHILD_VECTOR_OPTION option = CHILD_VECTOR_OPTION::DISABLE);
 ConstantSP _toDolphinDB_Scalar(py::object obj, Type typeIndicator);
 ConstantSP _toDolphinDB_Scalar(py::object obj);
 ConstantSP _toDolphinDB_Vector(py::object obj, Type typeIndicator, CHILD_VECTOR_OPTION option = CHILD_VECTOR_OPTION::DISABLE, TableVectorInfo info = {true, ""});
-// ConstantSP toDolphinDB_Matrix(py::object obj, Type typeIndicator);
 ConstantSP _toDolphinDB_Set(py::object obj);
 ConstantSP _toDolphinDB_Dictionary(py::object obj);
 ConstantSP _toDolphinDB_Table(py::object obj, TableChecker &checker);
 ConstantSP _toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_VECTOR_OPTION &option);
 ConstantSP _toDolphinDB_Vector_SeriesOrIndex(py::object obj, Type typeIndicator, const CHILD_VECTOR_OPTION &options, const TableVectorInfo &info);
+
 template <typename T>
 ConstantSP
 _toDolphinDB_Vector_TupleOrList(
@@ -48,58 +49,19 @@ static inline std::string py2str(const py::object &obj) {
     return py::str(obj).cast<std::string>();
 }
 
-inline void getVersionVector(const py::object &module, vector<int> &version) {
-    string ver_ = py2str(module.attr("__version__"));
-    const char split = '.';
-    string verstr = ver_ + split;
-    size_t pos;
-    while(true) {
-        pos = verstr.find(split);
-        if(pos == string::npos)
-            break;
-        string tmpstr = verstr.substr(0, pos);
-        version.push_back(atoi(tmpstr.c_str()));
-        verstr = verstr.substr(pos + 1);
-    }
-} 
+inline bool checkVersionAbove(const py::object &module, const std::string &version) {
+    py::object Version = py::module::import("packaging.version").attr("Version");
+    py::object ver1 = Version(module.attr("__version__"));
+    py::object ver2 = Version(version);
+    return py::cast<bool>(py::bool_(ver1 >= ver2));
+}
 
 Preserved::Preserved(){
-    vector<int> version;
     numpy_ = py::module::import("numpy");
-    getVersionVector(numpy_, version);
-    if (version.size() >= 2) {
-        np_above_1_20_ = ((version[0] == 1) && (version[1] >= 20)) || (version[0] >= 2);
-    }
-    else {
-        np_above_1_20_ = false;
-    }
-    
-    version.clear();
+    np_above_1_20_ = checkVersionAbove(numpy_, "1.20");
     pandas_ = py::module::import("pandas");
-    getVersionVector(pandas_, version);
-    if (version.size() >= 1) {
-        pd_above_2_0_ = version[0] >= 2;
-    }
-    else {
-        pd_above_2_0_ = false;
-    }
-    if (version.size() >= 1) {
-        if (version[0] >= 2) {
-            pd_above_1_2_ = true;
-        }
-        else if (version[0] == 1) {
-            if (version.size() >= 2) {
-                pd_above_1_2_ = version[1] >= 2;
-            }
-            else {
-                pd_above_1_2_ = false;
-            }
-        }
-        else {
-            pd_above_1_2_ = false;
-        }
-    }
-
+    pd_above_2_0_ = checkVersionAbove(pandas_, "2");
+    pd_above_1_2_ = checkVersionAbove(pandas_, "1.2");
     py::module_ importUtil = py::module::import("importlib.util");
     has_arrow_ = !(importUtil.attr("find_spec")("pyarrow").is_none());
     pyarrow_import_ = false;
@@ -194,8 +156,9 @@ Preserved::Preserved(){
     decimal_ = m_decimal_.attr("Decimal");
 }
 
-TableChecker::TableChecker(const py::dict &pydict) {
-    if (pydict.is_none()) return;
+TableChecker::TableChecker(const py::object &pyobj) {
+    if (pyobj.is_none()) return;
+    py::dict pydict = py::cast<py::dict>(pyobj);
     for(auto iter = pydict.begin(); iter != pydict.end(); ++iter) {
         py::object key = py::reinterpret_borrow<py::object>((*iter).first);
         py::object value = py::reinterpret_borrow<py::object>((*iter).second);
@@ -238,21 +201,21 @@ static inline bool isValueNumpyNull(float value) {
     return std::isnan(value);
 }
 
-static inline bool isNULL(PyObject *pobj) {
+inline bool isNULL(PyObject *pobj) {
     return  PyObject_IsInstance(pobj,DdbPythonUtil::preserved_->pynone_.ptr()) ||
             PyObject_IsInstance(pobj,DdbPythonUtil::preserved_->pdNaT_.ptr())  ||
             PyObject_IsInstance(pobj,DdbPythonUtil::preserved_->pdNA_.ptr())   ||
             (PyObject_IsInstance(pobj,DdbPythonUtil::preserved_->nan_.ptr())&&isValueNumpyNull(py::cast<double>(pobj)));
 }
 
-static inline bool isNULL(const py::object &obj) {
+inline bool isNULL(const py::object &obj) {
     return  py::isinstance(obj, DdbPythonUtil::preserved_->pynone_) ||
             py::isinstance(obj, DdbPythonUtil::preserved_->pdNaT_) ||
             py::isinstance(obj, DdbPythonUtil::preserved_->pdNA_) ||
             (py::isinstance(obj, DdbPythonUtil::preserved_->nan_) && isValueNumpyNull(py::cast<double>(obj)));
 }
 
-static inline bool isNULL(const py::object &obj, int &pri, DATA_TYPE &nullType) {
+inline bool isNULL(const py::object &obj, int &pri, DATA_TYPE &nullType) {
     if (py::isinstance(obj, DdbPythonUtil::preserved_->pynone_)) {
         pri = 1;
         nullType = DT_ANY;
@@ -282,52 +245,62 @@ static inline py::object getDType(const py::object &obj){
     return dtype;
 }
 
-static inline int getPyDecimalScale(PyObject* obj) {
-    PyObject* DecTuple = PyObject_CallMethod(obj, "as_tuple", NULL);
-    PyObject* dataExp = PyObject_GetAttrString(DecTuple, "exponent");
+static inline int getPyDecimalScale(const py::handle &obj) {
+    py::object decTuple = obj.attr("as_tuple")();
+    py::object dataExp = decTuple.attr("exponent");
     int res = EXPARAM_DEFAULT;
-    if(!PyObject_IsInstance(dataExp, DdbPythonUtil::preserved_->pystr_.ptr())) {
-        res = (-1)*py::cast<int>(dataExp);
+    if (!py::isinstance(dataExp, DdbPythonUtil::preserved_->pystr_)) {
+        res = (-1) * py::cast<int>(dataExp);
     }
-    Py_DECREF(DecTuple);
-    Py_DECREF(dataExp);
     return res;
 }
 
+static inline int getPyDecimalScale(PyObject* obj) {
+    return getPyDecimalScale(py::reinterpret_borrow<py::object>(obj));
+}
+
+
 template <typename T>
-T getPyDecimalData(PyObject* obj, bool &hasNull) {
-    PyObject* DecTuple = PyObject_CallMethod(obj, "as_tuple", NULL);
-    PyObject* dataExp = PyObject_GetAttrString(DecTuple, "exponent");
-    if(PyObject_IsInstance(dataExp, DdbPythonUtil::preserved_->pystr_.ptr())) {
-        Py_DECREF(DecTuple);
-        Py_DECREF(dataExp);
+T getPyDecimalData(const py::handle &data, bool &hasNull, int scale = EXPARAM_DEFAULT) {
+    py::object decTuple = data.attr("as_tuple")();
+    py::object dataExp = decTuple.attr("exponent");
+
+    if (py::isinstance(dataExp, DdbPythonUtil::preserved_->pystr_)) {
         hasNull = true;
         return std::numeric_limits<T>::min();
     }
-        
-    int sign = py::cast<int>(PyObject_GetAttrString(DecTuple, "sign"));
-    PyObject* dataTuple = PyObject_GetAttrString(DecTuple, "digits");
-    int dec_len = PyTuple_GET_SIZE(dataTuple);
+
+    py::object dataSign = decTuple.attr("sign");
+    int sign = py::cast<int>(dataSign);
+    py::list dataTuple = py::cast<py::list>(decTuple.attr("digits"));
+    auto dec_len = dataTuple.size();
     T dec_data = 0;
-    for(int ti=0;ti<dec_len;ti++) {
+    int exp = (-1) * py::cast<int>(dataExp);
+    if (scale == EXPARAM_DEFAULT) scale = exp;
+    for (auto ti = 0; ti < dec_len - exp + scale; ++ti) {
         dec_data *= 10;
-        dec_data += (T)py::cast<int>(PyTuple_GET_ITEM(dataTuple, ti));
-        if(dec_data < 0) {
-            Py_DECREF(DecTuple);
-            Py_DECREF(dataExp);
-            Py_DECREF(dataTuple);
+        if (ti < dec_len) {
+            py::object item = dataTuple[ti];
+            dec_data += (T)(py::cast<int>(item));
+        }
+        if (dec_data < 0) {
             throw RuntimeException("Decimal math overflow");
         }
     }
-    Py_DECREF(DecTuple);
-    Py_DECREF(dataExp);
-    Py_DECREF(dataTuple);
-    if(sign) {
-        return (-1)*dec_data;
-    }else {
+    if (sign) {
+        return (-1) * dec_data;
+    }
+    else {
         return dec_data;
     }
 }
+
+
+template <typename T>
+T getPyDecimalData(PyObject* obj, bool &hasNull, int scale = EXPARAM_DEFAULT) {
+    return getPyDecimalData<T>(py::reinterpret_borrow<py::object>(obj), hasNull, scale);
+}
+
 
 template <typename T>
 void getDecimalDigits(T raw_data, vector<int>& digits) {
@@ -492,6 +465,7 @@ bool addNullVector(const py::array &pyVec, size_t size, size_t offset, T nullVal
 template <typename T>
 bool addDecimalVector(const py::array &pyVec, size_t size, size_t offset, T nullValue, Type type,
     std::function<void(T *, int)> f, const TableVectorInfo &info) {
+    int scale = type.second;
     int bufsize = std::min(65535, (int)size);
     std::unique_ptr<T[]> bufsp(new T[bufsize]);
     T* buf = bufsp.get();
@@ -510,11 +484,12 @@ bool addDecimalVector(const py::array &pyVec, size_t size, size_t offset, T null
                 if (isNULL(*ptr)) {
                     buf[i] = nullValue;
                     hasNull = true;
+                    
                 } else {
                     if (!PyObject_IsInstance(*ptr, DdbPythonUtil::preserved_->decimal_.ptr())) {
                         throw RuntimeException("");
                     }
-                    buf[i] = getPyDecimalData<T>(*ptr, hasNull);
+                    buf[i] = getPyDecimalData<T>(*ptr, hasNull, scale);
                 }
                 it += stride;
             }
@@ -565,15 +540,23 @@ void addStringVector(VectorSP &ddbVec, const py::array &pyVec, size_t size, ssiz
             }
             addstrindex++;
             if(addstrindex >= strbufsize){
-                if(!ddbVec->appendString(strs, addstrindex, ind)){
-                    throw RuntimeException("");
+                if(!ddbVec->appendString(strs, addstrindex)){
+                    goto error;
                 }
+                ind += addstrindex;
                 addstrindex=0;
                 addbatchindex++;
             }
         }
-        if(!ddbVec->appendString(strs, addstrindex, ind)) {
-            throw RuntimeException("");
+        if(!ddbVec->appendString(strs, addstrindex)) {
+            goto error;
+        }
+        ind += addstrindex;
+        return;
+error:
+        for (int _i = 0; _i < addstrindex; ++_i, ++ind) {
+            if (!ddbVec->appendString(strs+_i, 1))
+                throw RuntimeException("");
         }
     }
     catch(...) {
@@ -742,7 +725,7 @@ Scalar2DolphinDBType(const py::object       &obj,
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->decimal_)) {
         DLOG("is decimal.");
-        int scale = getPyDecimalScale(obj.ptr());
+        int scale = getPyDecimalScale(obj);
         if (scale > 17) return {DT_DECIMAL128, scale};
         return {DT_DECIMAL64, scale};
     }
@@ -1083,11 +1066,13 @@ _toDolphinDB_Table(py::object       obj,
             if (!isArrayLike(tmpObj)) {
                 throw RuntimeException("Table columns must be vectors (np.array, series, tuple, or list) for upload.");
             }
+
             columns[ni] = _toDolphinDB_Vector_SeriesOrIndex(
                 tmpObj, std::make_pair(DT_UNK, EXPARAM_DEFAULT),
                 {CHILD_VECTOR_OPTION::ARRAY_VECTOR}, info);
         }
         columns[ni]->setTemporary(true);
+
     }
     // Create DDB TableSP
     TableSP ddbTbl = Util::createTable(col_names, columns);
@@ -1235,7 +1220,6 @@ ConstantSP _toDolphinDB_NDArray(py::array obj, Type typeIndicator, const CHILD_V
     if (rows == 1) {
         // Create Vector
         if (dim == 2) {
-            DLOG("xxxxxx");
             if (py::isinstance(obj, DdbPythonUtil::preserved_->npmatrix_)) {
                 DLOG("np.matrix1_");
                 obj = DdbPythonUtil::preserved_->numpy_.attr("array")(obj);
@@ -1547,7 +1531,7 @@ inferobjectdtype:
                                 continue;
                             }
                             if (py::isinstance(it, DdbPythonUtil::preserved_->decimal_)) {
-                                exparam = getPyDecimalScale(it.ptr());
+                                exparam = getPyDecimalScale(it);
                                 if (exparam == EXPARAM_DEFAULT) {
                                     ++nullCount;
                                     ++index;
@@ -1581,7 +1565,20 @@ inferobjectdtype:
                     ddbVec->setNullFlag(addDecimalVector<int>(
                         series_array, size, index, INT32_MIN, typeIndicator,
                         [&](int *buf, int size) {
-                        ((FastDecimal32VectorSP)ddbVec)->appendInt(buf, size);
+                        int *w_buf;
+#ifdef _MSC_VER
+                        int *tmp = new int[size];
+#else
+                        int tmp[size];
+#endif
+                        INDEX start_p = ddbVec->size();
+                        ddbVec->resize(start_p + size);
+                        w_buf = ddbVec->getIntBuffer(start_p, size, tmp);
+                        memcpy(w_buf, buf, size * sizeof(int));
+                        ddbVec->setInt(start_p, size, w_buf);
+#ifdef _MSC_VER
+                        delete[]tmp;
+#endif
                     }, info));
                     break;
                 }
@@ -1597,7 +1594,20 @@ inferobjectdtype:
                     ddbVec->setNullFlag(addDecimalVector<long long>(
                         series_array, size, index, INT64_MIN, typeIndicator,
                         [&](long long *buf, int size) {
-                        ((FastDecimal64VectorSP)ddbVec)->appendLong(buf, size);
+                        long long *w_buf;
+#ifdef _MSC_VER
+                        long long *tmp = new long long[size];
+#else
+                        long long tmp[size];
+#endif
+                        INDEX start_p = ddbVec->size();
+                        ddbVec->resize(start_p + size);
+                        w_buf = ddbVec->getLongBuffer(start_p, size, tmp);
+                        memcpy(w_buf, buf, size * sizeof(long long));
+                        ddbVec->setLong(start_p, size, w_buf);
+#ifdef _MSC_VER
+                        delete[]tmp;
+#endif
                     }, info));
                     break;
                 }
@@ -2268,7 +2278,20 @@ ConstantSP _toDolphinDB_Vector_SeriesOrIndex(
                         ddbVec->setNullFlag(addDecimalVector<int>(
                             series_array, size, 0, INT32_MIN, typeIndicator,
                             [&](int *buf, int size) {
-                            ((FastDecimal32VectorSP)ddbVec)->appendInt(buf, size);
+                            int *w_buf;
+#ifdef _MSC_VER
+                            int *tmp = new int[size];
+#else
+                            int tmp[size];
+#endif
+                            INDEX start_p = ddbVec->size();
+                            ddbVec->resize(start_p + size);
+                            w_buf = ddbVec->getIntBuffer(start_p, size, tmp);
+                            memcpy(w_buf, buf, size * sizeof(int));
+                            ddbVec->setInt(start_p, size, w_buf);
+#ifdef _MSC_VER
+                            delete[]tmp;
+#endif
                         }, info));
                     }
                     else if (typeInfer == DT_DECIMAL128) {
@@ -2282,7 +2305,20 @@ ConstantSP _toDolphinDB_Vector_SeriesOrIndex(
                         ddbVec->setNullFlag(addDecimalVector<long long>(
                             series_array, size, 0, INT64_MIN, typeIndicator,
                             [&](long long *buf, int size) {
-                            ((FastDecimal64VectorSP)ddbVec)->appendLong(buf, size);
+                            long long *w_buf;
+#ifdef _MSC_VER
+                            long long *tmp = new long long[size];
+#else
+                            long long tmp[size];
+#endif
+                            INDEX start_p = ddbVec->size();
+                            ddbVec->resize(start_p + size);
+                            w_buf = ddbVec->getLongBuffer(start_p, size, tmp);
+                            memcpy(w_buf, buf, size * sizeof(long long));
+                            ddbVec->setLong(start_p, size, w_buf);
+#ifdef _MSC_VER
+                            delete[]tmp;
+#endif
                         }, info));
                     }
                     break;
@@ -2676,7 +2712,7 @@ indicatetype:
                                 continue;
                             }
                             if (py::isinstance(it, DdbPythonUtil::preserved_->decimal_)) {
-                                exparam = getPyDecimalScale(it.ptr());
+                                exparam = getPyDecimalScale(it);
                                 if (exparam == EXPARAM_DEFAULT) {
                                     ++nullCount;
                                     ++index;
@@ -2704,11 +2740,26 @@ indicatetype:
                     ddbVec = Util::createVector(typeInfer, index, size, true, typeIndicator.second);
                 }
                 if (index != 0) {
-                    ddbVec->fill(0, index, Constant::void_);
+                    ddbVec->fill(0, index, Constant::null_);
                 }
                 if (typeInfer == DT_DECIMAL32) {
-                    ddbVec->setNullFlag(addDecimalVector<int>(series_array, size, index, INT32_MIN, typeIndicator, [&](int *buf, int size) {
-                        ((FastDecimal32VectorSP)ddbVec)->appendInt(buf, size);
+                    ddbVec->setNullFlag(addDecimalVector<int>(
+                        series_array, size, index, INT32_MIN, typeIndicator,
+                        [&](int *buf, int size) {
+                        int *w_buf;
+#ifdef _MSC_VER
+                        int *tmp = new int[size];
+#else
+                        int tmp[size];
+#endif
+                        INDEX start_p = ddbVec->size();
+                        ddbVec->resize(start_p + size);
+                        w_buf = ddbVec->getIntBuffer(start_p, size, tmp);
+                        memcpy(w_buf, buf, size * sizeof(int));
+                        ddbVec->setInt(start_p, size, w_buf);
+#ifdef _MSC_VER
+                        delete[]tmp;
+#endif
                     }, info));
                     break;
                 }
@@ -2724,7 +2775,20 @@ indicatetype:
                     ddbVec->setNullFlag(addDecimalVector<long long>(
                         series_array, size, index, INT64_MIN, typeIndicator,
                         [&](long long *buf, int size) {
-                        ((FastDecimal64VectorSP)ddbVec)->appendLong(buf, size);
+                        long long *w_buf;
+#ifdef _MSC_VER
+                        long long *tmp = new long long[size];
+#else
+                        long long tmp[size];
+#endif
+                        INDEX start_p = ddbVec->size();
+                        ddbVec->resize(start_p + size);
+                        w_buf = ddbVec->getLongBuffer(start_p, size, tmp);
+                        memcpy(w_buf, buf, size * sizeof(long long));
+                        ddbVec->setLong(start_p, size, w_buf);
+#ifdef _MSC_VER
+                        delete[]tmp;
+#endif
                     }, info));
                     break;
                 }
@@ -2961,7 +3025,7 @@ inferobjecttype:
                             continue;
                         }
                         if (py::isinstance(it, DdbPythonUtil::preserved_->decimal_)) {
-                            exparam = getPyDecimalScale(it.ptr());
+                            exparam = getPyDecimalScale(it);
                             if (exparam == EXPARAM_DEFAULT) {
                                 ++nullCount;
                                 ++index;
@@ -2992,7 +3056,23 @@ inferobjecttype:
                 ddbVec->setNullFlag(addDecimalVector<int>(
                     series_array, size, index, INT32_MIN, typeIndicator,
                     [&](int *buf, int size) {
-                    ((FastDecimal32VectorSP)ddbVec)->appendInt(buf, size);
+                    int *w_buf;
+#ifdef _MSC_VER
+                    int *tmp = new int[size];
+#else
+                    int tmp[size];
+#endif
+                    INDEX start_p = ddbVec->size();
+                    ddbVec->resize(start_p + size);
+                    w_buf = ddbVec->getIntBuffer(start_p, size, tmp);
+                    memcpy(w_buf, buf, size * sizeof(int));
+                    for(int i = 0; i < size; ++i) {
+                        std::cout << "i: " << i << " value: " << w_buf[i] << std::endl;
+                    }
+                    ddbVec->setInt(start_p, size, w_buf);
+#ifdef _MSC_VER
+                    delete[]tmp;
+#endif
                 }, info));
                 break;
             }
@@ -3000,7 +3080,20 @@ inferobjecttype:
                 ddbVec->setNullFlag(addDecimalVector<long long>(
                     series_array, size, index, INT64_MIN, typeIndicator,
                     [&](long long *buf, int size) {
-                    ((FastDecimal64VectorSP)ddbVec)->appendLong(buf, size);
+                    long long *w_buf;
+#ifdef _MSC_VER
+                    long long *tmp = new long long[size];
+#else
+                    long long tmp[size];
+#endif
+                    INDEX start_p = ddbVec->size();
+                    ddbVec->resize(start_p + size);
+                    w_buf = ddbVec->getLongBuffer(start_p, size, tmp);
+                    memcpy(w_buf, buf, size * sizeof(long long));
+                    ddbVec->setLong(start_p, size, w_buf);
+#ifdef _MSC_VER
+                    delete[]tmp;
+#endif
                 }, info));
                 break;
             }
@@ -3122,18 +3215,21 @@ ConstantSP _toDolphinDB_Scalar(py::object obj, Type typeIndicator) {
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->decimal_)) {
         bool hasNull=false;
-        int scale = getPyDecimalScale(obj.ptr());
+        int scale = getPyDecimalScale(obj);
         if (scale == EXPARAM_DEFAULT) {
             return Util::createNullConstant(type, exparam == EXPARAM_DEFAULT ? 0 : exparam);
         }
+        if (exparam != EXPARAM_DEFAULT) {
+            scale = exparam;
+        }
         if (type == DT_DECIMAL32) {
-            return new Decimal32(scale, getPyDecimalData<int32_t>(obj.ptr(), hasNull));
+            return new Decimal32(scale, getPyDecimalData<int32_t>(obj, hasNull, scale));
         }
         else if (type == DT_DECIMAL128) {
-            return new Decimal128(scale, getPyDecimalData<wide_integer::int128>(obj.ptr(), hasNull));
+            return new Decimal128(scale, getPyDecimalData<wide_integer::int128>(obj, hasNull, scale));
         }
         else {
-            return Util::createObject(type, getPyDecimalData<int64_t>(obj.ptr(), hasNull), nullptr, scale);
+            return Util::createObject(type, getPyDecimalData<int64_t>(obj, hasNull, scale), nullptr, scale);
         }
     }
     else if (py::isinstance(obj, DdbPythonUtil::preserved_->pybytes_)) {

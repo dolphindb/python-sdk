@@ -20,10 +20,7 @@
 
 namespace dolphindb {
 
-#ifdef DLOG
-    #undef DLOG
-#endif
-#define DLOG true?ddb::DLogger::GetMinLevel():ddb::DLogger::Info
+
 
 #define EXPARAM_DEFAULT INT_MIN
 
@@ -194,7 +191,7 @@ struct TableVectorInfo {
 class EXPORT_DECL TableChecker: public std::map<std::string, Type>{
 public:
     TableChecker() {}
-    TableChecker(const py::dict &pydict);
+    TableChecker(const py::object &pydict);
 };
 
 class EXPORT_DECL DdbPythonUtil{

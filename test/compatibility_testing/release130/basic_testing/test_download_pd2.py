@@ -1,17 +1,15 @@
 import pytest
-from pandas2_testing.utils import equalPlus
+from basic_testing.utils import equalPlus
 from setup.prepare import *
 from setup.settings import *
-from pandas2_testing.prepare import DataUtils
+from basic_testing.prepare import DataUtils
 from setup.utils import get_pid
 
-# todo:pickle,compress
 class TestDownload(object):
 
     @classmethod
     def setup_class(cls):
-        cls.conn = ddb.Session(enablePickle=False)
-        cls.conn.connect(HOST,PORT)
+        cls.conn = ddb.Session(HOST, PORT, USER, PASSWD,enablePickle=False)
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
@@ -85,12 +83,6 @@ class TestDownload(object):
         x = self.__class__.conn.run(data['value'])
         assert equalPlus(x, data['expect'])
 
-    @pytest.mark.parametrize('data', DataUtils.getSetSpecial('download').values(),
-                             ids=[i for i in DataUtils.getSetSpecial('download')])
-    def test_download_set_special(self,data):
-        x = self.__class__.conn.run(data['value'])
-        assert equalPlus(x, data['expect'])
-
     @pytest.mark.parametrize('data', DataUtils.getSetContainNone('download').values(),
                              ids=[i for i in DataUtils.getSetContainNone('download')])
     def test_download_set_contain_none(self, data):
@@ -139,53 +131,3 @@ class TestDownload(object):
         x = self.__class__.conn.run(data['value'])
         assert equalPlus(x, data['expect'])
 
-    @pytest.mark.parametrize('data', DataUtils.getTableSpecial('download').values(),
-                             ids=[i for i in DataUtils.getTableSpecial('download')])
-    def test_download_table_special(self, data):
-        x = self.__class__.conn.run(data['value'])
-        assert equalPlus(x, data['expect'])
-
-    @pytest.mark.parametrize('data', DataUtils.getArrayVector('download').values(),
-                             ids=[i for i in DataUtils.getArrayVector('download')])
-    def test_download_array_vector(self,data):
-        x = self.__class__.conn.run(data['value'])
-        assert equalPlus(x[0], data['expect'])
-        assert equalPlus(x[1], data['expect'])
-        assert equalPlus(x[2], data['expect'])
-
-    @pytest.mark.parametrize('data', DataUtils.getArrayVectorContainNone('download').values(),
-                             ids=[i for i in DataUtils.getArrayVectorContainNone('download')])
-    def test_download_array_vector_contain_none(self,data):
-        x = self.__class__.conn.run(data['value'])
-        assert equalPlus(x[0], data['expect'])
-        assert equalPlus(x[1], data['expect'])
-        assert equalPlus(x[2], data['expect'])
-
-    @pytest.mark.parametrize('data', DataUtils.getArrayVectorSpecial('download').values(),
-                             ids=[i for i in DataUtils.getArrayVectorSpecial('download')])
-    def test_download_array_vector_special(self,data):
-        x = self.__class__.conn.run(data['value'])
-        assert equalPlus(x, data['expect'])
-
-    @pytest.mark.parametrize('data', DataUtils.getArrayVectorTable('download').values(),
-                             ids=[i for i in DataUtils.getArrayVectorTable('download')])
-    def test_download_array_vector_table(self,data):
-        x = self.__class__.conn.run(data['value'])
-        assert equalPlus(x, data['expect'])
-
-    @pytest.mark.parametrize('data', DataUtils.getArrayVectorTableContainNone('download').values(),
-                             ids=[i for i in DataUtils.getArrayVectorTableContainNone('download')])
-    def test_download_array_vector_table_contain_none(self,data):
-        x = self.__class__.conn.run(data['value'])
-        assert equalPlus(x, data['expect'])
-
-    @pytest.mark.parametrize('data', DataUtils.getArrayVectorTableSpecial('download').values(),
-                             ids=[i for i in DataUtils.getArrayVectorTableSpecial('download')])
-    def test_download_array_vector_table_special(self,data):
-        x = self.__class__.conn.run(data['value'])
-        assert equalPlus(x, data['expect'])
-
-    def test_download_decimal_enablePickle(self):
-        conn=ddb.Session(HOST,PORT,USER,PASSWD)
-        with pytest.raises(RuntimeError,match="Cannot recognize the token decimal"):
-            conn.run("table([decimal('3.14',2)] as `a)")

@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 import dolphindb as ddb
-from pandas2_testing.utils import assertPlus
+from basic_testing.utils import assertPlus
 from setup.settings import *
-from pandas2_testing.prepare import DataUtils
+from basic_testing.prepare import DataUtils
 from setup.utils import get_pid
 import pandas as pd
 
@@ -502,8 +502,6 @@ class TestUpload(object):
                                  ids=[i for i in DataUtils.getTableArrowSpecial('upload')])
         def test_upload_table_arrow_special(self, data):
             for k, v in data.items():
-                if k=='table_arrow_symbol':
-                    assert False,'server bug' # todo:server bug
                 self.__class__.conn.upload({k: v['value']})
                 if 'expect_typestr' in v:
                     assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
