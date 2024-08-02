@@ -282,13 +282,13 @@ class TestSession:
         conn1 = ddb.session()
         conn1.connect(HOST, PORT, USER, PASSWD, reconnect=True)
         cur_node = conn1.run("getNodeAlias()")
-        assert (stopCurNodes(cur_node))
+        assert stopCurNodes(cur_node)
         time.sleep(1)
         conn2 = ddb.session()
         res = conn2.connect(HOST, PORT, USER, PASSWD)
         assert not res
         time.sleep(1)
-        assert (startCurNodes(cur_node))
+        assert startCurNodes(cur_node)
         assert conn1.run("1+1") == 2
         conn1.close()
         conn2.close()
@@ -354,7 +354,7 @@ class TestSession:
         size3 = len(output.toDF())
         assert size3 > 0
         conn1.runFile(file_dir, clearMemory=True)
-        assert (len(conn1.run("objs()")) == 0)
+        assert len(conn1.run("objs()")) == 0
         conn1.run(undef)
 
     if find_spec("pyarrow") is not None:
@@ -853,7 +853,6 @@ class TestSession:
         c4 = conn1.isClosed()
         assert c4
 
-    @pytest.mark.SESSION
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_pickle', [True, False], ids=["PICKLE_OPEN", "PICKLE_CLOSE"])
     def test_print_msg_in_console(self, _compress, _pickle):
@@ -980,7 +979,7 @@ class TestSession:
             assert_array_equal(res, expect)
 
         run_and_assert(self.conn, [0, 10], 0, 10)
-        run_and_assert(self.conn, [4, 2], None, None)
+        run_and_assert(self.conn, [4, 64], None, None)
         run_and_assert(self.conn, [8, 1], 9, 1)
 
     def test_run_fetchSize(self):

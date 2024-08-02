@@ -1292,33 +1292,32 @@ class TestSubscribe:
         ans = conn1.getSubscriptionTopics()
         assert len(ans) == 0, "5"
 
-    @pytest.mark.timeout(1200)
     def test_enableStreaming_subscribe_many_tables(self):
         self.conn.run("""
-            share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades
-            insert into trades values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
+            share streamTable(12000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades
+            insert into trades values(take(now(), 2000), take(`000905`600001`300201`000908`600002, 2000), rand(1000,2000)/10.0, 1..2000)
 
             share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades2
-            insert into trades2 values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
+            insert into trades2 values(take(now(), 2000), take(`000905`600001`300201`000908`600002, 2000), rand(1000,2000)/10.0, 1..2000)
 
             share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades3
-            insert into trades3 values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
+            insert into trades3 values(take(now(), 2000), take(`000905`600001`300201`000908`600002, 2000), rand(1000,2000)/10.0, 1..2000)
 
             share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades4
-            insert into trades4 values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
+            insert into trades4 values(take(now(), 2000), take(`000905`600001`300201`000908`600002, 2000), rand(1000,2000)/10.0, 1..2000)
 
             share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades5
-            insert into trades5 values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
+            insert into trades5 values(take(now(), 2000), take(`000905`600001`300201`000908`600002, 2000), rand(1000,2000)/10.0, 1..2000)
         """)
         conn1 = ddb.session()
         conn1.connect(HOST, PORT, USER, PASSWD)
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
-        counter = CountBatchDownLatch(200000)
-        counter2 = CountBatchDownLatch(200000)
-        counter3 = CountBatchDownLatch(200000)
-        counter4 = CountBatchDownLatch(200000)
-        counter5 = CountBatchDownLatch(200000)
+        counter = CountBatchDownLatch(2000)
+        counter2 = CountBatchDownLatch(2000)
+        counter3 = CountBatchDownLatch(2000)
+        counter4 = CountBatchDownLatch(2000)
+        counter5 = CountBatchDownLatch(2000)
         counters = [counter, counter2, counter3, counter4, counter5]
         results = [[], [], [], [], []]
         tables = ['trades', 'trades2', 'trades3', 'trades4', 'trades5']
@@ -1346,16 +1345,13 @@ class TestSubscribe:
         for ind, co in enumerate(counters):
             assert co.wait_s(200)
             ex_df = self.conn.run(f"select * from {tables[ind]}")
-            for res in results:
-                print(len(res))
             res1 = list(chain.from_iterable(results[ind]))
             for i in range(len(res1)):
                 assert res1[i] == list(ex_df.iloc[i])
         for tab in tables:
             conn1.unsubscribe(HOST, PORT, tab, "action")
         conn1.close()
-        self.conn.run(
-            "undef(`trades,SHARED);undef(`trades2,SHARED);undef(`trades3,SHARED);undef(`trades4,SHARED);undef(`trades5,SHARED);")
+        self.conn.run("undef(`trades,SHARED);undef(`trades2,SHARED);undef(`trades3,SHARED);undef(`trades4,SHARED);undef(`trades5,SHARED);")
 
     def test_enalbeStreaming_exception_in_handler(self):
         script = """

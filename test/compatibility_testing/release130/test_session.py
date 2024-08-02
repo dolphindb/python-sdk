@@ -506,7 +506,7 @@ class TestSession:
             assert_array_equal(res, expect)
 
         run_and_assert(self.conn, [0,10], 0, 10)
-        run_and_assert(self.conn, [4,2], None, None)
+        run_and_assert(self.conn, [4,64], None, None)
         run_and_assert(self.conn, [8,1], 9, 1)
 
 

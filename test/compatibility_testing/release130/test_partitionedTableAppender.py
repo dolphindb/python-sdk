@@ -2009,7 +2009,6 @@ class TestPartitionedTableAppender:
             assert "(column \"string\", row 0) must be of STRING type" in str(e)  
         pool.shutDown()
  
-    @pytest.mark.v130221
     def test_PartitionedTableAppender_no_pandasWarning(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         pool = ddb.DBConnectionPool(HOST,PORT,10, 'admin','123456')
@@ -2210,7 +2209,6 @@ class TestPartitionedTableAppender:
         conn.close()
         pool.shutDown()
 
-    @pytest.mark.v130221
     def test_PartitionedTableAppender_append_after_pool_deconstructed(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         pool = ddb.DBConnectionPool(HOST,PORT,1, 'admin','123456')
@@ -2243,7 +2241,6 @@ class TestPartitionedTableAppender:
         conn.close()
 
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
@@ -2328,8 +2325,6 @@ class TestPartitionedTableAppender:
         self.conn.dropDatabase("dfs://test_dfs1")
         pool.shutDown()
 
-    # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])

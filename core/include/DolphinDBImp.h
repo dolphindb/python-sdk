@@ -28,8 +28,8 @@ public:
     ~DBConnectionImpl();
     bool connect(const string& hostName, int port, const string& userId = "", const string& password = "",bool sslEnable = false, bool asynTask = false, int keepAliveTime = -1, bool compress= false, bool python = false);
     void login(const string& userId, const string& password, bool enableEncryption);
-    ConstantSP run(const string& script, int priority = 4, int parallelism = 2, int fetchSize = 0, bool clearMemory = false);
-    ConstantSP run(const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 2, int fetchSize = 0, bool clearMemory = false);
+    ConstantSP run(const string& script, int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false);
+    ConstantSP run(const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false);
     ConstantSP upload(const string& name, const ConstantSP& obj);
     ConstantSP upload(vector<string>& names, vector<ConstantSP>& objs);
     void close();
@@ -48,11 +48,11 @@ public:
         msg_ = flag;
     }
     py::object runPy(
-        const string& script, int priority = 4, int parallelism = 2,
+        const string& script, int priority = 4, int parallelism = 64,
         int fetchSize = 0, bool clearMemory = false,
         bool pickleTableToList = false, bool disableDecimal = false);
     py::object runPy(
-        const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 2,
+        const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 64,
         int fetchSize = 0, bool clearMemory = false,
         bool pickleTableToList = false, bool disableDecimal = false);
     void setkeepAliveTime(int keepAliveTime){
@@ -64,10 +64,10 @@ public:
     DataInputStreamSP getDataInputStream(){return inputStream_;}
 private:
     long generateRequestFlag(bool clearSessionMemory = false, bool disableprotocol = false, bool pickleTableToList = false, bool disableDecimal = false);
-    ConstantSP run(const string& script, const string& scriptType, vector<ConstantSP>& args, int priority = 4, int parallelism = 2,int fetchSize = 0, bool clearMemory = false);
+    ConstantSP run(const string& script, const string& scriptType, vector<ConstantSP>& args, int priority = 4, int parallelism = 64,int fetchSize = 0, bool clearMemory = false);
     py::object runPy(
         const string& script, const string& scriptType, vector<ConstantSP>& args,
-        int priority = 4, int parallelism = 2, int fetchSize = 0, bool clearMemory = false,
+        int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false,
         bool pickleTableToList = false, bool disableDecimal = false);
     bool connect();
     void login();

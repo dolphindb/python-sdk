@@ -55,7 +55,7 @@ class TestTableUpsert:
         data = pd.DataFrame({'sym': sym, 'date': date, 'qty': qty})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == 10)
+        assert num.rows == 10
         script = '''
             tmp=table(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..10 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
@@ -78,7 +78,7 @@ class TestTableUpsert:
         data = pd.DataFrame({'sym': sym, 'date': date, 'qty': qty})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == 10)
+        assert num.rows == 10
         script = '''
             tmp=table(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01M, NULL, 1965.07M, NULL, 2020.12M, 1970.01M, NULL, NULL, NULL, 2009.08M] as date, 1..10 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
@@ -99,7 +99,7 @@ class TestTableUpsert:
         data = pd.DataFrame({'sym': sym, 'month': month, 'qty': qty})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == 5)
+        assert num.rows == 5
         script = '''
             tmp=table(`A1`A2`A3`A4`A5 as sym, [1965.08M, NULL, 2012.02M, 2012.03M, NULL] as month, 1..5 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
@@ -120,7 +120,7 @@ class TestTableUpsert:
         data = pd.DataFrame({'sym': sym, 'month': month, 'qty': qty})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == 5)
+        assert num.rows == 5
         script = '''
             tmp=table(`A1`A2`A3`A4`A5 as sym, [1965.08.01, NULL, 2012.02.01, 2012.03.01, NULL] as month, 1..5 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
@@ -443,7 +443,7 @@ class TestTableUpsert:
              'qty': qty})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == n)
+        assert num.rows == n
         script = '''
             n = 500000
             tmp=table(take(1960.01.01,n) as date,take(1960.01M,n) as month,take(1960.01.01T13:30:10,n) as datetime,
@@ -474,7 +474,7 @@ class TestTableUpsert:
              'qty': qty})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == n)
+        assert num.rows == n
         script = '''
             n = 500000
             tmp=table(take(1960.01.01,n) as date,take(1960.01M,n) as month,take(1960.01.01T13:30:10,n) as datetime,
@@ -640,10 +640,10 @@ class TestTableUpsert:
         data1 = pd.DataFrame({'sym': sym, 'date': date, 'qty': qty1})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == 10)
+        assert num.rows == 10
         upsert.upsert(data1)
         num = conn.table(data="t")
-        assert (num.rows == 11)
+        assert num.rows == 11
         script = '''
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
@@ -668,10 +668,10 @@ class TestTableUpsert:
         data1 = pd.DataFrame({'sym': sym, 'date': date, 'qty': qty1})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == 10)
+        assert num.rows == 10
         upsert.upsert(data1)
         num = conn.table(data="t")
-        assert (num.rows == 11)
+        assert num.rows == 11
         script = '''
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
@@ -696,10 +696,10 @@ class TestTableUpsert:
         data1 = pd.DataFrame({'sym': sym, 'date': date, 'qty': qty1})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == 10)
+        assert num.rows == 10
         upsert.upsert(data1)
         num = conn.table(data="t")
-        assert (num.rows == 11)
+        assert num.rows == 11
         script = '''
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
@@ -724,10 +724,10 @@ class TestTableUpsert:
         data1 = pd.DataFrame({'sym': sym, 'date': date, 'qty': qty1})
         upsert.upsert(data)
         num = conn.table(data="t")
-        assert (num.rows == 10)
+        assert num.rows == 10
         upsert.upsert(data1)
         num = conn.table(data="t")
-        assert (num.rows == 11)
+        assert num.rows == 11
         script = '''
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
@@ -760,7 +760,7 @@ class TestTableUpsert:
         data1 = pd.DataFrame({'sym': sym, 'date': date, 'qty': qty1})
         upsert.upsert(data1)
         num = conn.table(data="pt")
-        assert (num.rows == 11)
+        assert num.rows == 11
         script = '''
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), (select * from loadTable('dfs://tableUpsert_test','pt')).values())
@@ -792,7 +792,7 @@ class TestTableUpsert:
         data1 = pd.DataFrame({'sym': sym, 'date': date, 'qty': qty1})
         upsert.upsert(data1)
         num = conn.table(data="pt")
-        assert (num.rows == 11)
+        assert num.rows == 11
         script = '''
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), (select * from loadTable('dfs://tableUpsert_test','pt')).values())

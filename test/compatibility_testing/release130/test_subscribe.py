@@ -1233,7 +1233,6 @@ class TestSubscribe:
         with pytest.raises(Exception):
             conn1.enableStreaming(None)
 
-    @pytest.mark.NOW
     @pytest.mark.SUBSCRIBE
     def test_enableStreaming_getSubscriptionTopics(self):
         conn1 = ddb.session()
@@ -1340,8 +1339,6 @@ class TestSubscribe:
         self.conn.run(
             "undef(`trades,SHARED);undef(`trades2,SHARED);undef(`trades3,SHARED);undef(`trades4,SHARED);undef(`trades5,SHARED);go")
 
-    @pytest.mark.SUBSCRIBE
-    @pytest.mark.v130221
     def test_enalbeStreaming_exception_in_handler(self):
         script="""
             colName=["time","x"]
@@ -1365,8 +1362,6 @@ class TestSubscribe:
                                ], stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8')
         assert "this should be catched" in result.stderr
 
-    @pytest.mark.SUBSCRIBE
-    @pytest.mark.v130221
     def test_enalbeStreaming_subscribe_keyededStreamTable(self):
         conn1 = ddb.session()
         conn1.connect(HOST, PORT, "admin", "123456")

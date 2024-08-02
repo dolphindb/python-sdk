@@ -1113,7 +1113,6 @@ class TesttableUpsert:
         re = conn.run(script)
         assert_array_equal(re, [ True for _ in range(21)])
 
-    @pytest.mark.v130221
     def test_TableUpsert_no_pandasWarning(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run("""
@@ -1293,7 +1292,6 @@ class TesttableUpsert:
         conn.dropDatabase("dfs://test_dfs1")
         conn.close()
 
-    @pytest.mark.v130221
     def test_TableUpsert_upsert_after_session_deconstructed(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run("""
@@ -1321,7 +1319,6 @@ class TesttableUpsert:
         conn.undef('share_t','SHARED')
         conn.close()
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
@@ -1404,7 +1401,6 @@ class TesttableUpsert:
         conn1.dropDatabase("dfs://test_dfs1")
         conn1.close()
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])

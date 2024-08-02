@@ -160,7 +160,6 @@ class TestDownloadBasicDataTypes:
         conn.undefAll()
         conn.close()
 
-@pytest.mark.v130221
 class TestDownloadHugeData:
     # expect string value
     tmp = "abcd中文123"

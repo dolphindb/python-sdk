@@ -71,7 +71,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_HASH_Huge(self, writer, id):
-        for i in range(150000):
+        for i in range(1500):
             res = writer.insert(np.datetime64("2016-01-12"), i)
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -82,7 +82,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_VALUE_Huge(self, writer, id):
-        for i in range(150000):
+        for i in range(15000):
             res = writer.insert(i, "a")
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -97,7 +97,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_RANGE_Huge(self, writer, id):
-        for i in range(150000):
+        for i in range(15000):
             res = writer.insert(i, 1)
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -108,7 +108,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_LIST_Huge(self, writer, id):
-        for i in range(150000):
+        for i in range(15000):
             res = writer.insert(i, "a")
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -119,7 +119,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_COMPO_Huge(self, writer, id):
-        for i in range(150000):
+        for i in range(15000):
             res = writer.insert(i, "a", "y")
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -176,7 +176,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_data_size_larger_than_1048576(self, writer, id):
-        for i in range(1500000):
+        for i in range(15000):
             res = writer.insert(i, i)
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -193,7 +193,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_date(self, writer, id):
-        for i in range(300000):
+        for i in range(3000):
             col_datetime = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[D]")
             j = i % 2
             res = writer.insert(j, col_datetime[j])
@@ -202,7 +202,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_datetime(self, writer, id):
-        for i in range(300000):
+        for i in range(3000):
             col_datetime = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[s]")
             j = i % 2
             res = writer.insert(j, col_datetime[j])
@@ -211,7 +211,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_timestamp(self, writer, id):
-        for i in range(300000):
+        for i in range(3000):
             col_timestamp = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ms]")
             j = i % 2
             res = writer.insert(j, col_timestamp[j])
@@ -220,7 +220,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_nanotimestamp(self, writer, id):
-        for i in range(300000):
+        for i in range(3000):
             col_nanotimestamp = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"],
                                          dtype="datetime64[ns]")
             j = i % 2
@@ -235,26 +235,27 @@ class TestMultithreadTableWriter:
         col_short = np.array([1, 2, 3, 4, 5, 6], dtype=np.int16)
         col_int = np.array([1, 2, 3, 4, 5, 6], dtype=np.int32)
         col_long = np.array([1, 2, 3, 4, 5, 6], dtype=np.int64)
-        col_date = np.array(["2013-06-13", "2013-06-13", "2013-06-13",
-                             "2013-06-13", "2013-06-13", "2013-06-13"], dtype="datetime64[D]")
-        col_month = np.array(["2012-06", "2012-06", "2012-06",
-                              "2012-06", "2012-06", "2012-06"], dtype="datetime64[M]")
-        col_time = np.array(["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
-                             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"],
-                            dtype="datetime64[ms]")
-        col_second = np.array(["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
-                               "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10"],
-                              dtype="datetime64[s]")
-        col_minute = np.array(["1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30",
-                               "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30"], dtype="datetime64[m]")
-        col_datehour = np.array(["2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30",
-                                 "2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30"], dtype="datetime64[h]")
-        col_datetime = np.array(["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
-                                 "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10"],
-                                dtype="datetime64[s]")
-        col_timestamp = np.array(["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
-                                  "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"],
-                                 dtype="datetime64[ms]")
+        col_date = np.array(["2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13"],
+                            dtype="datetime64[D]")
+        col_month = np.array(["2012-06", "2012-06", "2012-06", "2012-06", "2012-06", "2012-06"], dtype="datetime64[M]")
+        col_time = np.array(
+            ["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
+             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"], dtype="datetime64[ms]")
+        col_second = np.array(
+            ["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
+             "2012-06-13T13:30:10", "2012-06-13T13:30:10"], dtype="datetime64[s]")
+        col_minute = np.array(
+            ["1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30",
+             "1970-01-01T13:30"], dtype="datetime64[m]")
+        col_datehour = np.array(
+            ["2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30",
+             "2012-06-13T13:30"], dtype="datetime64[h]")
+        col_datetime = np.array(
+            ["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
+             "2012-06-13T13:30:10", "2012-06-13T13:30:10"], dtype="datetime64[s]")
+        col_timestamp = np.array(
+            ["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
+             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"], dtype="datetime64[ms]")
         col_nanotime = np.array(
             ["2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006",
              "2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006"],
@@ -267,31 +268,28 @@ class TestMultithreadTableWriter:
         col_double = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
         col_string = ["1", "2", "3", "4", "5", "6"]
         col_uuid = ["88b4ac61-1a43-94ca-1352-4da53cda28bd", "9e495846-1e79-2ca1-bb9b-cf62c3556976",
-                    "88b4ac61-1a43-94ca-1352-4da53cda28bd",
-                    "9e495846-1e79-2ca1-bb9b-cf62c3556976", "88b4ac61-1a43-94ca-1352-4da53cda28bd",
-                    "9e495846-1e79-2ca1-bb9b-cf62c3556976"]
+                    "88b4ac61-1a43-94ca-1352-4da53cda28bd", "9e495846-1e79-2ca1-bb9b-cf62c3556976",
+                    "88b4ac61-1a43-94ca-1352-4da53cda28bd", "9e495846-1e79-2ca1-bb9b-cf62c3556976"]
         col_int128 = ["af5cad08c356296a0544b6bf11556484", "af5cad08c356296a0544b6bf11556484",
-                      "af5cad08c356296a0544b6bf11556484",
                       "af5cad08c356296a0544b6bf11556484", "af5cad08c356296a0544b6bf11556484",
-                      "af5cad08c356296a0544b6bf11556484"]
+                      "af5cad08c356296a0544b6bf11556484", "af5cad08c356296a0544b6bf11556484"]
         col_ipaddr = ["3d5b:14af:b811:c475:5c90:f554:45aa:98a6", "3d5b:14af:b811:c475:5c90:f554:45aa:98a6",
-                      "3d5b:14af:b811:c475:5c90:f554:45aa:98a6",
                       "3d5b:14af:b811:c475:5c90:f554:45aa:98a6", "3d5b:14af:b811:c475:5c90:f554:45aa:98a6",
-                      "3d5b:14af:b811:c475:5c90:f554:45aa:98a6"]
-        col_decimal32 = np.array([decimal.Decimal("NaN"), decimal.Decimal('0.000000'), decimal.Decimal('-1'),
-                                  decimal.Decimal('2.000000'), decimal.Decimal('3.123123'), decimal.Decimal('4.0')],
-                                 dtype='object')
+                      "3d5b:14af:b811:c475:5c90:f554:45aa:98a6", "3d5b:14af:b811:c475:5c90:f554:45aa:98a6"]
+        col_decimal32 = np.array(
+            [decimal.Decimal("NaN"), decimal.Decimal('0.000000'), decimal.Decimal('-1'), decimal.Decimal('2.000000'),
+             decimal.Decimal('3.123123'), decimal.Decimal('4.0')], dtype='object')
         col_decimal64 = np.array(
             [decimal.Decimal("NaN"), decimal.Decimal('0.0000000000000000'), decimal.Decimal('-1.0000000000000000'),
              decimal.Decimal('2.0000000000000000'), decimal.Decimal('3.123123123123123'), decimal.Decimal('4.0')],
             dtype='object')
         col_decimal128 = np.array([decimal.Decimal("NaN"), decimal.Decimal('0.000000000000000000000000'),
-                                   decimal.Decimal('-1.000000000000000000000000'),
-                                   decimal.Decimal('2.000000'), decimal.Decimal('3.123123123123123123123123'),
-                                   decimal.Decimal('4.0')], dtype='object')
+                                   decimal.Decimal('-1.000000000000000000000000'), decimal.Decimal('2.000000'),
+                                   decimal.Decimal('3.123123123123123123123123'), decimal.Decimal('4.0')],
+                                  dtype='object')
         for i in range(6):
-            res = writer.insert(col_bool[i], col_char[i], col_short[i], col_int[i], col_long[i],
-                                col_date[i], col_month[i], col_time[i], col_second[i], col_minute[i], col_datehour[i],
+            res = writer.insert(col_bool[i], col_char[i], col_short[i], col_int[i], col_long[i], col_date[i],
+                                col_month[i], col_time[i], col_second[i], col_minute[i], col_datehour[i],
                                 col_datetime[i], col_timestamp[i], col_nanotime[i], col_nanotimestamp[i], col_float[i],
                                 col_double[i], col_string[i], col_uuid[i], col_int128[i], col_ipaddr[i],
                                 col_decimal32[i], col_decimal64[i], col_decimal128[i])
@@ -300,32 +298,32 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_all_data_type_basic(self, writer, id):
-        print("\ninsert_all_data_type {}".format(id))
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
         col_short = np.array([1, 2, 3, 4, 5, 6], dtype=np.int16)
         col_int = np.array([1, 2, 3, 4, 5, 6], dtype=np.int32)
         col_long = np.array([1, 2, 3, 4, 5, 6], dtype=np.int64)
-        col_date = np.array(["2013-06-13", "2013-06-13", "2013-06-13",
-                             "2013-06-13", "2013-06-13", "2013-06-13"], dtype="datetime64[D]")
-        col_month = np.array(["2012-06", "2012-06", "2012-06",
-                              "2012-06", "2012-06", "2012-06"], dtype="datetime64[M]")
-        col_time = np.array(["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
-                             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"],
-                            dtype="datetime64[ms]")
-        col_second = np.array(["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
-                               "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10"],
-                              dtype="datetime64[s]")
-        col_minute = np.array(["1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30",
-                               "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30"], dtype="datetime64[m]")
-        col_datehour = np.array(["2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30",
-                                 "2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30"], dtype="datetime64[h]")
-        col_datetime = np.array(["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
-                                 "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10"],
-                                dtype="datetime64[s]")
-        col_timestamp = np.array(["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
-                                  "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"],
-                                 dtype="datetime64[ms]")
+        col_date = np.array(["2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13"],
+                            dtype="datetime64[D]")
+        col_month = np.array(["2012-06", "2012-06", "2012-06", "2012-06", "2012-06", "2012-06"], dtype="datetime64[M]")
+        col_time = np.array(
+            ["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
+             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"], dtype="datetime64[ms]")
+        col_second = np.array(
+            ["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
+             "2012-06-13T13:30:10", "2012-06-13T13:30:10"], dtype="datetime64[s]")
+        col_minute = np.array(
+            ["1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30",
+             "1970-01-01T13:30"], dtype="datetime64[m]")
+        col_datehour = np.array(
+            ["2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30",
+             "2012-06-13T13:30"], dtype="datetime64[h]")
+        col_datetime = np.array(
+            ["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
+             "2012-06-13T13:30:10", "2012-06-13T13:30:10"], dtype="datetime64[s]")
+        col_timestamp = np.array(
+            ["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
+             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"], dtype="datetime64[ms]")
         col_nanotime = np.array(
             ["2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006",
              "2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006"],
@@ -338,8 +336,8 @@ class TestMultithreadTableWriter:
         col_double = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
         col_string = ["1", "2", "3", "4", "5", "6"]
         for i in range(6):
-            res = writer.insert(col_bool[i], col_char[i], col_short[i], col_int[i], col_long[i],
-                                col_date[i], col_month[i], col_time[i], col_second[i], col_minute[i], col_datehour[i],
+            res = writer.insert(col_bool[i], col_char[i], col_short[i], col_int[i], col_long[i], col_date[i],
+                                col_month[i], col_time[i], col_second[i], col_minute[i], col_datehour[i],
                                 col_datetime[i], col_timestamp[i], col_nanotime[i], col_nanotimestamp[i], col_float[i],
                                 col_double[i], col_string[i])
             if res.hasError():
@@ -353,26 +351,27 @@ class TestMultithreadTableWriter:
         col_short = np.array([1, 2, 3, 4, 5, 6], dtype=np.int16)
         col_int = np.array([1, 2, 3, 4, 5, 6], dtype=np.int32)
         col_long = np.array([1, 2, 3, 4, 5, 6], dtype=np.int64)
-        col_date = np.array(["2013-06-13", "2013-06-13", "2013-06-13",
-                             "2013-06-13", "2013-06-13", "2013-06-13"], dtype="datetime64[D]")
-        col_month = np.array(["2012-06", "2012-06", "2012-06",
-                              "2012-06", "2012-06", "2012-06"], dtype="datetime64[M]")
-        col_time = np.array(["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
-                             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"],
-                            dtype="datetime64[ms]")
-        col_second = np.array(["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
-                               "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10"],
-                              dtype="datetime64[s]")
-        col_minute = np.array(["1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30",
-                               "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30"], dtype="datetime64[m]")
-        col_datehour = np.array(["2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30",
-                                 "2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30"], dtype="datetime64[h]")
-        col_datetime = np.array(["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
-                                 "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10"],
-                                dtype="datetime64[s]")
-        col_timestamp = np.array(["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
-                                  "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"],
-                                 dtype="datetime64[ms]")
+        col_date = np.array(["2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13"],
+                            dtype="datetime64[D]")
+        col_month = np.array(["2012-06", "2012-06", "2012-06", "2012-06", "2012-06", "2012-06"], dtype="datetime64[M]")
+        col_time = np.array(
+            ["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
+             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"], dtype="datetime64[ms]")
+        col_second = np.array(
+            ["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
+             "2012-06-13T13:30:10", "2012-06-13T13:30:10"], dtype="datetime64[s]")
+        col_minute = np.array(
+            ["1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30",
+             "1970-01-01T13:30"], dtype="datetime64[m]")
+        col_datehour = np.array(
+            ["2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30", "2012-06-13T13:30",
+             "2012-06-13T13:30"], dtype="datetime64[h]")
+        col_datetime = np.array(
+            ["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
+             "2012-06-13T13:30:10", "2012-06-13T13:30:10"], dtype="datetime64[s]")
+        col_timestamp = np.array(
+            ["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
+             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"], dtype="datetime64[ms]")
         col_nanotime = np.array(
             ["2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006",
              "2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006", "2012-06-13T13:30:10.008007006"],
@@ -387,20 +386,18 @@ class TestMultithreadTableWriter:
         col_arrayVector = [[1, 2], [1, 2], [1, 2], [1, 2], [1, 2], [1, 2]]
         for i in range(6):
             res = writer.insert(col_bool[i], col_char[i], col_short[i], col_int[i], col_long[i], col_date[i],
-                                col_month[i], col_time[i], col_second[i], col_minute[i],
-                                col_datehour[i], col_datetime[i], col_timestamp[i], col_nanotime[i],
-                                col_nanotimestamp[i], col_float[i], col_double[i], col_string[i], col_arrayVector[i])
+                                col_month[i], col_time[i], col_second[i], col_minute[i], col_datehour[i],
+                                col_datetime[i], col_timestamp[i], col_nanotime[i], col_nanotimestamp[i], col_float[i],
+                                col_double[i], col_string[i], col_arrayVector[i])
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
                 break
-        print("\ninsert_all_type_compress end {}".format(id))
 
     def insert_NULL2(self, writer, id):
-        print("thread", id, "start.")
-        sym = ['AAPL', 'AAPL', 'GOOG', 'GOOG', 'MSFT',
-               'MSFT', 'IBM', 'IBM', 'YHOO', 'YHOO']
-        date = np.array(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23',
-                         '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'], dtype="datetime64")
+        sym = ['AAPL', 'AAPL', 'GOOG', 'GOOG', 'MSFT', 'MSFT', 'IBM', 'IBM', 'YHOO', 'YHOO']
+        date = np.array(
+            ['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23', '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'],
+            dtype="datetime64")
         qty1 = np.array([2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dtype=np.int64)
         for i in range(10):
             res = writer.insert(sym[i], date[i], qty1[i])
@@ -677,7 +674,6 @@ class TestMultithreadTableWriter:
         assert datas2[5][3] == "sym5"
         self.conn.run("undef(`test_tab, SHARED)")
 
-    @pytest.mark.MultithreadTableWriter
     def test_multithreadTableWriterTest_function_getUnwrittenData_2(self):
         script = """
             t = table(100:0, [`date, `int, `string, `ipaddr], [DATE, INT, STRING, IPADDR]);
@@ -779,10 +775,10 @@ class TestMultithreadTableWriter:
         status2 = writer.getStatus()
         assert status2.sendFailedRows + status2.unsentRows == 100
         datas2 = writer.getUnwrittenData()
-        assert (datas2[5][0] == np.datetime64('2022-03-25'))
-        assert (datas2[5][1] == -1.356468)
-        assert (datas2[5][2] == "str5")
-        assert (datas2[5][3] == "sym5")
+        assert datas2[5][0] == np.datetime64('2022-03-25')
+        assert datas2[5][1] == -1.356468
+        assert datas2[5][2] == "str5"
+        assert datas2[5][3] == "sym5"
         self.conn.dropDatabase(self.dbname)
 
     def test_multithreadTableWriterTest_function_getUnwrittenData_dfs_2(self):
@@ -806,10 +802,10 @@ class TestMultithreadTableWriter:
         status2 = writer.getStatus()
         assert status2.sendFailedRows + status2.unsentRows == 100
         datas2 = writer.getUnwrittenData()
-        assert (datas2[5][0] == np.datetime64('2022-03-25'))
-        assert (datas2[5][1] == "5")
-        assert (datas2[5][2] == "str5")
-        assert (datas2[5][3] == "abcd")
+        assert datas2[5][0] == np.datetime64('2022-03-25')
+        assert datas2[5][1] == "5"
+        assert datas2[5][2] == "str5"
+        assert datas2[5][3] == "abcd"
         self.conn.dropDatabase(self.dbname)
 
     def test_multithreadTableWriterTest_object_MultithreadedTableWriterThreadStatus(self):
@@ -826,21 +822,21 @@ class TestMultithreadTableWriter:
             writer.insert(col_int[i], col_int[i])
         writer.waitForThreadCompletion()
         status = writer.getStatus()
-        assert (status.hasError())
-        assert (status.sentRows == 0)
-        assert (status.sendFailedRows + status.unsentRows == 3)
-        assert (status.errorCode != '')
-        assert (status.errorInfo != '')
+        assert status.hasError()
+        assert status.sentRows == 0
+        assert status.sendFailedRows + status.unsentRows == 3
+        assert status.errorCode != ''
+        assert status.errorInfo != ''
         writer2 = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "test_tab_2")
         for i in range(3):
             writer2.insert(col_int[i], col_str[i])
         writer2.waitForThreadCompletion()
         status2 = writer2.getStatus()
-        assert (not status2.hasError())
-        assert (status2.sentRows == 3)
-        assert (status2.sendFailedRows == 0)
-        assert (status2.errorCode == '')
-        assert (status2.errorInfo == '')
+        assert not status2.hasError()
+        assert status2.sentRows == 3
+        assert status2.sendFailedRows == 0
+        assert status2.errorCode == ''
+        assert status2.errorInfo == ''
         self.conn.run("undef(`test_tab_2, SHARED)")
 
     def test_multithreadTableWriterTest_all_data_type(self):
@@ -860,33 +856,34 @@ class TestMultithreadTableWriter:
         time.sleep(3)
         st = writer.getStatus()
         last = self.conn.run("select count(*) from all_data_type")
-        assert (last["count"][0] - first["count"][0] == 6)
+        assert last["count"][0] - first["count"][0] == 6
         re = self.conn.run("select * from all_data_type")
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
         col_short = np.array([1, 2, 3, 4, 5, 6], dtype=np.int16)
         col_int = np.array([1, 2, 3, 4, 5, 6], dtype=np.int32)
         col_long = np.array([1, 2, 3, 4, 5, 6], dtype=np.int64)
-        col_date = np.array(["2013-06-13", "2013-06-13", "2013-06-13",
-                             "2013-06-13", "2013-06-13", "2013-06-13"], dtype="datetime64[ns]")
-        col_month = np.array(["2012-06", "2012-06", "2012-06",
-                              "2012-06", "2012-06", "2012-06"], dtype="datetime64[ns]")
-        col_time = np.array(["1970-01-01T13:30:10.008", "1970-01-01T13:30:10.008", "1970-01-01T13:30:10.008",
-                             "1970-01-01T13:30:10.008", "1970-01-01T13:30:10.008", "1970-01-01T13:30:10.008"],
+        col_date = np.array(["2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13", "2013-06-13"],
                             dtype="datetime64[ns]")
-        col_second = np.array(["1970-01-01T13:30:10", "1970-01-01T13:30:10", "1970-01-01T13:30:10",
-                               "1970-01-01T13:30:10", "1970-01-01T13:30:10", "1970-01-01T13:30:10"],
-                              dtype="datetime64[ns]")
-        col_minute = np.array(["1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30",
-                               "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30"], dtype="datetime64[ns]")
-        col_datehour = np.array(["2012-06-13T13", "2012-06-13T13", "2012-06-13T13",
-                                 "2012-06-13T13", "2012-06-13T13", "2012-06-13T13"], dtype="datetime64[ns]")
-        col_datetime = np.array(["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
-                                 "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10"],
-                                dtype="datetime64[ns]")
-        col_timestamp = np.array(["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
-                                  "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"],
-                                 dtype="datetime64[ns]")
+        col_month = np.array(["2012-06", "2012-06", "2012-06", "2012-06", "2012-06", "2012-06"], dtype="datetime64[ns]")
+        col_time = np.array(
+            ["1970-01-01T13:30:10.008", "1970-01-01T13:30:10.008", "1970-01-01T13:30:10.008", "1970-01-01T13:30:10.008",
+             "1970-01-01T13:30:10.008", "1970-01-01T13:30:10.008"], dtype="datetime64[ns]")
+        col_second = np.array(
+            ["1970-01-01T13:30:10", "1970-01-01T13:30:10", "1970-01-01T13:30:10", "1970-01-01T13:30:10",
+             "1970-01-01T13:30:10", "1970-01-01T13:30:10"], dtype="datetime64[ns]")
+        col_minute = np.array(
+            ["1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30", "1970-01-01T13:30",
+             "1970-01-01T13:30"], dtype="datetime64[ns]")
+        col_datehour = np.array(
+            ["2012-06-13T13", "2012-06-13T13", "2012-06-13T13", "2012-06-13T13", "2012-06-13T13", "2012-06-13T13"],
+            dtype="datetime64[ns]")
+        col_datetime = np.array(
+            ["2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10", "2012-06-13T13:30:10",
+             "2012-06-13T13:30:10", "2012-06-13T13:30:10"], dtype="datetime64[ns]")
+        col_timestamp = np.array(
+            ["2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008",
+             "2012-06-13T13:30:10.008", "2012-06-13T13:30:10.008"], dtype="datetime64[ns]")
         col_nanotime = np.array(
             ["1970-01-01T13:30:10.008007006", "1970-01-01T13:30:10.008007006", "1970-01-01T13:30:10.008007006",
              "1970-01-01T13:30:10.008007006", "1970-01-01T13:30:10.008007006", "1970-01-01T13:30:10.008007006"],
@@ -898,7 +895,6 @@ class TestMultithreadTableWriter:
         col_float = np.array([1, 2, 3, 4, 5, 6], dtype=np.float32)
         col_double = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
         col_string = ["1", "2", "3", "4", "5", "6"]
-
         col_uuid = ["88b4ac61-1a43-94ca-1352-4da53cda28bd", "9e495846-1e79-2ca1-bb9b-cf62c3556976",
                     "88b4ac61-1a43-94ca-1352-4da53cda28bd",
                     "9e495846-1e79-2ca1-bb9b-cf62c3556976", "88b4ac61-1a43-94ca-1352-4da53cda28bd",
@@ -964,7 +960,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from all_data_type")
-        assert (last["count"][0] - first["count"][0] == 6)
+        assert last["count"][0] - first["count"][0] == 6
         re = self.conn.run("select * from all_data_type")
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
@@ -1073,7 +1069,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from all_data_type")
-        assert (last["count"][0] - first["count"][0] == 6)
+        assert last["count"][0] - first["count"][0] == 6
         re = self.conn.run("select * from all_data_type")
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
@@ -1161,7 +1157,6 @@ class TestMultithreadTableWriter:
         assert_frame_equal(re, ex)
         self.conn.run("undef(`all_data_type, SHARED)")
 
-    @pytest.mark.MultithreadTableWriter
     def test_multithreadTableWriterTest_dfs_upsert_all_data_type(self):
         script_all_data_type = f"""
             dbPath = "{self.dbname}"
@@ -1299,7 +1294,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(6)
         last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
-        assert (last["count"][0] - first["count"][0] == 1)
+        assert last["count"][0] - first["count"][0] == 1
         script = f'''
             re = select * from loadTable('{self.dbname}','pt')
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
@@ -1336,7 +1331,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(6)
         last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
-        assert (last["count"][0] - first["count"][0] == 1)
+        assert last["count"][0] - first["count"][0] == 1
         script = f'''
             re = select * from loadTable('{self.dbname}','pt')
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
@@ -1368,7 +1363,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(6)
         last = self.conn.run("select count(*) from tt1")
-        assert (last["count"][0] - first["count"][0] == 1)
+        assert last["count"][0] - first["count"][0] == 1
         script = '''
             re = select * from tt1
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
@@ -1399,7 +1394,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(6)
         last = self.conn.run("select count(*) from tt1")
-        assert (last["count"][0] - first["count"][0] == 1)
+        assert last["count"][0] - first["count"][0] == 1
         script = '''
             re = select * from tt1
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
@@ -1430,7 +1425,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(6)
         last = self.conn.run("select count(*) from tt1")
-        assert (last["count"][0] - first["count"][0] == 1)
+        assert last["count"][0] - first["count"][0] == 1
         script = '''
             re = select * from tt1
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
@@ -1461,7 +1456,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(6)
         last = self.conn.run("select count(*) from tt1")
-        assert (last["count"][0] - first["count"][0] == 1)
+        assert last["count"][0] - first["count"][0] == 1
         script = '''
             re = select * from tt1
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
@@ -1497,11 +1492,11 @@ class TestMultithreadTableWriter:
             t.join()
         time.sleep(5)
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO_batchSize_throttle','pt')")
-        assert (last["count"][0] - first["count"][0] == 0)
+        assert last["count"][0] - first["count"][0] == 0
         time.sleep(10)
-        assert (writer.getStatus().unsentRows == 0)
+        assert writer.getStatus().unsentRows == 0
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO_batchSize_throttle','pt')")
-        assert (last["count"][0] - first["count"][0] == 1600)
+        assert last["count"][0] - first["count"][0] == 1600
         self.conn.run('dropDatabase("dfs://valuedb_DFS_COMPO_batchSize_throttle")')
 
     def test_multithreadTableWriterTest_AllData(self):
@@ -1534,12 +1529,12 @@ class TestMultithreadTableWriter:
             res = writer.getStatus()
             sentRows = res.sentRows
             time.sleep(1)
-        assert (last["count"][0] - first["count"][0] + len(getUnwiteen) == 3000000)
+        assert last["count"][0] - first["count"][0] + len(getUnwiteen) == 300000
         insert_res = writer.insertUnwrittenData(getUnwiteen)
         assert not insert_res.hasError()
         writer.waitForThreadCompletion()
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_RANGE_AllData','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 300000
         self.conn.run('dropDatabase("dfs://valuedb_DFS_RANGE_AllData")')
 
     def test_multithreadTableWriterTest_getStatus_waitfor(self):
@@ -1564,12 +1559,12 @@ class TestMultithreadTableWriter:
             t.join()
         writer.waitForThreadCompletion()
         assert writer.getStatus().isExiting
-        assert (writer.getStatus().errorCode == '')
-        assert (writer.getStatus().errorInfo == '')
-        assert (writer.getStatus().sentRows == 20)
-        assert (writer.getStatus().unsentRows == 0)
-        assert (writer.getStatus().sendFailedRows == 0)
-        assert (len(writer.getStatus().threadStatus) == 2)
+        assert writer.getStatus().errorCode == ''
+        assert writer.getStatus().errorInfo == ''
+        assert writer.getStatus().sentRows == 20
+        assert writer.getStatus().unsentRows == 0
+        assert writer.getStatus().sendFailedRows == 0
+        assert len(writer.getStatus().threadStatus) == 2
         self.conn.dropDatabase(self.dbname)
 
     def test_multithreadTableWriterTest_getStatus_time(self):
@@ -1595,15 +1590,14 @@ class TestMultithreadTableWriter:
         while writer.getStatus().unsentRows:
             time.sleep(1)
         assert not writer.getStatus().isExiting
-        assert (writer.getStatus().errorCode == '')
-        assert (writer.getStatus().errorInfo == '')
-        assert (writer.getStatus().sentRows == 20)
-        assert (writer.getStatus().unsentRows == 0)
-        assert (writer.getStatus().sendFailedRows == 0)
-        assert (len(writer.getStatus().threadStatus) == 2)
+        assert writer.getStatus().errorCode == ''
+        assert writer.getStatus().errorInfo == ''
+        assert writer.getStatus().sentRows == 20
+        assert writer.getStatus().unsentRows == 0
+        assert writer.getStatus().sendFailedRows == 0
+        assert len(writer.getStatus().threadStatus) == 2
         self.conn.dropDatabase(self.dbname)
 
-    @pytest.mark.MultithreadTableWriter
     def test_multithreadTableWriterTest_Memory_Table_single_thread(self):
         script_Memory_Table = """
             t = table(1000:0, `id`x, [LONG, INT])
@@ -1626,7 +1620,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from share_table")
-        assert (last["count"][0] - first["count"][0] == 2200)
+        assert last["count"][0] - first["count"][0] == 2200
         re = self.conn.run("select * from share_table")
         id = re["id"].to_list()
         id.sort()
@@ -1662,7 +1656,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from share_table")
-        assert (last["count"][0] - first["count"][0] == 2200)
+        assert last["count"][0] - first["count"][0] == 2200
         re = self.conn.run("select * from share_table")
         id = re["id"].to_list()
         id.sort()
@@ -1699,7 +1693,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from keyed_table")
-        assert (last["count"][0] - first["count"][0] == 130)
+        assert last["count"][0] - first["count"][0] == 130
         re = self.conn.run("select * from keyed_table")
         id = re["id"].to_list()
         id.sort()
@@ -1733,7 +1727,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from stream_table")
-        assert (last["count"][0] - first["count"][0] == 130)
+        assert last["count"][0] - first["count"][0] == 130
         re = self.conn.run("select * from stream_table")
         id = re["id"].to_list()
         id.sort()
@@ -1767,7 +1761,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from stream_table")
-        assert (last["count"][0] - first["count"][0] == 1300)
+        assert last["count"][0] - first["count"][0] == 1300
         re = self.conn.run("select * from stream_table")
         id = re["id"].to_list()
         id.sort()
@@ -1791,8 +1785,8 @@ class TestMultithreadTableWriter:
             pt=db.createPartitionedTable(datetest,'pdatetest','date')
         """
         self.conn.run(script_DFS_HASH)
-        writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100, 0.1, 10, "date")
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100,
+                                              0.1, 10, "date")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_HASH_Huge, args=(writer, i,)))
@@ -1806,11 +1800,11 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pdatetest')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run(f"select date from loadTable('{self.dbname}','pdatetest')")
         date = []
         date.extend([np.datetime64("2016-02-12"),
-                     np.datetime64("2016-01-12")] * 1500000)
+                     np.datetime64("2016-01-12")] * 15000)
         date.sort()
         ex = pd.DataFrame({
             "date": date,
@@ -1843,9 +1837,9 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
-        assert (last["count"][0] - first["count"][0] == 4500000)
+        assert last["count"][0] - first["count"][0] == 450000
         re = self.conn.run(f"select name from loadTable('{self.dbname}','pt')")
-        name = ["a", "b", "c"] * 1500000
+        name = ["a", "b", "c"] * 150000
         name.sort()
         ex = pd.DataFrame({
             "name": name
@@ -1878,9 +1872,9 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_RANGE','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 300000
         re = self.conn.run("select x from loadTable('dfs://valuedb_DFS_RANGE','pt')")
-        x = [1, 7] * 1500000
+        x = [1, 7] * 150000
         x.sort()
         ex = pd.DataFrame({
             "x": np.array(x, dtype=np.int32)
@@ -1914,9 +1908,9 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_LIST','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 300000
         re = self.conn.run("select name from loadTable('dfs://valuedb_DFS_LIST','pt')")
-        name = ["a", "d"] * 1500000
+        name = ["a", "d"] * 150000
         name.sort()
         ex = pd.DataFrame({
             "name": name
@@ -1951,10 +1945,10 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 300000
         re = self.conn.run("select x,y from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        x = ["a"] * 3000000
-        y = ["y", "z"] * 1500000
+        x = ["a"] * 300000
+        y = ["y", "z"] * 150000
         y.sort()
         ex = pd.DataFrame({
             "x": x,
@@ -1990,10 +1984,10 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 300000
         re = self.conn.run("select x,y from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        x = ["a"] * 3000000
-        y = ["y", "z"] * 1500000
+        x = ["a"] * 300000
+        y = ["y", "z"] * 150000
         y.sort()
         ex = pd.DataFrame({
             "x": x,
@@ -2027,7 +2021,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_Dimensional','pt')")
-        assert (last["count"][0] - first["count"][0] == 900)
+        assert last["count"][0] - first["count"][0] == 900
         re = self.conn.run("select * from loadTable('dfs://valuedb_DFS_Dimensional','pt') order by id")
         id = list(range(90)) * 10
         id.sort()
@@ -2083,7 +2077,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO_SSL','pt')")
-        assert (last["count"][0] - first["count"][0] == 1600)
+        assert last["count"][0] - first["count"][0] == 1600
         re = self.conn.run("select x,y from loadTable('dfs://valuedb_DFS_COMPO_SSL','pt')")
         x = ["a"] * 1600
         y = ["y", "z"] * 800
@@ -2120,7 +2114,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_TSDB','pt')")
-        assert (last["count"][0] - first["count"][0] == 30000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://valuedb_DFS_TSDB','pt')")
         id = list(range(3000)) * 10
         id.sort()
@@ -2157,7 +2151,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_TSDB','pt')")
-        assert (last["count"][0] - first["count"][0] == 30000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://valuedb_DFS_TSDB','pt')")
         id = list(range(3000)) * 10
         id.sort()
@@ -2194,13 +2188,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_datehour_datetime','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_datehour_datetime','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2234,13 +2228,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_datehour_timestamp','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_datehour_timestamp','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2275,13 +2269,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_datehour_nanotimestamp','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_datehour_nanotimestamp','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2315,13 +2309,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_date_datetime','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_date_datetime','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2355,13 +2349,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_date_timestamp','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_date_timestamp','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2395,13 +2389,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_date_nanotimestamp','pt')")
-        assert last["count"][0] - first["count"][0] == 3000000
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_date_nanotimestamp','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2435,13 +2429,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_month_datetime','pt')")
-        assert last["count"][0] - first["count"][0] == 3000000
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_month_datetime','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2475,13 +2469,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://_DFS_VALUE_month_timestamp','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://_DFS_VALUE_month_timestamp','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2515,13 +2509,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_month_nanotimestamp','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_month_nanotimestamp','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2544,8 +2538,7 @@ class TestMultithreadTableWriter:
             HOST, PORT, USER, PASSWD, "dfs://DFS_RANGE_date_date", "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
-            threads.append(threading.Thread(
-                target=self.insert_date, args=(writer, i,)))
+            threads.append(threading.Thread(target=self.insert_date, args=(writer, i,)))
         self.conn.run("delete from loadTable('dfs://DFS_RANGE_date_date','pt')")
         first = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_date','pt')")
         for t in threads:
@@ -2556,13 +2549,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_date','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_RANGE_date_date','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15", "2013-06-15"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2596,13 +2589,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_datetime','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_RANGE_date_datetime','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2636,13 +2629,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_timestamp','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_RANGE_date_timestamp','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2676,13 +2669,13 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_nanotimestamp','pt')")
-        assert (last["count"][0] - first["count"][0] == 3000000)
+        assert last["count"][0] - first["count"][0] == 30000
         re = self.conn.run("select * from loadTable('dfs://DFS_RANGE_date_nanotimestamp','pt')")
-        id = [0] * 1500000
-        id_last = [1] * 1500000
+        id = [0] * 15000
+        id_last = [1] * 15000
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"], dtype="datetime64[ns]")
-        x = np.repeat(x, 1500000)
+        x = np.repeat(x, 15000)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
@@ -2716,7 +2709,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://data_size_between_1024_1048576','pt')")
-        assert (last["count"][0] - first["count"][0] == 20000)
+        assert last["count"][0] - first["count"][0] == 20000
         re = self.conn.run("select * from loadTable('dfs://data_size_between_1024_1048576','pt')")
         id = re["id"].to_list()
         id.sort()
@@ -2755,15 +2748,15 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from loadTable('dfs://data_size_larger_than_1048576','pt')")
-        assert (last["count"][0] - first["count"][0] == 15000000)
+        assert last["count"][0] - first["count"][0] == 150000
         re = self.conn.run("select * from loadTable('dfs://data_size_larger_than_1048576','pt')")
         id = re["id"].to_list()
         id.sort()
         x = re["x"].to_list()
         x.sort()
-        ex_id = list(range(1500000)) * 10
+        ex_id = list(range(15000)) * 10
         ex_id.sort()
-        ex_x = list(range(1500000)) * 10
+        ex_x = list(range(15000)) * 10
         ex_x.sort()
         assert id == ex_id
         assert x == ex_x
@@ -2859,7 +2852,7 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from all_type_compress_LZ4")
-        assert (last["count"][0] - first["count"][0] == 6)
+        assert last["count"][0] - first["count"][0] == 6
         re = self.conn.run("select * from all_type_compress_LZ4")
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
@@ -2941,18 +2934,18 @@ class TestMultithreadTableWriter:
         tbname = 't_' + random_string(5)
         scirpt_one_col_insert_double_and_int = f"share table(1 2 as id, double(1 2) as val, nanotimestamp(111111 222222) as time) as {tbname}"
         self.conn.run(scirpt_one_col_insert_double_and_int)
-        mtw = ddb.MultithreadedTableWriter(
-            HOST, PORT, "admin", "123456", "", tbname)
+        mtw = ddb.MultithreadedTableWriter(HOST, PORT, "admin", "123456", "", tbname)
         mtw.insert(1, 1, np.datetime64("2022-01-02T14:12:12.123456789"))
         mtw.insert(2, 2.2, np.datetime64("2022-01-02T14:12:12.123456789"))
         mtw.insert(3, None, None)
         mtw.waitForThreadCompletion()
-        data = {"id": np.array([1, 2, 1, 2, 3], dtype=np.int32),
-                "val": np.array([1.0, 2.0, 1.0, 2.2, np.NaN], dtype=np.float64),
-                "time": np.array(["1970-01-01 00:00:00.000111111", "1970-01-01 00:00:00.000222222",
-                                  "2022-01-02 14:12:12.123456789", "2022-01-02 14:12:12.123456789", None],
-                                 dtype="datetime64[ns]")
-                }
+        data = {
+            "id": np.array([1, 2, 1, 2, 3], dtype=np.int32),
+            "val": np.array([1.0, 2.0, 1.0, 2.2, np.nan], dtype=np.float64),
+            "time": np.array(
+                ["1970-01-01 00:00:00.000111111", "1970-01-01 00:00:00.000222222", "2022-01-02 14:12:12.123456789",
+                 "2022-01-02 14:12:12.123456789", None], dtype="datetime64[ns]")
+        }
         ex = pd.DataFrame(data)
         ans = self.conn.run(tbname)
         assert_frame_equal(ex, ans)

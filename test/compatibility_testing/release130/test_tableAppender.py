@@ -891,7 +891,6 @@ class TestAutoFitTableAppender:
         re = conn.run(script)
         assert_array_equal(re, [ True for _ in range(21)])
 
-    @pytest.mark.v130221
     def test_TableAppender_no_pandasWarning(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run("""
@@ -1070,7 +1069,6 @@ class TestAutoFitTableAppender:
         conn.dropDatabase("dfs://test_dfs1")
         conn.close()
 
-    @pytest.mark.v130221
     def test_TableAppender_append_after_session_deconstructed(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run("""
@@ -1180,7 +1178,6 @@ class TestAutoFitTableAppender:
         conn1.close()
 
     # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])

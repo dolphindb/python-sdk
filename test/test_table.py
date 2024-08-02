@@ -552,7 +552,6 @@ class TestTable:
             del tmpb
             assert self.conn.run(get_scripts("objCounts").format(name=strb)) == 0
 
-    @pytest.mark.BIGCASE
     def test_table_del_bigdata(self):
 
         (_, _), pythons_tmp = get_TableData(names="AllTrade", n=300000)
@@ -1639,7 +1638,6 @@ class TestTableDelete:
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_delete_where)
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('flushed_table_n100', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
@@ -1845,7 +1843,6 @@ class TestTableUpdate:
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_update_where)
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('flushed_table_n100', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
@@ -3392,7 +3389,6 @@ class TestTableContextby:
         eval_sql_with_data(self.conn, data, test_top_num)
         eval_sql_with_data(self.conn, data, test_top_str)
 
-    @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
                                       df_python, dict_python, dict2_python, PartitionedTable],

@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 from basic_testing.utils import equalPlus
 from setup.prepare import *
@@ -6,7 +7,7 @@ from basic_testing.prepare import DataUtils
 from setup.utils import get_pid
 
 
-# todo:pickle,compress
+@pytest.mark.BASIC
 class TestDownloadNew(object):
     conn: ddb.Session
 
@@ -193,3 +194,19 @@ class TestDownloadNew(object):
         conn = ddb.Session(HOST, PORT, USER, PASSWD)
         with pytest.raises(RuntimeError, match="Cannot recognize the token decimal"):
             conn.run("table([decimal('3.14',2)] as `a)")
+
+    def test_download_dfs_table(self):
+        conn = ddb.Session(HOST, PORT, USER, PASSWD, enablePickle=True)
+        x = conn.run("""
+            db = database("", VALUE, 2019.01.01..2019.03.02)
+            t = table(take("aaa", 10) as  uuid, 2019.02.03 + 1..10 as date, take(['AAPL', 'AMZN', 'AMZN'], 10) as ticker, rand(10.0, 10) as price)
+            pt1 = db.createPartitionedTable(t, "pt1", "date").append!(t);
+            pt1
+        """)
+        expect = pd.DataFrame({
+            "uuid": pd.Series([], dtype="object"),
+            "date": pd.Series([], dtype="datetime64[ns]"),
+            "ticker": pd.Series([], dtype="object"),
+            "price": pd.Series([], dtype=np.float64),
+        })
+        assert equalPlus(x, expect)

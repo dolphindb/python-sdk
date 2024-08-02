@@ -26,17 +26,11 @@ ddbcpp.init()
 
 
 def http_request(host, port, path="/", method="GET"):
-    # 创建一个socket对象
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # 连接到指定的主机和端口
     client_socket.connect((host, port))
-    # 构建HTTP请求
     request = f"{method} {path} HTTP/1.1\r\nHost: {host}\r\n\r\n"
-    # 发送HTTP请求
     client_socket.sendall(request.encode())
-    # 接收服务端的响应
     response = client_socket.recv(1024)
-    # 关闭socket连接
     client_socket.close()
     return response.decode()
 

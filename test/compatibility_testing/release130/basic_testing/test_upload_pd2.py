@@ -479,7 +479,6 @@ class TestUpload(object):
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
     if PANDAS_VERSION>=(2,0,0):
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrow('upload').items()],
                                  ids=[i for i in DataUtils.getTableArrow('upload')])
         def test_upload_table_arrow(self, data):
@@ -488,7 +487,6 @@ class TestUpload(object):
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrowContainNone('upload').items()],
                                  ids=[i for i in DataUtils.getTableArrowContainNone('upload')])
         def test_upload_table_arrow_contain_none(self, data):
@@ -497,7 +495,6 @@ class TestUpload(object):
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrowSpecial('upload').items()],
                                  ids=[i for i in DataUtils.getTableArrowSpecial('upload')])
         def test_upload_table_arrow_special(self, data):

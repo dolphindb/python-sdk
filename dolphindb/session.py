@@ -114,7 +114,7 @@ class DBConnectionPool(object):
             If the length of each row is different, the execution fails.
         """
         priority = kwargs.get('priority', 4)
-        parallelism = kwargs.get('parallelism', 2)
+        parallelism = kwargs.get('parallelism', 64)
         if type(priority) is not int or priority > 9 or priority < 0:
             raise RuntimeError("priority must be an integer from 0 to 9")
         if type(parallelism) is not int or parallelism <= 0:
@@ -489,7 +489,7 @@ class Session(object):
             When setting pickleTableToList=True and enablePickle=True, if the table contains array vectors, it will be converted to a NumPy 2d array. If the length of each row is different, the execution fails.
         """
         priority = kwargs.get('priority', 4)
-        parallelism = kwargs.get('parallelism', 2)
+        parallelism = kwargs.get('parallelism', 64)
         if type(priority) is not int or priority > 9 or priority < 0:
             raise RuntimeError("priority must be an integer from 0 to 9")
         if type(parallelism) is not int or parallelism <= 0:

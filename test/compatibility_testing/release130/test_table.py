@@ -464,10 +464,6 @@ class TestTable:
     def test_session_table_partitions(self, colName):
         pass
 
-    # @pytest.mark.NOW
-    @pytest.mark.DATA_DIR
-    @pytest.mark.SESSION
-    @pytest.mark.TABLE
     @pytest.mark.parametrize('file', [loadText, loadText2,], ids=["csv_,", "csv_$"])
     def test_session_loadText(self, file):
 
@@ -477,10 +473,6 @@ class TestTable:
             ex = csv_df[i]
             assert_frame_equal(re, ex)
 
-    # @pytest.mark.NOW
-    @pytest.mark.DATA_DIR
-    @pytest.mark.SESSION
-    @pytest.mark.TABLE
     @pytest.mark.parametrize('file', [ploadText, ploadText2,], ids=["csv_,", "csv_$"])
     def test_session_ploadText(self, file):
 
@@ -490,7 +482,6 @@ class TestTable:
             ex = csv_df[i]
             assert_frame_equal(re, ex)
 
-    @pytest.mark.NOW
     @pytest.mark.parametrize('file', [loadTextEx, loadTextEx2,], ids=["csv_,", "csv_$"])
     def test_session_loadTextEx(self, file):
 
@@ -579,7 +570,6 @@ class TestTable:
             del tmpb
             assert self.conn.run(get_scripts("objCounts").format(name=strb)) == 0
 
-    @pytest.mark.BIGCASE
     def test_table_del_bigdata(self):
 
         (_, _), pythons_tmp = get_TableData(names="AllTrade", n=300000)
@@ -1444,7 +1434,6 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, test_append)
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
                                       df_python, dict_python, dict2_python, PartitionedTable], 
@@ -1654,7 +1643,6 @@ class TestTableDelete:
             
         eval_sql_with_data(self.conn, flushed_table_n100, test_delete_where)
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('flushed_table_n100', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
@@ -1840,7 +1828,6 @@ class TestTableUpdate:
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_update_where)
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('flushed_table_n100', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",

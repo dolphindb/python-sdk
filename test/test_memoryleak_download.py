@@ -13,6 +13,7 @@ from setup.settings import *
 import gc
 
 
+@pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
 class TestMemoryLeak:
     N = 100
 

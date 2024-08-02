@@ -110,14 +110,14 @@ public:
 	 * the function returns a void object. If error is raised on the server, the function throws an
 	 * exception.
 	 */
-	ConstantSP run(const string& script, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory = false);
+	ConstantSP run(const string& script, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false);
 
 	/**
 	 * Run the given function on the DolphinDB server using the local objects as the arguments
 	 * for the function and return the result to the client. If nothing returns, the function
 	 * returns a void object. If error is raised on the server, the function throws an exception.
 	 */
-	ConstantSP run(const string& funcName, vector<ConstantSP>& args, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory = false);
+	ConstantSP run(const string& funcName, vector<ConstantSP>& args, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false);
 
 	/**
 	 * upload a local object to the DolphinDB server and assign the given name in the session.
@@ -147,11 +147,11 @@ public:
 	DataInputStreamSP getDataInputStream();
 
 	py::object runPy(
-		const string& script, int priority=4, int parallelism=2,
+		const string& script, int priority=4, int parallelism=64,
 		int fetchSize=0, bool clearMemory=false,
 		bool pickleTableToList=false, bool disableDecimal=false);
 	py::object runPy(
-		const string& funcName, vector<ConstantSP>& args, int priority=4, int parallelism=2,
+		const string& funcName, vector<ConstantSP>& args, int priority=4, int parallelism=64,
 		int fetchSize=0, bool clearMemory=false,
 		bool pickleTableToList=false, bool disableDecimal=false);
 	void setKeepAliveTime(int keepAliveTime);
@@ -237,9 +237,9 @@ public:
 		PROTOCOL protocol = PROTOCOL_DDB, bool showOutput = true);
 	virtual ~DBConnectionPool();
 	
-	void run(const string& script, int identity, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory = false);
+	void run(const string& script, int identity, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false);
 	
-	void run(const string& functionName, const vector<ConstantSP>& args, int identity, int priority=4, int parallelism=2, int fetchSize=0, bool clearMemory = false);
+	void run(const string& functionName, const vector<ConstantSP>& args, int identity, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false);
     
 	bool isFinished(int identity);
 
@@ -253,12 +253,12 @@ public:
 
 	void runPy(
 		const string& script, int identity,
-		int priority=4, int parallelism=2,
+		int priority=4, int parallelism=64,
 		int fetchSize=0, bool clearMemory = false,
 		bool pickleTableToList=false, bool disableDecimal=false);
 	void runPy(
 		const string& functionName, const vector<ConstantSP>& args,
-		int identity, int priority=4, int parallelism=2,
+		int identity, int priority=4, int parallelism=64,
 		int fetchSize=0, bool clearMemory = false,
 		bool pickleTableToList=false, bool disableDecimal=false);
 	py::object getPyData(int identity);

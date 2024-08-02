@@ -96,7 +96,7 @@ public:
     ~DBConnectionPoolImpl() {}
     py::object run(const string &script, int taskId) {
         TRY
-            dbConnectionPool_.runPy(script, taskId, 4, 2);
+            dbConnectionPool_.runPy(script, taskId);
         CATCH_EXCEPTION("<Exception> in run: ")
         return py::none();
     }
@@ -127,7 +127,7 @@ public:
         if (kwargs.contains("priority")) {
             priority = kwargs["priority"].cast<int>();
         }
-        int parallelism = 2;
+        int parallelism = 64;
         if (kwargs.contains("parallelism")) {
             parallelism = kwargs["parallelism"].cast<int>();
         }
@@ -155,7 +155,7 @@ public:
         if (kwargs.contains("priority")) {
             priority = kwargs["priority"].cast<int>();
         }
-        int parallelism = 2;
+        int parallelism = 64;
         if (kwargs.contains("parallelism")) {
             parallelism = kwargs["parallelism"].cast<int>();
         }
@@ -393,7 +393,7 @@ public:
     ddb::ConstantSP runcpp(const string &script) {
         ddb::ConstantSP result;
         TRY
-            result = dbConnection_.run(script, 4, 2);
+            result = dbConnection_.run(script);
             
         CATCH_EXCEPTION("<Exception> in runcpp: ")
         return result;
@@ -458,7 +458,7 @@ public:
         py::object result;
         TRY
             //ddb::RecordTime::printAllTime();
-            result = dbConnection_.runPy(script, 4, 2);
+            result = dbConnection_.runPy(script);
             DLOG(ddb::RecordTime::printAllTime());
         CATCH_EXCEPTION("<Exception> in run: ")
         return result;
@@ -587,7 +587,7 @@ public:
         if (kwargs.contains("priority")) {
             priority = kwargs["priority"].cast<int>();
         }
-        int parallelism = 2;
+        int parallelism = 64;
         if (kwargs.contains("parallelism")) {
             parallelism = kwargs["parallelism"].cast<int>();
         }
@@ -663,7 +663,7 @@ public:
         if (kwargs.contains("priority")) {
             priority = kwargs["priority"].cast<int>();
         }
-        int parallelism = 2;
+        int parallelism = 64;
         if (kwargs.contains("parallelism")) {
             parallelism = kwargs["parallelism"].cast<int>();
         }
@@ -696,7 +696,7 @@ public:
         }
         ddb::ConstantSP result;
         TRY
-            result = dbConnection_.run(script, 4, 2, fetchSize, clearMemory);
+            result = dbConnection_.run(script, 4, 64, fetchSize, clearMemory);
         CATCH_EXCEPTION("<Exception> in runBlock: ")
         BlockReader blockReader(result);
         return blockReader;

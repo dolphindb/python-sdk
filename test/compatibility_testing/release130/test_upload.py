@@ -229,8 +229,6 @@ class TestUploadBasicDataTypes:
         conn.undefAll()
         conn.close()
 
-    @pytest.mark.NOW
-    #TODO: 48 faileds about DT_MONTH, which will be fixed at 1.30.20.1
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('isShare', [True, False], ids=["enshare", "unshare"])  
@@ -352,7 +350,6 @@ class TestUploadBasicDataTypes:
         [[np.nan, np.nan, np.nan],["", "", ""], [np.nan,np.nan,np.nan]],
     ]
 
-    @pytest.mark.v130221
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_upload_allNone_tables_with_numpyArray(self, val, valstr, valdecimal):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
@@ -503,7 +500,6 @@ class TestUploadBasicDataTypes:
         conn.undefAll()
         conn.close()
 
-    @pytest.mark.v130221
     def test_upload_exceptions(self):
         df = pd.DataFrame({
                 1: [1, 2, 3],
@@ -525,7 +521,6 @@ class TestUploadBasicDataTypes:
             self.conn.upload({'a': df})
 
     # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
@@ -598,7 +593,6 @@ class TestUploadBasicDataTypes:
         conn1.close()
 
     # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])

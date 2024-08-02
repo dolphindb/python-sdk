@@ -61,10 +61,8 @@ class ServerManager:
                 wait_num = 1
                 while wait_num <= 10:
                     time.sleep(6)
-                    conn_ctl.connect(self.host, self.ctl_p,
-                                     self.user, self.password)
-                    conn.connect(self.host, self.port,
-                                 self.user, self.password)
+                    conn_ctl.connect(self.host, self.ctl_p, self.user, self.password)
+                    conn.connect(self.host, self.port, self.user, self.password)
                     if self.check_server_status(conn) and self.check_server_status(conn_ctl):
                         break
                     wait_num += 1
@@ -171,7 +169,7 @@ def check_package_version(tmp_path_factory, worker_id):
             fn.write_text(json.dumps(data))
 
 
-@pytest.fixture(scope="function", autouse=AUTO_TESTING)
+@pytest.fixture(scope="module", autouse=AUTO_TESTING)
 def check_server_status(request):
     setup_name = request.node.nodeid.split('.')[0].replace('/', '.')
     manager = ServerManager(*CONFIG_MAP[setup_name])
@@ -184,7 +182,3 @@ def check_server_status(request):
             RESTRAT_SINGLE_INIT.format(SERVER_MAP[setup_name]))
     if not manager.check_if_restart():
         pytest.exit("Server cannot be started, may it was core dumped.")
-
-
-if __name__ == '__main__':
-    pass

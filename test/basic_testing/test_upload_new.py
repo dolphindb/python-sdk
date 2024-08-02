@@ -14,7 +14,7 @@ if find_spec("pyarrow") is not None:
 PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
 
 
-# todo:pickle,compress
+@pytest.mark.BASIC
 class TestUploadNew(object):
     conn: ddb.Session
 
@@ -1042,8 +1042,6 @@ class TestUploadNew(object):
 
     if PANDAS_VERSION >= (2, 0, 0) and find_spec("pyarrow") is not None:
 
-        # todo:APY-988
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
                                           b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
                                  ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
@@ -1055,7 +1053,6 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('isNull(a["a"][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE VECTOR'
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
                                           b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
                                  ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
@@ -1067,7 +1064,6 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('isNull(a["a"][0][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE[] VECTOR'
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
                                           b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
                                  ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
@@ -1081,7 +1077,6 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('isNull(a["a"][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT VECTOR'
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
                                           b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
                                  ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
@@ -1095,7 +1090,6 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('isNull(a["a"][0][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT[] VECTOR'
 
-        @pytest.mark.PANDAS2
         @pytest.mark.skip
         @pytest.mark.parametrize('data',
                                  [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
@@ -1107,7 +1101,6 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('isNull(a["a"][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT VECTOR'
 
-        @pytest.mark.PANDAS2
         @pytest.mark.skip
         @pytest.mark.parametrize('data',
                                  [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
@@ -1119,7 +1112,6 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('isNull(a["a"][0][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT VECTOR'
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data',
                                  [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
                                  ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
@@ -1134,7 +1126,6 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('isNull(a["a"][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE VECTOR'
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data',
                                  [b'\x00\x00\xf8\xff', b'\x00\x00\xf8\x7f', b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff'],
                                  ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
@@ -1149,7 +1140,6 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('isNull(a["a"][0][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE[] VECTOR'
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrow('upload').items()],
                                  ids=[i for i in DataUtils.getTableArrow('upload')])
         def test_upload_table_arrow(self, data):
@@ -1158,7 +1148,6 @@ class TestUploadNew(object):
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrowContainNone('upload').items()],
                                  ids=[i for i in DataUtils.getTableArrowContainNone('upload')])
         def test_upload_table_arrow_contain_none(self, data):
@@ -1167,7 +1156,6 @@ class TestUploadNew(object):
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-        @pytest.mark.PANDAS2
         @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrowSpecial('upload').items()],
                                  ids=[i for i in DataUtils.getTableArrowSpecial('upload')])
         def test_upload_table_arrow_special(self, data):
@@ -1178,7 +1166,6 @@ class TestUploadNew(object):
                 if 'expect_value' in v:
                     assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-        @pytest.mark.PANDAS2
         def test_upload_table_arrow_array_vector(self):
             for data in [{k: v} for k, v in DataUtils.getTableArrowArrayVector('upload').items()]:
                 for k, v in data.items():
@@ -1186,7 +1173,6 @@ class TestUploadNew(object):
                     assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
                     assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-        @pytest.mark.PANDAS2
         def test_upload_table_arrow_array_vector_contain_none(self):
             for data in [{k: v} for k, v in DataUtils.getTableArrowArrayVectorContainNone('upload').items()]:
                 for k, v in data.items():
@@ -1194,7 +1180,6 @@ class TestUploadNew(object):
                     assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
                     assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-        @pytest.mark.PANDAS2
         def test_upload_table_arrow_array_vector_contain_empty(self):
             for data in [{k: v} for k, v in DataUtils.getTableArrowArrayVectorContainEmpty('upload').items()]:
                 for k, v in data.items():

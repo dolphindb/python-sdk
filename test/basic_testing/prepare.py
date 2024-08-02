@@ -7,16 +7,16 @@ from decimal import Decimal
 import pandas as pd
 import dolphindb.settings as keys
 from importlib.util import find_spec
+
 if find_spec("pyarrow") is not None:
     import pyarrow as pa
+
     PYARROW_VERSION = tuple(int(i) for i in pa.__version__.split('.'))
 
 PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
 PYTHON_VERSION = tuple(int(i) for i in platform.python_version().split('.'))
 
 
-# todo:str & bytes empty
-# todo:dtype,str
 class DataUtils(object):
     DATA_UPLOAD = {
         # None
@@ -232,6 +232,7 @@ class DataUtils(object):
         #     'expect_value': '00F',
         # },
 
+        # todo:empty
         # str
         'data_string': {
             'value': "abc!@#中文 123",
@@ -455,6 +456,16 @@ class DataUtils(object):
             'value': 'false',
             'expect': False,
             'dtype': np.bool_,
+            'contain_none': {
+                'expect': None,
+                'dtype': 'object',
+            },
+            'ddbtype': 'BOOL',
+        },
+        'bool_none': {
+            'value': '00b',
+            'expect': None,
+            'dtype': 'object',
             'contain_none': {
                 'expect': None,
                 'dtype': 'object',
@@ -902,8 +913,6 @@ class DataUtils(object):
             'ddbtype': 'DOUBLE',
         },
 
-        # todo:symbol-vector
-
         # string
         'string': {
             'value': "'abc!@#中文 123'",
@@ -928,12 +937,20 @@ class DataUtils(object):
             'ddbtype': 'UUID',
         },
 
-        # TODO:any-vector
-
         # datehour
         'datehour_0': {
             'value': "datehour('1970.01.01T00')",
             'expect': np.datetime64('1970-01-01T00', 'h'),
+            'dtype': 'datetime64[h]',
+            'contain_none': {
+                'expect': np.datetime64('nat', 'h'),
+                'dtype': 'datetime64[h]',
+            },
+            'ddbtype': 'DATEHOUR',
+        },
+        'datehour_none': {
+            'value': "datehour(NULL)",
+            'expect': None,
             'dtype': 'datetime64[h]',
             'contain_none': {
                 'expect': np.datetime64('nat', 'h'),
@@ -1810,7 +1827,6 @@ class DataUtils(object):
             })
             return rtn
 
-    # todo:download
     @classmethod
     def getVectorMix(cls, _type):
         """
@@ -2184,6 +2200,7 @@ class DataUtils(object):
                     'void',
                     'bool_true',
                     'bool_false',
+                    'bool_none',
                     'decimal32',
                     'decimal32_8',
                     'decimal32_9',
@@ -2204,7 +2221,6 @@ class DataUtils(object):
     def getSetSpecial(cls, _type):
         if _type.lower() == 'upload':
             return {
-                # todo:bug
                 'set_empty': {
                     'value': set(),
                     'expect_typestr': '',
@@ -2271,6 +2287,7 @@ class DataUtils(object):
                     'void',
                     'bool_true',
                     'bool_false',
+                    'bool_none',
                     'decimal32',
                     'decimal32_8',
                     'decimal32_9',
@@ -2478,6 +2495,7 @@ class DataUtils(object):
                     'void',
                     'bool_true',
                     'bool_false',
+                    'bool_none',
                     'date_0',
                     'date_none',
                     'month_0',
@@ -2497,6 +2515,7 @@ class DataUtils(object):
                     'nanotimestamp_0',
                     'nanotimestamp_none',
                     'datehour_0',
+                    'datehour_none',
                     'float_0',
                     'float_nan',
                     'float_inf',
@@ -2524,7 +2543,6 @@ class DataUtils(object):
                 )
             }
 
-    # todo:download
     @classmethod
     def getDictKeyContainNone(cls, _type):
         """
@@ -2589,6 +2607,7 @@ class DataUtils(object):
                     'void',
                     'bool_true',
                     'bool_false',
+                    'bool_none',
                     'date_0',
                     'date_none',
                     'month_0',
@@ -2608,6 +2627,7 @@ class DataUtils(object):
                     'nanotimestamp_0',
                     'nanotimestamp_none',
                     'datehour_0',
+                    'datehour_none',
                     'float_0',
                     'float_nan',
                     'float_inf',
@@ -2649,7 +2669,6 @@ class DataUtils(object):
         """
         _type:upload or download
         """
-        # todo:dict_empty
         if _type.lower() == 'upload':
             rtn = {
                 'dictSpecial_vector': {
@@ -6802,7 +6821,6 @@ class DataUtils(object):
                 else:
                     return {}
 
-            # todo:None
             @classmethod
             def getTableArrowArrayVectorContainNone(cls, _type):
                 """
@@ -6850,10 +6868,6 @@ class DataUtils(object):
                         'value': pd.DataFrame({'a': [[], [v['value'], None, v['value']], [v['value']]]},
                                               dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
                         'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
-                        # todo: why
-                        # 'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
-                        # v['expect_typestr'] != "'FAST DECIMAL64 VECTOR'" else
-                        # f"table(array(DECIMAL64(2)[],0,3).append!([[],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
                     } for k, v in cls.DATA_UPLOAD_ARROW.items()
                         if k not in (
                             'data_arrow_string',

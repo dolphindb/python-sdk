@@ -594,9 +594,6 @@ class TestDBConnectionPool:
                                ], stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8')
         assert result.stdout == ""
 
-    # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.CONNECTIONPOOL
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
@@ -686,9 +683,6 @@ class TestDBConnectionPool:
         assert_array_equal(tys, ex_types)
         self.conn.dropDatabase("dfs://test_dfs1")
 
-    # https://dolphindb1.atlassian.net/browse/APY-653
-    @pytest.mark.CONNECTIONPOOL
-    @pytest.mark.v130221
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
@@ -815,7 +809,7 @@ class TestDBConnectionPool:
 
         ]
         loop.run_until_complete(asyncio.wait(tasks))
-        expect = [[0,10], [4,2], [8,1]]
+        expect = [[0,10], [4,64], [8,1]]
         for ind, task in enumerate(tasks):
             assert_array_equal(task.result(), expect[ind])
         pool1.shutDown()

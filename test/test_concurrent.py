@@ -14,7 +14,6 @@ def insert_job(tablename, sleep_time, conn: ddb.Session = None):
     s = f"""
         tableInsert({tablename}, 1, `d, 500);
         sleep({sleep_time});
-        go
     """
     conn.run(s)
     if needClose:
@@ -23,7 +22,7 @@ def insert_job(tablename, sleep_time, conn: ddb.Session = None):
 
 
 class TestConcurrent:
-    conn = ddb.session(enablePickle=False)  # pickle=True时，不支持decimal
+    conn = ddb.session(enablePickle=False)
 
     def setup_method(self):
         try:
@@ -50,32 +49,24 @@ class TestConcurrent:
 
     def test_session_concurrent_insert_datas(self):
         self.conn.run("share table(1:0, `c1`c2`c3, [INT, SYMBOL, TIMESTAMP]) as test_cur_share")
-
         thds = []
         for _ in range(100):
             thds.append(threading.Thread(target=insert_job, args=('test_cur_share', 500)))
-
         for thd in thds:
             thd.start()
-
         for thd in thds:
             thd.join()
-
         assert self.conn.run("exec count(*) from test_cur_share") == 100
 
     def test_session_concurrent_insert_datas_single(self):
         self.conn.run("share table(1:0, `c1`c2`c3, [INT, SYMBOL, TIMESTAMP]) as test_cur_share")
-
         thds = []
         for _ in range(100):
             thds.append(threading.Thread(target=insert_job, args=('test_cur_share', 500, self.conn)))
-
         for thd in thds:
             thd.start()
-
         for thd in thds:
             thd.join()
-
         assert self.conn.run("exec count(*) from test_cur_share") == 100
 
     def test_connectionPool_concurrent_insert_datas(self):
@@ -109,7 +100,3 @@ class TestConcurrent:
         loop.run_until_complete(asyncio.gather(*[insert_task() for _ in range(100)]))
         pool.shutDown()
         assert self.conn.run("exec count(*) from loadTable('dfs://test_concurrent', `pt)") == 100
-
-
-if __name__ == '__main__':
-    pytest.main(['-s', 'test/test_concurrent.py'])

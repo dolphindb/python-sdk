@@ -4,7 +4,6 @@ from decimal import Decimal
 import pandas as pd
 
 
-# todo:assert_frame_equal
 def equalPlus(dataA, dataB):
     """
     bool/int/str/None/Decimal:==

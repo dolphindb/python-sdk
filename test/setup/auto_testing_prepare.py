@@ -35,7 +35,7 @@ def find_test_files(directory, ignoredir=None):
 
         for _file in _files:
             if re.match(r'^test_.*\.py$', _file):
-                test_files.append(os.path.join(root, _file).replace(os.sep,"/"))
+                test_files.append(os.path.join(root, _file).replace(os.sep, "/"))
 
     return test_files
 
@@ -43,11 +43,11 @@ def find_test_files(directory, ignoredir=None):
 test_path = sys.argv[1]
 files = find_test_files(test_path)
 
-for file in files:  # 按测试文件生成配置信息并修改测试文件中的端口为随机端口，以及server路径
+for file in files:
     with open(file, encoding='utf-8') as f:
         content = f.read()
         r_port, r_sub_port, r_ctl_port = get_unique_ports(3)
-        pattern = r'/test(/.*)?$'  # 匹配以"/test"开头的部分
+        pattern = r'/test(/.*)?$'
         test_module = re.search(pattern, file).group(1)[1:]
         test_module = test_module.replace('/', '.')[:-3]
         r_server_path = SERVER_COPY_PATH + '/' + test_module
@@ -64,13 +64,15 @@ for file in files:  # 按测试文件生成配置信息并修改测试文件中�
     with open(file, 'w', encoding='utf-8') as f:
         f.write(new_content)
 
-for setup_name, server_path in SERVER_MAP.items():  # 根据配置文件修改server
+if os.path.exists(PORTS_SAVE_PATH) and cur_os == 'win':
+    os.remove(PORTS_SAVE_PATH)
+for setup_name, server_path in SERVER_MAP.items():
 
     if cur_os in ['linux', 'win']:
-        if os.path.exists(server_path):  # 清空本地已有的copied server
+        if os.path.exists(server_path):
             shutil.rmtree(server_path)
 
-        if not CONFIG_MAP[setup_name][4]:  # 单节点
+        if not CONFIG_MAP[setup_name][4]:
             shutil.copytree(SERVER_ROOT_PATH + '/server_single', server_path)
             with open(server_path + '/dolphindb.cfg', encoding='utf-8') as f:
                 content = f.read()
@@ -82,8 +84,6 @@ for setup_name, server_path in SERVER_MAP.items():  # 根据配置文件修改se
                 f.write(new_content)
 
             if cur_os == 'win':
-                if os.path.exists(PORTS_SAVE_PATH):
-                    os.remove(PORTS_SAVE_PATH)
                 with open(PORTS_SAVE_PATH, 'a+', encoding='utf-8') as f:
                     f.write(str(CONFIG_MAP[setup_name][1]) + '\n')
         else:  # 集群
