@@ -307,7 +307,7 @@ class TestDecimal:
             share t as decimal_t
         """
         self.conn.run(script_decimal)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, "admin", "123456", "", "decimal_t", False, False, [], 100, 0.1, 1, "")
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "decimal_t", False, False, [], 100, 0.1, 1, "")
         cont = decimal.Context(prec=39)
         col_float = np.array([1.0, np.nan, 0, -1.00], dtype=np.float32)
         col_decimal32_3 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000")), None, decimal.Decimal("0").quantize(decimal.Decimal("0.000")), decimal.Decimal("1").quantize(decimal.Decimal("0.000"))],dtype=object)

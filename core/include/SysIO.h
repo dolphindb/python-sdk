@@ -71,6 +71,7 @@ public:
 	bool isBlockingMode() const {return blocking_;}
 	bool isValid();
 	void setAutoClose(bool option) { autoClose_ = option;}
+	void setTimeout(int readTimeout, int writeTimeout);
 	static void enableTcpNoDelay(bool enable);
 	static bool ENABLE_TCP_NODELAY;
 	static void setTcpTimeout(unsigned int timeout);
@@ -78,8 +79,10 @@ public:
 	bool skipAll();
 
 private:
-	void getTimeout(int &timeoutMs);
-	void setTimeout(int timeoutMs);
+	void getReadTimeout(int &timeoutMs);
+	void getWriteTimeout(int &timeoutMs);
+	void setReadTimeout(int timeoutMs);
+	void setWriteTimeout(int timeoutMs);
 	bool setNonBlocking();
 	bool setBlocking();
 	bool setTcpNoDelay();
@@ -99,6 +102,8 @@ private:
 	SSL_CTX* ctx_;
 	SSL* ssl_;
 	int keepAliveTime_;
+	int readTimeout_;
+	int writeTimeout_;
 };
 
 class EXPORT_DECL UdpSocket{

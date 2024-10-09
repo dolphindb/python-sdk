@@ -84,7 +84,7 @@ private:
 
 class EXPORT_DECL DBConnection {
 public:
-	DBConnection(bool enableSSL = false, bool asyncTask = false, int keepAliveTime = 7200, bool compress = false, bool python = false, bool isReverseStreaming = false);
+	DBConnection(bool enableSSL = false, bool asyncTask = false, int keepAliveTime = 7200, bool compress = false, bool python = false, bool isReverseStreaming = false, int sqlStd = 0);
 	virtual ~DBConnection();
 	DBConnection(DBConnection&& oth);
 	DBConnection& operator=(DBConnection&& oth);
@@ -95,7 +95,7 @@ public:
 	 * please use the login function for authentication separately.
 	 */
 	bool connect(const string& hostName, int port, const string& userId = "", const string& password = "", const string& initialScript = "",
-		bool highAvailability = false, const vector<string>& highAvailabilitySites = vector<string>(), int keepAliveTime=7200, bool reconnect = false);
+		bool highAvailability = false, const vector<string>& highAvailabilitySites = vector<string>(), int keepAliveTime=7200, bool reconnect = false, int tryReconnectNums = -1, int readTimeout = -1, int writeTimeout = -1);
 
 	/**
 	 * Log onto the DolphinDB server using the given userId and password. If the parameter enableEncryption
@@ -155,6 +155,7 @@ public:
 		int fetchSize=0, bool clearMemory=false,
 		bool pickleTableToList=false, bool disableDecimal=false);
 	void setKeepAliveTime(int keepAliveTime);
+	void setTimeout(int readTimeout, int writeTimeout);
 	const string getSessionId() const;
 	void setProtocol(PROTOCOL protocol);
 	void setShowOutput(bool flag);
@@ -208,7 +209,7 @@ private:
 	PROTOCOL protocol_;
 	bool reconnect_, closed_;
 	bool msg_;
-	static const int maxRerunCnt_ = 30;
+	int tryReconnectNums_;
 };
 
 class EXPORT_DECL BlockReader : public Constant{
@@ -234,7 +235,7 @@ class EXPORT_DECL DBConnectionPool{
 public:
     DBConnectionPool(const string& hostName, int port, int threadNum = 10, const string& userId = "", const string& password = "",
 		bool loadBalance = false, bool highAvailability = false, bool compress = false, bool reConnect = false, bool python = false,
-		PROTOCOL protocol = PROTOCOL_DDB, bool showOutput = true);
+		PROTOCOL protocol = PROTOCOL_DDB, bool showOutput = true, int sqlStd = 0, int tryReconnectNums = -1);
 	virtual ~DBConnectionPool();
 	
 	void run(const string& script, int identity, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false);

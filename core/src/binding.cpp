@@ -2,6 +2,7 @@
 // Created by jccai on 3/28/19.
 //
 
+#include "Constant.h"
 #include "DolphinDB.h"
 #include "Streaming.h"
 #include "BatchTableWriter.h"
@@ -16,6 +17,8 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/eval.h"
 #include "pybind11/stl.h"
+#include <pybind11/cast.h>
+#include <pybind11/pytypes.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -66,6 +69,9 @@ using std::endl;
     #define CATCH_EXCEPTION(text)
 #endif
 
+#define DEFAULT_PRIORITY 4
+#define DEFAULT_PARALLELISM 64
+
 static const ddb::Preserved *preserved_ = nullptr;
 
 void ddbinit() {
@@ -90,86 +96,56 @@ class DBConnectionPoolImpl {
 public:
     DBConnectionPoolImpl(const std::string& hostName, int port, int threadNum = 10, const std::string& userId = "", const std::string& password = "",
             bool loadBalance = false, bool highAvailability = false, bool compress = false, bool reConnect = false, bool python = false,
-            int protocol = ddb::PROTOCOL_PICKLE, bool show_output = true)
-            :dbConnectionPool_(hostName, port, threadNum, userId, password,loadBalance,highAvailability,compress,reConnect,python,ddb::PROTOCOL(protocol),show_output),
+            int protocol = ddb::PROTOCOL_PICKLE, bool show_output = true, int sqlStd = 0, int tryReconnectNums = -1)
+            :dbConnectionPool_(hostName, port, threadNum, userId, password,loadBalance,highAvailability,compress,reConnect,python,ddb::PROTOCOL(protocol),show_output, sqlStd, tryReconnectNums),
                 host_(hostName), port_(port), threadNum_(threadNum), userId_(userId), password_(password) {}
     ~DBConnectionPoolImpl() {}
-    py::object run(const string &script, int taskId) {
-        TRY
-            dbConnectionPool_.runPy(script, taskId);
-        CATCH_EXCEPTION("<Exception> in run: ")
-        return py::none();
-    }
+    py::object run(const std::string &script, int taskId, const py::args &args,
+                   const py::handle &clearMemory = py::none(), const py::handle &pickleTableToList = py::none(),
+                   const py::handle &priority = py::none(), const py::handle &parallelism = py::none(),
+                   const py::handle &disableDecimal = py::none()) {
+        bool clearMemory_ = false;
+        if (!clearMemory.is_none()) {
+            clearMemory_ = clearMemory.cast<bool>();
+        }
 
-    py::object run(const string &funcName, int taskId, const py::args &args) {
-        vector<ddb::ConstantSP> ddbArgs;
-        for (py::handle one : args) {
-            py::object pyobj = py::reinterpret_borrow<py::object>(one);
-            ddb::ConstantSP pcp = ddb::DdbPythonUtil::toDolphinDB(pyobj);
-            ddbArgs.push_back(pcp);
+        bool pickleTableToList_ = false;
+        if (!pickleTableToList.is_none()) {
+            pickleTableToList_ = pickleTableToList.cast<bool>();
         }
-        TRY
-            dbConnectionPool_.runPy(funcName, ddbArgs, taskId);
-        CATCH_EXCEPTION("<Exception> in run: ")
-        return py::none();
-    }
 
-    py::object run(const string &script, int taskId, const py::kwargs & kwargs) {
-        bool clearMemory = false;
-        if(kwargs.contains("clearMemory")){
-            clearMemory = kwargs["clearMemory"].cast<bool>();
+        int priority_ = DEFAULT_PRIORITY;
+        if (!priority.is_none()) {
+            priority_ = priority.cast<int>();
         }
-        bool pickleTableToList = false;
-        if(kwargs.contains("pickleTableToList")){
-            pickleTableToList = kwargs["pickleTableToList"].cast<bool>();
-        }
-        int priority = 4;
-        if (kwargs.contains("priority")) {
-            priority = kwargs["priority"].cast<int>();
-        }
-        int parallelism = 64;
-        if (kwargs.contains("parallelism")) {
-            parallelism = kwargs["parallelism"].cast<int>();
-        }
-        bool disableDecimal = false;
-        if(kwargs.contains("disableDecimal")){
-            disableDecimal = kwargs["disableDecimal"].cast<bool>();
-        }
-        TRY
-            dbConnectionPool_.runPy(script, taskId, priority, parallelism, 0, clearMemory, pickleTableToList, disableDecimal);
-        CATCH_EXCEPTION("<Exception> in run: ")
-        //ddb::DLogger::Info(script,"cost time\n",ddb::RecordTime::printAllTime());
-        return py::none();
-    }
 
-    py::object run(const string &funcName, int taskId, const py::args &args, const py::kwargs &kwargs) {
-        bool clearMemory = false;
-        if(kwargs.contains("clearMemory")){
-            clearMemory = kwargs["clearMemory"].cast<bool>();
+        int parallelism_ = DEFAULT_PARALLELISM;
+        if (!parallelism.is_none()) {
+            parallelism_ = parallelism.cast<int>();
         }
-        bool pickleTableToList = false;
-        if(kwargs.contains("pickleTableToList")){
-            pickleTableToList = kwargs["pickleTableToList"].cast<bool>();
+
+        bool disableDecimal_ = false;
+        if (!disableDecimal.is_none()) {
+            disableDecimal_ = disableDecimal.cast<bool>();
         }
-        int priority = 4;
-        if (kwargs.contains("priority")) {
-            priority = kwargs["priority"].cast<int>();
+
+        if (args.empty()) {
+            // script mode
+            TRY dbConnectionPool_.runPy(script, taskId, priority_, parallelism_, 0, clearMemory_, pickleTableToList_,
+                                        disableDecimal_);
+            CATCH_EXCEPTION("<Exception> in run: ")
+        } else {
+            // function mode
+            std::vector<ddb::ConstantSP> ddbArgs;
+            for (const auto &one : args) {
+                py::object pyobj = py::reinterpret_borrow<py::object>(one);
+                ddb::ConstantSP pcp = ddb::DdbPythonUtil::toDolphinDB(pyobj);
+                ddbArgs.push_back(pcp);
+            }
+            TRY dbConnectionPool_.runPy(script, ddbArgs, taskId, priority_, parallelism_, 0, clearMemory_,
+                                        pickleTableToList_, disableDecimal_);
+            CATCH_EXCEPTION("<Exception> in run: ")
         }
-        int parallelism = 64;
-        if (kwargs.contains("parallelism")) {
-            parallelism = kwargs["parallelism"].cast<int>();
-        }
-        bool disableDecimal = false;
-        if(kwargs.contains("disableDecimal")){
-            disableDecimal = kwargs["disableDecimal"].cast<bool>();
-        }
-        vector<ddb::ConstantSP> ddbArgs;
-        for (auto it = args.begin(); it != args.end(); ++it) { ddbArgs.push_back(ddb::DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(*it))); }
-        TRY
-            dbConnectionPool_.runPy(
-                funcName, ddbArgs, taskId,
-                priority, parallelism, 0, clearMemory, pickleTableToList, disableDecimal);
-        CATCH_EXCEPTION("<Exception> in run: ")
         return py::none();
     }
     bool isFinished(int taskId) {
@@ -311,25 +287,27 @@ private:
 // FIXME: not thread safe
 class SessionImpl {
 public:
-    SessionImpl(bool enableSSL=false, bool enableASYN=false, int keepAliveTime=7200, bool compress=false, bool python=false, int protocol=ddb::PROTOCOL_DDB, bool show_output=true)
+    SessionImpl(bool enableSSL=false, bool enableASYN=false, int keepAliveTime=7200, bool compress=false, bool python=false, int protocol=ddb::PROTOCOL_DDB, bool show_output=true, int sqlStd=0)
         : host_(), port_(-1), userId_(), password_(), encrypted_(true),
-            dbConnection_(enableSSL,enableASYN, keepAliveTime, compress, python), nullValuePolicy_([](ddb::VectorSP) {}), subscriber_(nullptr),subscriberPool_(nullptr),keepAliveTime_(keepAliveTime) {
+            dbConnection_(enableSSL,enableASYN, keepAliveTime, compress, python, false, sqlStd), nullValuePolicy_([](ddb::VectorSP) {}), subscriber_(nullptr),subscriberPool_(nullptr),keepAliveTime_(keepAliveTime) {
                 dbConnection_.setProtocol(ddb::PROTOCOL(protocol));
                 dbConnection_.setShowOutput(show_output);
             }
-    
-    bool connect(const std::string &host, const int &port, const std::string &userId, const std::string &password, const std::string &startup = "", const bool &highAvailability = false,
-                 const std::vector<string> &highAvailabilitySites = {}, const int &keepAliveTime=30, bool reconnect=false) {
+
+    bool connect(const std::string &host, const int &port, const std::string &userId,
+                    const std::string &password, const std::string &startup = "",
+                    const bool &highAvailability = false, const std::vector<string> &highAvailabilitySites = {},
+                    const int &keepAliveTime = 30, bool reconnect = false, int tryReconnectNums = -1, int readTimeout = -1, int writeTimeout = -1) {
         host_ = host;
         port_ = port;
         userId_ = userId;
         password_ = password;
         bool isSuccess = false;
-        if(keepAliveTime > 0){
+        if (keepAliveTime > 0) {
             dbConnection_.setKeepAliveTime(keepAliveTime);
         }
-        TRY
-            isSuccess = dbConnection_.connect(host_, port_, userId_, password_, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect);
+        TRY isSuccess = dbConnection_.connect(host_, port_, userId_, password_, startup, highAvailability,
+                                                highAvailabilitySites, keepAliveTime, reconnect, tryReconnectNums, readTimeout, writeTimeout);
         CATCH_EXCEPTION("<Exception> in connect: ")
         return isSuccess;
     }
@@ -406,45 +384,47 @@ public:
             
         CATCH_EXCEPTION("<Exception> in runcpp: ")
         return result;
-    } 
+    }
 
-    py::object run(const string &script) {
-        if(enableJobCancellation_) {
+    py::object run(const std::string &script, const py::args &args, const py::handle &clearMemory = py::none(),
+                   const py::handle &pickleTableToList = py::none(), const py::handle &priority = py::none(),
+                   const py::handle &parallelism = py::none(), const py::handle &disableDecimal = py::none()) {
+        if (enableJobCancellation_) {
             ddb::LockGuard<ddb::Mutex> LockGuard(&SessionImpl::mapMutex_);
-            if(SessionImpl::runningMap_.count(this) == 0) {
-                SessionImpl::runningMap_.insert(pair<SessionImpl*, int>(this, 1));
+            if (SessionImpl::runningMap_.count(this) == 0) {
+                SessionImpl::runningMap_.insert(pair<SessionImpl *, int>(this, 1));
             } else {
-                SessionImpl::runningMap_[this]+=1;
+                SessionImpl::runningMap_[this] += 1;
             }
 
             sighandler_t old_handler;
 
             old_handler = signal(SIGINT, signal_handler_fun);
-            if((long long)old_handler != (long long)signal_handler_fun) {
+            if ((long long)old_handler != (long long)signal_handler_fun) {
                 sighandler_ = old_handler;
             }
         }
-        Defer df([=](){
-            if(enableJobCancellation_) {
+        Defer df([=]() {
+            if (enableJobCancellation_) {
                 ddb::LockGuard<ddb::Mutex> LockGuard(&SessionImpl::mapMutex_);
 
-                if(SessionImpl::runningMap_.count(this) > 0) {
-                    SessionImpl::runningMap_[this]-=1;
-                    if(SessionImpl::runningMap_[this] <= 0) {
+                if (SessionImpl::runningMap_.count(this) > 0) {
+                    SessionImpl::runningMap_[this] -= 1;
+                    if (SessionImpl::runningMap_[this] <= 0) {
                         SessionImpl::runningMap_.erase(this);
                     }
                 } else {
                     throw std::runtime_error("Session: " + getSessionId() + " is not exited.");
                 }
 
-                if(!SessionImpl::isSigint_) {
-                    if(SessionImpl::runningMap_.size() == 0) {
+                if (!SessionImpl::isSigint_) {
+                    if (SessionImpl::runningMap_.size() == 0) {
                         signal(SIGINT, SessionImpl::sighandler_);
                         SessionImpl::sighandler_ = nullptr;
                     }
-                    
+
                 } else {
-                    if(SessionImpl::runningMap_.size() == 0) {
+                    if (SessionImpl::runningMap_.size() == 0) {
                         signal(SIGINT, SessionImpl::sighandler_);
                         SessionImpl::sighandler_ = nullptr;
                         SessionImpl::isSigint_ = false;
@@ -455,248 +435,79 @@ public:
                 }
             }
         });
+
+        bool clearMemory_ = false;
+        if (!clearMemory.is_none()) {
+            clearMemory_ = clearMemory.cast<bool>();
+        }
+
+        bool pickleTableToList_ = false;
+        if (!pickleTableToList.is_none()) {
+            pickleTableToList_ = pickleTableToList.cast<bool>();
+        }
+
+        int priority_ = DEFAULT_PRIORITY;
+        if (!priority.is_none()) {
+            priority_ = priority.cast<int>();
+        }
+
+        int parallelism_ = DEFAULT_PARALLELISM;
+        if (!parallelism.is_none()) {
+            parallelism_ = parallelism.cast<int>();
+        }
+
+        bool disableDecimal_ = false;
+        if (!disableDecimal.is_none()) {
+            disableDecimal_ = disableDecimal.cast<bool>();
+        }
+
         py::object result;
-        TRY
-            //ddb::RecordTime::printAllTime();
-            result = dbConnection_.runPy(script);
-            DLOG(ddb::RecordTime::printAllTime());
-        CATCH_EXCEPTION("<Exception> in run: ")
+        if (args.empty()) {
+            // script mode
+            TRY result = dbConnection_.runPy(script, priority_, parallelism_, 0, clearMemory_, pickleTableToList_,
+                                             disableDecimal_);
+            CATCH_EXCEPTION("<Exception> in run: ")
+        } else {
+            // function mode
+            TRY std::vector<ddb::ConstantSP> ddbArgs;
+            for (const auto &it : args) {
+                ddbArgs.push_back(ddb::DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(it)));
+            }
+            result = dbConnection_.runPy(script, ddbArgs, priority_, parallelism_, 0, clearMemory_, pickleTableToList_,
+                                         disableDecimal_);
+            CATCH_EXCEPTION("<Exception> in run: ")
+        }
         return result;
     }
 
-    py::object run(const string &funcName, const py::args &args) {
-        if(enableJobCancellation_) {
-            ddb::LockGuard<ddb::Mutex> LockGuard(&SessionImpl::mapMutex_);
-            if(SessionImpl::runningMap_.count(this) == 0) {
-                SessionImpl::runningMap_.insert(pair<SessionImpl*, int>(this, 1));
-            } else {
-                SessionImpl::runningMap_[this]+=1;
-            }
-
-            sighandler_t old_handler;
-
-            old_handler = signal(SIGINT, signal_handler_fun);
-            if((long long)old_handler != (long long)signal_handler_fun) {
-                sighandler_ = old_handler;
-            }
+    BlockReader runBlock(const string &script, const py::handle &clearMemory = py::none(),
+                         const py::handle &fetchSize = py::none(), const py::handle &priority = py::none(),
+                         const py::handle &parallelism = py::none()) {
+        bool clearMemory_ = false;
+        if (!clearMemory.is_none()) {
+            clearMemory_ = clearMemory.cast<bool>();
         }
-        Defer df([=](){
-            if(enableJobCancellation_) {
-                ddb::LockGuard<ddb::Mutex> LockGuard(&SessionImpl::mapMutex_);
 
-                if(SessionImpl::runningMap_.count(this) > 0) {
-                    SessionImpl::runningMap_[this]-=1;
-                    if(SessionImpl::runningMap_[this] <= 0) {
-                        SessionImpl::runningMap_.erase(this);
-                    }
-                } else {
-                    throw std::runtime_error("Session: " + getSessionId() + " is not exited.");
-                }
+        int fetchSize_ = 0;
+        if (!fetchSize.is_none()) {
+            fetchSize_ = fetchSize.cast<int>();
+        }
 
-                if(!SessionImpl::isSigint_) {
-                    if(SessionImpl::runningMap_.size() == 0) {
-                        signal(SIGINT, SessionImpl::sighandler_);
-                        SessionImpl::sighandler_ = nullptr;
-                    }
-                    
-                } else {
-                    if(SessionImpl::runningMap_.size() == 0) {
-                        signal(SIGINT, SessionImpl::sighandler_);
-                        SessionImpl::sighandler_ = nullptr;
-                        SessionImpl::isSigint_ = false;
-#ifndef MAC
-                        raise(SIGINT);
-#endif
-                    }
-                }
-            }
-        });
-        //ddb::RecordTime::printAllTime();
-        py::object result;
-        TRY
-            vector<ddb::ConstantSP> ddbArgs;
-            int index=0;
-            for (py::handle one : args) {
-                py::object pyobj = py::reinterpret_borrow<py::object>(one);
-                ddb::ConstantSP pcp = ddb::DdbPythonUtil::toDolphinDB(pyobj);
-                ddbArgs.push_back(pcp);
-                index++;
-            }
-            result = dbConnection_.runPy(funcName, ddbArgs);
-            DLOG(ddb::RecordTime::printAllTime());
-        CATCH_EXCEPTION("<Exception> in run: ")
-        return result;
-    }
+        int priority_ = DEFAULT_PRIORITY;
+        if (!priority.is_none()) {
+            priority_ = priority.cast<int>();
+        }
 
-    py::object run(const string &script, const py::kwargs & kwargs) {
-        if(enableJobCancellation_) {
-            ddb::LockGuard<ddb::Mutex> LockGuard(&SessionImpl::mapMutex_);
-            if(SessionImpl::runningMap_.count(this) == 0) {
-                SessionImpl::runningMap_.insert(pair<SessionImpl*, int>(this, 1));
-            } else {
-                SessionImpl::runningMap_[this]+=1;
-            }
+        int parallelism_ = DEFAULT_PARALLELISM;
+        if (!parallelism.is_none()) {
+            parallelism_ = parallelism.cast<int>();
+        }
 
-            sighandler_t old_handler;
-
-            old_handler = signal(SIGINT, signal_handler_fun);
-            if((long long)old_handler != (long long)signal_handler_fun) {
-                sighandler_ = old_handler;
-            }
-        }
-        Defer df([=](){
-            if(enableJobCancellation_) {
-                ddb::LockGuard<ddb::Mutex> LockGuard(&SessionImpl::mapMutex_);
-
-                if(SessionImpl::runningMap_.count(this) > 0) {
-                    SessionImpl::runningMap_[this]-=1;
-                    if(SessionImpl::runningMap_[this] <= 0) {
-                        SessionImpl::runningMap_.erase(this);
-                    }
-                } else {
-                    throw std::runtime_error("Session: " + getSessionId() + " is not exited.");
-                }
-
-                if(!SessionImpl::isSigint_) {
-                    if(SessionImpl::runningMap_.size() == 0) {
-                        signal(SIGINT, SessionImpl::sighandler_);
-                        SessionImpl::sighandler_ = nullptr;
-                    }
-                    
-                } else {
-                    if(SessionImpl::runningMap_.size() == 0) {
-                        signal(SIGINT, SessionImpl::sighandler_);
-                        SessionImpl::sighandler_ = nullptr;
-                        SessionImpl::isSigint_ = false;
-#ifndef MAC
-                        raise(SIGINT);
-#endif
-                    }
-                }
-            }
-        });
-        bool clearMemory = false;
-        if(kwargs.contains("clearMemory")){
-            clearMemory = kwargs["clearMemory"].cast<bool>();
-        }
-        bool pickleTableToList = false;
-        if(kwargs.contains("pickleTableToList")){
-            pickleTableToList = kwargs["pickleTableToList"].cast<bool>();
-        }
-        int priority = 4;
-        if (kwargs.contains("priority")) {
-            priority = kwargs["priority"].cast<int>();
-        }
-        int parallelism = 64;
-        if (kwargs.contains("parallelism")) {
-            parallelism = kwargs["parallelism"].cast<int>();
-        }
-        bool disableDecimal = false;
-        if(kwargs.contains("disableDecimal")){
-            disableDecimal = kwargs["disableDecimal"].cast<bool>();
-        }
-        py::object result;
-        TRY
-            //ddb::RecordTime::printAllTime();
-            result = dbConnection_.runPy(script, priority, parallelism, 0, clearMemory, pickleTableToList, disableDecimal);
-            DLOG(ddb::RecordTime::printAllTime());
-        CATCH_EXCEPTION("<Exception> in run: ")
-        return result;
-    }
-
-    py::object run(const string &funcName, const py::args &args, const py::kwargs &kwargs) {
-        if(enableJobCancellation_) {
-            ddb::LockGuard<ddb::Mutex> LockGuard(&SessionImpl::mapMutex_);
-            if(SessionImpl::runningMap_.count(this) == 0) {
-                SessionImpl::runningMap_.insert(pair<SessionImpl*, int>(this, 1));
-            } else {
-                SessionImpl::runningMap_[this]+=1;
-            }
-
-            sighandler_t old_handler;
-
-            old_handler = signal(SIGINT, signal_handler_fun);
-            if((long long)old_handler != (long long)signal_handler_fun) {
-                sighandler_ = old_handler;
-            }
-        }
-        Defer df([=](){
-            if(enableJobCancellation_) {
-                ddb::LockGuard<ddb::Mutex> LockGuard(&SessionImpl::mapMutex_);
-
-                if(SessionImpl::runningMap_.count(this) > 0) {
-                    SessionImpl::runningMap_[this]-=1;
-                    if(SessionImpl::runningMap_[this] <= 0) {
-                        SessionImpl::runningMap_.erase(this);
-                    }
-                } else {
-                    throw std::runtime_error("Session: " + getSessionId() + " is not exited.");
-                }
-
-                if(!SessionImpl::isSigint_) {
-                    if(SessionImpl::runningMap_.size() == 0) {
-                        signal(SIGINT, SessionImpl::sighandler_);
-                        SessionImpl::sighandler_ = nullptr;
-                    }
-                    
-                } else {
-                    if(SessionImpl::runningMap_.size() == 0) {
-                        signal(SIGINT, SessionImpl::sighandler_);
-                        SessionImpl::sighandler_ = nullptr;
-                        SessionImpl::isSigint_ = false;
-#ifndef MAC
-                        raise(SIGINT);
-#endif
-                    }
-                }
-            }
-        });
-        bool clearMemory = false;
-        if(kwargs.contains("clearMemory")){
-            clearMemory = kwargs["clearMemory"].cast<bool>();
-        }
-        bool pickleTableToList = false;
-        if(kwargs.contains("pickleTableToList")){
-            pickleTableToList = kwargs["pickleTableToList"].cast<bool>();
-        }
-        int priority = 4;
-        if (kwargs.contains("priority")) {
-            priority = kwargs["priority"].cast<int>();
-        }
-        int parallelism = 64;
-        if (kwargs.contains("parallelism")) {
-            parallelism = kwargs["parallelism"].cast<int>();
-        }
-        bool disableDecimal = false;
-        if(kwargs.contains("disableDecimal")){
-            disableDecimal = kwargs["disableDecimal"].cast<bool>();
-        }
-        py::object result;
-        //ddb::RecordTime::printAllTime();
-        TRY
-            vector<ddb::ConstantSP> ddbArgs;
-            for (auto it = args.begin(); it != args.end(); ++it) { ddbArgs.push_back(ddb::DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(*it))); }
-            result = dbConnection_.runPy(funcName, ddbArgs, priority, parallelism, 0, clearMemory, pickleTableToList, disableDecimal);
-        CATCH_EXCEPTION("<Exception> in run: ")
-        DLOG(ddb::RecordTime::printAllTime());
-        return result;
-    }
-
-    BlockReader runBlock(const string &script, const py::kwargs & kwargs) {
-        int fetchSize = 0;
-        bool clearMemory = false;
-        if(kwargs.contains("clearMemory")){
-            clearMemory = kwargs["clearMemory"].cast<bool>();
-        }
-        if(kwargs.contains("fetchSize")){
-            fetchSize = kwargs["fetchSize"].cast<int>();
-        }
-        if(fetchSize < 8192) {
-            throw std::runtime_error(std::string("<Exception> in run: fectchSize must be greater than 8192"));
+        if (fetchSize_ < 8192) {
+            throw std::runtime_error(std::string("<Exception> in runBlock: fetchSize must be greater than 8192"));
         }
         ddb::ConstantSP result;
-        TRY
-            result = dbConnection_.run(script, 4, 64, fetchSize, clearMemory);
+        TRY result = dbConnection_.run(script, priority_, parallelism_, fetchSize_, clearMemory_);
         CATCH_EXCEPTION("<Exception> in runBlock: ")
         BlockReader blockReader(result);
         return blockReader;
@@ -1526,29 +1337,47 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
     m.def("init", &ddbinit);
 
     py::class_<DBConnectionPoolImpl>(m, "dbConnectionPoolImpl")
-        .def(py::init<const std::string &,int,int,const std::string &,const std::string &,bool, bool, bool, bool, bool, int, bool>())
-        .def("run", (py::object(DBConnectionPoolImpl::*)(const std::string &, int)) & DBConnectionPoolImpl::run)
-        .def("run", (py::object(DBConnectionPoolImpl::*)(const std::string &, int, const py::args &)) & DBConnectionPoolImpl::run)
-        .def("run", (py::object(DBConnectionPoolImpl::*)(const std::string &, int, const py::kwargs &)) & DBConnectionPoolImpl::run)
-        .def("run", (py::object(DBConnectionPoolImpl::*)(const std::string &, int, const py::args &, const py::kwargs &)) & DBConnectionPoolImpl::run)
+        .def(py::init<const std::string &,int,int,const std::string &,const std::string &,bool, bool, bool, bool, bool, int, bool, int, int>())
+        .def("run", &DBConnectionPoolImpl::run,
+            py::arg("script"),
+            py::arg("taskId"),
+            py::kw_only(),
+            py::arg("clearMemory") = py::none(),
+            py::arg("pickleTableToList") = py::none(),
+            py::arg("priority") = py::none(),
+            py::arg("parallelism") = py::none(),
+            py::arg("disableDecimal") = py::none()
+        )
         .def("isFinished",(bool(DBConnectionPoolImpl::*)(int)) & DBConnectionPoolImpl::isFinished)
         .def("getData",(py::object(DBConnectionPoolImpl::*)(int)) & DBConnectionPoolImpl::getData)
         .def("shutDown",&DBConnectionPoolImpl::shutDown)
         .def("getSessionId",&DBConnectionPoolImpl::getSessionId);
 
     py::class_<SessionImpl>(m, "sessionimpl")
-        .def(py::init<bool,bool,int,bool,bool,int,bool>())
+        .def(py::init<bool,bool,int,bool,bool,int,bool, int>())
         .def("connect", &SessionImpl::connect)
         .def("login", &SessionImpl::login)
         .def("getInitScript", &SessionImpl::getInitScript)
         .def("setInitScript", &SessionImpl::setInitScript)
         .def("close", &SessionImpl::close)
         .def("getSessionId", &SessionImpl::getSessionId)
-        .def("run", (py::object(SessionImpl::*)(const std::string &)) & SessionImpl::run)
-        .def("run", (py::object(SessionImpl::*)(const std::string &, const py::args &)) & SessionImpl::run)
-        .def("run", (py::object(SessionImpl::*)(const std::string &, const py::kwargs &)) & SessionImpl::run)
-        .def("run", (py::object(SessionImpl::*)(const std::string &, const py::args &, const py::kwargs &)) & SessionImpl::run)
-        .def("runBlock",&SessionImpl::runBlock)
+        .def("run", &SessionImpl::run,
+            py::arg("script"),
+            py::kw_only(),
+            py::arg("clearMemory") = py::none(),
+            py::arg("pickleTableToList") = py::none(),
+            py::arg("priority") = py::none(),
+            py::arg("parallelism") = py::none(),
+            py::arg("disableDecimal") = py::none()
+        )
+        .def("runBlock",&SessionImpl::runBlock,
+            py::arg("script"),
+            py::kw_only(),
+            py::arg("clearMemory") = py::none(),
+            py::arg("fetchSize") = py::none(),
+            py::arg("priority") = py::none(),
+            py::arg("parallelism") = py::none()
+        )
         .def("upload", &SessionImpl::upload)
         .def("nullValueToZero", &SessionImpl::nullValueToZero)
         .def("nullValueToNan", &SessionImpl::nullValueToNan)

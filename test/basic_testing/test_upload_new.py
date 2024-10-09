@@ -1140,6 +1140,15 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('isNull(a["a"][0][0])')
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE[] VECTOR'
 
+        def test_upload_string_table_arrow_setType_SYMBOL(self):
+            df = pd.DataFrame({'a':['a','b','c','d']},dtype=pd.ArrowDtype(pa.utf8()))
+            df.__DolphinDB_Type__ = {
+                'a': keys.DT_SYMBOL
+            }
+            self.__class__.conn.upload({'a': df})
+            assert self.__class__.conn.run('typestr a["a"]') == 'FAST SYMBOL VECTOR'
+            assert self.__class__.conn.run('eqObj(a[`a],symbol(`a`b`c`d))')
+
         @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrow('upload').items()],
                                  ids=[i for i in DataUtils.getTableArrow('upload')])
         def test_upload_table_arrow(self, data):

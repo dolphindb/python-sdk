@@ -2934,7 +2934,7 @@ class TestMultithreadTableWriter:
         tbname = 't_' + random_string(5)
         scirpt_one_col_insert_double_and_int = f"share table(1 2 as id, double(1 2) as val, nanotimestamp(111111 222222) as time) as {tbname}"
         self.conn.run(scirpt_one_col_insert_double_and_int)
-        mtw = ddb.MultithreadedTableWriter(HOST, PORT, "admin", "123456", "", tbname)
+        mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", tbname)
         mtw.insert(1, 1, np.datetime64("2022-01-02T14:12:12.123456789"))
         mtw.insert(2, 2.2, np.datetime64("2022-01-02T14:12:12.123456789"))
         mtw.insert(3, None, None)
@@ -2958,7 +2958,7 @@ class TestMultithreadTableWriter:
         random_threadCount = random.randint(10, 20)
         st = time.time()
         ddb.MultithreadedTableWriter(
-            HOST, PORT, "admin", "123456", "", tbname, threadCount=random_threadCount, partitionCol='id')
+            HOST, PORT, USER, PASSWD, "", tbname, threadCount=random_threadCount, partitionCol='id')
         et = time.time()
         elapsed_time = et - st
         assert elapsed_time < 10

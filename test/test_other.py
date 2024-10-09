@@ -82,7 +82,7 @@ class TestOther:
                 pool.taskId += 1
                 break
         # run+taskid+kwargs,not contain clearMemory
-        pool.pool.run('print 1', pool.taskId, test=True)
+        pool.pool.run('print 1', pool.taskId, pickleTableToList=True)
         while True:
             isFinished = pool.pool.isFinished(pool.taskId)
             if isFinished == 0:
@@ -133,7 +133,7 @@ class TestOther:
         conn.run('print', 1, priority=4, parallelism=2)
 
         # runBlock
-        with pytest.raises(RuntimeError, match='<Exception> in run: fectchSize must be greater than 8192'):
+        with pytest.raises(RuntimeError, match='fetchSize must be greater than 8192'):
             conn.cpp.runBlock('table(take(1,10000) as a)', clearMemory=True)
 
         # hashBucket

@@ -59,7 +59,8 @@ void LOG_INFO(const string& msg){
 	std::cout<<msg<<std::endl;
 }
 
-Socket::Socket():host_(""), port_(-1), blocking_(true), autoClose_(true), enableSSL_(false), ctx_(nullptr), ssl_(nullptr), keepAliveTime_(30) {
+Socket::Socket():host_(""), port_(-1), blocking_(true), autoClose_(true), enableSSL_(false), ctx_(nullptr),
+	ssl_(nullptr), keepAliveTime_(30), readTimeout_(-1), writeTimeout_(-1) {
     handle_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(INVALID_SOCKET == handle_) {
         throw IOException("Couldn't create a socket with error code " + std::to_string(getErrorCode()));
@@ -71,7 +72,9 @@ Socket::Socket():host_(""), port_(-1), blocking_(true), autoClose_(true), enable
         setTcpNoDelay();
 }
 
-Socket::Socket(const string& host, int port, bool blocking, int keepAliveTime, bool enableSSL) : host_(host), port_(port), blocking_(blocking), autoClose_(true), enableSSL_(enableSSL), ctx_(nullptr), ssl_(nullptr), keepAliveTime_(keepAliveTime) {
+Socket::Socket(const string& host, int port, bool blocking, int keepAliveTime, bool enableSSL)
+	: host_(host), port_(port), blocking_(blocking), autoClose_(true), enableSSL_(enableSSL), ctx_(nullptr),
+		ssl_(nullptr), keepAliveTime_(keepAliveTime), readTimeout_(-1), writeTimeout_(-1) {
     if(host.empty() && port > 0){
         //server mode
         handle_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -92,7 +95,9 @@ Socket::Socket(const string& host, int port, bool blocking, int keepAliveTime, b
         handle_ = INVALID_SOCKET;
 }
 
-Socket::Socket(SOCKET handle, bool blocking, int keepAliveTime) : host_(""), port_(-1), handle_(handle), blocking_(blocking), autoClose_(true), enableSSL_(false), ctx_(nullptr), ssl_(nullptr), keepAliveTime_(keepAliveTime) {
+Socket::Socket(SOCKET handle, bool blocking, int keepAliveTime)
+	: host_(""), port_(-1), handle_(handle), blocking_(blocking), autoClose_(true), enableSSL_(false), ctx_(nullptr),
+		ssl_(nullptr), keepAliveTime_(keepAliveTime), readTimeout_(-1), writeTimeout_(-1) {
     if(INVALID_SOCKET == handle_) {
         throw IOException("The given socket is invalid.");
     }
@@ -346,6 +351,11 @@ IO_ERR Socket::connect(){
 		if (setsockopt(handle_, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(int)) != 0) {
 			LOG_ERR("Failed to set SO_REUSEADDR with error: " + std::to_string(getErrorCode()));
 		}
+
+		if (readTimeout_ > 0)
+			setReadTimeout(readTimeout_);
+		if (writeTimeout_ > 0)
+			setWriteTimeout(writeTimeout_);
 		
 		if(::connect(handle_, p->ai_addr, static_cast<int>(p->ai_addrlen)) == SOCKET_ERROR) {
 			if(!blocking_){
@@ -436,32 +446,64 @@ SOCKET Socket::getHandle(){
 	return handle_;
 }
 
-void Socket::setTimeout(int timeoutMs){
+
+void Socket::setTimeout(int readTimeout, int writeTimeout) {
+	if (readTimeout > 0)
+		readTimeout_ = readTimeout;
+	if (writeTimeout > 0)
+		writeTimeout_ = writeTimeout;
+}
+
+
+void Socket::setReadTimeout(int timeoutMs){
 #ifdef WINDOWS
 	int iTimeOut = timeoutMs;
     setsockopt(handle_, SOL_SOCKET, SO_RCVTIMEO,(char*)&iTimeOut,sizeof(iTimeOut));
+#else
+	struct timeval timeout;
+    timeout.tv_sec = timeoutMs / 1000;
+    timeout.tv_usec = (timeoutMs%1000) * 1000;
+	int ret = setsockopt(handle_, SOL_SOCKET,SO_RCVTIMEO, &timeout, sizeof(timeout));
+#endif
+}
+
+void Socket::setWriteTimeout(int timeoutMs){
+#ifdef WINDOWS
+	int iTimeOut = timeoutMs;
     setsockopt(handle_, SOL_SOCKET, SO_SNDTIMEO,(char*)&iTimeOut,sizeof(iTimeOut));
 #else
 	struct timeval timeout;
     timeout.tv_sec = timeoutMs / 1000;
     timeout.tv_usec = (timeoutMs%1000) * 1000;
     setsockopt(handle_, SOL_SOCKET,SO_SNDTIMEO, &timeout, sizeof(timeout));
-	setsockopt(handle_, SOL_SOCKET,SO_RCVTIMEO, &timeout, sizeof(timeout));
 #endif
 }
 
-void Socket::getTimeout(int &timeoutMs){
+void Socket::getReadTimeout(int &timeoutMs){
 #ifdef WINDOWS
 	int iTimeOut;
 	socklen_t readlen=sizeof(iTimeOut);
 	getsockopt(handle_, SOL_SOCKET, SO_RCVTIMEO,(char*)&iTimeOut,&readlen);
-    //getsockopt(handle_, SOL_SOCKET, SO_SNDTIMEO,(char*)&iTimeOut,sizeof(iTimeOut));
 	timeoutMs=iTimeOut;
 #else
 	struct timeval timeout;
 	socklen_t readlen=sizeof(timeout);
-    //getsockopt(handle_, SOL_SOCKET,SO_SNDTIMEO, &timeout, sizeof(timeout));
 	getsockopt(handle_, SOL_SOCKET,SO_RCVTIMEO, &timeout, &readlen);
+	timeoutMs = timeout.tv_sec*1000 + timeout.tv_usec/1000;
+#endif
+}
+
+
+void Socket::getWriteTimeout(int &timeoutMs){
+#ifdef WINDOWS
+	int iTimeOut;
+	socklen_t readlen=sizeof(iTimeOut);
+    getsockopt(handle_, SOL_SOCKET, SO_SNDTIMEO,(char*)&iTimeOut,&readlen);
+	timeoutMs=iTimeOut;
+#else
+	struct timeval timeout;
+	socklen_t readlen=sizeof(timeout);
+    getsockopt(handle_, SOL_SOCKET, SO_SNDTIMEO, &timeout, &readlen);
 	timeoutMs = timeout.tv_sec*1000 + timeout.tv_usec/1000;
 #endif
 }
@@ -494,15 +536,16 @@ bool Socket::setBlocking(){
 }
 
 bool Socket::skipAll(){
-	int oldTimeout=-2;
+	int oldReadTimeout=-2;
+	int oldWriteTimeout=-2;
 	if(blocking_ == false){
 		if(setBlocking() == false)
 			return false;
 	}else{
-		getTimeout(oldTimeout);
-		//printf("oldTimeout: %d\n",oldTimeout);
+		getReadTimeout(oldReadTimeout);
+		getWriteTimeout(oldWriteTimeout);
 	}
-	setTimeout(50);
+	setTimeout(50, 50);
 	const int bufsize=256;
 	char buf[bufsize];
 	size_t readlen;
@@ -513,8 +556,10 @@ bool Socket::skipAll(){
 	if(blocking_ == false){
 		setNonBlocking();
 	}else{
-		if(oldTimeout != -2)
-			setTimeout(oldTimeout);
+		if(oldReadTimeout != -2)
+			setReadTimeout(oldReadTimeout);
+		if(oldWriteTimeout != -2)
+			setWriteTimeout(oldWriteTimeout);
 	}
 	return true;
 }

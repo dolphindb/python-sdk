@@ -10,10 +10,11 @@
 namespace dolphindb {
 
 DdbInit DBConnectionImpl::ddbInit_;
-DBConnectionImpl::DBConnectionImpl(bool sslEnable, bool asynTask, int keepAliveTime, bool compress, bool python, bool isReverseStreaming)
+DBConnectionImpl::DBConnectionImpl(bool sslEnable, bool asynTask, int keepAliveTime, bool compress, bool python, bool isReverseStreaming, int sqlStd)
 		: port_(0), encrypted_(false), isConnected_(false), littleEndian_(Util::isLittleEndian()), 
 		sslEnable_(sslEnable),asynTask_(asynTask), keepAliveTime_(keepAliveTime), compress_(compress),
-		python_(python), protocol_(PROTOCOL_DDB), msg_(true), isReverseStreaming_(isReverseStreaming){
+		python_(python), protocol_(PROTOCOL_DDB), msg_(true), isReverseStreaming_(isReverseStreaming),
+        sqlStd_(sqlStd), readTimeout_(-1), writeTimeout_(-1) {
 }
 
 DBConnectionImpl::~DBConnectionImpl() {
@@ -33,7 +34,7 @@ void DBConnectionImpl::close() {
 
 bool DBConnectionImpl::connect(const string& hostName, int port, const string& userId,
         const string& password, bool sslEnable,bool asynTask, int keepAliveTime, bool compress,
-        bool python) {
+        bool python, int readTimeout, int writeTimeout) {
     hostName_ = hostName;
     port_ = port;
     userId_ = userId;
@@ -46,6 +47,12 @@ bool DBConnectionImpl::connect(const string& hostName, int port, const string& u
     }
     compress_ = compress;
     python_ = python;
+    if (readTimeout > 0) {
+        readTimeout_ = readTimeout ;
+    }
+    if (writeTimeout > 0) {
+        writeTimeout_ = writeTimeout;
+    }
     return connect();
 }
 
@@ -54,6 +61,7 @@ bool DBConnectionImpl::connect() {
     close();
 
     SocketSP conn = new Socket(hostName_, port_, true, keepAliveTime_, sslEnable_);
+    conn->setTimeout(readTimeout_, writeTimeout_);
     IO_ERR ret = conn->connect();
     if (ret != OK) {
         return false;
@@ -262,6 +270,9 @@ long DBConnectionImpl::generateRequestFlag(bool clearSessionMemory, bool disable
     }
     if (isReverseStreaming_) {
         flag += 131072;
+    }
+    if (sqlStd_) {
+        flag += sqlStd_ << 19;
     }
     if (disableDecimal) {
         flag += (1 << 23);

@@ -5,6 +5,7 @@ import dolphindb as ddb
 from numpy.testing import *
 from pandas.testing import *
 from setup.utils import get_pid
+from basic_testing.utils import equalPlus
 
 
 class TestDownload:
@@ -181,7 +182,6 @@ class TestDownload:
         tmp_s, tmp_p = get_Table_arrayVetcor(types=data_type, n=100, typeTable=typeTable, isShare=isShare, names="download")
         conn = ddb.session(HOST, PORT, USER, PASSWD,enablePickle=pickle, compress=compress)
         conn.run(tmp_s)
-        from basic_testing.utils import equalPlus
         for s, p in tmp_p:
             assert equalPlus(conn.run(s), p)
         conn.undefAll()

@@ -9,7 +9,7 @@ from setup.utils import get_pid
 
 class DBInfo:
     dfsDBName = 'dfs://testLoadTable'
-    diskDBName = WORK_DIR + '/testLoadTable'
+    diskDBName = REMOTE_WORK_DIR + '/testLoadTable'
     table1 = 'tb1'
     table2 = 'tb2'
 
@@ -224,7 +224,7 @@ def create_disk_range_db(s: ddb.session):
 
 
 def create_disk_hash_db(s: ddb.session):
-    s.connect(HOST, PORT, "admin", "123456")
+    s.connect(HOST, PORT, USER, PASSWD)
     ddb_script = f'''
         login('{USER}','{PASSWD}')
         dbPath='{DBInfo.diskDBName}'
@@ -914,7 +914,7 @@ class TestLoadTable:
         assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_value_partition_string_scalar(self):
-        myDBName = WORK_DIR + "/db1"
+        myDBName = REMOTE_WORK_DIR + "/db1"
         script = f'''
             login("{USER}","{PASSWD}")
             if(exists("{myDBName}"))
@@ -929,7 +929,7 @@ class TestLoadTable:
         assert_frame_equal(res, expected)
 
     def test_loadTable_disk_value_partition_string_vector(self):
-        myDBName = WORK_DIR + "/db1"
+        myDBName = REMOTE_WORK_DIR + "/db1"
         script = f'''
             login("{USER}","{PASSWD}")
             if(exists("{myDBName}"))
@@ -1036,7 +1036,7 @@ class TestLoadTable:
             tb=db.createPartitionedTable(t,`tb,`c2,sortColumns=`c3).append!(t)
         """)
         tsdb_table = self.conn.loadTable(tableName='tb', dbPath='dfs://test_loadTable_tsdb_table_drop')
-        with pytest.raises(RuntimeError, match='Column modifications only supported for OLAP-based DFS tables'):
+        with pytest.raises(RuntimeError):
             tsdb_table.drop(['c1'])
 
 

@@ -1344,4 +1344,4 @@ class TestDatabase:
 
     def test_database_save_table(self):
         tb = self.conn.table(data=pd.DataFrame({'a': [1, 2, 3]}))
-        assert self.conn.saveTable(tb, WORK_DIR + '/test')
+        assert self.conn.saveTable(tb, REMOTE_WORK_DIR+'test')

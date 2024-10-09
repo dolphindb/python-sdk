@@ -954,12 +954,12 @@ class TestSession:
         for v in av:
             assert v == [123456]
 
-    @pytest.mark.parametrize('_priority', [-1, 'a', 1.1, dict(), list(), tuple(), set(), None])
+    @pytest.mark.parametrize('_priority', [-1, 'a', 1.1, dict(), list(), tuple(), set()])
     def test_run_with_para_priority_exception(self, _priority):
         with pytest.raises(Exception, match="priority must be an integer from 0 to 9"):
             self.conn.run("objs();sleep(2000)", priority=_priority)
 
-    @pytest.mark.parametrize('_parallelism', [-1, 'a', 1.1, dict(), list(), tuple(), set(), None])
+    @pytest.mark.parametrize('_parallelism', [-1, 'a', 1.1, dict(), list(), tuple(), set()])
     def test_run_with_para_parallelism_exception(self, _parallelism):
         with pytest.raises(Exception, match="parallelism must be an integer greater than 0"):
             self.conn.run("objs();sleep(2000)", parallelism=_parallelism)
@@ -967,10 +967,10 @@ class TestSession:
     def test_run_with_para_priority_parallelism(self):
         def run_and_assert(conn: ddb.session, expect, priority=None, parallelism=None):
             s = f"""
-                    sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
-                    priority = exec priority from getConsoleJobs() where sessionId=sessionid;
-                    parallelism = exec parallelism from getConsoleJobs() where sessionId=sessionid;
-                    [priority[0], parallelism[0]]
+                sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
+                priority = exec priority from getConsoleJobs() where sessionId=sessionid;
+                parallelism = exec parallelism from getConsoleJobs() where sessionId=sessionid;
+                [priority[0], parallelism[0]]
             """
             if priority is None and parallelism is None:
                 res = conn.run(s)
@@ -998,7 +998,7 @@ class TestSession:
         assert self.conn.getInitScript() == script
 
     def test_session_get_session_id(self):
-        id, user = self.conn.run('getCurrentSessionAndUser()')
+        id, user = self.conn.run('getCurrentSessionAndUser()')[:2]
         assert str(id) == self.conn.getSessionId()
         assert user == USER
 
@@ -1047,3 +1047,94 @@ class TestSession:
         # print(conn.run("select site,(connectionNum + workerNum + executorNum)/3.0 as load,connectionNum,workerNum,executorNum from rpc(getControllerAlias(), getClusterPerf) where mode=0"))
         for i in connList:
             i.close()
+
+    def test_session_sqlStd(self):
+        conn_ddb=ddb.Session(HOST,PORT,USER,PASSWD,sqlStd=keys.SqlStd.DolphinDB)
+        conn_oracle=ddb.Session(HOST,PORT,USER,PASSWD,sqlStd=keys.SqlStd.Oracle)
+        conn_myqsql=ddb.Session(HOST,PORT,USER,PASSWD,sqlStd=keys.SqlStd.MySQL)
+        with pytest.raises(RuntimeError):
+            conn_ddb.run("sysdate()")
+        conn_oracle.run("sysdate()")
+        conn_myqsql.run("sysdate()")
+
+    def test_session_tryReconnectNums_conn(self):
+        n=3
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 "conn=ddb.Session();"
+                                 f"res=conn.connect('{HOST}', 56789, '{USER}', '{PASSWD}', reconnect=True, tryReconnectNums={n});"
+                                 f"assert not res;"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        assert result.stdout.count("Failed")==n
+        assert result.stderr==f"Connect to {HOST}:56789 failed after {n} reconnect attempts.\n"
+
+    def test_session_tryReconnectNums_run(self):
+        n=3
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 "conn=ddb.Session();"
+                                 f"res=conn.connect('{HOST}', 56789, '{USER}', '{PASSWD}', reconnect=True, tryReconnectNums={n});"
+                                 "assert not res;"
+                                 "conn.run('1+1');"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        assert result.stdout.count("Failed")==n*2
+        assert f"Connect to {HOST}:56789 failed after {n} reconnect attempts." in result.stderr
+        print(result.stderr)
+
+    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
+    def test_session_highAvailability_tryReconnectNums_conn(self):
+        host = "192.168.0.54"
+        port0 = 9900
+        port1 = 9902
+        port2 = 9903
+        port3 = 9904
+        user = "admin"
+        passwd = "123456"
+        conn = ddb.Session(host, port0, user, passwd)
+        conn.run(f"stopDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])")
+        n=3
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 "conn_=ddb.Session();"
+                                 f"conn_.connect('{host}',{port1},'{user}','{passwd}', highAvailability=True, highAvailabilitySites=['{host}:{port1}','{host}:{port2}','{host}:{port3}'], tryReconnectNums={n});"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        conn.run(f"startDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])")
+        assert result.stdout.count("Failed")==n*3
+        assert f"Connect failed after {n} reconnect attempts for every node in high availability sites." in result.stderr
+
+    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
+    def test_session_highAvailability_tryReconnectNums_run(self):
+        host = "192.168.0.54"
+        port0 = 9900
+        port1 = 9902
+        port2 = 9903
+        port3 = 9904
+        user = "admin"
+        passwd = "123456"
+        conn = ddb.Session(host, port0, user, passwd)
+        n=3
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 f"conn=ddb.Session('{host}',{port0},'{user}','{passwd}');"
+                                 "conn_=ddb.Session();"
+                                 f"conn_.connect('{host}',{port1},'{user}','{passwd}', highAvailability=True, highAvailabilitySites=['{host}:{port1}','{host}:{port2}','{host}:{port3}'], tryReconnectNums={n});"
+                                 f"""conn.run("stopDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])");"""
+                                 "conn_.run('true');"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        conn.run(f"startDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])")
+        assert result.stdout.count("Failed")==n*3
+        assert f"Connect to nodes failed after {n} reconnect attempts." in result.stderr
+
+    def test_session_readTimeout(self):
+        conn = ddb.Session()
+        conn.connect(HOST,PORT,USER,PASSWD,readTimeout=3)
+        assert conn.run('true')
+        with pytest.raises(RuntimeError):
+            conn.run('sleep(4000);true')
+
+    def test_session_writeTimeout(self):
+        conn = ddb.Session()
+        conn.connect(HOST,PORT,USER,PASSWD,writeTimeout=3)
+        conn.upload({'a':True})
+        assert conn.run('a')
+        # set packet loss to test

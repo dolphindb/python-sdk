@@ -11,14 +11,16 @@ CLIENT_HOST = "127.0.0.1"
 USER = "admin"
 PASSWD = "123456"
 WORK_DIR = (os.path.abspath(os.path.join(os.path.abspath(__file__), "../.."))) + '/workdir'
-# WORK_DIR="d:/code/python-sdk/test/workdir"
+WORK_DIR="d:/code/python-sdk/test/workdir"
 DATA_DIR = '/opt/downloads/data'
 # DATA_DIR="C:/Users/jianbo.shi/Downloads/data"
 if AUTO_TESTING:
     LOCAL_DATA_DIR = DATA_DIR
+    REMOTE_WORK_DIR = WORK_DIR
 else:
     # LOCAL_DATA_DIR=(os.path.abspath(os.path.join(os.path.abspath(__file__), "../..")))+ '/data'
     LOCAL_DATA_DIR = "C:/Users/jianbo.shi/Downloads/data"
+    REMOTE_WORK_DIR = "/opt/download/test"
 
 ARROW_DIR = "/opt/dolphindb/single/release300/server/plugins/Arrow/PluginArrow.txt"
 # ARROW_DIR=r"D:\\test\\plugin\\Arrow\\release200\\PluginArrow.txt"

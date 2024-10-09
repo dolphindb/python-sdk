@@ -30,7 +30,7 @@ public:
     
     DBConnectionPoolImpl(const string& hostName, int port, int threadNum = 10, const string& userId = "", const string& password = "",
         bool loadBalance = true, bool highAvailability = true, bool compress = false, bool reConnect = false,
-        bool python = false, PROTOCOL protocol = PROTOCOL_DDB, bool show_output = true);
+        bool python = false, PROTOCOL protocol = PROTOCOL_DDB, bool show_output = true, int sqlStd = 0, int tryReconnectNums = -1);
     
     ~DBConnectionPoolImpl(){
         shutDown();

@@ -1,4 +1,5 @@
 #include "DdbPythonUtil.h"
+#include <pybind11/pytypes.h>
 #include "Concurrent.h"
 #include "ConstantImp.h"
 #include "ConstantMarshall.h"
@@ -86,6 +87,7 @@ Preserved::Preserved(){
         patimestamp_ns_ = pyarrow_.attr("timestamp")("ns");
         pautf8_ = pyarrow_.attr("utf8")();
         padictionary_int32_utf8_ = pyarrow_.attr("dictionary")(paint32_, pautf8_);
+        paDictionaryType_ = pyarrow_.attr("DictionaryType");
         pafixed_size_binary_16_ = pyarrow_.attr("binary")(16);
         palarge_binary_ = pyarrow_.attr("large_binary")();
         padecimal128_ = pyarrow_.attr("Decimal128Type");
@@ -2190,22 +2192,35 @@ ConstantSP _toDolphinDB_Vector_SeriesOrIndex(
                     break;
                 }
                 case DT_SYMBOL: {
-                    obj = DdbPythonUtil::preserved_->pyarrow_.attr("array")(obj.attr("array"));
-                    if (py::isinstance(obj, DdbPythonUtil::preserved_->pachunkedarray_))
-                        obj = obj.attr("combine_chunks")();
-                    py::array_t<int32_t> indices = DdbPythonUtil::preserved_->pdseries_(obj.attr("indices"), "dtype"_a=DdbPythonUtil::preserved_->pdarrowdtype_(DdbPythonUtil::preserved_->paint32_))
+                    if (py::isinstance(obj, DdbPythonUtil::preserved_->paDictionaryType_)) {
+                        obj = DdbPythonUtil::preserved_->pyarrow_.attr("array")(obj.attr("array"));
+                        if (py::isinstance(obj, DdbPythonUtil::preserved_->pachunkedarray_))
+                            obj = obj.attr("combine_chunks")();
+                        py::array_t<int32_t> indices = DdbPythonUtil::preserved_->pdseries_(obj.attr("indices"), "dtype"_a=DdbPythonUtil::preserved_->pdarrowdtype_(DdbPythonUtil::preserved_->paint32_))
                                                     .attr("to_numpy")("dtype"_a="int32", "na_value"_a=INT_MIN);
-                    py::array dictionary = obj.attr("dictionary");
-                    vector<std::string> dict_string;
-                    dict_string.reserve(dictionary.size());
-                    for (auto &it : dictionary) {
-                        dict_string.push_back(py::cast<std::string>(it));
+                        py::array dictionary = obj.attr("dictionary");
+                        vector<std::string> dict_string;
+                        dict_string.reserve(dictionary.size());
+                        for (auto &it : dictionary) {
+                            dict_string.push_back(py::cast<std::string>(it));
+                        }
+                        size_t size = indices.size();
+                        ddbVec = Util::createVector(DT_SYMBOL, size, size);
+                        const int32_t *data = indices.data();
+                        for (int it = 0; it < size; ++it) {
+                            ddbVec->setString(it, data[it] == INT_MIN ? "" : dict_string[data[it]]);
+                        }
                     }
-                    size_t size = indices.size();
-                    ddbVec = Util::createVector(DT_SYMBOL, size, size);
-                    const int32_t *data = indices.data();
-                    for (int it = 0; it < size; ++it) {
-                        ddbVec->setString(it, data[it] == INT_MIN ? "" : dict_string[data[it]]);
+                    else {
+                        // maybe string or others
+                        py::array series_array = obj.attr("to_numpy")("dtype"_a="object", "na_value"_a="");
+                        size_t size = series_array.size();
+                        ddbVec = Util::createVector(typeInfer, size, size);
+                        int index = 0;
+                        for (auto &it : series_array) {
+                            ddbVec->setString(index, py::cast<std::string>(it));
+                            ++index;
+                        }
                     }
                     break;
                 }

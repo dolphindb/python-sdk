@@ -947,6 +947,7 @@ class TestTableUpsert:
         upsert.upsert(df)
         assert_frame_equal(df, conn.run("select * from pt"))
 
+    # todo:bug of pandas 2.2
     @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     def test_tableUpsert_dfs_table_column_dateType_not_match_1(self, pickle, compress):

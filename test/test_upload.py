@@ -45,11 +45,10 @@ class TestUpload:
                 f.write(cls.__name__ + ' finished.\n')
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Scalar(self, data_type, pickle, compress):
+    def test_upload_Scalar(self, data_type, compress):
         tmp_s, tmp_p = get_Scalar(types=data_type, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_s_')
@@ -64,11 +63,10 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Vector(self, data_type, pickle, compress):
+    def test_upload_Vector(self, data_type, compress):
         tmp_s, tmp_p = get_Vector(types=data_type, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_v_')
@@ -83,11 +81,10 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Matrix(self, data_type, pickle, compress):
+    def test_upload_Matrix(self, data_type, compress):
         tmp_s, tmp_p = get_Matrix(types=data_type, names="upload", r=10, c=10)
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_m_')
@@ -102,11 +99,10 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Set(self, data_type, pickle, compress):
+    def test_upload_Set(self, data_type, compress):
         tmp_s, tmp_p = get_Set(types=data_type, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_set_')
@@ -121,11 +117,10 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_Dictionary_upload(self, data_type, pickle, compress):
+    def test_Dictionary_upload(self, data_type, compress):
         tmp_s, tmp_p = get_Dictionary(types=data_type, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_d_')
@@ -145,13 +140,12 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('isShare', [False], ids=['unshare'])
     @pytest.mark.parametrize('tabletype', ['table'], ids=['table'])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Table(self, tabletype, data_type, pickle, compress, isShare):
+    def test_upload_Table(self, tabletype, data_type, compress, isShare):
         tmp_s, tmp_p = get_Table(typeTable=tabletype, types=data_type, ishare=isShare, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_t_')
@@ -180,14 +174,13 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('isShare', [False], ids=['unshare'])
     @pytest.mark.parametrize('table_type', ['table'], ids=['table'])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_TableArrayVector(self, data_type, pickle, compress, table_type, isShare):
+    def test_upload_TableArrayVector(self, data_type, compress, table_type, isShare):
         tmp_s, tmp_p = get_Table_arrayVetcor(types=data_type, typeTable=table_type, isShare=isShare,
                                              names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_at_')
@@ -204,13 +197,12 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('isShare', [True, False], ids=["enshare", "unshare"])
     @pytest.mark.parametrize('table_type', ["table", "streamTable", "indexedTable", "keyedTable"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_tableAppender_Table(self, table_type, data_type, pickle, compress, isShare):
+    def test_tableAppender_Table(self, table_type, data_type, compress, isShare):
         tmp_s, tmp_p = get_Table(typeTable=table_type, types=data_type, isShare=isShare, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = "test_" + s
@@ -226,13 +218,12 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('isShare', [True, False], ids=["enshare", "unshare"])
     @pytest.mark.parametrize('table_type', ["indexedTable", "keyedTable"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_tableUpsert_Table(self, table_type, data_type, pickle, compress, isShare):
+    def test_tableUpsert_Table(self, table_type, data_type, compress, isShare):
         tmp_s, tmp_p = get_Table(typeTable=table_type, types=data_type, isShare=isShare, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = "test_" + s
@@ -248,11 +239,10 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_partitionedTable_TableAppender(self, data_type, pickle, compress):
+    def test_partitionedTable_TableAppender(self, data_type, compress):
         tmp_s, tmp_p = get_PartitionedTable_Append_Upsert(types=data_type, names="upload", script_type=data_type)
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = "test_" + s
@@ -271,12 +261,11 @@ class TestUpload:
         conn.close()
 
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('ignoreNull', [True, False], ids=['enignoreNull', 'unignoreNull'])
-    def test_partitionedTable_TableUpserter(self, data_type, pickle, compress, ignoreNull):
+    def test_partitionedTable_TableUpserter(self, data_type, compress, ignoreNull):
         tmp_s, tmp_p = get_PartitionedTable_Append_Upsert(types=data_type, names="upload", script_type=data_type)
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = "test_" + s
@@ -309,10 +298,9 @@ class TestUpload:
     ]
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('data_type, np_dict', test_dataArray, ids=[x.name for x in TIMETYPE])
-    def test_upload_numpyTimeTypesArray_Vector(self, pickle, data_type, np_dict, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, pickle=pickle, compress=compress)
+    def test_upload_numpyTimeTypesArray_Vector(self, data_type, np_dict, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         if data_type == 'TIME':
             data_type = 'TIMESTAMP'
         elif data_type == 'MINUTE' or data_type == 'SECOND':

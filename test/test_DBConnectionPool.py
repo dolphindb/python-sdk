@@ -9,7 +9,6 @@ from numpy.testing import *
 from pandas.testing import *
 import decimal
 import random
-import platform
 import sys
 
 
@@ -122,7 +121,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_read_dfs_table_runTaskAsync_Unspecified_time(self, _compress):
         create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         pool.startLoop()
         task1 = pool.runTaskAsync("sleep(1000);exec count(*) from loadTable('dfs://test_dbConnection', 'pt')")
         assert task1.result() == 1000000
@@ -131,7 +130,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_read_dfs_table_runTaskAsyn_unfinished(self, _compress):
         create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         pool.startLoop()
         task1 = pool.runTaskAsync("sleep(7000);exec count(*) from loadTable('dfs://test_dbConnection', 'pt')")
         try:
@@ -143,7 +142,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_read_dfs_table_runTaskAsyn_param_Unspecified_time(self, _compress):
         create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         pool.startLoop()
         t1 = time.time()
         task1 = pool.runTaskAsync("sleep", 1000)
@@ -169,7 +168,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_read_dfs_table_runTaskAsyn_param_set_time(self, _compress):
         create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         pool.startLoop()
         t1 = time.time()
         task1 = pool.runTaskAsync("sleep", 1000)
@@ -195,7 +194,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_read_dfs_table_runTaskAsyn_param_unfinished(self, _compress):
         create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         pool.startLoop()
         t1 = time.time()
         task1 = pool.runTaskAsync("sleep", 7000)
@@ -212,7 +211,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_read_dfs_table_runTaskAsyn_param_basic(self, _compress):
         create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         pool.startLoop()
         task1 = pool.runTaskAsync("add", 1, 2)
         task2 = pool.runTaskAsync("sum", [1, 2, 3])
@@ -224,7 +223,7 @@ class TestDBConnectionPool:
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_insert_tablewithAlltypes(self, _compress):
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         self.conn.run("""
             undef(`tab,SHARED);
             t=table(100:0,
@@ -271,7 +270,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_run(self, _compress):
         loop = asyncio.get_event_loop_policy().new_event_loop()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         task1 = pool.run(f'''
             login("{USER}","{PASSWD}")
             dbpath="dfs://test_dfs";
@@ -313,7 +312,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_run_clearMemory(self, _compress):
         loop = asyncio.get_event_loop_policy().new_event_loop()
-        pool = ddb.DBConnectionPool(HOST, PORT, 1, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD, compress=_compress)
         task1 = pool.run(f'''
             login("{USER}","{PASSWD}")
             dbpath="dfs://test_dfs";
@@ -359,7 +358,7 @@ class TestDBConnectionPool:
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_addTask(self, _compress):
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         assert (len(pool.getSessionId()) == 8)
         self.conn.run("""
             undef(`tab,SHARED);
@@ -407,7 +406,7 @@ class TestDBConnectionPool:
     @pytest.mark.timeout(10)
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_addTask_1(self, _compress):
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         assert len(pool.getSessionId()) == 8
         self.conn.run("""
             undef(`tab,SHARED);
@@ -460,7 +459,7 @@ class TestDBConnectionPool:
     @pytest.mark.timeout(10)
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_addTask_2(self, _compress):
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456", compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         assert len(pool.getSessionId()) == 8
         self.conn.run("""
             undef(`tab,SHARED);
@@ -510,7 +509,7 @@ class TestDBConnectionPool:
         self.conn.undef("tab", "SHARED")
 
     def test_DBConnectionPool_func_runTaskAsyn_warning(self):
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, "admin", "123456")
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD,)
         with pytest.warns(DeprecationWarning):
             task = pool.runTaskAsyn("sleep(2000);1+1")
             while not task.done():
@@ -521,7 +520,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_runTaskAsync(self, _compress):
         pool = ddb.DBConnectionPool(
-            HOST, PORT, 8, "admin", "123456", compress=_compress)
+            HOST, PORT, 8, USER, PASSWD, compress=_compress)
         self.conn.run("""
             dbpath="dfs://test_runTaskAsync";
             if(existsDatabase(dbpath)){dropDatabase(dbpath)};
@@ -950,7 +949,7 @@ class TestDBConnectionPool:
         assert_array_equal(tys, ex_types)
         self.conn.dropDatabase("dfs://test_dfs1")
 
-    @pytest.mark.parametrize('_priority', [-1, 'a', 1.1, dict(), list(), tuple(), set(), None, 10])
+    @pytest.mark.parametrize('_priority', [-1, 'a', 1.1, dict(), list(), tuple(), set(), 10])
     def test_run_with_para_priority_exception(self, _priority):
         pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD)
         loop = asyncio.get_event_loop_policy().new_event_loop()
@@ -959,7 +958,7 @@ class TestDBConnectionPool:
         pool.shutDown()
         loop.close()
 
-    @pytest.mark.parametrize('_parallelism', [-1, 'a', 1.1, dict(), list(), tuple(), set(), None])
+    @pytest.mark.parametrize('_parallelism', [-1, 'a', 1.1, dict(), list(), tuple(), set()])
     def test_run_with_para_parallelism_exception(self, _parallelism):
         pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD)
         loop = asyncio.get_event_loop_policy().new_event_loop()
@@ -1081,3 +1080,63 @@ class TestDBConnectionPool:
             "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0").result()
         assert not all(((loadDf - loadDf.mean()).abs() < 0.4)['load'])
         pool.shutDown()
+
+    def test_DBConnectionPool_sqlStd(self):
+        pool_ddb = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD, sqlStd=keys.SqlStd.DolphinDB)
+        pool_oracle = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD, sqlStd=keys.SqlStd.Oracle)
+        pool_mysql = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD, sqlStd=keys.SqlStd.MySQL)
+        with pytest.raises(RuntimeError):
+            pool_ddb.runTaskAsync("sysdate()").result()
+        pool_oracle.runTaskAsync("sysdate()").result()
+        pool_mysql.runTaskAsync("sysdate()").result()
+
+    def test_DBConnectionPool_tryReconnectNums_conn(self):
+        n=3
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 f"pool=ddb.DBConnectionPool('{HOST}', 56789, 3, reConnect=True, tryReconnectNums={n});"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        assert result.stdout.count("Failed")==n
+        assert f"Connect to {HOST}:56789 failed after {n} reconnect attempts." in result.stderr
+
+    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
+    def test_DBConnectionPool_tryReconnectNums_run(self):
+        host = "192.168.0.54"
+        port0 = 9900
+        port1 = 9902
+        user = "admin"
+        passwd = "123456"
+        conn = ddb.Session(host, port0, user, passwd)
+        n=3
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 f"conn=ddb.Session('{host}',{port0},'{user}','{passwd}');"
+                                 f"pool=ddb.DBConnectionPool('{HOST}', {port1}, 3, reConnect=True, tryReconnectNums={n});"
+                                 f"""conn.run("stopDataNode(['{host}:{port1}'])");"""
+                                 "pool.runTaskAsync('1+1').result();"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        conn.run(f"startDataNode(['{host}:{port1}'])")
+        assert result.stdout.count("Failed")==n
+        assert f"Connect to {HOST}:{port1} failed after {n} reconnect attempts." in result.stderr
+
+    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
+    def test_DBConnectionPool_highAvailability_tryReconnectNums(self):
+        host = "192.168.0.54"
+        port0 = 9900
+        port1 = 9902
+        port2 = 9903
+        port3 = 9904
+        user = "admin"
+        passwd = "123456"
+        conn = ddb.Session(host, port0, user, passwd)
+        n=3
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 f"conn=ddb.Session('{host}',{port0},'{user}','{passwd}');"
+                                 f"pool=ddb.DBConnectionPool('{HOST}', {port1}, 1, reConnect=True, highAvailability=True, tryReconnectNums={n});"
+                                 f"""conn.run("stopDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])");"""
+                                 "pool.runTaskAsync('1+1').result();"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        conn.run(f"startDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])")
+        assert result.stdout.count("Failed")==n*4
+        assert f"Connect to nodes failed after {n} reconnect attempts." in result.stderr

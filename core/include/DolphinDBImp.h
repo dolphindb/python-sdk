@@ -24,9 +24,9 @@ public:
 
 class DBConnectionImpl {
 public:
-    DBConnectionImpl(bool sslEnable = false, bool asynTask = false, int keepAliveTime = 7200, bool compress = false, bool python = false, bool isReverseStreaming = false);
+    DBConnectionImpl(bool sslEnable = false, bool asynTask = false, int keepAliveTime = 7200, bool compress = false, bool python = false, bool isReverseStreaming = false, int sqlStd = 0);
     ~DBConnectionImpl();
-    bool connect(const string& hostName, int port, const string& userId = "", const string& password = "",bool sslEnable = false, bool asynTask = false, int keepAliveTime = -1, bool compress= false, bool python = false);
+    bool connect(const string& hostName, int port, const string& userId = "", const string& password = "",bool sslEnable = false, bool asynTask = false, int keepAliveTime = -1, bool compress= false, bool python = false, int readTimeout = -1, int writeTimeout = -1);
     void login(const string& userId, const string& password, bool enableEncryption);
     ConstantSP run(const string& script, int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false);
     ConstantSP run(const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false);
@@ -56,7 +56,14 @@ public:
         int fetchSize = 0, bool clearMemory = false,
         bool pickleTableToList = false, bool disableDecimal = false);
     void setkeepAliveTime(int keepAliveTime){
-        keepAliveTime_ = keepAliveTime;
+        if (keepAliveTime > 0)
+            keepAliveTime_ = keepAliveTime;
+    }
+    void setTimeout(int readTimeout, int writeTimeout) {
+        if (readTimeout > 0)
+            readTimeout_ = readTimeout;
+        if (writeTimeout > 0)
+            writeTimeout_ = writeTimeout;
     }
     const string getSessionId() const {
         return sessionId_;
@@ -91,6 +98,9 @@ private:
     bool msg_;
     static DdbInit ddbInit_;
     bool isReverseStreaming_;
+    int sqlStd_;
+    int readTimeout_;
+    int writeTimeout_;
     DataInputStreamSP inputStream_;
     Mutex mutex_;
 };

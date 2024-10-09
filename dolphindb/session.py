@@ -16,8 +16,15 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 from dolphindb._core import DolphinDBRuntime
 from dolphindb.database import Database
-from dolphindb.settings import (DDB_EPSILON, PROTOCOL_ARROW, PROTOCOL_DDB,
-                                PROTOCOL_DEFAULT, PROTOCOL_PICKLE)
+from dolphindb.settings import (
+    DDB_EPSILON,
+    PROTOCOL_ARROW,
+    PROTOCOL_DDB,
+    PROTOCOL_DEFAULT,
+    PROTOCOL_PICKLE,
+    default_protocol,
+    SqlStd,
+)
 from dolphindb.table import Table
 from dolphindb.utils import _generate_dbname, _generate_tablename, month
 from pandas import DataFrame
@@ -43,25 +50,41 @@ class DBConnectionPool(object):
         reConnect : whether to enable reconnection. True means enabled, otherwise False. Defaults to False.
         enablePickle : whether to enable the Pickle protocol. Defaults to False.
         python : whether to enable the Python parser. True means enabled, otherwise False. Defaults to False.
-        protocol : the data transmission protocol. Defaults to PROTOCOL_DEFAULT, which is equivalant to PROTOCOL_PICKLE.
+        protocol : the data transmission protocol. Defaults to PROTOCOL_DEFAULT, which is equivalant to PROTOCOL_DDB.
 
     Kwargs:
         show_output : whether to display the output of print statements in the script after execution. Defaults to True.
+        sqlStd: an enum specifying the syntax to parse input SQL scripts. Three parsing syntaxes are supported: DolphinDB (default), Oracle, and MySQL.
+        tryReconnectNums: the number of reconnection attempts when reconnection is enabled. If high availability mode is on, it will retry tryReconnectNums times for each node. None means unlimited reconnection attempts. Defaults to None.
 
     Note:
         If the parameter python is True, the script is parsed in Python rather than DolphinDB language.
     """
     def __init__(
-        self, host: str, port: int, threadNum: int = 10, userid: str = None, password: str = None,
-        loadBalance: bool = False, highAvailability: bool = False, compress: bool = False,
-        reConnect: bool = False, python: bool = False, protocol: int = PROTOCOL_DEFAULT,
-        *, show_output: bool = True
+        self,
+        host: str,
+        port: int,
+        threadNum: int = 10,
+        userid: str = None,
+        password: str = None,
+        loadBalance: bool = False,
+        highAvailability: bool = False,
+        compress: bool = False,
+        reConnect: bool = False,
+        python: bool = False,
+        protocol: int = PROTOCOL_DEFAULT,
+        *,
+        show_output: bool = True,
+        sqlStd: SqlStd = SqlStd.DolphinDB,
+        tryReconnectNums: Optional[int] = None,
     ):
         """Constructor of DBConnectionPool, including the number of threads, load balancing, high availability, reconnection, compression and Pickle protocol."""
         userid = userid if userid is not None else ""
         password = password if password is not None else ""
+
         if protocol == PROTOCOL_DEFAULT:
-            protocol = PROTOCOL_PICKLE
+            protocol = default_protocol
+
         if protocol not in [PROTOCOL_DEFAULT, PROTOCOL_DDB, PROTOCOL_PICKLE, PROTOCOL_ARROW]:
             raise RuntimeError(f"Protocol {protocol} is not supported. ")
 
@@ -71,8 +94,26 @@ class DBConnectionPool(object):
         if protocol == PROTOCOL_ARROW:
             __import__("pyarrow")
 
+        if tryReconnectNums is None:
+            tryReconnectNums = -1
+
         self.mutex = Lock()
-        self.pool = ddbcpp.dbConnectionPoolImpl(host, port, threadNum, userid, password, loadBalance, highAvailability, compress, reConnect, python, protocol, show_output)
+        self.pool = ddbcpp.dbConnectionPoolImpl(
+            host,
+            port,
+            threadNum,
+            userid,
+            password,
+            loadBalance,
+            highAvailability,
+            compress,
+            reConnect,
+            python,
+            protocol,
+            show_output,
+            sqlStd.value,
+            tryReconnectNums,
+        )
         self.host = host
         self.port = port
         self.userid = userid
@@ -87,7 +128,16 @@ class DBConnectionPool(object):
         if hasattr(self, "pool") and self.pool is not None:
             self.shutDown()
 
-    async def run(self, script: str, *args, **kwargs):
+    async def run(
+        self,
+        script: str,
+        *args,
+        clearMemory: Optional[bool] = None,
+        pickleTableToList: Optional[bool] = None,
+        priority: Optional[int] = None,
+        parallelism: Optional[int] = None,
+        disableDecimal: Optional[bool] = None,
+    ):
         """Coroutine function.
 
         Pass the script to the connection pool to call the thread execution with the run method.
@@ -103,7 +153,7 @@ class DBConnectionPool(object):
             clearMemory : whether to release variables after queries. True means to release, otherwise False. Defaults to True.
             pickleTableToList : whether to convert table to list or DataFrame. True: to list, False: to DataFrame. Defaults to False.
             priority : a job priority system with 10 priority levels (0 to 9), allocating thread resources to high-priority jobs and using round-robin allocation for jobs of the same priority. Defaults to 4.
-            parallelism : parallelism determines the maximum number of threads to execute a job's tasks simultaneously on a data node; the system optimizes resource utilization by allocating all available threads to a job if there's only one job running and multiple local executors are available. Defaults to 2.
+            parallelism : parallelism determines the maximum number of threads to execute a job's tasks simultaneously on a data node; the system optimizes resource utilization by allocating all available threads to a job if there's only one job running and multiple local executors are available. Defaults to 64.
             disableDecimal: whether to convert decimal to double in the result table. True: convert to double, False: return as is. Defaults to False.
 
         Returns:
@@ -113,20 +163,29 @@ class DBConnectionPool(object):
             When setting pickleTableToList=True and enablePickle=True, if the table contains array vectors, it will be converted to a NumPy 2d array.
             If the length of each row is different, the execution fails.
         """
-        priority = kwargs.get('priority', 4)
-        parallelism = kwargs.get('parallelism', 64)
-        if type(priority) is not int or priority > 9 or priority < 0:
-            raise RuntimeError("priority must be an integer from 0 to 9")
-        if type(parallelism) is not int or parallelism <= 0:
-            raise RuntimeError("parallelism must be an integer greater than 0")
+        if clearMemory is None:
+            clearMemory = True
+        if priority is not None:
+            if not isinstance(priority, int) or priority > 9 or priority < 0:
+                raise RuntimeError("priority must be an integer from 0 to 9")
+        if parallelism is not None:
+            if not isinstance(parallelism, int) or parallelism <= 0:
+                raise RuntimeError("parallelism must be an integer greater than 0")
 
         self.mutex.acquire()
         self.taskId = self.taskId + 1
         tid = self.taskId
         self.mutex.release()
-        if "clearMemory" not in kwargs.keys():
-            kwargs["clearMemory"] = True
-        self.pool.run(script, tid, *args, **kwargs)
+        self.pool.run(
+            script,
+            tid,
+            *args,
+            clearMemory=clearMemory,
+            pickleTableToList=pickleTableToList,
+            priority=priority,
+            parallelism=parallelism,
+            disableDecimal=disableDecimal,
+        )
         while True:
             isFinished = self.pool.isFinished(tid)
             if isFinished == 0:
@@ -151,8 +210,6 @@ class DBConnectionPool(object):
         Returns:
             execution result.
         """
-        if "clearMemory" not in kwargs.keys():
-            kwargs["clearMemory"] = True
         return self.pool.run(script, taskId, *args, **kwargs)
 
     def isFinished(self, taskId: int) -> bool:
@@ -217,8 +274,6 @@ class DBConnectionPool(object):
         """
         if self.loop is None:
             self.startLoop()
-        if "clearMemory" not in kwargs.keys():
-            kwargs["clearMemory"] = True
         task = asyncio.run_coroutine_threadsafe(self.run(script, *args, **kwargs), self.loop)
         return task
 
@@ -238,8 +293,6 @@ class DBConnectionPool(object):
         Returns:
             concurrent.futures.Future object for receiving data.
         """
-        if "clearMemory" not in kwargs.keys():
-            kwargs["clearMemory"] = True
         warnings.warn("Please use runTaskAsync instead of runTaskAsyn.", DeprecationWarning, stacklevel=2)
         return self.runTaskAsync(script, *args, **kwargs)
 
@@ -315,11 +368,12 @@ class Session(object):
         enableChunkGranularityConfig : whether to enable chunk granularity configuration. Defaults to False.
         compress : whether to enable compressed communication. Defaults to False.
         enablePickle : whether to enable the Pickle protocol. Defaults to True.
-        protocol: the data transmission protocol. Defaults to PROTOCOL_DEFAULT, which is equivalant to PROTOCOL_PICKLE.
+        protocol: the data transmission protocol. Defaults to PROTOCOL_DEFAULT, which is equivalant to PROTOCOL_DDB.
         python : whether to enable python parser. Defaults to False.
 
     Kwargs:
         show_output : whether to display the output of print statements in the script after execution. Defaults to True.
+        sqlStd: an enum specifying the syntax to parse input SQL scripts. Three parsing syntaxes are supported: DolphinDB (default), Oracle, and MySQL.
 
     Note:
         set enableSSL =True to enable encrypted communication. It's also required to configure enableHTTPS =true in the server.
@@ -331,15 +385,14 @@ class Session(object):
         self, host: Optional[str] = None, port: Optional[int] = None,
         userid: Optional[str] = "", password: Optional[str] = "", enableSSL: bool = False,
         enableASYNC: bool = False, keepAliveTime: int = 30, enableChunkGranularityConfig: bool = False,
-        compress: bool = False, enablePickle: bool = None, protocol: int = PROTOCOL_DEFAULT,
-        python: bool = False, *, show_output: bool = True, **kwargs
+        compress: bool = False, enablePickle: Optional[bool] = None, protocol: int = PROTOCOL_DEFAULT,
+        python: bool = False, *, enableASYN=None, show_output: bool = True, sqlStd: SqlStd = SqlStd.DolphinDB,
     ):
         """Constructor of Session, inluding OpenSSL encryption, asynchronous mode, TCP detection, block granularity matching, compression, Pickle protocol."""
-        if 'enableASYN' in kwargs.keys():
-            enableASYNC = kwargs['enableASYN']
+        if enableASYN is not None:
+            enableASYNC = enableASYN
             warnings.warn("Please use enableASYNC instead of enableASYN.", DeprecationWarning, stacklevel=2)
 
-        default_protocol = PROTOCOL_PICKLE
         if protocol == PROTOCOL_DEFAULT:
             protocol = PROTOCOL_PICKLE if enablePickle else PROTOCOL_DDB
             if enablePickle is None:
@@ -356,7 +409,7 @@ class Session(object):
         if protocol == PROTOCOL_ARROW:
             __import__("pyarrow")
 
-        self.cpp = ddbcpp.sessionimpl(enableSSL, enableASYNC, keepAliveTime, compress, python, protocol, show_output)
+        self.cpp = ddbcpp.sessionimpl(enableSSL, enableASYNC, keepAliveTime, compress, python, protocol, show_output, sqlStd.value)
         self.host = host
         self.port = port
         self.userid = userid
@@ -376,7 +429,11 @@ class Session(object):
     def connect(
         self, host: str, port: int, userid: str = None, password: str = None, startup: str = None,
         highAvailability: bool = False, highAvailabilitySites: Optional[List[str]] = None,
-        keepAliveTime: Optional[int] = None, reconnect: bool = False
+        keepAliveTime: Optional[int] = None, reconnect: bool = False,
+        *,
+        tryReconnectNums: Optional[int] = None,
+        readTimeout: Optional[int] = None,
+        writeTimeout: Optional[int] = None,
     ) -> bool:
         """Establish connection, including initialization script, high availability, TCP detection.
 
@@ -391,6 +448,11 @@ class Session(object):
             keepAliveTime : the duration between two keepalive transmissions to detect the TCP connection status. Defaults to None, meaning keepAliveTime = 30 (seconds). Set the parameter to release half-open TCP connections timely when the network is unstable.
             reconnect : whether to enable reconnection. True means enabled, otherwise False. Defaults to False.
 
+        Kwargs:
+            tryReconnectNums ：the number of reconnection attempts when reconnection is enabled. If high availability mode is on, it will retry tryReconnectNums times for each node. None means unlimited reconnection attempts. Defaults to None.
+            readTimeout : the read timeout in seconds. If None, no timeout is set. Corresponds to the `SO_RCVTIMEO` socket option. Defaults to None.
+            writeTimeout : the write timeout in seconds. If None, no timeout is set. Corresponds to the `SO_SNDTIMEO` socket option. Defaults to None.
+
         Returns:
             whether the connection is established. True if established, otherwise False.
         """
@@ -404,7 +466,21 @@ class Session(object):
             password = ""
         if startup is None:
             startup = ""
-        if self.cpp.connect(host, port, userid, password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect):
+
+        if tryReconnectNums is None:
+            tryReconnectNums = -1
+
+        if readTimeout is None:
+            readTimeout = -1
+        else:
+            readTimeout = int(readTimeout * 1000)
+
+        if writeTimeout is None:
+            writeTimeout = -1
+        else:
+            writeTimeout = int(writeTimeout * 1000)
+
+        if self.cpp.connect(host, port, userid, password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect, tryReconnectNums, readTimeout, writeTimeout):
             self.host = host
             self.port = port
             self.userid = userid
@@ -461,7 +537,17 @@ class Session(object):
         """
         return self.cpp.upload(nameObjectDict)
 
-    def run(self, script: str, *args, **kwargs):
+    def run(
+        self,
+        script: str,
+        *args,
+        clearMemory: Optional[bool] = None,
+        pickleTableToList: Optional[bool] = None,
+        priority: Optional[int] = None,
+        parallelism: Optional[int] = None,
+        fetchSize: Optional[int] = None,
+        disableDecimal: Optional[bool] = None,
+    ):
         """Execute script.
 
         Args:
@@ -475,7 +561,7 @@ class Session(object):
             clearMemory : whether to release variables after queries. True means to release, otherwise False. Defaults to False.
             pickleTableToList : whether to convert table to list or DataFrame. True: to list, False: to DataFrame.  Defaults to False.
             priority : a job priority system with 10 priority levels (0 to 9), allocating thread resources to high-priority jobs and using round-robin allocation for jobs of the same priority. Defaults to 4.
-            parallelism : parallelism determines the maximum number of threads to execute a job's tasks simultaneously on a data node; the system optimizes resource utilization by allocating all available threads to a job if there's only one job running and multiple local executors are available. Defaults to 2.
+            parallelism : parallelism determines the maximum number of threads to execute a job's tasks simultaneously on a data node; the system optimizes resource utilization by allocating all available threads to a job if there's only one job running and multiple local executors are available. Defaults to 64.
             fetchSize : the size of a block.
             disableDecimal: whether to convert decimal to double in the result table. True: convert to double, False: return as is. Defaults to False.
 
@@ -488,17 +574,32 @@ class Session(object):
         Note:
             When setting pickleTableToList=True and enablePickle=True, if the table contains array vectors, it will be converted to a NumPy 2d array. If the length of each row is different, the execution fails.
         """
-        priority = kwargs.get('priority', 4)
-        parallelism = kwargs.get('parallelism', 64)
-        if type(priority) is not int or priority > 9 or priority < 0:
-            raise RuntimeError("priority must be an integer from 0 to 9")
-        if type(parallelism) is not int or parallelism <= 0:
-            raise RuntimeError("parallelism must be an integer greater than 0")
+        if priority is not None:
+            if not isinstance(priority, int) or priority > 9 or priority < 0:
+                raise RuntimeError("priority must be an integer from 0 to 9")
+        if parallelism is not None:
+            if not isinstance(parallelism, int) or parallelism <= 0:
+                raise RuntimeError("parallelism must be an integer greater than 0")
 
-        if kwargs:
-            if "fetchSize" in kwargs.keys():
-                return BlockReader(self.cpp.runBlock(script, **kwargs))
-        return self.cpp.run(script, *args, **kwargs)
+        if fetchSize is not None:
+            return BlockReader(
+                self.cpp.runBlock(
+                    script,
+                    clearMemory=clearMemory,
+                    fetchSize=fetchSize,
+                    priority=priority,
+                    parallelism=parallelism,
+                )
+            )
+        return self.cpp.run(
+            script,
+            *args,
+            clearMemory=clearMemory,
+            pickleTableToList=pickleTableToList,
+            priority=priority,
+            parallelism=parallelism,
+            disableDecimal=disableDecimal,
+        )
 
     def runFile(self, filepath: str, *args, **kwargs):
         """Execute script.
@@ -522,7 +623,7 @@ class Session(object):
         """
         with open(filepath, "r") as fp:
             script = fp.read()
-            return self.run(script, *args, **kwargs)
+        return self.run(script, *args, **kwargs)
 
     def getSessionId(self) -> str:
         """Get the Session ID of the current Session.
@@ -675,7 +776,7 @@ class Session(object):
             True.
         """
         tblName = tbl.tableName()
-        dbName =  _generate_dbname()
+        dbName = _generate_dbname()
         s1 = dbName+"=database('"+dbPath+"')"
         self.run(s1)
         s2 = "saveTable(%s, %s)" % (dbName, tblName)
@@ -1068,7 +1169,7 @@ class Session(object):
         """Set the TCP timeout.
 
         Args:
-            timeout : corresponds to the TCP_USER_TIMEOUT option. Specify the value in units of seconds. 
+            timeout : corresponds to the TCP_USER_TIMEOUT option. Specify the value in units of seconds.
         """
         ddbcpp.sessionimpl.setTimeout(timeout)
 

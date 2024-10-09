@@ -116,6 +116,7 @@ struct HIDEVISIBILITY Preserved {
     py::object pafloat32_;
     py::object pafloat64_;
     py::object padictionary_int32_utf8_;
+    py::object paDictionaryType_;
     py::object pautf8_;
     py::object pafixed_size_binary_16_;
     py::object palarge_binary_;

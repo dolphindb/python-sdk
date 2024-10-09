@@ -7078,7 +7078,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
                                                                          np.array([None], dtype="object")]})),
         ],
         "download": [
-            ("{}_bool_0".format(testTypeTable), pd.DataFrame({"bool_0": [np.array([True, False], dtype="object"),
+            ("{}_bool_0".format(testTypeTable), pd.DataFrame({"bool_0": [np.array([True, False]),
                                                                          np.array([None, True, False], dtype="object"),
                                                                          np.array([True, None, False], dtype="object"),
                                                                          np.array([True, False, None], dtype="object"),

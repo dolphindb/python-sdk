@@ -50,7 +50,7 @@ class TestLoadText:
 
 class DBInfo:
     dfsDBName = 'dfs://testLoadTextEx'
-    diskDBName = WORK_DIR + '/testLoadTextEx'
+    diskDBName = REMOTE_WORK_DIR + '/testLoadTextEx'
     table1 = 'tb1'
     table2 = 'tb2'
 

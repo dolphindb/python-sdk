@@ -161,10 +161,10 @@ ConstantSP Constant::getColumnLabel() const {
 
 
 
-DBConnection::DBConnection(bool enableSSL, bool asynTask, int keepAliveTime, bool compress, bool python, bool isReverseStreaming) :
-	conn_(new DBConnectionImpl(enableSSL, asynTask, keepAliveTime, compress, python, isReverseStreaming)), uid_(""), pwd_(""), ha_(false),
+DBConnection::DBConnection(bool enableSSL, bool asynTask, int keepAliveTime, bool compress, bool python, bool isReverseStreaming, int sqlStd) :
+	conn_(new DBConnectionImpl(enableSSL, asynTask, keepAliveTime, compress, python, isReverseStreaming, sqlStd)), uid_(""), pwd_(""), ha_(false),
 		enableSSL_(enableSSL), asynTask_(asynTask), compress_(compress), python_(python), nodes_({}), protocol_(PROTOCOL_DDB),
-		lastConnNodeIndex_(0), reconnect_(false), closed_(true), msg_(true){
+		lastConnNodeIndex_(0), reconnect_(false), closed_(true), msg_(true), tryReconnectNums_(-1) {
 }
 
 DBConnection::DBConnection(DBConnection&& oth) :
@@ -196,13 +196,18 @@ DBConnection::~DBConnection() {
 }
 
 bool DBConnection::connect(const string& hostName, int port, const string& userId, const string& password, const string& startup,
-                           bool ha, const vector<string>& highAvailabilitySites, int keepAliveTime, bool reconnect) {
+                           bool ha, const vector<string>& highAvailabilitySites, int keepAliveTime, bool reconnect, int tryReconnectNums, int readTimeout, int writeTimeout) {
     ha_ = ha;
 	uid_ = userId;
 	pwd_ = password;
     initialScript_ = startup;
 	reconnect_ = reconnect;
 	closed_ = false;
+    setKeepAliveTime(keepAliveTime);
+    setTimeout(readTimeout, writeTimeout);
+
+    tryReconnectNums_ = (tryReconnectNums <= 0) ? -1 : tryReconnectNums;
+
     if (ha_) {
 		for (auto &one : highAvailabilitySites)
 			nodes_.push_back(Node(one));
@@ -220,7 +225,9 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 		Node connectedNode;
 		TableSP table;
 		while (closed_ == false) {
+            int attempt = 0;
 			while(conn_->isConnected()==false && closed_ == false) {
+                ++attempt;
 				for (auto &one : nodes_) {
 					if (connectNode(one.hostName, one.port, keepAliveTime)) {
 						connectedNode = one;
@@ -228,6 +235,10 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 					}
 					Thread::sleep(100);
 				}
+                if (tryReconnectNums_ > 0 && attempt >= tryReconnectNums_) {
+                    std::cerr<< "Connect failed after " << tryReconnectNums_ << " reconnect attempts for every node in high availability sites.";
+                    return false;
+                }
 			}
 			try {
 				table = conn_->run("rpc(getControllerAlias(), getClusterPerf)");
@@ -313,7 +324,13 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
     } else {
 		if (reconnect_) {
 			nodes_.push_back(Node(hostName, port));
-			switchDataNode();
+            try {
+                switchDataNode(hostName, port);
+            }
+            catch (std::exception &e) {
+                std::cerr << e.what() << std::endl;
+                return false;
+            }
 		}
 		else {
 			if (!connectNode(hostName, port, keepAliveTime))
@@ -340,7 +357,7 @@ bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
 	//int attempt = 0;
 	while (closed_ == false) {
 		try {
-			return conn_->connect(hostName, port, uid_, pwd_, enableSSL_, asynTask_, keepAliveTime, compress_,python_);
+			return conn_->connect(hostName, port, uid_, pwd_, enableSSL_, asynTask_, keepAliveTime, compress_, python_);
 		}
 		catch (IOException& e) {
 			if (connected()) {
@@ -394,26 +411,35 @@ DBConnection::ExceptionType DBConnection::parseException(const string &msg, stri
 }
 
 void DBConnection::switchDataNode(const string &host, int port) {
+    int attempt = 0;
     bool connected = false;
-    while (connected == false && closed_ == false){
+    while (closed_ == false && connected == false && (tryReconnectNums_ < 0 || attempt < tryReconnectNums_)){
         if (!host.empty()) {
             if (connectNode(host, port)) {
                 connected = true;
                 break;
             }
         }
-        if (nodes_.empty()) {
-            throw RuntimeException("Failed to connect to " + host + ":" + std::to_string(port));
-        }
-        for (int i = static_cast<int>(nodes_.size() - 1); i >= 0; i--) {
-            lastConnNodeIndex_ = (lastConnNodeIndex_ + 1) % nodes_.size();
-            if (connectNode(nodes_[lastConnNodeIndex_].hostName, nodes_[lastConnNodeIndex_].port)) {
-                connected = true;
-                break;
+        else {
+            if (nodes_.empty()) {
+                throw RuntimeException("Failed to connect to " + host + ":" + std::to_string(port));
+            }
+            for (int i = static_cast<int>(nodes_.size() - 1); i >= 0; i--) {
+                lastConnNodeIndex_ = (lastConnNodeIndex_ + 1) % nodes_.size();
+                if (connectNode(nodes_[lastConnNodeIndex_].hostName, nodes_[lastConnNodeIndex_].port)) {
+                    connected = true;
+                    break;
+                }
             }
         }
-        if(connected) break;
         Thread::sleep(1000);
+        ++attempt;
+    }
+    if (!closed_ && !connected) {
+        if (host.empty()) {
+            throw RuntimeException(std::string("Connect to nodes failed after ") + std::to_string(attempt) + " reconnect attempts.");
+        }
+        throw RuntimeException(std::string("Connect to ") + host + ":" + std::to_string(port) + " failed after " + std::to_string(attempt) + " reconnect attempts.");
     }
     if (connected && initialScript_.empty() == false)
         run(initialScript_);
@@ -474,7 +500,12 @@ py::object DBConnection::runPy(
                 else{
                 	parseException(e.what(), host, port);
                 }
-                switchDataNode(host, port);
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port);
+                }
+                else {
+                    switchDataNode(host, port);
+                }
             }
         }
         return py::none();
@@ -637,6 +668,10 @@ void DBConnection::setKeepAliveTime(int keepAliveTime){
     conn_->setkeepAliveTime(keepAliveTime);
 }
 
+void DBConnection::setTimeout(int readTimeout, int writeTimeout) {
+    conn_->setTimeout(readTimeout, writeTimeout);
+}
+
 void DBConnection::setProtocol(PROTOCOL protocol) {
     protocol_ = protocol;
     conn_->setProtocol(protocol);
@@ -697,8 +732,8 @@ void BlockReader::skipAll(){
 
 
 DBConnectionPool::DBConnectionPool(const string& hostName, int port, int threadNum, const string& userId, const string& password,
-				bool loadBalance, bool highAvailability, bool compress, bool reConnect, bool python, PROTOCOL protocol, bool showOutput)
-    : pool_(new DBConnectionPoolImpl(hostName, port, threadNum, userId, password, loadBalance, highAvailability, compress,reConnect,python,protocol,showOutput))
+				bool loadBalance, bool highAvailability, bool compress, bool reConnect, bool python, PROTOCOL protocol, bool showOutput, int sqlStd, int tryReconnectNums)
+    : pool_(new DBConnectionPoolImpl(hostName, port, threadNum, userId, password, loadBalance, highAvailability, compress,reConnect,python,protocol,showOutput, sqlStd, tryReconnectNums))
 {}
 DBConnectionPool::~DBConnectionPool(){}
 void DBConnectionPool::run(const string& script, int identity, int priority, int parallelism, int fetchSize, bool clearMemory){
