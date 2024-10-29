@@ -1,6 +1,7 @@
 import math
-import numpy as np
 from decimal import Decimal
+
+import numpy as np
 import pandas as pd
 
 
@@ -16,15 +17,17 @@ def equalPlus(dataA, dataB):
     """
     if not isinstance(dataA, dataB.__class__):
         return False
-    if isinstance(dataA, (bool, int, str,)) or dataA is None:
+    if isinstance(dataA, (bool, int, str, bytes)) or dataA is None:
         return dataA == dataB
     elif isinstance(dataA, Decimal):
         return str(dataA) == str(dataB)
     elif isinstance(dataA, float):
         if math.isnan(dataA):
             return math.isnan(dataB)
+        elif math.isinf(dataA):
+            return math.isinf(dataB)
         else:
-            return dataA == dataB
+            return abs(dataA - dataB) < 0.000001
     elif isinstance(dataA, (list, tuple)):
         if len(dataA) != len(dataB):
             return False

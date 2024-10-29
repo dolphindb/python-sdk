@@ -1,19 +1,18 @@
+import copy
 from locale import atoi
 from operator import add, and_, eq, floordiv, ge, gt, le, lshift, lt, mul, ne, or_, rshift, sub, truediv, mod
-import pytest
-from setup.prepare import generate_uuid, get_TableData, get_scripts, eval_table_with_data, eval_sql_with_data
-
-from setup.settings import *
 
 import dolphindb as ddb
 import dolphindb.settings as keys
-import numpy as np
 import pandas as pd
+import pytest
 import statsmodels.api as sm
 from numpy.testing import *
 from pandas.testing import *
+
+from setup.prepare import generate_uuid, get_TableData, get_scripts, eval_table_with_data, eval_sql_with_data
+from setup.settings import *
 from setup.utils import get_pid
-import copy
 
 # pytestmark = pytest.mark.skip("有很多error和failure待修复")
 
@@ -39,25 +38,27 @@ loadPTable = names["loadPTable"]
 loadTableBySQL = names["loadTableBySQL"]
 loadTextEx = names["loadTextEx"]
 loadTextEx2 = names["loadTextEx$"]
-        
+
 df_python = pythons["DataFrame"]
 dict_python = pythons["dict"]
 dict2_python = pythons["dict_list"]
 csv_df = pythons["csv_df"]
 
+
 def get_combinations(data_list):
     from itertools import combinations
     res = []
     for i in range(len(data_list)):
-        for x in combinations(data_list, i+1):
+        for x in combinations(data_list, i + 1):
             res.append(x)
     return res
+
 
 @pytest.fixture(scope="function")
 def flushed_table_n100(request):
     conn_fixture = ddb.session(HOST, PORT, USER, PASSWD)
     conn_fixture.run(get_scripts("undefShare"))
-    
+
     (scripts, names), pythons = get_TableData(names="AllTrade", n=100)
     conn_fixture.run(scripts)
     NormalTable = names["NormalTable"]
@@ -69,7 +70,7 @@ def flushed_table_n100(request):
     KeyedTable = names["KeyedTable"]
     ShareKeyedTable = names["ShareKeyedTable"]
     PartitionedTable = names["PartitionedTable"]
-            
+
     df_python = pythons["DataFrame"]
     dict_python = pythons["dict"]
     dict2_python = pythons["dict_list"]
@@ -90,6 +91,7 @@ def flushed_table_n100(request):
     }
 
     yield tabledict[request.param]
+
 
 operators = {
     "or": or_,
@@ -119,6 +121,7 @@ corresponds = {
     "==": "==",
 }
 
+
 class TestFilterCond:
     conn = ddb.session()
 
@@ -129,6 +132,7 @@ class TestFilterCond:
             self.conn.connect(HOST, PORT, USER, PASSWD)
             self.conn.run(get_scripts("undefShare"))
             self.conn.run(scripts)
+
     # def teardown_method(self):
     #     self.conn.undefAll()
     #     self.conn.clearAllCache()
@@ -137,7 +141,7 @@ class TestFilterCond:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -146,11 +150,11 @@ class TestFilterCond:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
 
-    @pytest.mark.parametrize('right', ["rightName"] + [ddb.FilterCond("tmpc", x, "tmpd") for x in operators], 
-                                     ids=["rightName"] + ["R_"+str(x) for x in operators ])
+    @pytest.mark.parametrize('right', ["rightName"] + [ddb.FilterCond("tmpc", x, "tmpd") for x in operators],
+                             ids=["rightName"] + ["R_" + str(x) for x in operators])
     @pytest.mark.parametrize('op', operators.keys(), ids=operators.keys())
-    @pytest.mark.parametrize('left', ["leftName"] + [ddb.FilterCond("tmpa", x, "tmpb") for x in operators], 
-                                     ids=["leftName"] + ["L_"+str(x) for x in operators ])
+    @pytest.mark.parametrize('left', ["leftName"] + [ddb.FilterCond("tmpa", x, "tmpb") for x in operators],
+                             ids=["leftName"] + ["L_" + str(x) for x in operators])
     def test_TestFilterCond_init_str(self, left, right, op):
         FilterCondtmp = ddb.FilterCond(left, op, right)
         assert FilterCondtmp._FilterCond__lhs == left
@@ -158,11 +162,11 @@ class TestFilterCond:
         assert FilterCondtmp._FilterCond__op == op
         assert str(FilterCondtmp) == "({} {} {})".format(str(left), str(op), str(right))
 
-    @pytest.mark.parametrize('right', ["rightName"] + [ddb.FilterCond("tmpc", x, "tmpd") for x in operators], 
-                                     ids=["rightName"] + ["R_"+str(x) for x in operators ])
+    @pytest.mark.parametrize('right', ["rightName"] + [ddb.FilterCond("tmpc", x, "tmpd") for x in operators],
+                             ids=["rightName"] + ["R_" + str(x) for x in operators])
     @pytest.mark.parametrize('op', operators.keys(), ids=operators.keys())
-    @pytest.mark.parametrize('left', ["leftName"] + [ddb.FilterCond("tmpa", x, "tmpb") for x in operators], 
-                                     ids=["leftName"] + ["L_"+str(x) for x in operators ])
+    @pytest.mark.parametrize('left', ["leftName"] + [ddb.FilterCond("tmpa", x, "tmpb") for x in operators],
+                             ids=["leftName"] + ["L_" + str(x) for x in operators])
     def test_TestFilterCond_op(self, left, right, op):
         if op == '%' and str(left) == 'leftName':
             pytest.skip("this op is not expected.")
@@ -175,6 +179,7 @@ class TestFilterCond:
         else:
             assert str(res) == "({} {} {})".format(str(left), str(op), str(right))
 
+
 class TestVector:
     conn = ddb.session()
 
@@ -185,6 +190,7 @@ class TestVector:
             self.conn.connect(HOST, PORT, USER, PASSWD)
             self.conn.run(get_scripts("undefShare"))
             self.conn.run(scripts)
+
     # def teardown_method(self):
     #     self.conn.undefAll()
     #     self.conn.clearAllCache()
@@ -193,7 +199,7 @@ class TestVector:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -208,7 +214,7 @@ class TestVector:
                 f.write(cls.__name__ + ' finished.\n')
 
     @pytest.mark.parametrize('datas', [df_python, dict_python, dict2_python],
-                                     ids=["DF", "DICT", "DICT_List"])
+                             ids=["DF", "DICT", "DICT_List"])
     def test_Vector_init_bytable_bydataframe_bydict(self, datas):
 
         for data in datas:
@@ -228,7 +234,8 @@ class TestVector:
                     assert not tmp.vecs[vi]._Vector__vec
                     assert tmp.vecs[vi]._Vector__session is self.conn
 
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, SharedTable], ids=["DF", "DICT", "DICT_List", "NAME"])
+    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, SharedTable],
+                             ids=["DF", "DICT", "DICT_List", "NAME"])
     def test_Vector_init(self, python_data):
 
         for data, name in zip(python_data, SharedTable):
@@ -252,8 +259,9 @@ class TestVector:
                     assert vectmp._Vector__tableName == name
                     assert vectmp._Vector__session is self.conn
                     assert_series_equal(vectmp._Vector__vec, pd.Series(data[col]))
-    
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, SharedTable], ids=["DF", "DICT", "DICT_List", "NAME"])
+
+    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, SharedTable],
+                             ids=["DF", "DICT", "DICT_List", "NAME"])
     def test_Vector_name_tableName_str(self, python_data):
 
         for data, name in zip(python_data, SharedTable):
@@ -264,7 +272,8 @@ class TestVector:
                 assert vectmp.tableName() == vectmp._Vector__tableName
                 assert str(vectmp) == col
 
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, NormalTable], ids=["DF", "DICT", "DICT_List", "NAME"])
+    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, NormalTable],
+                             ids=["DF", "DICT", "DICT_List", "NAME"])
     @pytest.mark.parametrize('useCache', [True, False, None], ids=["T_Cache", "F_Cache", "N_Cache"])
     def test_Vector_as_series(self, python_data, useCache):
         self.conn.run(NormalTable[0])
@@ -277,16 +286,17 @@ class TestVector:
                 res = vectmp.as_series(useCache)
                 if isinstance(data, str):
                     assert res.name == None
-                    res.name=col
+                    res.name = col
                     assert_series_equal(res, self.conn.run("select * from {}".format(data))[col])
                 elif isinstance(data, dict):
                     assert_series_equal(res, pd.Series(data[col]))
                 elif isinstance(data, pd.DataFrame):
                     assert res.name == None
-                    res.name=col
+                    res.name = col
                     assert_series_equal(res, pd.Series(data[col]))
 
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, NormalTable], ids=["DF", "DICT", "DICT_List", "NAME"])
+    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, NormalTable],
+                             ids=["DF", "DICT", "DICT_List", "NAME"])
     def test_Vector_op(self, python_data):
 
         self.conn.run(NormalTable[0])
@@ -296,13 +306,14 @@ class TestVector:
             colNames = self.conn.run(get_scripts("colNames").format(tableName=name))
             for col in colNames:
                 vectmp = ddb.Vector(name=col, data=data, s=self.conn, tableName=name)
-        
+
+
 class TestCounter:
     @classmethod
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -325,7 +336,7 @@ class TestCounter:
 
         counter2 = ddb.Counter()
         assert counter2._Counter__value == 1
-    
+
     def test_Counter_dec(self):
         counter1 = ddb.Counter()
         assert counter1._Counter__value == 1
@@ -344,7 +355,8 @@ class TestCounter:
         assert counter1.val() == 3
         counter1.dec()
         assert counter1.val() == 2
-    
+
+
 class TestTable:
     conn = ddb.session()
 
@@ -355,6 +367,7 @@ class TestTable:
             self.conn.connect(HOST, PORT, USER, PASSWD)
             self.conn.run(get_scripts("undefShare"))
             self.conn.run(scripts)
+
     # def teardown_method(self):
     #     self.conn.undefAll()
     #     self.conn.clearAllCache()
@@ -363,7 +376,7 @@ class TestTable:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -376,12 +389,12 @@ class TestTable:
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
-    
+
     @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python], ids=["DF", "DICT", "DICT_List"])
     @pytest.mark.parametrize('tableName', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                           IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable"])
+                                           IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable"])
     def test_session_table_data_bydataframe_bydict(self, python_data, tableName):
 
         if len(tableName) == 3:
@@ -397,9 +410,9 @@ class TestTable:
             assert_frame_equal(self.conn.run("select * from {}".format(alias)), pd.DataFrame(data))
 
     @pytest.mark.parametrize('tableName', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                           IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable"])
+                                           IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable"])
     def test_session_table_data_bystr(self, tableName):
 
         if len(tableName) == 3:
@@ -431,9 +444,9 @@ class TestTable:
 
     @pytest.mark.parametrize('python_data', [df_python], ids=["DF"])
     @pytest.mark.parametrize('tableName', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                           IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable"])
+                                           IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable"])
     def test_session_table_tableAliasName_data_bystr(self, python_data, tableName):
 
         if len(tableName) == 3:
@@ -464,7 +477,7 @@ class TestTable:
     def test_session_table_partitions(self, colName):
         pass
 
-    @pytest.mark.parametrize('file', [loadText, loadText2,], ids=["csv_,", "csv_$"])
+    @pytest.mark.parametrize('file', [loadText, loadText2, ], ids=["csv_,", "csv_$"])
     def test_session_loadText(self, file):
 
         for i, name in enumerate(file[2:]):
@@ -473,7 +486,7 @@ class TestTable:
             ex = csv_df[i]
             assert_frame_equal(re, ex)
 
-    @pytest.mark.parametrize('file', [ploadText, ploadText2,], ids=["csv_,", "csv_$"])
+    @pytest.mark.parametrize('file', [ploadText, ploadText2, ], ids=["csv_,", "csv_$"])
     def test_session_ploadText(self, file):
 
         for i, name in enumerate(file[2:]):
@@ -482,16 +495,15 @@ class TestTable:
             ex = csv_df[i]
             assert_frame_equal(re, ex)
 
-    @pytest.mark.parametrize('file', [loadTextEx, loadTextEx2,], ids=["csv_,", "csv_$"])
+    @pytest.mark.parametrize('file', [loadTextEx, loadTextEx2, ], ids=["csv_,", "csv_$"])
     def test_session_loadTextEx(self, file):
 
         self.conn.run(file[1])
         for id, name in enumerate(file[4:6]):
-            re = self.conn.loadTextEx(file[2], file[id+7], [file[6]], DATA_DIR+"/{}".format(name), file[3])
+            re = self.conn.loadTextEx(file[2], file[id + 7], [file[6]], DATA_DIR + "/{}".format(name), file[3])
             re = re.toDF().sort_values("index", ascending=True).reset_index(drop=True)
             ex = csv_df[id]
             assert_frame_equal(re, ex)
-        
 
     # @pytest.mark.NOW
     def test_session_loadTable_bystr(self):
@@ -519,10 +531,6 @@ class TestTable:
             re = re.sort_values("index", ascending=True).reset_index(drop=True)
             ex = df_python[id]
             assert_frame_equal(re, ex)
-
-    
-
-    
 
     @pytest.mark.parametrize('python_data', [df_python], ids=["DF"])
     @pytest.mark.parametrize('needGC', [True, False], ids=["T_GC", "F_GC"])
@@ -587,13 +595,13 @@ class TestTable:
 
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_getattr(self, data):
 
-        def test_getattr(conntmp:ddb.session, tabletmp:ddb.Table):
+        def test_getattr(conntmp: ddb.session, tabletmp: ddb.Table):
             cols = conntmp.run(get_scripts("colNames").format(tableName=tabletmp.tableName()))
             for col in cols:
                 # res = compile("tabletmp.{}".format(col), "", 'eval')
@@ -605,14 +613,13 @@ class TestTable:
     # TODO: this fucntion is not easy to test
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_getitem(self, data):
 
-
-        def test_getitem(conntmp:ddb.session, tabletmp:ddb.Table):
+        def test_getitem(conntmp: ddb.session, tabletmp: ddb.Table):
             cols = conntmp.run(get_scripts("colNames").format(tableName=tabletmp.tableName()))
             for col in cols:
                 res1 = tabletmp[col]
@@ -623,17 +630,16 @@ class TestTable:
             assert_frame_equal(res1.toDF(), res2.toDF())
 
         eval_table_with_data(self.conn, data, test_getitem)
-    
+
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_property(self, data):
 
-
-        def test_get_proprety(conntmp:ddb.session, tabletmp:ddb.Table):
+        def test_get_proprety(conntmp: ddb.session, tabletmp: ddb.Table):
             # tableName
             assert tabletmp.tableName() == tabletmp._Table__tableName
             assert tabletmp._getTableName() == tabletmp._Table__tableName
@@ -648,7 +654,7 @@ class TestTable:
 
             assert tabletmp.colNames == [str(x) for x in tabletmp.toDF().columns]
             assert_frame_equal(tabletmp.schema, conntmp.run("schema({})".format(tabletmp.tableName()))['colDefs'])
-            
+
             assert tabletmp.isMergeForUpdate == tabletmp._Table__merge_for_update
             assert tabletmp.isExec == tabletmp._Table__exec
 
@@ -657,14 +663,14 @@ class TestTable:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_toDataFrame(self, data):
 
-
-        def test_toDataFrame(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_toDataFrame(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             assert_frame_equal(tb1.toDataFrame(), tb1.toDF())
             assert tb1.toDataFrame.__code__.co_code == tb1.toDF.__code__.co_code
 
@@ -673,19 +679,19 @@ class TestTable:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_setMergeForUpdate(self, data):
 
-
-        def test_setMergeForUpdate(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_setMergeForUpdate(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                   df2: pd.DataFrame, partitioned: bool = False):
             assert tb1._Table__merge_for_update == False
 
             tb1.setMergeForUpdate(True)
             assert tb1._Table__merge_for_update == True
-            
+
             tb1.setMergeForUpdate(False)
             assert tb1._Table__merge_for_update == False
 
@@ -694,14 +700,14 @@ class TestTable:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_sql_select_where(self, data):
 
-
-        def test_select_where(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_select_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             # select index,ask from t
             tmp1 = copy.copy(tb1)
             re = tmp1.select(["index", "price"])
@@ -756,7 +762,7 @@ class TestTable:
             else:
                 re = re.toDF().reset_index(drop=True)
                 assert_frame_equal(re, df)
-            
+
             # select index,symbol,price from t where time <= 1970.01.01 10:01:03 order by index desc
             tmp1 = copy.copy(tb1)
             re = tmp1.select(["index", "symbol", "price"])
@@ -766,19 +772,19 @@ class TestTable:
             assert "where (time <= 1970.01.01 10:01:03) order by index desc" in sql
 
         eval_sql_with_data(self.conn, data, test_select_where)
-    
+
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     @pytest.mark.parametrize('select_data', ["index", ("index"), ("index", "symbol"), ["index"], ["index", "symbol"]])
     def test_table_select(self, data, select_data):
 
-
-        def test_select(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, select_data, partitioned:bool=False):
+        def test_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                        select_data, partitioned: bool = False):
             # select index from t
             re = tb1.select(select_data).toDF()
             if isinstance(select_data, tuple):
@@ -788,20 +794,20 @@ class TestTable:
             df = df1[select_data].reset_index(drop=True)
             re = re.reset_index(drop=True)
             assert_frame_equal(re, df)
-            
+
         eval_sql_with_data(self.conn, data, test_select, select_data)
 
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_where(self, data):
 
-
-        def test_where_str1(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_where_str1(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                            partitioned: bool = False):
             # select index from t
             re = tb1.where("index % 3 == 0")
             sql = re.showSQL()
@@ -810,7 +816,8 @@ class TestTable:
             re = re.toDF().reset_index(drop=True)
             assert_frame_equal(re, df)
 
-        def test_where_str2(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_where_str2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                            partitioned: bool = False):
             # select index from t
             re = tb1.where("index % 3 == 0 and symbol == `X")
             sql = re.showSQL()
@@ -819,7 +826,8 @@ class TestTable:
             re = re.toDF().reset_index(drop=True)
             assert_frame_equal(re, df)
 
-        def test_where_tuple(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_where_tuple(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             # select index from t
             re = tb1.where(("index % 3 == 0", "symbol == `X"))
             sql = re.showSQL()
@@ -828,7 +836,8 @@ class TestTable:
             re = re.toDF().reset_index(drop=True)
             assert_frame_equal(re, df)
 
-        def test_where_list(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_where_list(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                            partitioned: bool = False):
             # select index from t
             re = tb1.where(["index % 3 == 0", "symbol == `X"])
             sql = re.showSQL()
@@ -836,8 +845,9 @@ class TestTable:
             df = df1[(df1["index"] % 3 == 0) & (df1["symbol"] == "X")].reset_index(drop=True)
             re = re.toDF().reset_index(drop=True)
             assert_frame_equal(re, df)
-        
-        def test_where_cond1(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_where_cond1(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             # select index from t
             re = tb1.where((ddb.FilterCond("index", "%", 3) == 0) & ddb.FilterCond("symbol", "==", "`X"))
             sql = re.showSQL()
@@ -846,7 +856,8 @@ class TestTable:
             re = re.toDF().reset_index(drop=True)
             assert_frame_equal(re, df)
 
-        def test_where_cond2(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_where_cond2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             # select index from t
             re = tb1.where(((ddb.FilterCond("index", "%", 3) == 0), ddb.FilterCond("symbol", "==", "`X")))
             sql = re.showSQL()
@@ -865,28 +876,30 @@ class TestTable:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_top(self, data):
 
-
-        def test_top_num(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_top_num(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                         partitioned: bool = False):
             # select index from t
             re = tb1.top(5).toDF()
             df = df1[:5].reset_index(drop=True)
             re = re.reset_index(drop=True)
             assert_frame_equal(re, df)
 
-        def test_top_str1(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_top_str1(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                          partitioned: bool = False):
             # select index from t
             re = tb1.top("5").toDF()
             df = df1[:5].reset_index(drop=True)
             re = re.reset_index(drop=True)
             assert_frame_equal(re, df)
 
-        def test_top_str2(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_top_str2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                          partitioned: bool = False):
             # select index from t
             re = tb1.top("5:19").toDF()
             df = df1[5:19].reset_index(drop=True)
@@ -900,20 +913,21 @@ class TestTable:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     @pytest.mark.parametrize('limit', [5, (5), (5, 18), [5], [5, 18], "5", ("5"), ("5", "18"), ["5"], ["5", "18"]])
     def test_table_limit(self, data, limit):
 
-
-        def test_limit(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_limit(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                       partitioned: bool = False):
             # select index from t
             re = tb1.limit(limit).toDF()
             if (isinstance(limit, list) or isinstance(limit, tuple)):
                 if len(limit) == 2:
-                    df = df1.copy()[atoi(str(limit[0])):atoi(str(limit[0]))+atoi(str(limit[1]))].reset_index(drop=True)
+                    df = df1.copy()[atoi(str(limit[0])):atoi(str(limit[0])) + atoi(str(limit[1]))].reset_index(
+                        drop=True)
                 else:
                     df = df1.copy()[:atoi(str(limit[0]))].reset_index(drop=True)
             else:
@@ -922,26 +936,30 @@ class TestTable:
             assert_frame_equal(re, df)
 
         eval_sql_with_data(self.conn, data, test_limit)
-        
+
     # @pytest.mark.NOW
     # @pytest.mark.skip(reason="This case has many bugs.[300 failed]")
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys', ["index", ("index"), ["index"], ("size", "price"), ["size", "price"], ("price", "size"), ["price", "size"]])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('bys',
+                             ["index", ("index"), ["index"], ("size", "price"), ["size", "price"], ("price", "size"),
+                              ["price", "size"]])
     @pytest.mark.parametrize('ascending', [True, False, (True), (False), [True], [False], (True, False), [True, False]])
     def test_table_sort(self, data, bys, ascending):
 
-
-        def test_sort(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, bys, ascending, partitioned:bool=False):
-            if (isinstance(bys, list) or isinstance(bys, tuple)) and (isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
+        def test_sort(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame, bys,
+                      ascending, partitioned: bool = False):
+            if (isinstance(bys, list) or isinstance(bys, tuple)) and (
+                    isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
                 with pytest.raises(ValueError) as e:
                     re = tb1.sort(bys, ascending=ascending)
                 return
-            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(ascending) != 1:
+            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(
+                    ascending) != 1:
                 with pytest.raises(ValueError) as e:
                     re = tb1.sort(bys, ascending=ascending)
                 return
@@ -964,21 +982,25 @@ class TestTable:
     # @pytest.mark.skip(reason="This case has many bugs.[300 failed]")
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys', ["index", ("index"), ["index"], ("size", "price"), ["size", "price"], ("price", "size"), ["price", "size"]])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('bys',
+                             ["index", ("index"), ["index"], ("size", "price"), ["size", "price"], ("price", "size"),
+                              ["price", "size"]])
     @pytest.mark.parametrize('ascending', [True, False, (True), (False), [True], [False], (True, False), [True, False]])
     def test_table_csort_contextby(self, data, bys, ascending):
 
-
-        def test_csort_contextby(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, bys, ascending, partitioned:bool=False):
-            if (isinstance(bys, list) or isinstance(bys, tuple)) and (isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
+        def test_csort_contextby(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                 df2: pd.DataFrame, bys, ascending, partitioned: bool = False):
+            if (isinstance(bys, list) or isinstance(bys, tuple)) and (
+                    isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
                 with pytest.raises(ValueError) as e:
                     re = tb1.top(2).csort(bys, ascending=ascending).contextby("symbol")
                 return
-            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(ascending) != 1:
+            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(
+                    ascending) != 1:
                 with pytest.raises(ValueError) as e:
                     re = tb1.top(2).csort(bys, ascending=ascending).contextby("symbol")
                 return
@@ -992,16 +1014,19 @@ class TestTable:
             if isinstance(ascending, bool):
                 ascending = [ascending for _ in range(len(bys))]
             _csort = [by + " desc" if asc == False else by for by, asc in zip(bys, ascending)]
-            ex = conntmp.run("select top 2 * from {} context by symbol csort {}".format(tb1.tableName(), ",".join(_csort)))
+            ex = conntmp.run(
+                "select top 2 * from {} context by symbol csort {}".format(tb1.tableName(), ",".join(_csort)))
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
             if partitioned:
-                assert_frame_equal(re.sort_values("index", ascending=True).reset_index(drop=True), ex.sort_values("index", ascending=True).reset_index(drop=True))
+                assert_frame_equal(re.sort_values("index", ascending=True).reset_index(drop=True),
+                                   ex.sort_values("index", ascending=True).reset_index(drop=True))
             else:
                 assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             if partitioned:
-                assert_frame_equal(re.sort_values("index", ascending=True).reset_index(drop=True), ex.sort_values("index", ascending=True).reset_index(drop=True))
+                assert_frame_equal(re.sort_values("index", ascending=True).reset_index(drop=True),
+                                   ex.sort_values("index", ascending=True).reset_index(drop=True))
             else:
                 assert_frame_equal(re, ex)
 
@@ -1009,11 +1034,11 @@ class TestTable:
 
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                    IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                    df_python, dict_python, dict2_python, PartitionedTable], 
-                                        ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                        "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                        "DF", "DICT", "DICT_List", "PTable"])
+                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     @pytest.mark.parametrize('on', [["symbol", None, None],
                                     [["symbol"], None, None],
                                     [["symbol", "time"], None, None],
@@ -1022,12 +1047,13 @@ class TestTable:
                                     [None, None, None],
                                     [None, ["symbol"], ["symbol", "ask"]],
                                     ])
-    @pytest.mark.parametrize('how', [("left", "lj"), ("right", "lj"), ("inner", "ej"), ("outer", "fj"), ("left semi", "lsj")], 
-                                    ids=["left", "right", "inner", "outer", "left semi"])
+    @pytest.mark.parametrize('how',
+                             [("left", "lj"), ("right", "lj"), ("inner", "ej"), ("outer", "fj"), ("left semi", "lsj")],
+                             ids=["left", "right", "inner", "outer", "left semi"])
     def test_table_merge_without_select(self, data, on, how):
 
-
-        def test_merge_without_select(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, on, how, partitioned:bool=False):
+        def test_merge_without_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                      df2: pd.DataFrame, on, how, partitioned: bool = False):
             on_0, on_1, on_2 = on
             if on[0] is not None and not isinstance(on_0, list) and not isinstance(on_0, tuple):
                 on_0 = [on_0]
@@ -1038,7 +1064,7 @@ class TestTable:
             if on[2] is not None and not isinstance(on_2, list) and not isinstance(on_2, tuple):
                 on_2 = [on_2]
             on_2_str = "`" + "`".join(on_2) if on[2] else ""
-            
+
             if on[0] is None and on[1] is None and on[2] is None:
                 with pytest.raises(Exception):
                     re = copy.copy(tb1).merge(tb2, how=how[0], on=on[0], left_on=on[1], right_on=on[2])
@@ -1051,14 +1077,20 @@ class TestTable:
             re = copy.copy(tb1).merge(tb2, how=how[0], on=on[0], left_on=on[1], right_on=on[2]).toDF()
             if on[0] is not None:
                 if how[0] == "right":
-                    df = conntmp.run('select * from {}({}, {}, {})'.format(how[1], tb2.tableName(), tb1.tableName(), on_0_str))
+                    df = conntmp.run(
+                        'select * from {}({}, {}, {})'.format(how[1], tb2.tableName(), tb1.tableName(), on_0_str))
                 else:
-                    df = conntmp.run('select * from {}({}, {}, {})'.format(how[1], tb1.tableName(), tb2.tableName(), on_0_str))
+                    df = conntmp.run(
+                        'select * from {}({}, {}, {})'.format(how[1], tb1.tableName(), tb2.tableName(), on_0_str))
             else:
                 if how[0] == "right":
-                    df = conntmp.run('select * from {}({}, {}, {}, {})'.format(how[1], tb2.tableName(), tb1.tableName(), on_2_str, on_1_str))
+                    df = conntmp.run(
+                        'select * from {}({}, {}, {}, {})'.format(how[1], tb2.tableName(), tb1.tableName(), on_2_str,
+                                                                  on_1_str))
                 else:
-                    df = conntmp.run('select * from {}({}, {}, {}, {})'.format(how[1], tb1.tableName(), tb2.tableName(), on_1_str, on_2_str))
+                    df = conntmp.run(
+                        'select * from {}({}, {}, {}, {})'.format(how[1], tb1.tableName(), tb2.tableName(), on_1_str,
+                                                                  on_2_str))
             re = re.sort_values(by="index").reset_index(drop=True)
             df = df.sort_values(by="index").reset_index(drop=True)
             re.columns = [str(i) for i, k in enumerate(re.columns)]
@@ -1069,11 +1101,11 @@ class TestTable:
 
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                    IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                    df_python, dict_python, dict2_python, PartitionedTable], 
-                                        ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                        "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                        "DF", "DICT", "DICT_List", "PTable"])
+                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     @pytest.mark.parametrize('on', [["time", None, None],
                                     [["time"], None, None],
                                     [["symbol", "time"], None, None],
@@ -1084,8 +1116,8 @@ class TestTable:
                                     ])
     def test_table_merge_asof_without_select(self, data, on):
 
-
-        def test_merge_asof_without_select(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, on, partitioned:bool=False):
+        def test_merge_asof_without_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                           df2: pd.DataFrame, on, partitioned: bool = False):
             on_0, on_1, on_2 = on
             if on[0] is not None and not isinstance(on_0, list) and not isinstance(on_0, tuple):
                 on_0 = [on_0]
@@ -1099,7 +1131,7 @@ class TestTable:
 
             if partitioned and on_0 is not None and len(on_0) == 1:
                 pytest.skip(reason="For distributed aj, the number of matching columns must be larger than 1!")
-            
+
             if on[0] is None and on[1] is None and on[2] is None:
                 with pytest.raises(Exception):
                     re = copy.copy(tb1).merge_asof(tb2, on=on[0], left_on=on[1], right_on=on[2])
@@ -1113,7 +1145,8 @@ class TestTable:
             if on[0] is not None:
                 df = conntmp.run('select * from aj({}, {}, {})'.format(tb1.tableName(), tb2.tableName(), on_0_str))
             else:
-                df = conntmp.run('select * from aj({}, {}, {}, {})'.format(tb1.tableName(), tb2.tableName(), on_1_str, on_2_str))
+                df = conntmp.run(
+                    'select * from aj({}, {}, {}, {})'.format(tb1.tableName(), tb2.tableName(), on_1_str, on_2_str))
             re = re.sort_values(by="index").reset_index(drop=True)
             df = df.sort_values(by="index").reset_index(drop=True)
             re.columns = [str(i) for i, k in enumerate(re.columns)]
@@ -1121,14 +1154,14 @@ class TestTable:
             assert_frame_equal(re, df)
 
         eval_sql_with_data(self.conn, data, test_merge_asof_without_select, on)
-    
+
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                    IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                    df_python, dict_python, dict2_python, PartitionedTable], 
-                                        ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                        "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                        "DF", "DICT", "DICT_List", "PTable"])
+                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     @pytest.mark.parametrize('on', [["time", None, None],
                                     [["time"], None, None],
                                     [["symbol", "time"], None, None],
@@ -1143,8 +1176,8 @@ class TestTable:
     ])
     def test_table_merge_window_without_select(self, data, on, bound, func):
 
-
-        def test_merge_window_without_select(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, on, bound, func, partitioned:bool=False):
+        def test_merge_window_without_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                             df2: pd.DataFrame, on, bound, func, partitioned: bool = False):
             on_0, on_1, on_2 = on
             if on[0] is not None and not isinstance(on_0, list) and not isinstance(on_0, tuple):
                 on_0 = [on_0]
@@ -1161,22 +1194,30 @@ class TestTable:
             func_str = "<[" + ",".join(func_) + "]>"
 
             if partitioned and on_0 is not None and len(on_0) == 1:
-                pytest.skip(reason="When joining two partitioned tables, the matching columns must include all partitioning columns.")
-            
+                pytest.skip(
+                    reason="When joining two partitioned tables, the matching columns must include all partitioning columns.")
+
             if on[0] is None and on[1] is None and on[2] is None:
                 with pytest.raises(Exception):
-                    re = copy.copy(tb1).merge_window(tb2, bound[0], bound[1], func, on=on[0], left_on=on[1], right_on=on[2])
+                    re = copy.copy(tb1).merge_window(tb2, bound[0], bound[1], func, on=on[0], left_on=on[1],
+                                                     right_on=on[2])
                 return
             if on_1 is not None and on_2 is not None and len(on_1) != len(on_2):
                 with pytest.raises(Exception):
-                    re = copy.copy(tb1).merge_window(tb2, bound[0], bound[1], func, on=on[0], left_on=on[1], right_on=on[2])
+                    re = copy.copy(tb1).merge_window(tb2, bound[0], bound[1], func, on=on[0], left_on=on[1],
+                                                     right_on=on[2])
                 return
 
-            re = copy.copy(tb1).merge_window(tb2, bound[0], bound[1], func, on=on[0], left_on=on[1], right_on=on[2]).toDF()
+            re = copy.copy(tb1).merge_window(tb2, bound[0], bound[1], func, on=on[0], left_on=on[1],
+                                             right_on=on[2]).toDF()
             if on[0] is not None:
-                df = conntmp.run('select * from wj({}, {},{}:{},{}, {})'.format(tb1.tableName(), tb2.tableName(), bound[0], bound[1], func_str, on_0_str))
+                df = conntmp.run(
+                    'select * from wj({}, {},{}:{},{}, {})'.format(tb1.tableName(), tb2.tableName(), bound[0], bound[1],
+                                                                   func_str, on_0_str))
             else:
-                df = conntmp.run('select * from wj({}, {},{}:{},{}, {}, {})'.format(tb1.tableName(), tb2.tableName(), bound[0], bound[1], func_str, on_1_str, on_2_str))
+                df = conntmp.run(
+                    'select * from wj({}, {},{}:{},{}, {}, {})'.format(tb1.tableName(), tb2.tableName(), bound[0],
+                                                                       bound[1], func_str, on_1_str, on_2_str))
             re = re.sort_values(by="index").reset_index(drop=True)
             df = df.sort_values(by="index").reset_index(drop=True)
             re.columns = [str(i) for i, k in enumerate(re.columns)]
@@ -1184,21 +1225,21 @@ class TestTable:
             assert_frame_equal(re, df)
 
         eval_sql_with_data(self.conn, data, test_merge_window_without_select, on, bound, func)
-    
+
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                    IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                    df_python, dict_python, dict2_python, PartitionedTable], 
-                                        ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                        "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                        "DF", "DICT", "DICT_List", "PTable"])
+                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_merge_cross_without_select(self, data):
 
-
-        def test_merge_cross_without_select(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
-
+        def test_merge_cross_without_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                            df2: pd.DataFrame, partitioned: bool = False):
             if partitioned:
-                pytest.skip(reason="When joining two partitioned tables, the matching columns must include all partitioning columns.")
+                pytest.skip(
+                    reason="When joining two partitioned tables, the matching columns must include all partitioning columns.")
 
             re = copy.copy(tb1).merge_cross(tb2).toDF()
             df = conntmp.run('select * from cj({}, {})'.format(tb1.tableName(), tb2.tableName()))
@@ -1213,7 +1254,6 @@ class TestTable:
     # TODO: add more case
     # @pytest.mark.NOW
     def test_table_ols(self):
-
 
         self.conn.run(get_scripts("clearDatabase").format(dbPath="dfs://test_table_ols"))
         self.conn.run("""
@@ -1233,14 +1273,14 @@ class TestTable:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_rename(self, data):
 
-
-        def test_rename(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_rename(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                        partitioned: bool = False):
             new_name = generate_uuid("rename_")
             tb1.rename(new_name)
             assert tb1._Table__tableName == new_name
@@ -1254,17 +1294,17 @@ class TestTable:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     @pytest.mark.parametrize('cols', [
         "*", "index", ["time"], ["index", "time"], ("time"), ("index", "time"),
     ])
     def test_table_exec(self, data, cols):
 
-
-        def test_exec(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, cols, partitioned:bool=False):
+        def test_exec(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame, cols,
+                      partitioned: bool = False):
             re = tb1.exec(cols).toDF()
             isDF = True
 
@@ -1274,7 +1314,7 @@ class TestTable:
                 else:
                     df = df1[cols]
                     isDF = False
-            elif isinstance(cols, list) or isinstance(cols, tuple):   
+            elif isinstance(cols, list) or isinstance(cols, tuple):
                 if len(cols) == 1:
                     df = df1[cols[0]]
                     isDF = False
@@ -1293,17 +1333,17 @@ class TestTable:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     @pytest.mark.parametrize('expr', [
         None, "*", "index", ["time"], ["index", "time"], ("time"), ("index", "time"),
     ])
     def test_table_execute(self, data, expr):
 
-
-        def test_execute(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, expr, partitioned:bool=False):
+        def test_execute(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                         expr, partitioned: bool = False):
             # TODO: execute must have param expr
             re = tb1.execute(expr)
             isDF = True
@@ -1312,7 +1352,7 @@ class TestTable:
             elif isinstance(expr, str):
                 df = df1[expr]
                 isDF = False
-            elif isinstance(expr, list) or isinstance(expr, tuple):   
+            elif isinstance(expr, list) or isinstance(expr, tuple):
                 if len(expr) == 1:
                     df = df1[expr[0]]
                     isDF = False
@@ -1328,18 +1368,17 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, test_execute, expr)
 
-    
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_executeAs(self, data):
 
-
-        def test_executeAs(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_executeAs(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                           partitioned: bool = False):
             new_name = generate_uuid("tmp_")
             re = conntmp.run(get_scripts("objExist").format(tableName=new_name))
             assert re == False
@@ -1354,22 +1393,22 @@ class TestTable:
             assert_frame_equal(tbtmp.toDF(), tb1.toDF())
 
         eval_sql_with_data(self.conn, data, test_executeAs)
-        
+
     # @pytest.mark.NOW
     # require separate testing drop PartitionedTable cols
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List"])
+                                      df_python, dict_python, dict2_python],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List"])
     @pytest.mark.parametrize('cols', [
         None, "time", ["time"], ["time", "symbol"], []
     ])
     def test_table_drop(self, data, cols):
 
-
-        def test_drop(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, cols, partitioned:bool=False):
+        def test_drop(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame, cols,
+                      partitioned: bool = False):
             new_name = generate_uuid("tmp_")
             conntmp.run("""
                 {} = {}
@@ -1403,14 +1442,14 @@ class TestTable:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_append(self, data):
 
-
-        def test_append(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_append(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                        partitioned: bool = False):
             new_name = generate_uuid("tmp_")
             conntmp.run("""
                 {} = {}
@@ -1428,7 +1467,7 @@ class TestTable:
 
             with pytest.raises(RuntimeError) as e:
                 tbtmp.append(df1)
-            
+
             tbtmp.append(tbdata)
             assert len(tbtmp.toDF()) == 2 * length
 
@@ -1436,12 +1475,13 @@ class TestTable:
 
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
-    def test_table_with_many_where(self,data):
-        def select_with_many_where(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_with_many_where(self, data):
+        def select_with_many_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                   df2: pd.DataFrame, partitioned: bool = False):
 
             # select * from t where symbol =`X and price = 3.0
             tmp1 = copy.copy(tb1)
@@ -1475,10 +1515,11 @@ class TestTable:
 
             # select * from pt1 where (index%3 == 0) and (price = 3.0 or price = 3.1)
             tmp1 = copy.copy(tb1)
-            re:ddb.Table = tmp1.where("index%3 == 0").where("price = 3.0 or price = 3.1")
+            re: ddb.Table = tmp1.where("index%3 == 0").where("price = 3.0 or price = 3.1")
             sql = re.showSQL()
             assert "where (index%3 == 0) and (price = 3.0 or price = 3.1)" in sql
-            df = df1.copy().query("(index%3 == 0) and (price == 3.0 or price == 3.1)").sort_values(by="index").reset_index(drop=True)
+            df = df1.copy().query("(index%3 == 0) and (price == 3.0 or price == 3.1)").sort_values(
+                by="index").reset_index(drop=True)
             # print(df)
             if partitioned:
                 df = df.sort_values(by="index").reset_index(drop=True)
@@ -1490,10 +1531,11 @@ class TestTable:
 
             # select * from t where (index%3 == 0) and (price > 3.0 and index > 30)
             tmp1 = copy.copy(tb1)
-            re:ddb.Table = tmp1.where("index%3 == 0").where("price > 3.0 and index > 30")
+            re: ddb.Table = tmp1.where("index%3 == 0").where("price > 3.0 and index > 30")
             sql = re.showSQL()
             assert "where (index%3 == 0) and (price > 3.0 and index > 30)" in sql
-            df = df1.copy().query("(index%3 == 0) and (price > 3.0 and index > 30)").sort_values(by="index").reset_index(drop=True)
+            df = df1.copy().query("(index%3 == 0) and (price > 3.0 and index > 30)").sort_values(
+                by="index").reset_index(drop=True)
             # print(df)
             if partitioned:
                 df = df.sort_values(by="index").reset_index(drop=True)
@@ -1505,6 +1547,7 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, select_with_many_where)
 
+
 class TestTableDelete:
     conn = ddb.session()
 
@@ -1515,6 +1558,7 @@ class TestTableDelete:
             self.conn.connect(HOST, PORT, USER, PASSWD)
             self.conn.run(get_scripts("undefShare"))
             self.conn.run(scripts)
+
     # def teardown_method(self):
     #     self.conn.undefAll()
     #     self.conn.clearAllCache()
@@ -1523,7 +1567,7 @@ class TestTableDelete:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -1545,7 +1589,9 @@ class TestTableDelete:
     def test_table_delete_init(self, flushed_table_n100):
 
         n = 100
-        def test_delete_init(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_delete_init(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             assert tb1._Table__ref.val() == 1
             tbtmp = tb1.delete()
             assert tbtmp._TableDelete__t._Table__tableName == tb1._Table__tableName
@@ -1563,7 +1609,9 @@ class TestTableDelete:
     def test_table_delete(self, flushed_table_n100):
 
         n = 100
-        def test_delete(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_delete(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                        partitioned: bool = False):
             assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
             tb1.delete()
             assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
@@ -1586,22 +1634,30 @@ class TestTableDelete:
     def test_table_showSQL(self, flushed_table_n100):
 
         n = 100
-        def test_showSQL(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_showSQL(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                         partitioned: bool = False):
             tbtmp = tb1.delete()
             assert tbtmp.showSQL() == tbtmp._TableDelete__t.showSQL()
 
             def execute(tabletmp):
-                assert tabletmp.showSQL() == "delete from {table}".format(table=tabletmp._TableDelete__t._Table__tableName)
+                assert tabletmp.showSQL() == "delete from {table}".format(
+                    table=tabletmp._TableDelete__t._Table__tableName)
+
             tbtmp = tb1.delete()
             execute(tbtmp)
 
             def print(tabletmp):
-                assert tabletmp.showSQL() == "delete from {table}".format(table=tabletmp._TableDelete__t._Table__tableName)
+                assert tabletmp.showSQL() == "delete from {table}".format(
+                    table=tabletmp._TableDelete__t._Table__tableName)
+
             tbtmp = tb1.delete()
             print(tbtmp)
 
             def str(tabletmp):
-                assert tabletmp.showSQL() == "delete from {table}".format(table=tabletmp._TableDelete__t._Table__tableName)
+                assert tabletmp.showSQL() == "delete from {table}".format(
+                    table=tabletmp._TableDelete__t._Table__tableName)
+
             tbtmp = tb1.delete()
             str(tbtmp)
 
@@ -1617,7 +1673,9 @@ class TestTableDelete:
     def test_table_delete_where(self, flushed_table_n100):
 
         n = 100
-        def test_delete_where(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_delete_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
             tbtmp1 = tb1.delete().where("index < 5")
             sql = tbtmp1._TableDelete__executesql()
@@ -1625,7 +1683,7 @@ class TestTableDelete:
             assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._TableDelete__t._Table__tableName)) == n
             tbtmp1 = tb1.delete().where("index < 5").execute()
             re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._Table__tableName))
-            assert re == n-4
+            assert re == n - 4
             tbtmp1_df = conntmp.table(data=df1)
             conntmp.run("delete from {} where index < 5".format(tbtmp1_df._Table__tableName))
             ex = conntmp.run("{}".format(tbtmp1_df._Table__tableName))
@@ -1637,10 +1695,11 @@ class TestTableDelete:
             assert "where (index > 50) and (symbol==`X) and (ask <= 100)" in sql
             re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2._Table__tableName))
             tbtmp2_df = conntmp.table(data=df2)
-            conntmp.run("delete from {} where index > 50 and symbol == `X and ask <= 100".format(tbtmp2_df._Table__tableName))
+            conntmp.run(
+                "delete from {} where index > 50 and symbol == `X and ask <= 100".format(tbtmp2_df._Table__tableName))
             ex = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2_df._Table__tableName))
             assert re == ex
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_delete_where)
 
     @pytest.mark.parametrize('flushed_table_n100', [
@@ -1650,7 +1709,9 @@ class TestTableDelete:
     def test_table_delete_many_where(self, flushed_table_n100):
 
         n = 100
-        def test_delete_where(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_delete_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
             tbtmp1 = tb1.delete().where("index < 5").where("price > 3")
             sql = tbtmp1._TableDelete__executesql()
@@ -1658,22 +1719,26 @@ class TestTableDelete:
             assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._TableDelete__t._Table__tableName)) == n
             tbtmp1 = tb1.delete().where("index < 5").where("price > 3").execute()
             re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._Table__tableName))
-            assert re == n-3
+            assert re == n - 3
             tbtmp1_df = conntmp.table(data=df1)
             conntmp.run("delete from {} where (index < 5) and (price > 3)".format(tbtmp1_df._Table__tableName))
             ex = conntmp.run("{}".format(tbtmp1_df._Table__tableName))
             assert_frame_equal(tbtmp1.toDF(), ex)
 
             assert conntmp.run(get_scripts("tableRows").format(tableName=tb2._Table__tableName)) == n
-            tbtmp2 = tb2.delete().where("index > 50").where("symbol==`X or symbol==`Y").where("ask <= 100 and ask > 50").execute()
-            sql = tb2.delete().where("index > 50").where("symbol==`X or symbol==`Y").where("ask <= 100 and ask > 50")._TableDelete__executesql()
+            tbtmp2 = tb2.delete().where("index > 50").where("symbol==`X or symbol==`Y").where(
+                "ask <= 100 and ask > 50").execute()
+            sql = tb2.delete().where("index > 50").where("symbol==`X or symbol==`Y").where(
+                "ask <= 100 and ask > 50")._TableDelete__executesql()
             assert "where (index > 50) and (symbol==`X or symbol==`Y) and (ask <= 100 and ask > 50)" in sql
             re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2._Table__tableName))
             tbtmp2_df = conntmp.table(data=df2)
-            conntmp.run("delete from {} where (index > 50) and (symbol==`X or symbol == `Y) and (ask <= 100 and ask > 50)".format(tbtmp2_df._Table__tableName))
+            conntmp.run(
+                "delete from {} where (index > 50) and (symbol==`X or symbol == `Y) and (ask <= 100 and ask > 50)".format(
+                    tbtmp2_df._Table__tableName))
             ex = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2_df._Table__tableName))
             assert re == ex
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_delete_where)
 
     # @pytest.mark.NOW
@@ -1684,14 +1749,17 @@ class TestTableDelete:
     def test_table_toDF(self, flushed_table_n100):
 
         n = 100
-        def test_toDF(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_toDF(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                      partitioned: bool = False):
             assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
             tbtmp1 = tb1.delete().where("index < 5")
             assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._TableDelete__t._Table__tableName)) == n
             re = tb1.delete().where("index < 5").toDF()
             assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_toDF)
+
 
 class TestTableUpdate:
     conn = ddb.session()
@@ -1703,6 +1771,7 @@ class TestTableUpdate:
             self.conn.connect(HOST, PORT, USER, PASSWD)
             self.conn.run(get_scripts("undefShare"))
             self.conn.run(scripts)
+
     # def teardown_method(self):
     #     self.conn.undefAll()
     #     self.conn.clearAllCache()
@@ -1711,7 +1780,7 @@ class TestTableUpdate:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -1724,6 +1793,7 @@ class TestTableUpdate:
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
+
     # @pytest.mark.NOW
     @pytest.mark.parametrize('flushed_table_n100', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
@@ -1732,7 +1802,9 @@ class TestTableUpdate:
     def test_table_update_without_merge(self, flushed_table_n100):
 
         n = 100
-        def test_update_without_merge(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_update_without_merge(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                      df2: pd.DataFrame, partitioned: bool = False):
             assert tb1._Table__ref.val() == 1
             tbtmp1 = tb1.update(["price"], ["price * 10"])
             assert tb1._Table__ref.val() == 2
@@ -1760,22 +1832,25 @@ class TestTableUpdate:
         [None, ["symbol", "size"], ["symbol", "ask"]],
         [None, ("symbol", "size"), ("symbol", "ask")],
     ])
-    @pytest.mark.parametrize('how', [("left", "lj"), ("right", "lj"), ("inner", "ej"), ("outer", "fj"), ("left semi", "lsj")], 
-                                    ids=["left", "right", "inner", "outer", "left semi"])
+    @pytest.mark.parametrize('how',
+                             [("left", "lj"), ("right", "lj"), ("inner", "ej"), ("outer", "fj"), ("left semi", "lsj")],
+                             ids=["left", "right", "inner", "outer", "left semi"])
     def test_table_update_merge(self, flushed_table_n100, on, how):
 
         if how[0] in ['right', 'outer']:
             pytest.skip("unsupported right or outer join")
 
         n = 100
-        def test_update_merge(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, on, how, partitioned:bool=False):
-            
+
+        def test_update_merge(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, on, how, partitioned: bool = False):
+
             if partitioned:
                 pytest.skip("merge PTable unsupported")
-            
+
             tb1_df = conntmp.table(data=df1)
             tb2_df = conntmp.table(data=df2)
-            
+
             on_0, on_1, on_2 = on
             if on[0] is not None and not isinstance(on_0, list) and not isinstance(on_0, tuple):
                 on_0 = [on_0]
@@ -1787,19 +1862,36 @@ class TestTableUpdate:
                 on_2 = [on_2]
             on_2_str = "`" + "`".join(on_2) if on[2] else ""
 
-            tb1.merge(tb2, how=how[0], on=on[0], left_on=on[1], right_on=on[2], merge_for_update=True).update(["price"], ["price*ask"]).execute()
+            tb1.merge(tb2, how=how[0], on=on[0], left_on=on[1], right_on=on[2], merge_for_update=True).update(["price"],
+                                                                                                              [
+                                                                                                                  "price*ask"]).execute()
             if on[0] is not None:
                 if how[0] == "right":
-                    df = conntmp.run('update {} set price=price*ask from {}({}, {}, {})'.format(tb1_df.tableName(), how[1], tb2_df.tableName(), tb1_df.tableName(), on_0_str))
+                    df = conntmp.run(
+                        'update {} set price=price*ask from {}({}, {}, {})'.format(tb1_df.tableName(), how[1],
+                                                                                   tb2_df.tableName(),
+                                                                                   tb1_df.tableName(), on_0_str))
                 else:
-                    df = conntmp.run('update {} set price=price*ask from {}({}, {}, {})'.format(tb1_df.tableName(), how[1], tb1_df.tableName(), tb2_df.tableName(), on_0_str))
+                    df = conntmp.run(
+                        'update {} set price=price*ask from {}({}, {}, {})'.format(tb1_df.tableName(), how[1],
+                                                                                   tb1_df.tableName(),
+                                                                                   tb2_df.tableName(), on_0_str))
             else:
                 if how[0] == "right":
-                    df = conntmp.run('update {} set price=price*ask from {}({}, {}, {}, {})'.format(tb1_df.tableName(), how[1], tb2_df.tableName(), tb1_df.tableName(), on_2_str, on_1_str))
+                    df = conntmp.run(
+                        'update {} set price=price*ask from {}({}, {}, {}, {})'.format(tb1_df.tableName(), how[1],
+                                                                                       tb2_df.tableName(),
+                                                                                       tb1_df.tableName(), on_2_str,
+                                                                                       on_1_str))
                 else:
-                    df = conntmp.run('update {} set price=price*ask from {}({}, {}, {}, {})'.format(tb1_df.tableName(), how[1], tb1_df.tableName(), tb2_df.tableName(), on_1_str, on_2_str))
+                    df = conntmp.run(
+                        'update {} set price=price*ask from {}({}, {}, {}, {})'.format(tb1_df.tableName(), how[1],
+                                                                                       tb1_df.tableName(),
+                                                                                       tb2_df.tableName(), on_1_str,
+                                                                                       on_2_str))
             re = tb1.toDF().sort_values(by="index").reset_index(drop=True)
-            df = conntmp.run("select * from {}".format(tb1_df.tableName())).sort_values(by="index").reset_index(drop=True)
+            df = conntmp.run("select * from {}".format(tb1_df.tableName())).sort_values(by="index").reset_index(
+                drop=True)
             re.columns = [str(i) for i, k in enumerate(re.columns)]
             df.columns = [str(i) for i, k in enumerate(df.columns)]
 
@@ -1815,7 +1907,9 @@ class TestTableUpdate:
     def test_table_update_where(self, flushed_table_n100):
 
         n = 100
-        def test_update_where(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_update_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             tb1.update(["price"], ["price*10"]).where("symbol=`X").execute()
             sql = tb1.update(["price"], ["price*10"]).where("symbol=`X")._TableUpdate__executesql()
             assert sql == f"update {tb1.tableName()} set price=price*10 where symbol=`X"
@@ -1833,14 +1927,19 @@ class TestTableUpdate:
         "DF", "DICT", "DICT_List", "PTable",
     ], indirect=True)
     def test_table_update_many_where(self, flushed_table_n100):
-        def test_update_where(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
-            tb1.update(["price"], ["price*10"]).where("symbol=`X or symbol =`Z").where("price > 50 and price <= 100").where("index%10=0").execute()
-            sql = tb1.update(["price"], ["price*10"]).where("symbol=`X or symbol=`Z").where("price > 50 and price <= 100").where("index%10=0")._TableUpdate__executesql()
+        def test_update_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
+            tb1.update(["price"], ["price*10"]).where("symbol=`X or symbol =`Z").where(
+                "price > 50 and price <= 100").where("index%10=0").execute()
+            sql = tb1.update(["price"], ["price*10"]).where("symbol=`X or symbol=`Z").where(
+                "price > 50 and price <= 100").where("index%10=0")._TableUpdate__executesql()
             assert sql == f"update {tb1.tableName()} set price=price*10 where (symbol=`X or symbol=`Z) and (price > 50 and price <= 100) and (index%10=0)"
             re = tb1.toDF()
             new_name = generate_uuid("tmp_")
             conntmp.upload({new_name: df1})
-            conntmp.run("update {} set price=price*10 where (symbol=`X or symbol=`Z) and (price > 50 and price <= 100) and (index%10 =0)".format(new_name))
+            conntmp.run(
+                "update {} set price=price*10 where (symbol=`X or symbol=`Z) and (price > 50 and price <= 100) and (index%10 =0)".format(
+                    new_name))
             ex = conntmp.run("select * from {}".format(new_name))
             assert_frame_equal(re, ex)
 
@@ -1854,22 +1953,30 @@ class TestTableUpdate:
     def test_table_showSQL(self, flushed_table_n100):
 
         n = 100
-        def test_showSQL(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_showSQL(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                         partitioned: bool = False):
             tbtmp = tb1.update(["price"], ["price+5"])
             assert tbtmp.showSQL() == tbtmp._TableUpdate__t.showSQL()
 
             def execute(tabletmp):
-                assert tabletmp.showSQL() == "update {table} set price=price+5".format(table=tabletmp._TableUpdate__t._Table__tableName)
+                assert tabletmp.showSQL() == "update {table} set price=price+5".format(
+                    table=tabletmp._TableUpdate__t._Table__tableName)
+
             tbtmp = tb1.update(["price"], ["price+5"])
             execute(tbtmp)
 
             def print(tabletmp):
-                assert tabletmp.showSQL() == "update {table} set price=price+5".format(table=tabletmp._TableUpdate__t._Table__tableName)
+                assert tabletmp.showSQL() == "update {table} set price=price+5".format(
+                    table=tabletmp._TableUpdate__t._Table__tableName)
+
             tbtmp = tb1.update(["price"], ["price+5"])
             print(tbtmp)
 
             def str(tabletmp):
-                assert tabletmp.showSQL() == "update {table} set price=price+5".format(table=tabletmp._TableUpdate__t._Table__tableName)
+                assert tabletmp.showSQL() == "update {table} set price=price+5".format(
+                    table=tabletmp._TableUpdate__t._Table__tableName)
+
             tbtmp = tb1.update(["price"], ["price+5"])
             str(tbtmp)
 
@@ -1885,7 +1992,9 @@ class TestTableUpdate:
     def test_table_toDF(self, flushed_table_n100):
 
         n = 100
-        def test_toDF(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_toDF(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                      partitioned: bool = False):
             assert_frame_equal(tb1.toDF(), df1)
 
             tbtmp1 = tb1.update(["price"], ["price+10"])
@@ -1894,8 +2003,9 @@ class TestTableUpdate:
 
             re = tb1.update(["price"], ["price+10"]).toDF()
             assert_frame_equal(re, df1)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_toDF)
+
 
 class TestTablePivotBy:
     conn = ddb.session()
@@ -1907,6 +2017,7 @@ class TestTablePivotBy:
             self.conn.connect(HOST, PORT, USER, PASSWD)
             self.conn.run(get_scripts("undefShare"))
             self.conn.run(scripts)
+
     # def teardown_method(self):
     #     self.conn.undefAll()
     #     self.conn.clearAllCache()
@@ -1915,7 +2026,7 @@ class TestTablePivotBy:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -1937,7 +2048,9 @@ class TestTablePivotBy:
     def test_table_pivotby(self, flushed_table_n100):
 
         n = 100
-        def test_pivotby(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_pivotby(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                         partitioned: bool = False):
             tbtmp = tb1.pivotby("index", "symbol", value="size", aggFunc=sum)
             assert tbtmp._TablePivotBy__row == "index"
             assert tbtmp._TablePivotBy__column == "symbol"
@@ -1955,7 +2068,9 @@ class TestTablePivotBy:
     def test_table_pivotby_isExec(self, flushed_table_n100):
 
         n = 100
-        def test_pivotby_isExec(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_pivotby_isExec(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.exec(["size"]).pivotby("price", "symbol")
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -1980,7 +2095,9 @@ class TestTablePivotBy:
     def test_table_pivotby_value_aggFunc(self, flushed_table_n100):
 
         n = 100
-        def test_pivotby_value_aggFunc(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_pivotby_value_aggFunc(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                       df2: pd.DataFrame, partitioned: bool = False):
             tbtmp = copy.copy(tb1).select(["index", "symbol", "price"]).pivotby("size", "symbol")
             sqlstr = tbtmp.showSQL()
             re = conntmp.run(sqlstr)
@@ -1997,7 +2114,8 @@ class TestTablePivotBy:
             re = tbtmp.toDF()
             assert_frame_equal(re, ex)
 
-            tbtmp = copy.copy(tb1).select(["index", "symbol", "price"]).pivotby("size", "symbol", value="price", aggFunc="sum")
+            tbtmp = copy.copy(tb1).select(["index", "symbol", "price"]).pivotby("size", "symbol", value="price",
+                                                                                aggFunc="sum")
             sqlstr = tbtmp.showSQL()
             re = conntmp.run(sqlstr)
             ex = conntmp.run("select sum(price) from (select * from {}) pivot by size,symbol".format(tb1.tableName()))
@@ -2005,7 +2123,8 @@ class TestTablePivotBy:
             re = tbtmp.toDF()
             assert_frame_equal(re, ex)
 
-            tbtmp = copy.copy(tb1).select(["index", "symbol", "price"]).pivotby("size", "symbol", value="price", aggFunc=sum)
+            tbtmp = copy.copy(tb1).select(["index", "symbol", "price"]).pivotby("size", "symbol", value="price",
+                                                                                aggFunc=sum)
             sqlstr = tbtmp.showSQL()
             re = conntmp.run(sqlstr)
             ex = conntmp.run("select sum(price) from (select * from {}) pivot by size,symbol".format(tb1.tableName()))
@@ -2014,7 +2133,7 @@ class TestTablePivotBy:
             assert_frame_equal(re, ex)
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_pivotby_value_aggFunc)
-    
+
     # @pytest.mark.NOW
     @pytest.mark.parametrize('flushed_table_n100', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
@@ -2023,13 +2142,15 @@ class TestTablePivotBy:
     def test_table_pivotby_executeAs(self, flushed_table_n100):
 
         n = 100
-        def test_pivotby_executeAs(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_pivotby_executeAs(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                   df2: pd.DataFrame, partitioned: bool = False):
             new_name = generate_uuid("tmp_")
             tbtmp1 = tb1.pivotby("price", "symbol", "index,time,size").executeAs(new_name)
             re = conntmp.run("select * from {}".format(new_name))
             ex = conntmp.run("select index,time,size from {} pivot by price, symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_pivotby_executeAs)
 
     # @pytest.mark.NOW
@@ -2040,8 +2161,9 @@ class TestTablePivotBy:
     def test_table_pivotby_selectAsVector(self, flushed_table_n100):
 
         n = 100
-        def test_pivotby_selectAsVector(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
 
+        def test_pivotby_selectAsVector(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                        df2: pd.DataFrame, partitioned: bool = False):
             re = tb1.pivotby("price", "symbol").selectAsVector("index")
             ex = conntmp.run("exec index from {} pivot by price, symbol".format(tb1.tableName()))
             assert_array_equal(re[0], ex[0])
@@ -2059,8 +2181,9 @@ class TestTablePivotBy:
             assert_array_equal(re[0], ex[0])
             assert_array_equal(re[1], ex[1])
             assert_array_equal(re[2], ex[2])
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_pivotby_selectAsVector)
+
 
 class TestTableGroupby:
     conn = ddb.session()
@@ -2072,6 +2195,7 @@ class TestTableGroupby:
             self.conn.connect(HOST, PORT, USER, PASSWD)
             self.conn.run(get_scripts("undefShare"))
             self.conn.run(scripts)
+
     # def teardown_method(self):
     #     self.conn.undefAll()
     #     self.conn.clearAllCache()
@@ -2080,7 +2204,7 @@ class TestTableGroupby:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -2102,7 +2226,9 @@ class TestTableGroupby:
     def test_table_groupby(self, flushed_table_n100):
 
         n = 100
-        def test_groupby(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                         partitioned: bool = False):
             tbtmp = copy.copy(tb1).groupby(["symbol"])
             assert tbtmp._TableGroupby__groupBys == ["symbol"]
             assert tbtmp._TableGroupby__having == None
@@ -2128,13 +2254,15 @@ class TestTableGroupby:
     def test_table_groupby_executeAs(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_executeAs(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_executeAs(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                   df2: pd.DataFrame, partitioned: bool = False):
             new_name = generate_uuid("tmp_")
             tb1.select(["max(size)"]).groupby(["symbol"]).executeAs(new_name)
             re = conntmp.run("select * from {}".format(new_name))
             ex = conntmp.run("select max(size) from {} group by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_executeAs)
 
     # @pytest.mark.NOW
@@ -2145,7 +2273,9 @@ class TestTableGroupby:
     def test_table_groupby_selectAsVector(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_selectAsVector(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_selectAsVector(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                        df2: pd.DataFrame, partitioned: bool = False):
             re = tb1.groupby(["symbol"]).selectAsVector("max(index)")
             ex = conntmp.run("exec max(index) from {} group by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
@@ -2157,7 +2287,7 @@ class TestTableGroupby:
             re = tb1.groupby(["symbol"]).selectAsVector(["max(index)"])
             ex = conntmp.run("exec max(index) from {} group by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_selectAsVector)
 
     # @pytest.mark.NOW
@@ -2168,13 +2298,15 @@ class TestTableGroupby:
     def test_table_groupby___getitem__(self, flushed_table_n100):
 
         n = 100
-        def test_groupby___getitem__(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby___getitem__(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                     df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.groupby(["symbol"])["max(index)"]
             assert tbtmp1._TableGroupby__t._Table__select == ["max(index)"]
             re = tbtmp1.toDF()
             ex = conntmp.run("select max(index) from {} group by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby___getitem__)
 
     # @pytest.mark.NOW
@@ -2185,7 +2317,9 @@ class TestTableGroupby:
     def test_table_groupby___next__(self, flushed_table_n100):
 
         n = 100
-        def test_groupby___next__(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby___next__(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                  df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.groupby(["symbol"])
             re = [x for x in tbtmp1]
             ex = ["symbol"]
@@ -2201,7 +2335,7 @@ class TestTableGroupby:
             re = [x for x in re]
             ex = ["symbol", "size"]
             assert re == ex
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby___next__)
 
     # @pytest.mark.NOW
@@ -2212,7 +2346,9 @@ class TestTableGroupby:
     def test_table_groupby_having(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_having(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_having(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select("max(index)").groupby(["symbol"]).having("first(size)>90")
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2220,7 +2356,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             ex = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_having)
 
     # @pytest.mark.NOW
@@ -2233,14 +2369,15 @@ class TestTableGroupby:
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
     ], indirect=True)
-    @pytest.mark.parametrize('aggcol, aggfunc, aggscript',[
+    @pytest.mark.parametrize('aggcol, aggfunc, aggscript', [
         ['index', ['sum', 'max'], 'sum(index), max(index)'],
         ['price', ['max'], 'max(price)'],
         ['time', ['first'], 'first(time)'],
         ['size', ['avg', 'sum'], 'avg(size), sum(size)'],
     ])
     def test_table_groupby_agg(self, flushed_table_n100, aggcol, aggfunc, aggscript):
-        def test_groupby_agg(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_groupby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             tbtmp1 = tb1.select([aggcol]).groupby("symbol").agg(aggfunc)
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2256,7 +2393,8 @@ class TestTableGroupby:
             })
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
-            ex = conntmp.run("select max(price), first(time), avg(size), sum(size) from {} group by symbol".format(tb1.tableName()))
+            ex = conntmp.run(
+                "select max(price), first(time), avg(size), sum(size) from {} group by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
@@ -2275,7 +2413,9 @@ class TestTableGroupby:
     def test_table_groupby_sum(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_sum(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_sum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").sum()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2283,7 +2423,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_sum)
 
     # @pytest.mark.NOW
@@ -2294,7 +2434,9 @@ class TestTableGroupby:
     def test_table_groupby_avg(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_avg(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_avg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").avg()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2302,7 +2444,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_avg)
 
     # @pytest.mark.NOW
@@ -2313,7 +2455,9 @@ class TestTableGroupby:
     def test_table_groupby_count(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_count(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_count(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").count()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2321,7 +2465,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_count)
 
     # @pytest.mark.NOW
@@ -2332,7 +2476,9 @@ class TestTableGroupby:
     def test_table_groupby_max(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_max(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_max(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").max()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2340,7 +2486,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_max)
 
     # @pytest.mark.NOW
@@ -2351,7 +2497,9 @@ class TestTableGroupby:
     def test_table_groupby_min(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_min(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_min(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").min()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2359,7 +2507,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_min)
 
     # @pytest.mark.NOW
@@ -2370,7 +2518,9 @@ class TestTableGroupby:
     def test_table_groupby_first(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_first(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_first(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["time"]).groupby("symbol").first()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2378,7 +2528,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_first)
 
     # @pytest.mark.NOW
@@ -2389,7 +2539,9 @@ class TestTableGroupby:
     def test_table_groupby_last(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_last(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_last(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["time"]).groupby("symbol").last()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2397,7 +2549,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_last)
 
     # @pytest.mark.NOW
@@ -2408,7 +2560,9 @@ class TestTableGroupby:
     def test_table_groupby_size(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_size(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_size(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").size()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2416,7 +2570,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_size)
 
     # @pytest.mark.NOW
@@ -2427,7 +2581,9 @@ class TestTableGroupby:
     def test_table_groupby_sum2(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_sum2(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_sum2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").sum2()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2435,7 +2591,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_sum2)
 
     # @pytest.mark.NOW
@@ -2446,7 +2602,9 @@ class TestTableGroupby:
     def test_table_groupby_std(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_std(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_std(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").std()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2454,7 +2612,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_std)
 
     # @pytest.mark.NOW
@@ -2465,7 +2623,9 @@ class TestTableGroupby:
     def test_table_groupby_var(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_var(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_var(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                             partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").var()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2473,7 +2633,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_var)
 
     # @pytest.mark.NOW
@@ -2484,7 +2644,9 @@ class TestTableGroupby:
     def test_table_groupby_prod(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_prod(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_prod(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").prod()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2492,7 +2654,7 @@ class TestTableGroupby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_prod)
 
     # @pytest.mark.NOW
@@ -2500,19 +2662,21 @@ class TestTableGroupby:
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
     ], indirect=True)
-    @pytest.mark.parametrize('aggfunc, aggscript',[
-        [[ddb.corr, ('ask', 'bid')], "corr(ask, bid)"], 
-        [['atImax', ('ask', 'bid')], "atImax(ask, bid)"], 
-        [['contextSum', ('ask', 'bid')], "contextSum(ask, bid)"], 
-        [[ddb.covar, ('ask', 'bid')], "covar(ask, bid)"], 
-        [[ddb.wavg, ('ask', 'bid')], "wavg(ask, bid)"], 
-        [[ddb.wsum, ('ask', 'bid')], "wsum(ask, bid)"], 
-        [[ddb.wsum, [('ask', 'bid'), ('bid', 'ask')]], "wsum(ask, bid), wsum(bid, ask)"], 
-        ])
+    @pytest.mark.parametrize('aggfunc, aggscript', [
+        [[ddb.corr, ('ask', 'bid')], "corr(ask, bid)"],
+        [['atImax', ('ask', 'bid')], "atImax(ask, bid)"],
+        [['contextSum', ('ask', 'bid')], "contextSum(ask, bid)"],
+        [[ddb.covar, ('ask', 'bid')], "covar(ask, bid)"],
+        [[ddb.wavg, ('ask', 'bid')], "wavg(ask, bid)"],
+        [[ddb.wsum, ('ask', 'bid')], "wsum(ask, bid)"],
+        [[ddb.wsum, [('ask', 'bid'), ('bid', 'ask')]], "wsum(ask, bid), wsum(bid, ask)"],
+    ])
     def test_table_groupby_agg2(self, flushed_table_n100, aggfunc, aggscript):
 
         n = 100
-        def test_groupby_agg2(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_agg2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").agg2(*aggfunc)
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
@@ -2548,7 +2712,9 @@ class TestTableGroupby:
     def test_table_groupby_wavg(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_wavg(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_wavg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").wavg(("ask", "bid"))
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
@@ -2567,7 +2733,9 @@ class TestTableGroupby:
     def test_table_groupby_wsum(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_wsum(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_wsum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").wsum(("ask", "bid"))
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
@@ -2586,7 +2754,9 @@ class TestTableGroupby:
     def test_table_groupby_covar(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_covar(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_covar(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").covar(("ask", "bid"))
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
@@ -2605,7 +2775,9 @@ class TestTableGroupby:
     def test_table_groupby_corr(self, flushed_table_n100):
 
         n = 100
-        def test_groupby_corr(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_groupby_corr(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").corr(("ask", "bid"))
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
@@ -2620,21 +2792,25 @@ class TestTableGroupby:
     # @pytest.mark.skip(reason="This case has many bugs.[300 failed]")
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys', ["price", ("price"), ["price"], ("size", "price"), ["size", "price"], ("price", "size"), ["price", "size"]])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('bys',
+                             ["price", ("price"), ["price"], ("size", "price"), ["size", "price"], ("price", "size"),
+                              ["price", "size"]])
     @pytest.mark.parametrize('ascending', [True, False, (True), (False), [True], [False], (True, False), [True, False]])
     def test_table_groupby_sort(self, data, bys, ascending):
 
-
-        def test_groupby_sort(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, bys, ascending, partitioned:bool=False):
-            if (isinstance(bys, list) or isinstance(bys, tuple)) and (isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
+        def test_groupby_sort(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                              df2: pd.DataFrame, bys, ascending, partitioned: bool = False):
+            if (isinstance(bys, list) or isinstance(bys, tuple)) and (
+                    isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
                 with pytest.raises(ValueError) as e:
                     re = tb1.select(["sum(price)"]).groupby(["symbol", "size", "price"]).sort(bys, ascending=ascending)
                 return
-            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(ascending) != 1:
+            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(
+                    ascending) != 1:
                 with pytest.raises(ValueError) as e:
                     re = tb1.select(["sum(price)"]).groupby(["symbol", "size", "price"]).sort(bys, ascending=ascending)
                 return
@@ -2648,7 +2824,9 @@ class TestTableGroupby:
             if isinstance(ascending, bool):
                 ascending = [ascending for _ in range(len(bys))]
             _sort = [by + " desc" if asc == False else by for by, asc in zip(bys, ascending)]
-            ex = conntmp.run("select sum(price) from {} group by symbol, size, price order by {}".format(tb1.tableName(), ",".join(_sort)))
+            ex = conntmp.run(
+                "select sum(price) from {} group by symbol, size, price order by {}".format(tb1.tableName(),
+                                                                                            ",".join(_sort)))
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
             assert_frame_equal(re, ex)
@@ -2661,6 +2839,7 @@ class TestTableGroupby:
     def test_table_groupby_csort(self, data, bys, ascending):
         pass
 
+
 class TestTableContextby:
     conn = ddb.session()
 
@@ -2671,6 +2850,7 @@ class TestTableContextby:
             self.conn.connect(HOST, PORT, USER, PASSWD)
             self.conn.run(get_scripts("undefShare"))
             self.conn.run(scripts)
+
     # def teardown_method(self):
     #     self.conn.undefAll()
     #     self.conn.clearAllCache()
@@ -2679,7 +2859,7 @@ class TestTableContextby:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -2701,7 +2881,9 @@ class TestTableContextby:
     def test_table_contextby(self, flushed_table_n100):
 
         n = 100
-        def test_contextby(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                           partitioned: bool = False):
             tbtmp = copy.copy(tb1).contextby(["symbol"])
             assert tbtmp._TableContextby__contextBys == ["symbol"]
             assert tbtmp._TableContextby__having == None
@@ -2727,13 +2909,15 @@ class TestTableContextby:
     def test_table_contextby_executeAs(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_executeAs(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_executeAs(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                     df2: pd.DataFrame, partitioned: bool = False):
             new_name = generate_uuid("tmp_")
             tb1.contextby(["symbol"]).executeAs(new_name)
             re = conntmp.run("select * from {}".format(new_name))
             ex = conntmp.run("select * from {} context by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_executeAs)
 
     # @pytest.mark.NOW
@@ -2744,7 +2928,9 @@ class TestTableContextby:
     def test_table_contextby_selectAsVector(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_selectAsVector(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_selectAsVector(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                          df2: pd.DataFrame, partitioned: bool = False):
             re = tb1.contextby(["symbol"]).selectAsVector("max(index)")
             ex = conntmp.run("exec max(index) from {} context by symbol".format(tb1.tableName()))
             assert_array_equal(re, ex)
@@ -2756,7 +2942,7 @@ class TestTableContextby:
             re = tb1.contextby(["symbol"]).selectAsVector(["max(index)"])
             ex = conntmp.run("exec max(index) from {} context by symbol".format(tb1.tableName()))
             assert_array_equal(re, ex)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_selectAsVector)
 
     # @pytest.mark.NOW
@@ -2767,13 +2953,15 @@ class TestTableContextby:
     def test_table_contextby___getitem__(self, flushed_table_n100):
 
         n = 100
-        def test_contextby___getitem__(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby___getitem__(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                       df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.contextby(["symbol"])["index"]
             assert tbtmp1._TableContextby__t._Table__select == ["index"]
             re = tbtmp1.toDF()
             ex = conntmp.run("select index from {} context by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby___getitem__)
 
     # @pytest.mark.NOW
@@ -2784,7 +2972,9 @@ class TestTableContextby:
     def test_table_contextby___next__(self, flushed_table_n100):
 
         n = 100
-        def test_contextby___next__(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby___next__(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                    df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.groupby(["symbol"])
             re = [x for x in tbtmp1]
             ex = ["symbol"]
@@ -2800,7 +2990,7 @@ class TestTableContextby:
             re = [x for x in re]
             ex = ["symbol", "size"]
             assert re == ex
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby___next__)
 
     # @pytest.mark.NOW
@@ -2811,7 +3001,9 @@ class TestTableContextby:
     def test_table_contextby_having(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_having(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_having(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                  df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select("index").contextby(["symbol"]).having("first(size)>90")
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2819,23 +3011,24 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             ex = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-            
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_having)
 
     # @pytest.mark.NOW
     @pytest.mark.parametrize('flushed_table_n100', [
-        "Table", 
+        "Table",
         "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
     ], indirect=True)
-    @pytest.mark.parametrize('aggcol, aggfunc, aggscript',[
+    @pytest.mark.parametrize('aggcol, aggfunc, aggscript', [
         ['index', ['sum', 'max'], 'sum(index), max(index)'],
         ['price', ['max'], 'max(price)'],
         ['time', ['first'], 'first(time)'],
         ['size', ['avg', 'sum'], 'avg(size), sum(size)'],
     ])
     def test_table_contextby_agg_list(self, flushed_table_n100, aggcol, aggfunc, aggscript):
-        def test_contextby_agg(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_contextby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select([aggcol]).contextby("symbol").agg(aggfunc)
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2854,26 +3047,29 @@ class TestTableContextby:
     def test_table_contextby_agg_tuple(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_agg(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             with pytest.raises(RuntimeError) as e:
                 tbtmp1 = tb1.select(["index"]).contextby("symbol").agg(("sum", "max"))
             assert str(e).find("invalid func format")
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_agg)
-    
+
     # @pytest.mark.NOW
     @pytest.mark.parametrize('flushed_table_n100', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
     ], indirect=True)
-    @pytest.mark.parametrize('aggcol, aggfunc, aggscript',[
+    @pytest.mark.parametrize('aggcol, aggfunc, aggscript', [
         ['index', ['sum', 'max'], 'sum(index), max(index)'],
         ['price', ['max'], 'max(price)'],
         ['time', ['first'], 'first(time)'],
         ['size', ['avg', 'sum'], 'avg(size), sum(size)'],
     ])
     def test_table_contextby_agg_str(self, flushed_table_n100, aggcol, aggfunc, aggscript):
-        def test_contextby_agg(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_contextby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select([aggcol]).contextby("symbol").agg(aggfunc)
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2892,7 +3088,9 @@ class TestTableContextby:
     def test_table_contextby_agg_dict(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_agg(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.contextby("symbol").agg({
                 'price': ["max"],
                 'time': "first",
@@ -2900,7 +3098,9 @@ class TestTableContextby:
             })
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
-            ex = conntmp.run("select symbol, max(price), first(time), avg(size), sum(size) from {} context by symbol".format(tb1.tableName()))
+            ex = conntmp.run(
+                "select symbol, max(price), first(time), avg(size), sum(size) from {} context by symbol".format(
+                    tb1.tableName()))
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
@@ -2915,7 +3115,9 @@ class TestTableContextby:
     def test_table_contextby_sum(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_sum(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_sum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").sum()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2923,7 +3125,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_sum)
 
     # @pytest.mark.NOW
@@ -2934,7 +3136,9 @@ class TestTableContextby:
     def test_table_contextby_avg(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_avg(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_avg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").avg()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2942,7 +3146,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_avg)
 
     # @pytest.mark.NOW
@@ -2953,7 +3157,9 @@ class TestTableContextby:
     def test_table_contextby_count(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_count(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_count(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").count()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2961,7 +3167,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_count)
 
     # @pytest.mark.NOW
@@ -2972,7 +3178,9 @@ class TestTableContextby:
     def test_table_contextby_max(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_max(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_max(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").max()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2980,7 +3188,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_max)
 
     # @pytest.mark.NOW
@@ -2991,7 +3199,9 @@ class TestTableContextby:
     def test_table_contextby_min(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_min(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_min(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").min()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -2999,7 +3209,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_min)
 
     # @pytest.mark.NOW
@@ -3010,7 +3220,9 @@ class TestTableContextby:
     def test_table_contextby_first(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_first(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_first(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["time"]).contextby("symbol").first()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3018,7 +3230,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_first)
 
     # @pytest.mark.NOW
@@ -3029,7 +3241,9 @@ class TestTableContextby:
     def test_table_contextby_last(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_last(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_last(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["time"]).contextby("symbol").last()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3037,7 +3251,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_last)
 
     # @pytest.mark.NOW
@@ -3048,7 +3262,9 @@ class TestTableContextby:
     def test_table_contextby_size(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_size(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_size(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").size()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3056,7 +3272,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_size)
 
     # @pytest.mark.NOW
@@ -3067,7 +3283,9 @@ class TestTableContextby:
     def test_table_contextby_sum2(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_sum2(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_sum2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").sum2()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3075,7 +3293,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_sum2)
 
     # @pytest.mark.NOW
@@ -3086,7 +3304,9 @@ class TestTableContextby:
     def test_table_contextby_std(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_std(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_std(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").std()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3094,7 +3314,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_std)
 
     # @pytest.mark.NOW
@@ -3105,7 +3325,9 @@ class TestTableContextby:
     def test_table_contextby_var(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_var(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_var(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").var()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3113,7 +3335,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_var)
 
     # @pytest.mark.NOW
@@ -3124,7 +3346,9 @@ class TestTableContextby:
     def test_table_contextby_prod(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_prod(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_prod(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").prod()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3132,7 +3356,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_prod)
 
     # @pytest.mark.NOW
@@ -3143,7 +3367,9 @@ class TestTableContextby:
     def test_table_contextby_cumsum(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_cumsum(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_cumsum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                  df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").cumsum()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3151,7 +3377,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_cumsum)
 
     # @pytest.mark.NOW
@@ -3162,7 +3388,9 @@ class TestTableContextby:
     def test_table_contextby_cummax(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_cummax(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_cummax(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                  df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").cummax()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3170,7 +3398,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_cummax)
 
     # @pytest.mark.NOW
@@ -3181,7 +3409,9 @@ class TestTableContextby:
     def test_table_contextby_cumprod(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_cumprod(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_cumprod(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                   df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["price"]).contextby("symbol").cumprod()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3189,7 +3419,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_cumprod)
 
     # @pytest.mark.NOW
@@ -3200,7 +3430,9 @@ class TestTableContextby:
     def test_table_contextby_cummin(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_cummin(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_cummin(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                  df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").cummin()
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3208,7 +3440,7 @@ class TestTableContextby:
             assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
-        
+
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_cummin)
 
     # @pytest.mark.NOW
@@ -3216,21 +3448,23 @@ class TestTableContextby:
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
     ], indirect=True)
-    @pytest.mark.parametrize('aggfunc, aggscript',[
-        [[ddb.corr, ('ask', 'bid')], "corr(ask, bid)"], 
-        [['atImax', ('ask', 'bid')], "atImax(ask, bid)"], 
-        [['contextSum', ('ask', 'bid')], "contextSum(ask, bid)"], 
-        [[ddb.covar, ('ask', 'bid')], "covar(ask, bid)"], 
-        [[ddb.wavg, ('ask', 'bid')], "wavg(ask, bid)"], 
-        [[ddb.wsum, ('ask', 'bid')], "wsum(ask, bid)"], 
-        [[ddb.wsum, [('ask', 'bid'), ('bid', 'ask')]], "wsum(ask, bid), wsum(bid, ask)"], 
-        ])
+    @pytest.mark.parametrize('aggfunc, aggscript', [
+        [[ddb.corr, ('ask', 'bid')], "corr(ask, bid)"],
+        [['atImax', ('ask', 'bid')], "atImax(ask, bid)"],
+        [['contextSum', ('ask', 'bid')], "contextSum(ask, bid)"],
+        [[ddb.covar, ('ask', 'bid')], "covar(ask, bid)"],
+        [[ddb.wavg, ('ask', 'bid')], "wavg(ask, bid)"],
+        [[ddb.wsum, ('ask', 'bid')], "wsum(ask, bid)"],
+        [[ddb.wsum, [('ask', 'bid'), ('bid', 'ask')]], "wsum(ask, bid), wsum(bid, ask)"],
+    ])
     def test_table_contextby_agg2(self, flushed_table_n100, aggfunc, aggscript):
-        def test_contextby_agg2(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_contextby_agg2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").agg2(*aggfunc)
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
-            ex = conntmp.run("select index,time,symbol,ask,bid,{} from {} context by symbol".format(aggscript, tb2.tableName()))
+            ex = conntmp.run(
+                "select index,time,symbol,ask,bid,{} from {} context by symbol".format(aggscript, tb2.tableName()))
             assert_frame_equal(re, ex)
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
@@ -3262,7 +3496,9 @@ class TestTableContextby:
     def test_table_contextby_wavg(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_wavg(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_wavg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").wavg(("ask", "bid"))
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
@@ -3281,7 +3517,9 @@ class TestTableContextby:
     def test_table_contextby_wsum(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_wsum(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_wsum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").wsum(("ask", "bid"))
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
@@ -3300,7 +3538,9 @@ class TestTableContextby:
     def test_table_contextby_covar(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_covar(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_covar(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").covar(("ask", "bid"))
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
@@ -3319,11 +3559,14 @@ class TestTableContextby:
     def test_table_contextby_corr(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_corr(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_corr(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").corr(("ask", "bid"))
             sqlstr = tbtmp2.showSQL()
             re = conntmp.run(sqlstr)
-            ex = conntmp.run("select index,time,symbol,ask,bid,corr(ask, bid) from {} context by symbol".format(tb2.tableName()))
+            ex = conntmp.run(
+                "select index,time,symbol,ask,bid,corr(ask, bid) from {} context by symbol".format(tb2.tableName()))
             assert_frame_equal(re, ex)
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
@@ -3338,7 +3581,9 @@ class TestTableContextby:
     def test_table_contextby_eachPre(self, flushed_table_n100):
 
         n = 100
-        def test_contextby_eachPre(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+
+        def test_contextby_eachPre(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                   df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.contextby("symbol").eachPre(("\\", "price"))
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
@@ -3353,21 +3598,25 @@ class TestTableContextby:
     # @pytest.mark.skip(reason="This case has many bugs.[300 failed]")
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys', ["price", ("price"), ["price"], ("size", "price"), ["size", "price"], ("price", "size"), ["price", "size"]])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('bys',
+                             ["price", ("price"), ["price"], ("size", "price"), ["size", "price"], ("price", "size"),
+                              ["price", "size"]])
     @pytest.mark.parametrize('ascending', [True, False, (True), (False), [True], [False], (True, False), [True, False]])
     def test_table_contextby_sort(self, data, bys, ascending):
 
-
-        def test_contextby_sort(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, bys, ascending, partitioned:bool=False):
-            if (isinstance(bys, list) or isinstance(bys, tuple)) and (isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
+        def test_contextby_sort(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                df2: pd.DataFrame, bys, ascending, partitioned: bool = False):
+            if (isinstance(bys, list) or isinstance(bys, tuple)) and (
+                    isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
                 with pytest.raises(ValueError) as e:
                     re = tb1.contextby(["symbol", "size", "price"]).sort(bys, ascending=ascending)
                 return
-            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(ascending) != 1:
+            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(
+                    ascending) != 1:
                 with pytest.raises(ValueError) as e:
                     re = tb1.contextby(["symbol", "size", "price"]).sort(bys, ascending=ascending)
                 return
@@ -3381,7 +3630,8 @@ class TestTableContextby:
             if isinstance(ascending, bool):
                 ascending = [ascending for _ in range(len(bys))]
             _csort = [by + " desc" if asc == False else by for by, asc in zip(bys, ascending)]
-            ex = conntmp.run("select * from {} context by symbol, size, price order by {}".format(tb1.tableName(), ",".join(_csort)))
+            ex = conntmp.run(
+                "select * from {} context by symbol, size, price order by {}".format(tb1.tableName(), ",".join(_csort)))
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
             assert_frame_equal(re, ex)
@@ -3394,21 +3644,25 @@ class TestTableContextby:
     # @pytest.mark.skip(reason="This case has many bugs.[300 failed]")
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys', ["index", ("index"), ["index"], ("size", "price"), ["size", "price"], ("price", "size"), ["price", "size"]])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('bys',
+                             ["index", ("index"), ["index"], ("size", "price"), ["size", "price"], ("price", "size"),
+                              ["price", "size"]])
     @pytest.mark.parametrize('ascending', [True, False, (True), (False), [True], [False], (True, False), [True, False]])
     def test_table_contextby_csort(self, data, bys, ascending):
 
-
-        def test_contextby_csort(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, bys, ascending, partitioned:bool=False):
-            if (isinstance(bys, list) or isinstance(bys, tuple)) and (isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
+        def test_contextby_csort(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
+                                 df2: pd.DataFrame, bys, ascending, partitioned: bool = False):
+            if (isinstance(bys, list) or isinstance(bys, tuple)) and (
+                    isinstance(ascending, list) or isinstance(ascending, tuple)) and (len(bys) != len(ascending)):
                 with pytest.raises(ValueError) as e:
                     re = tb1.top(2).contextby("symbol").csort(bys, ascending=ascending)
                 return
-            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(ascending) != 1:
+            if isinstance(bys, str) and (isinstance(ascending, tuple) or isinstance(ascending, list)) and len(
+                    ascending) != 1:
                 with pytest.raises(ValueError) as e:
                     re = tb1.top(2).contextby("symbol").csort(bys, ascending=ascending)
                 return
@@ -3422,16 +3676,19 @@ class TestTableContextby:
             if isinstance(ascending, bool):
                 ascending = [ascending for _ in range(len(bys))]
             _csort = [by + " desc" if asc == False else by for by, asc in zip(bys, ascending)]
-            ex = conntmp.run("select top 2 * from {} context by symbol csort {}".format(tb1.tableName(), ",".join(_csort)))
+            ex = conntmp.run(
+                "select top 2 * from {} context by symbol csort {}".format(tb1.tableName(), ",".join(_csort)))
             sqlstr = tbtmp1.showSQL()
             re = conntmp.run(sqlstr)
             if partitioned:
-                assert_frame_equal(re.sort_values("index", ascending=True).reset_index(drop=True), ex.sort_values("index", ascending=True).reset_index(drop=True))
+                assert_frame_equal(re.sort_values("index", ascending=True).reset_index(drop=True),
+                                   ex.sort_values("index", ascending=True).reset_index(drop=True))
             else:
                 assert_frame_equal(re, ex)
             re = tbtmp1.toDF()
             if partitioned:
-                assert_frame_equal(re.sort_values("index", ascending=True).reset_index(drop=True), ex.sort_values("index", ascending=True).reset_index(drop=True))
+                assert_frame_equal(re.sort_values("index", ascending=True).reset_index(drop=True),
+                                   ex.sort_values("index", ascending=True).reset_index(drop=True))
             else:
                 assert_frame_equal(re, ex)
 
@@ -3440,14 +3697,14 @@ class TestTableContextby:
     # @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     def test_table_contextby_top(self, data):
 
-
-        def test_top_num(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_top_num(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                         partitioned: bool = False):
             tbtmp1 = tb1.contextby("symbol").top(5)
             ex = conntmp.run("select top 5 * from {} context by symbol".format(tb1.tableName()))
             sqlstr = tbtmp1.showSQL()
@@ -3456,7 +3713,8 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        def test_top_str(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_top_str(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                         partitioned: bool = False):
             tbtmp1 = tb1.contextby("symbol").top("5")
             ex = conntmp.run("select top 5 * from {} context by symbol".format(tb1.tableName()))
             sqlstr = tbtmp1.showSQL()
@@ -3471,21 +3729,22 @@ class TestTableContextby:
     @pytest.mark.NOW
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
                                       IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable], 
-                                           ids=["Table", "STable", "streamTable", "SStreamTable", 
-                                           "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                           "DF", "DICT", "DICT_List", "PTable"])
+                                      df_python, dict_python, dict2_python, PartitionedTable],
+                             ids=["Table", "STable", "streamTable", "SStreamTable",
+                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                  "DF", "DICT", "DICT_List", "PTable"])
     @pytest.mark.parametrize('limit', [
         5, (5), [5], "5", ("5"), ["5"],
     ])
     def test_table_contextby_limit(self, data, limit):
 
-
-        def test_limit(conntmp:ddb.session, tb1:ddb.Table, tb2:ddb.Table, df1:pd.DataFrame, df2:pd.DataFrame, partitioned:bool=False):
+        def test_limit(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                       partitioned: bool = False):
             tbtmp1 = tb1.contextby("symbol").limit(limit)
             if isinstance(limit, list) or isinstance(limit, tuple):
                 if len(limit) == 2:
-                    ex = conntmp.run("select * from {} context by symbol limit {}, {}".format(tb1.tableName(), limit[0], limit[1]))
+                    ex = conntmp.run(
+                        "select * from {} context by symbol limit {}, {}".format(tb1.tableName(), limit[0], limit[1]))
                 else:
                     ex = conntmp.run("select * from {} context by symbol limit {}".format(tb1.tableName(), limit[0]))
             else:

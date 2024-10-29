@@ -1,18 +1,20 @@
 import pytest
+
+from basic_testing.prepare import DataUtils
 from basic_testing.utils import equalPlus
 from setup.prepare import *
 from setup.settings import *
-from basic_testing.prepare import DataUtils
 from setup.utils import get_pid
+
 
 class TestDownload(object):
 
     @classmethod
     def setup_class(cls):
-        cls.conn = ddb.Session(HOST, PORT, USER, PASSWD,enablePickle=False)
+        cls.conn = ddb.Session(HOST, PORT, USER, PASSWD, enablePickle=False)
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -55,15 +57,17 @@ class TestDownload(object):
         x = self.__class__.conn.run(data['value'])
         assert equalPlus(x, data['expect'])
 
-    @pytest.mark.parametrize('data',DataUtils.getVectorContainNone('download').values(),ids=[i for i in DataUtils.getVectorContainNone('download')])
-    def test_download_vector_contain_none(self,data):
-        x=self.__class__.conn.run(data['value'])
-        assert equalPlus(x,data['expect'])
+    @pytest.mark.parametrize('data', DataUtils.getVectorContainNone('download').values(),
+                             ids=[i for i in DataUtils.getVectorContainNone('download')])
+    def test_download_vector_contain_none(self, data):
+        x = self.__class__.conn.run(data['value'])
+        assert equalPlus(x, data['expect'])
 
-    @pytest.mark.parametrize('data',DataUtils.getVectorSpecial('download').values(),ids=[i for i in DataUtils.getVectorSpecial('download')])
-    def test_download_vector_special(self,data):
-        x=self.__class__.conn.run(data['value'])
-        assert equalPlus(x,data['expect'])
+    @pytest.mark.parametrize('data', DataUtils.getVectorSpecial('download').values(),
+                             ids=[i for i in DataUtils.getVectorSpecial('download')])
+    def test_download_vector_special(self, data):
+        x = self.__class__.conn.run(data['value'])
+        assert equalPlus(x, data['expect'])
 
     @pytest.mark.parametrize('data', DataUtils.getMatrix('download').values(),
                              ids=[i for i in DataUtils.getMatrix('download')])
@@ -130,4 +134,3 @@ class TestDownload(object):
     def test_download_table_contain_none(self, data):
         x = self.__class__.conn.run(data['value'])
         assert equalPlus(x, data['expect'])
-

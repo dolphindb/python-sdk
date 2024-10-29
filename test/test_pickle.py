@@ -1,13 +1,16 @@
-from dolphindb import Session
-import pickle
-import numpy as np
-import os
-import functools
-import dbm
 import collections
-import sys
 import copyreg
+import dbm
+import functools
+import os
+import pickle
+import sys
 import weakref
+
+import numpy as np
+from dolphindb import Session
+
+from setup.settings import WORK_DIR
 
 
 class ExtensionSaver:
@@ -489,24 +492,24 @@ class TestPickleUnmarshal:
     _testdata = create_data()
 
     def load(self, obj, protocol=4):
-        if os.path.exists("test.pkl"):
-            os.remove("test.pkl")
-        if os.path.exists("test.pkl_s"):
-            os.remove("test.pkl_s")
-        with open("test.pkl", "wb") as f:
+        if os.path.exists(f"{WORK_DIR}{os.sep}test.pkl"):
+            os.remove(f"{WORK_DIR}{os.sep}test.pkl")
+        if os.path.exists(f"{WORK_DIR}{os.sep}test.pkl_s"):
+            os.remove(f"{WORK_DIR}{os.sep}test.pkl_s")
+        with open(f"{WORK_DIR}{os.sep}test.pkl", "wb") as f:
             pickle.dump(obj, f, protocol=protocol)
         s = Session()
-        return s.cpp.loadPickleFile("test.pkl")
+        return s.cpp.loadPickleFile(f"{WORK_DIR}{os.sep}test.pkl")
 
     def loads(self, buf):
-        if os.path.exists("test.pkl"):
-            os.remove("test.pkl")
-        if os.path.exists("test.pkl_s"):
-            os.remove("test.pkl_s")
-        with open("test.pkl", "wb") as f:
+        if os.path.exists(f"{WORK_DIR}{os.sep}test.pkl"):
+            os.remove(f"{WORK_DIR}{os.sep}test.pkl")
+        if os.path.exists(f"{WORK_DIR}{os.sep}test.pkl_s"):
+            os.remove(f"{WORK_DIR}{os.sep}test.pkl_s")
+        with open(f"{WORK_DIR}{os.sep}test.pkl", "wb") as f:
             f.write(buf)
         s = Session()
-        return s.cpp.loadPickleFile("test.pkl")
+        return s.cpp.loadPickleFile(f"{WORK_DIR}{os.sep}test.pkl")
 
     def assertListEqual(self, a, b, msg=None):
         for x, y in zip(a, b):

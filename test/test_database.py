@@ -1,13 +1,14 @@
-import pytest
-from setup.settings import *
-from setup.utils import get_pid
 import dolphindb as ddb
+import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import *
 from pandas.testing import *
-import dolphindb.settings as keys
+
 from basic_testing.prepare import PANDAS_VERSION
+from setup.settings import *
+from setup.utils import get_pid
 
 
 class DBInfo:
@@ -1344,4 +1345,4 @@ class TestDatabase:
 
     def test_database_save_table(self):
         tb = self.conn.table(data=pd.DataFrame({'a': [1, 2, 3]}))
-        assert self.conn.saveTable(tb, REMOTE_WORK_DIR+'test')
+        assert self.conn.saveTable(tb, REMOTE_WORK_DIR + 'test')

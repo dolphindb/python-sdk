@@ -5,15 +5,17 @@
 @Time: 2024/1/10 10:51
 @Note: 
 """
+from time import sleep
+
+import dolphindb as ddb
 import numpy as np
 import pandas as pd
 import pytest
+
+from basic_testing.prepare import PANDAS_VERSION
 from basic_testing.utils import equalPlus
 from setup.settings import *
-import dolphindb as ddb
 from setup.utils import get_pid
-from time import sleep
-from basic_testing.prepare import PANDAS_VERSION
 
 
 def handlerDataframe(df1: pd.DataFrame, df2: pd.DataFrame):
@@ -80,7 +82,7 @@ class TestSubscribeStreamDeserializer(object):
                               "DATETIME", "TIMESTAMP", "NANOTIME", "NANOTIMESTAMP", "FLOAT", "DOUBLE", "STRING",
                               "UUID", "DATEHOUR", "IPADDR", "INT128", "BLOB", "DECIMAL32", "DECIMAL64", "DECIMAL128"])
     def test_streamDeserializer_single(self, dataType):
-        if dataType in ("STRING","UUID", "IPADDR", "INT128", "BLOB") and PANDAS_VERSION < (1,4,0):
+        if dataType in ("STRING", "UUID", "IPADDR", "INT128", "BLOB") and PANDAS_VERSION < (1, 4, 0):
             pytest.skip("pandas bug")
         dtype = {
             'BOOL': 'object',
@@ -168,7 +170,7 @@ class TestSubscribeStreamDeserializer(object):
         elif dataType == 'INT128':
             df_expect = df_expect.replace("00000000000000000000000000000000", None)
         elif dataType == "BLOB":
-            df_expect = df_expect.replace("", None)
+            df_expect = df_expect.replace(b"", None)
         assert equalPlus(df1, df_expect)
         assert equalPlus(df2, df_expect)
 

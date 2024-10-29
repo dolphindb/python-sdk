@@ -1,11 +1,12 @@
+import dolphindb as ddb
 import pandas as pd
 import pytest
-import dolphindb as ddb
-from numpy import repeat
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
+
 from setup.settings import *
 from setup.utils import get_pid
+
 
 class DBInfo:
     dfsDBName = 'dfs://testLoadTable'
@@ -14,7 +15,7 @@ class DBInfo:
     table2 = 'tb2'
 
 
-def create_dfs_dimension_db(s:ddb.session):
+def create_dfs_dimension_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -29,7 +30,7 @@ def create_dfs_dimension_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_range_db(s:ddb.session):
+def create_dfs_range_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -44,7 +45,7 @@ def create_dfs_range_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_hash_db(s:ddb.session):
+def create_dfs_hash_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -59,7 +60,7 @@ def create_dfs_hash_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_value_db(s:ddb.session):
+def create_dfs_value_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -74,7 +75,7 @@ def create_dfs_value_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_list_db(s:ddb.session):
+def create_dfs_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -89,7 +90,7 @@ def create_dfs_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_range_db(s:ddb.session):
+def create_dfs_compo_range_range_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -106,7 +107,7 @@ def create_dfs_compo_range_range_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_hash_db(s:ddb.session):
+def create_dfs_compo_range_hash_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -123,7 +124,7 @@ def create_dfs_compo_range_hash_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_value_db(s:ddb.session):
+def create_dfs_compo_range_value_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -140,7 +141,7 @@ def create_dfs_compo_range_value_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_list_db(s:ddb.session):
+def create_dfs_compo_range_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -157,7 +158,7 @@ def create_dfs_compo_range_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_hash_list_db(s:ddb.session):
+def create_dfs_compo_range_hash_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -175,7 +176,7 @@ def create_dfs_compo_range_hash_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_value_list_db(s:ddb.session):
+def create_dfs_compo_range_value_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -193,7 +194,7 @@ def create_dfs_compo_range_value_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_unpartitioned_db(s:ddb.session):
+def create_disk_unpartitioned_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -208,7 +209,7 @@ def create_disk_unpartitioned_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_range_db(s:ddb.session):
+def create_disk_range_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -223,7 +224,7 @@ def create_disk_range_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_hash_db(s:ddb.session):
+def create_disk_hash_db(s: ddb.session):
     s = ddb.session()
     s.connect(HOST, PORT, "admin", "123456")
     ddb_script = '''
@@ -240,7 +241,7 @@ def create_disk_hash_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_value_db(s:ddb.session):
+def create_disk_value_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -255,7 +256,7 @@ def create_disk_value_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_list_db(s:ddb.session):
+def create_disk_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -270,7 +271,7 @@ def create_disk_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_range_db(s:ddb.session):
+def create_disk_compo_range_range_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -287,7 +288,7 @@ def create_disk_compo_range_range_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_hash_db(s:ddb.session):
+def create_disk_compo_range_hash_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -304,7 +305,7 @@ def create_disk_compo_range_hash_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_value_db(s:ddb.session):
+def create_disk_compo_range_value_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -321,7 +322,7 @@ def create_disk_compo_range_value_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_list_db(s:ddb.session):
+def create_disk_compo_range_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -338,7 +339,7 @@ def create_disk_compo_range_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_hash_list_db(s:ddb.session):
+def create_disk_compo_range_hash_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -356,7 +357,7 @@ def create_disk_compo_range_hash_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_value_list_db(s:ddb.session):
+def create_disk_compo_range_value_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -375,7 +376,7 @@ def create_disk_compo_range_value_list_db(s:ddb.session):
 
 
 class TestLoadTable:
-    conn = ddb.session() 
+    conn = ddb.session()
     dbPaths = [DBInfo.dfsDBName, DBInfo.diskDBName]
 
     def setup_method(self):
@@ -392,7 +393,7 @@ class TestLoadTable:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -400,7 +401,6 @@ class TestLoadTable:
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
-
 
     def test_loadTable_dfs_dimension(self):
         dbPath = DBInfo.dfsDBName
@@ -630,7 +630,6 @@ class TestLoadTable:
         with pytest.raises(RuntimeError):
             self.conn.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
-
     def test_loadTable_disk_unpartitioned(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
@@ -706,7 +705,9 @@ class TestLoadTable:
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_value_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.01, 2010.01.30]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.01, 2010.01.30]".format(db=dbPath,
+                                                                                                   tb=tbName1))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
         assert_frame_equal(tmp.toDF(), rs)
 
@@ -734,7 +735,9 @@ class TestLoadTable:
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_list_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where sym in `DOP`ASZ`FSD`BBVC`AWQ`DS".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where sym in `DOP`ASZ`FSD`BBVC`AWQ`DS".format(db=dbPath,
+                                                                                                  tb=tbName1))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["DOP", "FSD", "AWQ"])
         assert_frame_equal(tmp.toDF(), rs)
 
@@ -763,8 +766,8 @@ class TestLoadTable:
         tbName1 = DBInfo.table1
         create_disk_compo_range_range_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}') where "
-                        "date between 2010.01.01:2010.01.31 "
-                        "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
+                           "date between 2010.01.01:2010.01.31 "
+                           "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.04.25"])
         assert_frame_equal(tmp.toDF(), rs)
 
@@ -793,8 +796,8 @@ class TestLoadTable:
         tbName1 = DBInfo.table1
         create_disk_compo_range_hash_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}') where "
-                        "date between 2010.01.01:2010.01.31 "
-                        "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
+                           "date between 2010.01.01:2010.01.31 "
+                           "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.04.25"])
         assert_frame_equal(tmp.toDF(), rs)
 
@@ -823,8 +826,8 @@ class TestLoadTable:
         tbName1 = DBInfo.table1
         create_disk_compo_range_value_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}') where "
-                        "date between 2010.01.01:2010.01.31 "
-                        "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
+                           "date between 2010.01.01:2010.01.31 "
+                           "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.04.25"])
         assert_frame_equal(tmp.toDF(), rs)
 
@@ -853,8 +856,8 @@ class TestLoadTable:
         tbName1 = DBInfo.table1
         create_disk_compo_range_list_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}') where "
-                        "date between 2010.01.01:2010.01.31 "
-                        "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
+                           "date between 2010.01.01:2010.01.31 "
+                           "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.04.25"])
         assert_frame_equal(tmp.toDF(), rs)
 
@@ -883,8 +886,8 @@ class TestLoadTable:
         tbName1 = DBInfo.table1
         create_disk_compo_range_hash_list_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}') where "
-                        "date between 2010.01.01:2010.01.31 "
-                        "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
+                           "date between 2010.01.01:2010.01.31 "
+                           "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.04.25"])
         assert_frame_equal(tmp.toDF(), rs)
 
@@ -913,8 +916,8 @@ class TestLoadTable:
         tbName1 = DBInfo.table1
         create_disk_compo_range_value_list_db(self.conn)
         rs = self.conn.run("select * from loadTable('{db}','{tb}') where "
-                        "date between 2010.01.01:2010.01.31 "
-                        "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
+                           "date between 2010.01.01:2010.01.31 "
+                           "or date between 2010.04.01:2010.04.30".format(db=dbPath, tb=tbName1))
         tmp = self.conn.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.04.25"])
         assert_frame_equal(tmp.toDF(), rs)
 
@@ -931,8 +934,8 @@ class TestLoadTable:
         assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_value_partition_string_scalar(self):
-        myDBName=WORK_DIR+"/db1"
-        script='''
+        myDBName = WORK_DIR + "/db1"
+        script = '''
         login("admin","123456")
         if(exists("{dbName}"))
             dropDatabase("{dbName}")
@@ -941,13 +944,13 @@ class TestLoadTable:
         db.createPartitionedTable(t, "pt", "sym").append!(t)
         '''.format(dbName=myDBName)
         self.conn.run(script)
-        res=self.conn.loadTable(tableName="pt", dbPath=myDBName, partitions="AAA", memoryMode=True).toDF()
-        expected=self.conn.run("select * from loadTable('{dbName}', 'pt') where sym='AAA'".format(dbName=myDBName))
+        res = self.conn.loadTable(tableName="pt", dbPath=myDBName, partitions="AAA", memoryMode=True).toDF()
+        expected = self.conn.run("select * from loadTable('{dbName}', 'pt') where sym='AAA'".format(dbName=myDBName))
         assert_frame_equal(res, expected)
 
     def test_loadTable_disk_value_partition_string_vector(self):
-        myDBName=WORK_DIR+"/db1"
-        script='''
+        myDBName = WORK_DIR + "/db1"
+        script = '''
         login("admin","123456")
         if(exists("{dbName}"))
             dropDatabase("{dbName}")
@@ -956,44 +959,46 @@ class TestLoadTable:
         db.createPartitionedTable(t, "pt", "sym").append!(t)
         '''.format(dbName=myDBName)
         self.conn.run(script)
-        res=self.conn.loadTable(tableName="pt", dbPath=myDBName, partitions=["AAA", "BBB"], memoryMode=True).toDF()
-        expected=self.conn.run("select * from loadTable('{dbName}', 'pt') where sym='AAA' or sym='BBB'".format(dbName=myDBName))
+        res = self.conn.loadTable(tableName="pt", dbPath=myDBName, partitions=["AAA", "BBB"], memoryMode=True).toDF()
+        expected = self.conn.run(
+            "select * from loadTable('{dbName}', 'pt') where sym='AAA' or sym='BBB'".format(dbName=myDBName))
         assert_frame_equal(res, expected)
+
     def test_loadTable_in_menory_table_drop_str(self):
         self.conn.run("""
             in_menory_table=table(1 2 3 as c1,`1`2`3 as c2,`a`b`c as c3)
         """)
-        in_menory_table=self.conn.loadTable(tableName='in_menory_table')
+        in_menory_table = self.conn.loadTable(tableName='in_menory_table')
         in_menory_table.drop('c1')
-        expect=pd.DataFrame({'c2':['1','2','3'],'c3':['a','b','c']},dtype='object')
-        assert_frame_equal(in_menory_table.toDF(),expect)
+        expect = pd.DataFrame({'c2': ['1', '2', '3'], 'c3': ['a', 'b', 'c']}, dtype='object')
+        assert_frame_equal(in_menory_table.toDF(), expect)
 
     def test_loadTable_in_menory_table_drop_list_len_eq_0(self):
         self.conn.run("""
             in_menory_table=table(1 2 3 as c1,`1`2`3 as c2,`a`b`c as c3)
         """)
-        in_menory_table=self.conn.loadTable(tableName='in_menory_table')
+        in_menory_table = self.conn.loadTable(tableName='in_menory_table')
         in_menory_table.drop([])
-        expect=pd.DataFrame({'c1':pd.Series([1,2,3],dtype='int32'),'c2':['1','2','3'],'c3':['a','b','c']})
-        assert_frame_equal(in_menory_table.toDF(),expect)
+        expect = pd.DataFrame({'c1': pd.Series([1, 2, 3], dtype='int32'), 'c2': ['1', '2', '3'], 'c3': ['a', 'b', 'c']})
+        assert_frame_equal(in_menory_table.toDF(), expect)
 
     def test_loadTable_in_menory_table_drop_list_len_eq_1(self):
         self.conn.run("""
             in_menory_table=table(1 2 3 as c1,`1`2`3 as c2,`a`b`c as c3)
         """)
-        in_menory_table=self.conn.loadTable(tableName='in_menory_table')
+        in_menory_table = self.conn.loadTable(tableName='in_menory_table')
         in_menory_table.drop(['c1'])
-        expect=pd.DataFrame({'c2':['1','2','3'],'c3':['a','b','c']},dtype='object')
-        assert_frame_equal(in_menory_table.toDF(),expect)
+        expect = pd.DataFrame({'c2': ['1', '2', '3'], 'c3': ['a', 'b', 'c']}, dtype='object')
+        assert_frame_equal(in_menory_table.toDF(), expect)
 
     def test_loadTable_in_menory_table_drop_list_len_gt_1(self):
         self.conn.run("""
             in_menory_table=table(1 2 3 as c1,`1`2`3 as c2,`a`b`c as c3)
         """)
-        in_menory_table=self.conn.loadTable(tableName='in_menory_table')
-        in_menory_table.drop(['c1','c2'])
-        expect=pd.DataFrame({'c3':['a','b','c']},dtype='object')
-        assert_frame_equal(in_menory_table.toDF(),expect)
+        in_menory_table = self.conn.loadTable(tableName='in_menory_table')
+        in_menory_table.drop(['c1', 'c2'])
+        expect = pd.DataFrame({'c3': ['a', 'b', 'c']}, dtype='object')
+        assert_frame_equal(in_menory_table.toDF(), expect)
 
     def test_loadTable_olap_table_drop_list_len_eq_0(self):
         self.conn.run("""
@@ -1004,13 +1009,14 @@ class TestLoadTable:
             t=table(1 2 3 as c1,`1`2`3 as c2,`a`b`c as c3)
             tb=db.createPartitionedTable(t,`tb,`c2).append!(t)
         """)
-        olap_table=self.conn.loadTable(tableName='tb',dbPath='dfs://test_loadTable_olap_table_drop')
+        olap_table = self.conn.loadTable(tableName='tb', dbPath='dfs://test_loadTable_olap_table_drop')
         olap_table.drop([])
-        expect=pd.DataFrame({'c1':pd.Series([1,2,3],dtype='int32'),'c2':['1','2','3'],'c3':['a','b','c']})
-        assert_frame_equal(olap_table.toDF(),expect)
+        expect = pd.DataFrame({'c1': pd.Series([1, 2, 3], dtype='int32'), 'c2': ['1', '2', '3'], 'c3': ['a', 'b', 'c']})
+        assert_frame_equal(olap_table.toDF(), expect)
+
 
 class TestLoadTableBySQL:
-    conn = ddb.session() 
+    conn = ddb.session()
     dbPaths = [DBInfo.dfsDBName, DBInfo.diskDBName]
 
     def setup_method(self):
@@ -1027,7 +1033,7 @@ class TestLoadTableBySQL:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -1042,96 +1048,127 @@ class TestLoadTableBySQL:
         create_dfs_dimension_db(self.conn)
         with pytest.raises(RuntimeError):
             self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                     sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                         tb=tbName1))
 
     def test_loadTableBySQL_dfs_range(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_range_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_dfs_hash(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_hash_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_dfs_value(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_value_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_dfs_list(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_list_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_dfs_compo_range_range(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_range_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_dfs_compo_range_hash(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_hash_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_dfs_compo_range_value(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_value_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_dfs_compo_range_list(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_list_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_dfs_compo_range_hash_list(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_hash_list_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_dfs_compo_range_value_list(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_value_list_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_unpartitioned(self):
@@ -1140,97 +1177,129 @@ class TestLoadTableBySQL:
         create_disk_unpartitioned_db(self.conn)
         with pytest.raises(RuntimeError):
             self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                     sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                         tb=tbName1))
 
     def test_loadTableBySQL_disk_range(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_range_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_hash(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_hash_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_value(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_value_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_list(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_list_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_compo_range_range(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_compo_range_range_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_compo_range_hash(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_compo_range_hash_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_compo_range_value(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_compo_range_value_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_compo_range_list(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_compo_range_list_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_compo_range_hash_list(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_compo_range_hash_list_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
     def test_loadTableBySQL_disk_compo_range_value_list(self):
         dbPath = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         create_disk_compo_range_value_list_db(self.conn)
-        rs = self.conn.run("select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath, tb=tbName1))
+        rs = self.conn.run(
+            "select * from loadTable('{db}','{tb}') where date in [2010.01.05,2010.01.15,2010.01.19]".format(db=dbPath,
+                                                                                                             tb=tbName1))
         tmp = self.conn.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
-                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+                                       sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(
+                                           tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
+
 
 if __name__ == '__main__':
     pytest.main()

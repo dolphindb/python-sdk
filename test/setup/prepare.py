@@ -1,11 +1,12 @@
-import numpy as np
-import pandas as pd
-import dolphindb as ddb
-import dolphindb.settings as keys
+import uuid
 from enum import Enum, unique
 from math import ceil
+
+import dolphindb as ddb
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
 from numpy import matrix
-import uuid
 
 
 def generate_uuid(prefix=None):
@@ -22,6 +23,8 @@ class DATAFORM(Enum):
     DF_MATRIX = keys.DF_MATRIX
     DF_DICTIONARY = keys.DF_DICTIONARY
     DF_TABLE = keys.DF_TABLE
+
+
 # DF_CHART        = keys.DF_CHART
 
 
@@ -435,7 +438,7 @@ def get_Scalar(*args, only_script=False, **kwargs):
                 # No way to upload DT_BLOB Scalar
             ],
             "download": [
-                ('s_blob_1', "hello"),
+                ('s_blob_1', b"hello"),
                 ('s_blob_2', None),
             ],
         }
@@ -1285,8 +1288,8 @@ def get_Vector(*args, n=100, **kwargs):
             # No Way to upload DT_BLOB Vector
         ],
         "download": [
-            ("v_blob_0", np.tile(np.array(["hello", ""], dtype="str"), ceil(n / 2))[:n]),
-            ("v_blob_1", np.tile(np.array(["", "hello"], dtype="str"), ceil(n / 2))[:n]),
+            ("v_blob_0", np.tile(np.array([b"hello", b""], dtype="object"), ceil(n / 2))[:n]),
+            ("v_blob_1", np.tile(np.array([b"", b"hello"], dtype="object"), ceil(n / 2))[:n]),
         ],
     }, DATATYPE.DT_DECIMAL32: {
         "scripts": """
@@ -2049,7 +2052,7 @@ def get_Dictionary(*args, **kwargs):
              dict(zip(np.array([19, 65], dtype="int8"), np.array(["abc123测试", None], dtype="object")))),
             ("dict_char_datehour", dict(zip(np.array([19, 65], dtype="int8"),
                                             np.array(["2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]")))),
-            ("dict_char_blob", dict(zip(np.array([19, 65], dtype="int8"), np.array(["hello", None], dtype="object")))),
+            ("dict_char_blob", dict(zip(np.array([19, 65], dtype="int8"), np.array([b"hello", None], dtype="object")))),
         ],
     }, DATATYPE.DT_SHORT: {
         "scripts": """
@@ -2121,7 +2124,7 @@ def get_Dictionary(*args, **kwargs):
              dict(zip(np.array([1, 0], dtype="int16"), np.array(["abc123测试", None], dtype="object")))),
             ("dict_short_datehour", dict(zip(np.array([1, 0], dtype="int16"),
                                              np.array(["2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]")))),
-            ("dict_short_blob", dict(zip(np.array([1, 0], dtype="int16"), np.array(["hello", None], dtype="object")))),
+            ("dict_short_blob", dict(zip(np.array([1, 0], dtype="int16"), np.array([b"hello", None], dtype="object")))),
         ],
     }, DATATYPE.DT_INT: {
         "scripts": """
@@ -2193,7 +2196,7 @@ def get_Dictionary(*args, **kwargs):
              dict(zip(np.array([1, 0], dtype="int32"), np.array(["abc123测试", None], dtype="object")))),
             ("dict_int_datehour", dict(zip(np.array([1, 0], dtype="int32"),
                                            np.array(["2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]")))),
-            ("dict_int_blob", dict(zip(np.array([1, 0], dtype="int32"), np.array(["hello", None], dtype="object")))),
+            ("dict_int_blob", dict(zip(np.array([1, 0], dtype="int32"), np.array([b"hello", None], dtype="object")))),
         ],
     }, DATATYPE.DT_LONG: {
         "scripts": """
@@ -2265,7 +2268,7 @@ def get_Dictionary(*args, **kwargs):
              dict(zip(np.array([1, 0], dtype="int64"), np.array(["abc123测试", None], dtype="object")))),
             ("dict_long_datehour", dict(zip(np.array([1, 0], dtype="int64"),
                                             np.array(["2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]")))),
-            ("dict_long_blob", dict(zip(np.array([1, 0], dtype="int64"), np.array(["hello", None], dtype="object")))),
+            ("dict_long_blob", dict(zip(np.array([1, 0], dtype="int64"), np.array([b"hello", None], dtype="object")))),
         ],
     }, DATATYPE.DT_DATE: {
         # TODO date don't supported as keytype temporarily
@@ -2423,7 +2426,7 @@ def get_Dictionary(*args, **kwargs):
             ("dict_string_datehour", dict(zip(np.array(["abc123测试", ""], dtype="str"),
                                               np.array(["2022-01-01 12:30:56.123456789", 0], dtype="datetime64[h]")))),
             ("dict_string_blob",
-             dict(zip(np.array(["abc123测试", ""], dtype="str"), np.array(["hello", None], dtype="object")))),
+             dict(zip(np.array(["abc123测试", ""], dtype="str"), np.array([b"hello", None], dtype="object")))),
         ],
     }, DATATYPE.DT_UUID: {
         # TODO Dictionary dont supporte uuid
@@ -4314,8 +4317,8 @@ def get_Pair(*args, **kwargs):
             # ('p_blob_0', np.array(['test', "123456"], dtype = 'object')),
             # ('p_blob_1', np.array(['test', None], dtype = 'object')),
             # ('p_blob_2', np.array([None, "123456"], dtype = 'object')),
-            ('p_blob_0', list(['test', "123456"])),
-            ('p_blob_1', list(['test', None])),
+            ('p_blob_0', list([b'test', b"123456"])),
+            ('p_blob_1', list([b'test', None])),
             ('p_blob_2', list([None, None])),
         ],
     }, DATATYPE.DT_DECIMAL32: {
@@ -6148,25 +6151,25 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
         ],
         "download": [
             ("{}_blob_0".format(testTypeTable), pd.DataFrame({"index": np.arange(1, n + 1).astype("int32"),
-                                                              "blob_0": np.tile(np.array(["hello", ""], dtype="str"),
+                                                              "blob_0": np.tile(np.array([b"hello", b""], dtype="object"),
                                                                                 ceil(n / 2))[:n],
-                                                              "blob_1": np.tile(np.array(["", "hello"], dtype="str"),
+                                                              "blob_1": np.tile(np.array([b"", b"hello"], dtype="object"),
                                                                                 ceil(n / 2))[:n],
-                                                              "blob_2": np.tile(np.array(["", ""], dtype="str"),
+                                                              "blob_2": np.tile(np.array([b"", b""], dtype="object"),
                                                                                 ceil(n / 2))[:n]
                                                               })),
             ("{}_blob_1".format(testTypeTable), pd.DataFrame({"index": np.arange(1, n + 1).astype("int32"),
-                                                              "blob_0": np.tile(np.array(["hello", ""], dtype="str"),
+                                                              "blob_0": np.tile(np.array([b"hello", b""], dtype="object"),
                                                                                 ceil(n / 2))[:n],
                                                               })),
             ("{}_blob_2".format(testTypeTable), pd.DataFrame({"index": np.arange(1, 2).astype("int32"),
-                                                              "blob_0": np.array(["hello"], dtype="str"),
-                                                              "blob_1": np.array([""], dtype="str"),
+                                                              "blob_0": np.array([b"hello"], dtype="object"),
+                                                              "blob_1": np.array([b""], dtype="object"),
                                                               })),
             ("{}_blob_3".format(testTypeTable), pd.DataFrame({"index": np.array([0], dtype="int32"),
-                                                              "blob_0": np.array([""], dtype="str"),
-                                                              "blob_1": np.array([""], dtype="str"),
-                                                              "blob_2": np.array([""], dtype="str")
+                                                              "blob_0": np.array([b""], dtype="object"),
+                                                              "blob_1": np.array([b""], dtype="object"),
+                                                              "blob_2": np.array([b""], dtype="object")
                                                               })),
         ],
     }, DATATYPE.DT_DECIMAL32: {

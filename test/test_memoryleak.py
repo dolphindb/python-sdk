@@ -5,12 +5,14 @@
 @Time: 2024/2/5 10:31
 @Note: 
 """
+import gc
+
+import dolphindb as ddb
 import pytest
 from memory_profiler import profile
+
 from basic_testing.prepare import DataUtils
-import dolphindb as ddb
 from setup.settings import *
-import gc
 
 
 @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")

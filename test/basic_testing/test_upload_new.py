@@ -1,17 +1,18 @@
-import numpy as np
-import pytest
+from importlib.util import find_spec
+
 import dolphindb as ddb
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
+import pytest
+
+from basic_testing.prepare import DataUtils,PANDAS_VERSION
 from basic_testing.utils import assertPlus
 from setup.settings import *
-from basic_testing.prepare import DataUtils
 from setup.utils import get_pid
-import pandas as pd
-import dolphindb.settings as keys
-from importlib.util import find_spec
+
 if find_spec("pyarrow") is not None:
     import pyarrow as pa
-
-PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
 
 
 @pytest.mark.BASIC
@@ -173,7 +174,7 @@ class TestUploadNew(object):
                              ids=['+nan', '-nan', '+all_1_nan', '-all_1_nan'])
     def test_upload_nan_32_table(self, data):
         data_ = np.frombuffer(data, dtype=np.float32)[0]
-        self.__class__.conn.upload({'a': pd.DataFrame({'a': [data_]},dtype=np.float32)})
+        self.__class__.conn.upload({'a': pd.DataFrame({'a': [data_]}, dtype=np.float32)})
         assert self.__class__.conn.run('isNull(a["a"][0])')
         assert self.__class__.conn.run('typestr a["a"]') == 'FAST FLOAT VECTOR'
 
@@ -363,7 +364,7 @@ class TestUploadNew(object):
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
             else:
                 # APY-876
-                with pytest.raises(RuntimeError, match="can not create all None set"):
+                with pytest.raises(RuntimeError, match="Cannot create a Set containing only null elements"):
                     self.__class__.conn.upload({k: v['value']})
 
     @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getDictContainNone('upload').items()],
@@ -455,13 +456,13 @@ class TestUploadNew(object):
 
     def test_upload_table_extension_dtype_not_support(self):
         with pytest.raises(RuntimeError,
-                           match="Unsupported data types: dtype 'UInt8'. DolphinDB supports pandas ExtensionDtype Boolean/Int8/Int16/Int32/Int64/Float32/Float64/String"):
+                           match="Cannot convert from pandas extension dtype UInt8"):
             self.__class__.conn.upload({
                 'extension_dtype_not_support': pd.DataFrame({'a': [1, 2, 3]}, dtype=pd.UInt8Dtype())
             })
 
     def test_upload_table_extension_dtype_ddb_not_support(self):
-        with pytest.raises(RuntimeError, match="boolean cannot be specified as BLOB"):
+        with pytest.raises(RuntimeError, match="Cannot convert pandas dtype boolean to BLOB"):
             df = pd.DataFrame({'a': [True, False]}, dtype=pd.BooleanDtype())
             df.__DolphinDB_Type__ = {
                 'a': keys.DT_BLOB
@@ -549,7 +550,6 @@ class TestUploadNew(object):
     def test_upload_table_set_type_INT(self, data):
         for k, v in data.items():
             self.__class__.conn.upload({k: v['value']})
-            self.__class__.conn.run(f'share {k} as `ttINT')
             for i in v['value'].columns:
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
@@ -749,6 +749,10 @@ class TestUploadNew(object):
                              ids=[i for i in DataUtils.getTableSetTypeDECIMAL32('upload')])
     def test_upload_table_set_type_DECIMAL32(self, data):
         for k, v in data.items():
+            pd.set_option('display.max_columns', None)
+            pd.set_option('display.max_rows', None)
+            print(k,v['value'])
+
             self.__class__.conn.upload({k: v['value']})
             for i in v['value'].columns:
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
@@ -1141,7 +1145,7 @@ class TestUploadNew(object):
             assert self.__class__.conn.run('typestr a["a"]') == 'FAST DOUBLE[] VECTOR'
 
         def test_upload_string_table_arrow_setType_SYMBOL(self):
-            df = pd.DataFrame({'a':['a','b','c','d']},dtype=pd.ArrowDtype(pa.utf8()))
+            df = pd.DataFrame({'a': ['a', 'b', 'c', 'd']}, dtype=pd.ArrowDtype(pa.utf8()))
             df.__DolphinDB_Type__ = {
                 'a': keys.DT_SYMBOL
             }

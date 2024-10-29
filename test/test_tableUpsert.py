@@ -1,8 +1,10 @@
 import decimal
 import random
+
 import pytest
 from numpy.testing import *
 from pandas.testing import *
+
 from setup.prepare import *
 from setup.settings import *
 from setup.utils import get_pid, random_string
@@ -945,9 +947,12 @@ class TestTableUpsert:
                 np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object')]
         })
         upsert.upsert(df)
+        if pickle:
+            for i in ['date','time','minute','second','datetime','datehour','timestamp','nanotime','nanotimestamp']:
+                df[i][0] = df[i][0].astype('datetime64[ns]')
+                df[i][1] = df[i][1].astype('datetime64[ns]')
         assert_frame_equal(df, conn.run("select * from pt"))
 
-    # todo:bug of pandas 2.2
     @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     def test_tableUpsert_dfs_table_column_dateType_not_match_1(self, pickle, compress):
@@ -994,12 +999,12 @@ class TestTableUpsert:
                              dtype='object'),
             'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             upsert.upsert(df)
         except Exception as e:
-            assert "The value e1671797c52e15f763380b45e841ec32 (column \"date\", row 0) must be of DATE type" in str(e)
+            assert "The value e1671797c52e15f763380b45e841ec32 (column \"date\", row 0) must be of DATE type." in str(e)
 
     @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
@@ -1047,12 +1052,12 @@ class TestTableUpsert:
                              dtype='object'),
             'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             upsert.upsert(df)
         except Exception as e:
-            assert "The value str1 (column \"long\", row 0) must be of LONG type" in str(e)
+            assert "The value str1 (column \"long\", row 0) must be of LONG type." in str(e)
 
     @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
@@ -1101,14 +1106,12 @@ class TestTableUpsert:
                              dtype='object'),
             'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             upsert.upsert(df)
         except Exception as e:
-            result = "must be of IPADDR type" in str(
-                e)
-            assert result
+            assert "The value <NULL> (column \"ipaddr\", row 2) must be of IPADDR type." in str(e)
 
     @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
@@ -1157,12 +1160,12 @@ class TestTableUpsert:
                              dtype='object'),
             'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             upsert.upsert(df)
         except Exception as e:
-            assert "(column \"string\", row 0) must be of STRING type" in str(e)
+            assert "The value <NULL> (column \"int128\", row 2) must be of INT128 type." in str(e)
 
     @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
@@ -1211,12 +1214,12 @@ class TestTableUpsert:
                              dtype='object'),
             'int128': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             upsert.upsert(df)
         except Exception as e:
-            assert "(column \"string\", row 0) must be of STRING type" in str(e)
+            assert "The value <NULL> (column \"int128\", row 2) must be of INT128 type." in str(e)
 
     @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])

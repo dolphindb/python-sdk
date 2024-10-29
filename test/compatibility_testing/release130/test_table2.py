@@ -1,15 +1,16 @@
-import pytest
-from setup.settings import *
-
 import dolphindb as ddb
 import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
+import pytest
 import statsmodels.api as sm
 from numpy.testing import *
 from pandas.testing import *
+
+from setup.settings import *
 from setup.utils import get_pid
 from setup.utils import random_string
+
 
 class TestTable2:
     pd_left = pd.DataFrame({'time': pd.to_datetime(
@@ -65,7 +66,7 @@ class TestTable2:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -229,9 +230,9 @@ class TestTable2:
 
     def test_table_sql_merge(self):
         dt1 = self.conn.table(data={'id': [1, 2, 3, 3], 'value': [
-                              7, 4, 5, 0]}, tableAliasName="t1")
+            7, 4, 5, 0]}, tableAliasName="t1")
         dt2 = self.conn.table(data={'id': [5, 3, 1], 'qty': [
-                              300, 500, 800]}, tableAliasName="t2")
+            300, 500, 800]}, tableAliasName="t2")
 
         re = dt1.merge(right=dt2, on='id').toDF()
         expected = self.conn.run('select * from ej(t1,t2,"id")')
@@ -261,13 +262,13 @@ class TestTable2:
     def test_table_sql_mergr_asof(self):
         dt1 = self.conn.table(data={'id': ['A', 'A', 'A', 'B', 'B'],
                                     'date': pd.to_datetime(
-            ['2017-02-06', '2017-02-08', '2017-02-10', '2017-02-07', '2017-02-09']),
-            'price': [22, 23, 20, 100, 102]},
-            tableAliasName="t1")
+                                        ['2017-02-06', '2017-02-08', '2017-02-10', '2017-02-07', '2017-02-09']),
+                                    'price': [22, 23, 20, 100, 102]},
+                              tableAliasName="t1")
         dt2 = self.conn.table(data={'id': ['A', 'A', 'B', 'B', 'B'],
                                     'date': pd.to_datetime(
-            ['2017-02-07', '2017-02-10', '2017-02-07', '2017-02-08', '2017-02-10'])},
-            tableAliasName="t2")
+                                        ['2017-02-07', '2017-02-10', '2017-02-07', '2017-02-08', '2017-02-10'])},
+                              tableAliasName="t2")
 
         re = dt2.merge_asof(right=dt1, on=['id', 'date']).toDF()
         expected = self.conn.run('select * from aj(t2,t1,`id`date)')
@@ -289,15 +290,16 @@ class TestTable2:
                                     'price': [10.6, 10.7, 20.6]},
                               tableAliasName="t1")
         dt2 = self.conn.table(
-            data={'sym': ["A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B"],
+            data={'sym': ["A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B", "B", "B", "B",
+                          "B"],
                   'time': pd.date_range(start='2012-09-30 09:56:01', end='2012-09-30 09:56:10', freq='s').append(
-                pd.date_range(start='2012-09-30 09:56:01', end='2012-09-30 09:56:10', freq='s')),
-                'bid': [10.05, 10.15, 10.25, 10.35, 10.45, 10.55, 10.65, 10.75, 10.85, 10.95, 20.05, 20.15, 20.25,
-                        20.35, 20.45, 20.55, 20.65, 20.75, 20.85, 20.95],
-                'offer': [10.15, 10.25, 10.35, 10.45, 10.55, 10.65, 10.75, 10.85, 10.95, 11.05, 20.15, 20.25, 20.35,
-                          20.45, 20.55, 20.65, 20.75, 20.85, 20.95, 21.01],
-                'volume': [100, 300, 800, 200, 600, 100, 300, 800, 200, 600, 100, 300, 800, 200, 600, 100, 300, 800,
-                           200, 600]},
+                      pd.date_range(start='2012-09-30 09:56:01', end='2012-09-30 09:56:10', freq='s')),
+                  'bid': [10.05, 10.15, 10.25, 10.35, 10.45, 10.55, 10.65, 10.75, 10.85, 10.95, 20.05, 20.15, 20.25,
+                          20.35, 20.45, 20.55, 20.65, 20.75, 20.85, 20.95],
+                  'offer': [10.15, 10.25, 10.35, 10.45, 10.55, 10.65, 10.75, 10.85, 10.95, 11.05, 20.15, 20.25, 20.35,
+                            20.45, 20.55, 20.65, 20.75, 20.85, 20.95, 21.01],
+                  'volume': [100, 300, 800, 200, 600, 100, 300, 800, 200, 600, 100, 300, 800, 200, 600, 100, 300, 800,
+                             200, 600]},
             tableAliasName="t2")
         re = dt1.merge_window(right=dt2, leftBound=-5, rightBound=0,
                               aggFunctions="avg(bid)", on=['sym', 'time']).toDF()
@@ -344,10 +346,12 @@ class TestTable2:
         assert_array_equal(re['qty'], [2200, 1300, 6800, 5400, 1900, 2100])
 
     def test_table_sql_update_where(self):
-        n = pd.DataFrame({'timestamp': pd.to_datetime(['09:34:07', '09:36:42', '09:36:51', '09:36:59', '09:32:47', '09:35:26', '09:34:16', '09:34:26', '09:38:12']),
-                          'sym': ['C', 'MS', 'MS', 'MS', 'IBM', 'IBM', 'C', 'C', 'C'],
-                          'price': [49.6, 29.46, 29.52, 30.02, 174.97, 175.23, 50.76, 50.32, 51.29],
-                          'qty': [2200, 1900, 2100, 3200, 6800, 5400, 1300, 2500, 8800]})
+        n = pd.DataFrame({'timestamp': pd.to_datetime(
+            ['09:34:07', '09:36:42', '09:36:51', '09:36:59', '09:32:47', '09:35:26', '09:34:16', '09:34:26',
+             '09:38:12']),
+            'sym': ['C', 'MS', 'MS', 'MS', 'IBM', 'IBM', 'C', 'C', 'C'],
+            'price': [49.6, 29.46, 29.52, 30.02, 174.97, 175.23, 50.76, 50.32, 51.29],
+            'qty': [2200, 1900, 2100, 3200, 6800, 5400, 1300, 2500, 8800]})
         dt1 = self.conn.table(data=n, tableAliasName="t1")
         re = dt1.update(["price"], ["price*10"]
                         ).where("sym=`C").execute().toDF()
@@ -542,16 +546,16 @@ class TestTable2:
 
         # with sort
         odf_res = trade.merge(right=quote, how='inner', on=[
-                              'symbol', 'time']).sort(bys='price')
+            'symbol', 'time']).sort(bys='price')
         pdf_res = pd.merge(pd_left, pd_right, on=[
-                           'symbol', 'time']).sort_values(by='price')
+            'symbol', 'time']).sort_values(by='price')
         assert_frame_equal(pdf_res, odf_res.toDF(), check_dtype=False)
 
         # right join with sort
         odf_res = trade.merge(right=quote, how='right', on=['symbol', 'time']).select(
             ["time", "symbol", "price", "size", "ask-bid as diff"]).sort(bys='time ,symbol')
         pdf = pd.merge(pd_left, pd_right, how='right', on=[
-                       'symbol', 'time']).sort_values(['symbol', 'time'])
+            'symbol', 'time']).sort_values(['symbol', 'time'])
         pdf['diff'] = pdf['ask'] - pdf['bid']
         pdf_res = pdf[['time', 'symbol', 'price', 'size', 'diff']]
         # print(odf_res.toDF())
@@ -570,9 +574,9 @@ class TestTable2:
 
         # left semi join with sort
         dt1 = self.conn.table(data={'id': [1, 2, 3, 3], 'value': [
-                              7, 4, 5, 0]}, tableAliasName="t1")
+            7, 4, 5, 0]}, tableAliasName="t1")
         dt2 = self.conn.table(data={'id': [5, 3, 1], 'qty': [
-                              300, 500, 800]}, tableAliasName="t2")
+            300, 500, 800]}, tableAliasName="t2")
         odf_res = dt2.merge(right=dt1, how='left semi', on='id').select(
             ["id", "value", "qty", "value-qty as diff"]).sort(bys='id').toDF()
 
@@ -605,17 +609,17 @@ class TestTable2:
 
         # with sort
         odf_res = trade.merge(right=quote, how='inner', on=[
-                              'symbol', 'time']).sort(bys='price')
+            'symbol', 'time']).sort(bys='price')
         pdf_res = pd.merge(pd_left, pd_right, on=[
-                           'symbol', 'time']).sort_values(by='price')
+            'symbol', 'time']).sort_values(by='price')
         # print(odf_res.toDF())
-        assert_frame_equal(odf_res.toDF(), pdf_res,  check_dtype=False)
+        assert_frame_equal(odf_res.toDF(), pdf_res, check_dtype=False)
 
         # right join with sort
         odf_res = trade.merge(right=quote, how='right', on=['symbol', 'time']).select(
             ["time", "symbol", "price", "size", "ask-bid as diff"]).sort(bys='time symbol')
         pdf = pd.merge(pd_left, pd_right, how='right', on=[
-                       'symbol', 'time']).sort_values(['time', 'symbol'])
+            'symbol', 'time']).sort_values(['time', 'symbol'])
         pdf['diff'] = pdf['ask'] - pdf['bid']
         pdf_res = pdf[['time', 'symbol', 'price', 'size', 'diff']]
         # print(np.array(odf_res.toDF()))
@@ -657,7 +661,7 @@ class TestTable2:
         pd_left = self.pd_left
         pd_right = self.pdf_right
         pdf = pd.merge_asof(pd_left, pd_right, on='time', left_by=[
-                            'symbol'], right_by=['symbol'])
+            'symbol'], right_by=['symbol'])
         pdf['diff'] = pdf['ask'] - pdf['bid']
         res = pdf[['time', 'symbol', 'price', 'size', 'diff']]
 
@@ -675,7 +679,7 @@ class TestTable2:
         pd_left = self.pd_left
         pd_right = self.pdf_right
         pdf = pd.merge_asof(pd_left, pd_right, on='time', left_by=[
-                            'symbol'], right_by=['symbol'])
+            'symbol'], right_by=['symbol'])
         pdf['diff'] = pdf['ask'] - pdf['bid']
         res = pdf[['time', 'symbol', 'price',
                    'size', 'diff']].sort_values("time")
@@ -815,9 +819,9 @@ class TestTable2:
         if self.conn.existsDatabase("dfs://valuedb"):
             self.conn.dropDatabase("dfs://valuedb")
         self.conn.database(dbName='mydb', partitionType=keys.VALUE, partitions=[
-                           "AMZN", "NFLX", "NVDA"], dbPath="dfs://valuedb")
+            "AMZN", "NFLX", "NVDA"], dbPath="dfs://valuedb")
         self.conn.loadTextEx(dbPath="dfs://valuedb", partitionColumns=[
-                             "TICKER"], tableName='trade', remoteFilePath=DATA_DIR + "/example.csv")
+            "TICKER"], tableName='trade', remoteFilePath=DATA_DIR + "/example.csv")
         trade = self.conn.loadTable(tableName="trade", dbPath="dfs://valuedb")
         z = trade.ols(Y='PRC', X=['BID'], INTERCEPT=True)
         re = z["Coefficient"]
@@ -829,9 +833,11 @@ class TestTable2:
 
     def test_table_function_paramete(self):
         t1 = self.conn.table(dbPath=None, data={
-                             'sym': ['C', 'MS']}, tableAliasName="tmp", inMem=False, partitions=None)
-        t2 = self.conn.table(dbPath=None, data={'sym': ['C', 'MS'], 'price': [1, 2], 'val': [3, 5], 'timestamp': pd.date_range(
-            '2019-06-01', '2019-06-02'), 'ask': [3, 5]}, tableAliasName="tmp", inMem=False, partitions=None)
+            'sym': ['C', 'MS']}, tableAliasName="tmp", inMem=False, partitions=None)
+        t2 = self.conn.table(dbPath=None,
+                             data={'sym': ['C', 'MS'], 'price': [1, 2], 'val': [3, 5], 'timestamp': pd.date_range(
+                                 '2019-06-01', '2019-06-02'), 'ask': [3, 5]}, tableAliasName="tmp", inMem=False,
+                             partitions=None)
         t1.append(table=t2)
         t1.contextby(cols='sym')
         t1.csort(bys='sym', ascending=True)
@@ -846,7 +852,7 @@ class TestTable2:
         t1.merge_asof(right=t2, on='sym', left_on='sym', right_on='sym')
         t1.merge_cross(right=t2)
         t1.merge_window(right=t1, leftBound=0, rightBound=0, aggFunctions=[
-                        "first(sym)"], on='sym', left_on='sym', right_on='sym', prevailing=False)
+            "first(sym)"], on='sym', left_on='sym', right_on='sym', prevailing=False)
         t2.pivotby(index='timestamp', column='sym',
                    value='last(price)', aggFunc=None).toDF()
         t1.rename(newName="test_name")
@@ -937,7 +943,7 @@ class TestTable2:
         self.conn.run("undef", tbName)
 
     def test_runFile(self):
-        file_path = LOCAL_DATA_DIR+"/run_data.txt"
+        file_path = LOCAL_DATA_DIR + "/run_data.txt"
         s = self.conn
         s.runFile(file_path)
         t1 = s.table(data="t1")
@@ -999,14 +1005,22 @@ class TestTable2:
             'int': np.array([-10, 1000], dtype=np.int32),
             'long': np.array([-100000000, 10000000000], dtype=np.int64),
             'date': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[m]"),
-            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]"),
-            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
-            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
+            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                             dtype="datetime64[ms]"),
+            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[m]"),
+            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[s]"),
+            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[s]"),
+            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[h]"),
+            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                  dtype="datetime64[ms]"),
+            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[ns]"),
+            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                      dtype="datetime64[ns]"),
             'float': np.array([2.2134500, np.nan], dtype='float32'),
             'double': np.array([3.214, np.nan], dtype='float64'),
             'symbol': np.array(['sym1', ''], dtype='object'),
@@ -1074,7 +1088,7 @@ class TestTable2:
                         blobV as blob)
                     """)
         assert_array_equal(self.conn.run("each(eqObj,t.values(),a.values())"), [
-                           True for _ in range(22)])
+            True for _ in range(22)])
 
     def test_table_dropPartition_loadtable_tmp_variable(self):
         self.conn.run("""
@@ -1114,8 +1128,8 @@ class TestTable2:
         self.conn.dropDatabase("dfs://PTA1_test")
 
     def test_sql_pattern_match(self):
-        dbname = "dfs://test_"+ random_string(5)
-        dbname2 = "dfs://test_"+ random_string(5)
+        dbname = "dfs://test_" + random_string(5)
+        dbname2 = "dfs://test_" + random_string(5)
         script = '''
         dbName="dfs://test_csort"
         if(existsDatabase(dbName)){
@@ -1136,12 +1150,14 @@ class TestTable2:
         import re
         sql1 = self.conn.table(data="pt", dbPath="dfs://test_csort").contextby("id").agg("sum").showSQL()
         sql2 = self.conn.loadTable(tableName="pt", dbPath="dfs://test_csort").contextby("id").agg("sum").showSQL()
-        sql3 = self.conn.loadTableBySQL(tableName="pt", dbPath="dfs://test_csort", sql="select * from pt").contextby("id").agg("sum").showSQL()
-        sql4 = self.conn.loadText(DATA_DIR+'/sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
-        sql5 = self.conn.loadTextEx("dfs://test_csort", "pt", ["id"], DATA_DIR+'/sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
+        sql3 = self.conn.loadTableBySQL(tableName="pt", dbPath="dfs://test_csort", sql="select * from pt").contextby(
+            "id").agg("sum").showSQL()
+        sql4 = self.conn.loadText(DATA_DIR + '/sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
+        sql5 = self.conn.loadTextEx("dfs://test_csort", "pt", ["id"], DATA_DIR + '/sql_pattern_test.csv').contextby(
+            "id").agg("sum").showSQL()
         sql6 = t.contextby("id").agg("sum").showSQL()
         sql7 = t2.contextby("id").agg("sum").showSQL()
-        sql8 = self.conn.ploadText(DATA_DIR+'/sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
+        sql8 = self.conn.ploadText(DATA_DIR + '/sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
 
         pattern1 = r"^select id,sum\(date\),sum\(val\) from pt_TMP_TBL_[a-zA-Z0-9]+ context by id$"
         pattern2 = r"^select id,sum\(date\),sum\(val\) from TMP_TBL_[a-zA-Z0-9]+ context by id$"
@@ -1157,6 +1173,7 @@ class TestTable2:
         self.conn.dropDatabase("dfs://test_csort")
         self.conn.dropDatabase(dbname)
         self.conn.dropDatabase(dbname2)
+
 
 if __name__ == '__main__':
     pytest.main(["-s", "test/test_table2.py"])

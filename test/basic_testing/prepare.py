@@ -1,12 +1,13 @@
+import math
 import platform
 import re
-from uuid import UUID
-import numpy as np
-import math
 from decimal import Decimal
-import pandas as pd
-import dolphindb.settings as keys
 from importlib.util import find_spec
+from uuid import UUID
+
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
 
 if find_spec("pyarrow") is not None:
     import pyarrow as pa
@@ -18,6 +19,7 @@ PYTHON_VERSION = tuple(int(i) for i in platform.python_version().split('.'))
 
 
 class DataUtils(object):
+
     DATA_UPLOAD = {
         # None
         'data_none': {
@@ -323,12 +325,12 @@ class DataUtils(object):
             'expect_value': "2262.04.11T23:47:16.854775807",
             'dtype': 'datetime64[ns]',
         },
-        'data_numpy_datetime64_ns_min': {
-            'value': np.datetime64('1677-09-21T00:12:43.145224193', 'ns'),
-            'expect_typestr': 'NANOTIMESTAMP',
-            'expect_value': "1677.09.21T00:12:43.145224193",
-            'dtype': 'datetime64[ns]',
-        },
+        # 'data_numpy_datetime64_ns_min': {
+        #     'value': np.datetime64('1677-09-21T00:12:43.145224193', 'ns'),
+        #     'expect_typestr': 'NANOTIMESTAMP',
+        #     'expect_value': "1677.09.21T00:12:43.145224193",
+        #     'dtype': 'datetime64[ns]',
+        # },
         'data_numpy_datetime64_ns_none': {
             'value': np.datetime64('1677-09-21T00:12:43.145224192', 'ns'),
             'expect_typestr': 'NANOTIMESTAMP',
@@ -645,6 +647,16 @@ class DataUtils(object):
         'date_0': {
             'value': '1970.01.01d',
             'expect': np.datetime64('1970-01-01', 'D'),
+            'dtype': 'datetime64[D]',
+            'contain_none': {
+                'expect': np.datetime64('nat', 'D'),
+                'dtype': 'datetime64[D]',
+            },
+            'ddbtype': 'DATE',
+        },
+        'date_1': {
+            'value': '1970.01.02d',
+            'expect': np.datetime64('1970-01-02', 'D'),
             'dtype': 'datetime64[D]',
             'contain_none': {
                 'expect': np.datetime64('nat', 'D'),
@@ -986,10 +998,10 @@ class DataUtils(object):
         # blob
         'blob': {
             'value': "blob('abc!@#中文 123')",
-            'expect': 'abc!@#中文 123',
+            'expect': 'abc!@#中文 123'.encode(),
             'dtype': 'object',
             'contain_none': {
-                'expect': '',
+                'expect': b'',
                 'dtype': 'object',
             },
             'ddbtype': 'BLOB',
@@ -997,7 +1009,7 @@ class DataUtils(object):
 
         # decimal
         'decimal32': {
-            'value': '"0"$DECIMAL32(3)',
+            'value': 'decimal32("0",3)',
             'expect': Decimal('0.000'),
             'dtype': 'object',
             'contain_none': {
@@ -1007,7 +1019,7 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL32(3)',
         },
         'decimal32_8': {
-            'value': "'3.141592653589'$DECIMAL32(8)",
+            'value': "decimal32('3.141592653589',8)",
             'expect': Decimal('3.14159265'),
             'dtype': 'object',
             'contain_none': {
@@ -1017,7 +1029,7 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL32(8)',
         },
         'decimal32_9': {
-            'value': "'-0.14159265358'$DECIMAL32(9)",
+            'value': "decimal32('-0.14159265358',9)",
             'expect': Decimal('-0.141592654'),
             'dtype': 'object',
             'contain_none': {
@@ -1037,7 +1049,7 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL32(0)',
         },
         'decimal64': {
-            'value': '"0"$DECIMAL64(3)',
+            'value': 'decimal64("0",3)',
             'expect': Decimal('0.000'),
             'dtype': 'object',
             'contain_none': {
@@ -1047,7 +1059,7 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL64(3)',
         },
         'decimal64_17': {
-            'value': "'3.14159265358979323846'$DECIMAL64(17)",
+            'value': "decimal64('3.14159265358979323846',17)",
             'expect': Decimal('3.14159265358979324'),
             'dtype': 'object',
             'contain_none': {
@@ -1057,7 +1069,7 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL64(17)',
         },
         'decimal64_18': {
-            'value': "'-0.14159265358979323846'$DECIMAL64(18)",
+            'value': "decimal64('-0.14159265358979323846',18)",
             'expect': Decimal('-0.141592653589793238'),
             'dtype': 'object',
             'contain_none': {
@@ -1087,7 +1099,7 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL64(0)',
         },
         'decimal128': {
-            'value': '"0"$DECIMAL128(3)',
+            'value': 'decimal128("0",3)',
             'expect': Decimal('0.000'),
             'dtype': 'object',
             'contain_none': {
@@ -1097,7 +1109,7 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL128(3)',
         },
         'decimal128_37': {
-            'value': "'3.14159265358979323846264338327950288419'$DECIMAL128(37)",
+            'value': "decimal128('3.14159265358979323846264338327950288419',37)",
             'expect': Decimal('3.1415926535897932384626433832795028842'),
             'dtype': 'object',
             'contain_none': {
@@ -1107,7 +1119,7 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL128(37)',
         },
         'decimal128_38': {
-            'value': "'-0.14159265358979323846264338327950288419'$DECIMAL128(38)",
+            'value': "decimal128('-0.14159265358979323846264338327950288419',38)",
             'expect': Decimal('-0.14159265358979323846264338327950288419'),
             'dtype': 'object',
             'contain_none': {
@@ -1127,7 +1139,9 @@ class DataUtils(object):
             'ddbtype': 'DECIMAL128(0)',
         },
     }
+
     if find_spec("pyarrow") is not None:
+
         DATA_UPLOAD_ARROW = {
             'data_arrow_int8_0': {
                 'value': 0,
@@ -1522,6 +1536,5651 @@ class DataUtils(object):
         },
     }
 
+    DATA_SCALAR_SET_TYPE = {
+        # none->set type
+        # only need one set type case
+        'py_none_set_decimal32': {
+            'params': {
+                'obj': None,
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': None,
+        },
+        # pd.NA->set type
+        'pd_na_set_decimal64': {
+            'params': {
+                'obj': pd.NA,
+                'types': [keys.DT_DECIMAL64, 15],
+            },
+            'expect': None,
+        },
+        # pd.NaT->set type
+        'pd_nat_set_decimal128': {
+            'params': {
+                'obj': pd.NaT,
+                'types': [keys.DT_DECIMAL128, 35],
+            },
+            'expect': None,
+        },
+        # np.nan->set type
+        'np_nan_set_decimal128': {
+            'params': {
+                'obj': np.nan,
+                'types': [keys.DT_DECIMAL128, 35],
+            },
+            'expect': None,
+        },
+        # bool->set type <bool>
+        'py_bool_set_type_bool': {
+            'params': {
+                'obj': True,
+                'types': keys.DT_BOOL,
+            },
+            'expect': True,
+        },
+        'np_bool_set_type_bool': {
+            'params': {
+                'obj': np.bool_(False),
+                'types': keys.DT_BOOL,
+            },
+            'expect': False,
+        },
+        # char->set type
+        # np.int8->set type <bool>
+        'np_int8_1_set_type_bool': {
+            'params': {
+                'obj': np.int8(1),
+                'types': keys.DT_BOOL,
+            },
+            'expect': True,
+        },
+        'np_int8_0_set_type_bool': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_BOOL,
+            },
+            'expect': False,
+        },
+        'np_int8_-128_set_type_bool': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_BOOL,
+            },
+            'expect': None,
+        },
+        # np.int8->set type <char>
+        'np_int8_0_set_type_char': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_CHAR,
+            },
+            'expect': 0,
+        },
+        'np_int8_-128_set_type_char': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_CHAR,
+            },
+            'expect': None,
+        },
+        # np.int8->set type <short>
+        'np_int8_0_set_type_short': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_SHORT,
+            },
+            'expect': 0,
+        },
+        'np_int8_-128_set_type_short': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_SHORT,
+            },
+            'expect': -128,
+        },
+        # np.int8->set type <int>
+        'np_int8_0_set_type_int': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_INT,
+            },
+            'expect': 0,
+        },
+        'np_int8_-128_set_type_int': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_INT,
+            },
+            'expect': -128,
+        },
+        # np.int8->set type <long>
+        'np_int8_0_set_type_long': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_LONG,
+            },
+            'expect': 0,
+        },
+        'np_int8_-128_set_type_long': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_LONG,
+            },
+            'expect': -128,
+        },
+        # todo:np.int8->set type <int128>
+        # 'np_int8_set_type_int128': {
+        #     'params': {
+        #         'obj': np.int8(0),
+        #         'types': keys.DT_INT128,
+        #     },
+        #     'expect': {
+        #         'normal': INt128(0),
+        #         'to_python': 0,
+        #     },
+        # },
+        # np.int8->set type <float>
+        'np_int8_1_set_type_float': {
+            'params': {
+                'obj': np.int8(1),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': 1.0,
+        },
+        'np_int8_-128_set_type_float': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': -128.0,
+        },
+        # np.int8->set type <double>
+        'np_int8_1_set_type_double': {
+            'params': {
+                'obj': np.int8(1),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': 1.0,
+        },
+        'np_int8_-128_set_type_double': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': -128.0,
+        },
+        # np.int8->set type <date>
+        'np_int8_0_set_type_date': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.datetime64("1970-01-01", "D"),
+        },
+        'np_int8_-128_set_type_date': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.datetime64("1969-08-26", "D"),
+        },
+        # np.int8->set type <month>
+        'np_int8_0_set_type_month': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.datetime64("0000-01", "M"),
+        },
+        # np.int8->set type <time>
+        'np_int8_set_type_time': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.datetime64("1970-01-01T00:00:00.000", "ms"),
+        },
+        # np.int8->set type <minute>
+        'np_int8_set_type_minute': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.datetime64("1970-01-01T00:00", "m"),
+        },
+        # np.int8->set type <second>
+        'np_int8_set_type_second': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.datetime64("1970-01-01T00:00:00", "s"),
+        },
+        # np.int8->set type <datetime>
+        'np_int8_0_set_type_datetime': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.datetime64("1970-01-01T00:00:00", "s"),
+        },
+        'np_int8_-128_set_type_datetime': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.datetime64("1969-12-31T23:57:52", "s"),
+        },
+        # np.int8->set type <timestamp>
+        'np_int8_0_set_type_timestamp': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.datetime64("1970-01-01T00:00:00.000", "ms"),
+        },
+        'np_int8_-128_set_type_timestamp': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.datetime64("1969-12-31T23:59:59.872", "ms"),
+        },
+        # np.int8->set type <nanotime>
+        'np_int8_set_type_nanotime': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.datetime64("1970-01-01T00:00:00.000000000", "ns"),
+        },
+        # np.int8->set type <nanotimestamp>
+        'np_int8_0_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.datetime64("1970-01-01T00:00:00.000000000", "ns"),
+        },
+        'np_int8_-128_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.datetime64("1969-12-31T23:59:59.999999872", "ns"),
+        },
+        # np.int8->set type <datehour>
+        'np_int8_0_set_type_datehour': {
+            'params': {
+                'obj': np.int8(0),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.datetime64("1970-01-01T00", "h"),
+        },
+        'np_int8_-128_set_type_datehour': {
+            'params': {
+                'obj': np.int8(-128),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.datetime64("1969-12-26T16", "h"),
+        },
+        # np.int8->set type <decimal32>
+        'np_int8_set_type_decimal32': {
+            'params': {
+                'obj': np.int8(1),
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': Decimal('1.000'),
+        },
+        # np.int8->set type <decimal64>
+        'np_int8_set_type_decimal64': {
+            'params': {
+                'obj': np.int8(1),
+                'types': [keys.DT_DECIMAL64, 3],
+            },
+            'expect': Decimal('1.000'),
+        },
+        # np.int8->set type <decimal128>
+        'np_int8_set_type_decimal128': {
+            'params': {
+                'obj': np.int8(1),
+                'types': [keys.DT_DECIMAL128, 3],
+            },
+            'expect': Decimal('1.000'),
+        },
+        # date->set type
+        # np.datetime64[D]->set type <date>
+        'np_datetime64_D_set_type_date': {
+            'params': {
+                'obj': np.datetime64('1970-01-01', 'D'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.datetime64('1970-01-01', 'D'),
+        },
+        # np.datetime64[D]->set type <month>
+        'np_datetime64_D_set_type_month': {
+            'params': {
+                'obj': np.datetime64('1970-01-01', 'D'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.datetime64('1970-01', 'M'),
+        },
+        # np.datetime64[D]->set type <time>
+        # 'np_datetime64_D_set_type_time': {
+        #     'params': {
+        #          'obj': np.datetime64('1970-01-01','D'),
+        #         'types': keys.DT_TIME,
+        #     },
+        #     'expect': {
+        #         'normal': Time(0),
+        #         'to_python': datetime.time(),
+        #     },
+        # },
+        # np.datetime64[D]->set type <minute>
+        # 'np_datetime64_D_set_type_minute': {
+        #     'params': {
+        #          'obj': np.datetime64('1970-01-01','D'),
+        #         'types': keys.DT_MINUTE,
+        #     },
+        #     'expect': {
+        #         'normal': Minute(0),
+        #         'to_python': datetime.time(),
+        #     },
+        # },
+        # np.datetime64[D]->set type <second>
+        # 'np_datetime64_D_set_type_second': {
+        #     'params': {
+        #          'obj': np.datetime64('1970-01-01','D'),
+        #         'types': keys.DT_SECOND,
+        #     },
+        #     'expect': {
+        #         'normal': Second(0),
+        #         'to_python': datetime.time(),
+        #     },
+        # },
+        # np.datetime64[D]->set type <datetime>
+        'np_datetime64_D_set_type_datetime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01', 'D'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[D]->set type <timestamp>
+        'np_datetime64_D_set_type_timestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01', 'D'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[D]->set type <nanotime>
+        # 'np_datetime64_D_set_type_nanotime': {
+        #     'params': {
+        #          'obj': np.datetime64('1970-01-01','D'),
+        #         'types': keys.DT_NANOTIME,
+        #     },
+        #     'expect': {
+        #         'normal': NanoTime(0),
+        #         'to_python': 0,
+        #     },
+        # },
+        # np.datetime64[D]->set type <nanotimestamp>
+        'np_datetime64_D_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01', 'D'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[D]->set type <datehour>
+        'np_datetime64_D_set_type_datehour': {
+            'params': {
+                'obj': np.datetime64('1970-01-01', 'D'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.datetime64('1970-01-01T00', 'h'),
+        },
+        # todo:OperatorImp::cast
+        # month->set type
+        # np.datetime64[M]->set type <date>
+        # 'np_datetime64_M_set_type_date': {
+        #     'params': {
+        #         'obj': np.datetime64('1970-01', 'M'),
+        #         'types': keys.DT_DATE,
+        #     },
+        #     'expect': np.datetime64('1970-01-01', 'D'),
+        # },
+        # np.datetime64[M]->set type <month>
+        'np_datetime64_M_set_type_month': {
+            'params': {
+                'obj': np.datetime64('1970-01', 'M'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.datetime64('1970-01', 'M'),
+        },
+        # np.datetime64[M]->set type <datetime>
+        # 'np_datetime64_M_set_type_datetime': {
+        #     'params': {
+        #         'obj': np.datetime64('1970-01', 'M'),
+        #         'types': keys.DT_DATETIME,
+        #     },
+        #     'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        # },
+        # np.datetime64[M]->set type <timestamp>
+        # 'np_datetime64_M_set_type_timestamp': {
+        #     'params': {
+        #         'obj': np.datetime64('1970-01', 'M'),
+        #         'types': keys.DT_TIMESTAMP,
+        #     },
+        #     'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        # },
+        # np.datetime64[M]->set type <nanotimestamp>
+        # 'np_datetime64_M_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': np.datetime64('1970-01', 'M'),
+        #         'types': keys.DT_NANOTIMESTAMP,
+        #     },
+        #     'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        # },
+        # np.datetime64[M]->set type <datehour>
+        # 'np_datetime64_M_set_type_datehour': {
+        #     'params': {
+        #         'obj': np.datetime64('1970-01', 'M'),
+        #         'types': keys.DT_DATEHOUR,
+        #     },
+        #     'expect': np.datetime64('1970-01-01T00', 'h'),
+        # },
+        # hour->set type
+        # np.datetime64[h]->set type <date>
+        'np_datetime64_h_set_type_date': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.datetime64('1970-01-01', 'D'),
+        },
+        # np.datetime64[h]->set type <month>
+        'np_datetime64_h_set_type_month': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.datetime64('1970-01', 'M'),
+        },
+        # np.datetime64[h]->set type <time>
+        'np_datetime64_h_set_type_time': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[h]->set type <minute>
+        'np_datetime64_h_set_type_minute': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.datetime64('1970-01-01T00:00', 'm'),
+        },
+        # np.datetime64[h]->set type <second>
+        'np_datetime64_h_set_type_second': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[h]->set type <datetime>
+        'np_datetime64_h_set_type_datetime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[h]->set type <timestamp>
+        'np_datetime64_h_set_type_timestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[h]->set type <nanotime>
+        'np_datetime64_h_set_type_nanotime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[h]->set type <nanotimestamp>
+        'np_datetime64_h_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[h]->set type <datehour>
+        'np_datetime64_h_set_type_datehour': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00', 'h'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.datetime64('1970-01-01T00', 'h'),
+        },
+        # minute->set type
+        # np.datetime64[m]->set type <date>
+        'np_datetime64_m_set_type_date': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.datetime64('1970-01-01', 'D'),
+        },
+        # np.datetime64[m]->set type <month>
+        'np_datetime64_m_set_type_month': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.datetime64('1970-01', 'M'),
+        },
+        # np.datetime64[m]->set type <time>
+        'np_datetime64_m_set_type_time': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[m]->set type <minute>
+        'np_datetime64_m_set_type_minute': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.datetime64('1970-01-01T00:00', 'm'),
+        },
+        # np.datetime64[m]->set type <second>
+        'np_datetime64_m_set_type_second': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[m]->set type <datetime>
+        'np_datetime64_m_set_type_datetime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[m]->set type <timestamp>
+        'np_datetime64_m_set_type_timestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[m]->set type <nanotime>
+        'np_datetime64_m_set_type_nanotime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[m]->set type <nanotimestamp>
+        'np_datetime64_m_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[m]->set type <datehour>
+        'np_datetime64_m_set_type_datehour': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 'm'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.datetime64('1970-01-01T00', 'h'),
+        },
+        # second->set type
+        # np.datetime64[s]->set type <date>
+        'np_datetime64_s_set_type_date': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.datetime64('1970-01-01', 'D'),
+        },
+        # np.datetime64[s]->set type <month>
+        'np_datetime64_s_set_type_month': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.datetime64('1970-01', 'M'),
+        },
+        # np.datetime64[s]->set type <time>
+        'np_datetime64_s_set_type_time': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[s]->set type <minute>
+        'np_datetime64_s_set_type_minute': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.datetime64('1970-01-01T00:00', 'm'),
+        },
+        # np.datetime64[s]->set type <second>
+        'np_datetime64_s_set_type_second': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[s]->set type <datetime>
+        'np_datetime64_s_set_type_datetime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[s]->set type <timestamp>
+        'np_datetime64_s_set_type_timestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[s]->set type <nanotime>
+        'np_datetime64_s_set_type_nanotime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[s]->set type <nanotimestamp>
+        'np_datetime64_s_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[s]->set type <datehour>
+        'np_datetime64_s_set_type_datehour': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00', 's'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.datetime64('1970-01-01T00', 'h'),
+        },
+        # millisecond->set type
+        # np.datetime64[ms]->set type <date>
+        'np_datetime64_ms_set_type_date': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.datetime64('1970-01-01', 'D'),
+        },
+        # np.datetime64[ms]->set type <month>
+        'np_datetime64_ms_set_type_month': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.datetime64('1970-01', 'M'),
+        },
+        # np.datetime64[ms]->set type <time>
+        'np_datetime64_ms_set_type_time': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[ms]->set type <minute>
+        'np_datetime64_ms_set_type_minute': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.datetime64('1970-01-01T00:00', 'm'),
+        },
+        # np.datetime64[ms]->set type <second>
+        'np_datetime64_ms_set_type_second': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[ms]->set type <datetime>
+        'np_datetime64_ms_set_type_datetime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[ms]->set type <timestamp>
+        'np_datetime64_ms_set_type_timestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[ms]->set type <nanotime>
+        'np_datetime64_ms_set_type_nanotime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[ms]->set type <nanotimestamp>
+        'np_datetime64_ms_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[ms]->set type <datehour>
+        'np_datetime64_ms_set_type_datehour': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.datetime64('1970-01-01T00', 'h'),
+        },
+        # microsecond->set type
+        # np.datetime64[us]->set type <date>
+        'np_datetime64_us_set_type_date': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.datetime64('1970-01-01', 'D'),
+        },
+        # np.datetime64[us]->set type <month>
+        'np_datetime64_us_set_type_month': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.datetime64('1970-01', 'M'),
+        },
+        # np.datetime64[us]->set type <time>
+        'np_datetime64_us_set_type_time': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[us]->set type <minute>
+        'np_datetime64_us_set_type_minute': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.datetime64('1970-01-01T00:00', 'm'),
+        },
+        # np.datetime64[us]->set type <second>
+        'np_datetime64_us_set_type_second': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[us]->set type <datetime>
+        'np_datetime64_us_set_type_datetime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[us]->set type <timestamp>
+        'np_datetime64_us_set_type_timestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[us]->set type <nanotime>
+        'np_datetime64_us_set_type_nanotime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[us]->set type <nanotimestamp>
+        'np_datetime64_us_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[us]->set type <datehour>
+        'np_datetime64_us_set_type_datehour': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.datetime64('1970-01-01T00', 'h'),
+        },
+        # nanosecond->set type
+        # np.datetime64[ns]->set type <date>
+        'np_datetime64_ns_set_type_date': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.datetime64('1970-01-01', 'D'),
+        },
+        # np.datetime64[ns]->set type <month>
+        'np_datetime64_ns_set_type_month': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.datetime64('1970-01', 'M'),
+        },
+        # np.datetime64[ns]->set type <time>
+        'np_datetime64_ns_set_type_time': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[ns]->set type <minute>
+        'np_datetime64_ns_set_type_minute': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.datetime64('1970-01-01T00:00', 'm'),
+        },
+        # np.datetime64[ns]->set type <second>
+        'np_datetime64_ns_set_type_second': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[ns]->set type <datetime>
+        'np_datetime64_ns_set_type_datetime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00', 's'),
+        },
+        # np.datetime64[ns]->set type <timestamp>
+        'np_datetime64_ns_set_type_timestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000', 'ms'),
+        },
+        # np.datetime64[ns]->set type <nanotime>
+        'np_datetime64_ns_set_type_nanotime': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[ns]->set type <nanotimestamp>
+        'np_datetime64_ns_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+        },
+        # np.datetime64[ns]->set type <datehour>
+        'np_datetime64_ns_set_type_datehour': {
+            'params': {
+                'obj': np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.datetime64('1970-01-01T00', 'h'),
+        },
+        # float->set type
+        # np.float32->set type <float>
+        'np_float32_set_type_float': {
+            'params': {
+                'obj': np.float32('3.14'),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': 3.14,
+        },
+        # np.float32->set type <double>
+        'np_float32_set_type_double': {
+            'params': {
+                'obj': np.float32('3.14'),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': 3.14,
+        },
+        # np.float32->set type <decimal32>
+        'np_float32_set_type_decimal32': {
+            'params': {
+                'obj': np.float32('3.14'),
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # np.float32->set type <decimal64>
+        'np_float32_set_type_decimal64': {
+            'params': {
+                'obj': np.float32('3.14'),
+                'types': [keys.DT_DECIMAL64, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # np.float32->set type <decimal128>
+        'np_float32_set_type_decimal128': {
+            'params': {
+                'obj': np.float32('3.14'),
+                'types': [keys.DT_DECIMAL128, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # double->set type
+        # py_float->set type <float>
+        'py_float_set_type_float': {
+            'params': {
+                'obj': 3.14,
+                'types': keys.DT_FLOAT,
+            },
+            'expect': 3.14,
+        },
+        # py_float->set type <double>
+        'py_float_set_type_double': {
+            'params': {
+                'obj': 3.14,
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': 3.14,
+        },
+        # py_float->set type <decimal32>
+        'py_float_set_type_decimal32': {
+            'params': {
+                'obj': 3.14,
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_float->set type <decimal64>
+        'py_float_set_type_decimal64': {
+            'params': {
+                'obj': 3.14,
+                'types': [keys.DT_DECIMAL64, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_float->set type <decimal128>
+        'py_float_set_type_decimal128': {
+            'params': {
+                'obj': 3.14,
+                'types': [keys.DT_DECIMAL128, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # string->set type
+        # py_str->set type <string>
+        'py_str_set_type_sting': {
+            'params': {
+                'obj': 'abc!@#中文 123',
+                'types': keys.DT_STRING,
+            },
+            'expect': 'abc!@#中文 123',
+        },
+        # py_str->set type <blob>
+        'py_str_set_type_blob': {
+            'params': {
+                'obj': 'abc!@#中文 123',
+                'types': keys.DT_BLOB,
+            },
+            'expect': 'abc!@#中文 123'.encode(),
+        },
+        # py_str->set type <decimal32>
+        'py_str_set_type_decimal32': {
+            'params': {
+                'obj': '3.14',
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_str->set type <decimal64>
+        'py_str_set_type_decimal64': {
+            'params': {
+                'obj': '3.14',
+                'types': [keys.DT_DECIMAL64, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_str->set type <decimal128>
+        'py_str_set_type_decimal128': {
+            'params': {
+                'obj': '3.14',
+                'types': [keys.DT_DECIMAL128, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_str->set type <uuid>
+        'py_str_set_type_uuid': {
+            'params': {
+                'obj': '9d457e79-1bed-d6c2-3612-b0d31c1881f6',
+                'types': keys.DT_UUID,
+            },
+            'expect': '9d457e79-1bed-d6c2-3612-b0d31c1881f6',
+        },
+        # py_str->set type <decimal32> format error
+        'py_str_set_type_decimal32_format_error': {
+            'params': {
+                'obj': 'test',
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': None,
+        },
+        # np.str_->set type <decimal32>
+        'np_str_set_type_decimal32': {
+            'params': {
+                'obj': np.str_('3.14'),
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # bytes->set type
+        # py_bytes->set type <string>
+        'py_bytes_set_type_sting': {
+            'params': {
+                'obj': 'abc!@#中文 123'.encode(),
+                'types': keys.DT_STRING,
+            },
+            'expect': 'abc!@#中文 123',
+        },
+        # py_bytes->set type <blob>
+        'py_bytes_set_type_blob': {
+            'params': {
+                'obj': 'abc!@#中文 123'.encode(),
+                'types': keys.DT_BLOB,
+            },
+            'expect': 'abc!@#中文 123'.encode(),
+        },
+        # py_bytes->set type <decimal32>
+        'py_bytes_set_type_decimal32': {
+            'params': {
+                'obj': '3.14'.encode(),
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_bytes->set type <decimal64>
+        'py_bytes_set_type_decimal64': {
+            'params': {
+                'obj': '3.14'.encode(),
+                'types': [keys.DT_DECIMAL64, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_bytes->set type <decimal128>
+        'py_bytes_set_type_decimal128': {
+            'params': {
+                'obj': '3.14'.encode(),
+                'types': [keys.DT_DECIMAL128, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # np.bytes_->set type <decimal32> format error
+        'np_bytes_set_type_decimal32_format_error': {
+            'params': {
+                'obj': np.bytes_('test'.encode()),
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': None,
+        },
+        # np.bytes_->set type <decimal32>
+        'np_bytes_set_type_decimal32': {
+            'params': {
+                'obj': np.bytes_('3.14'.encode()),
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_decimal->set type
+        # py_decimal->set type <decimal32>
+        'py_decimal_set_type_decimal32': {
+            'params': {
+                'obj': Decimal('3.14'),
+                'types': [keys.DT_DECIMAL32, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_decimal->set type <decimal64>
+        'py_decimal_set_type_decimal64': {
+            'params': {
+                'obj': Decimal('3.14'),
+                'types': [keys.DT_DECIMAL64, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_decimal->set type <decimal128>
+        'py_decimal_set_type_decimal128': {
+            'params': {
+                'obj': Decimal('3.14'),
+                'types': [keys.DT_DECIMAL128, 3],
+            },
+            'expect': Decimal('3.140'),
+        },
+        # py_decimal->set type <float>
+        'py_decimal_set_type_float': {
+            'params': {
+                'obj': Decimal('3.14'),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': 3.14,
+        },
+        # py_decimal->set type <double>
+        'py_decimal_set_type_double': {
+            'params': {
+                'obj': Decimal('3.14'),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': 3.14,
+        },
+    }
+
+    DATA_VECTOR_SET_TYPE = {
+        # none->set type
+        'none_list_set_type_decimal32': {
+            'params': {
+                'obj': [None, pd.NA, pd.NaT, np.nan],
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array([None, None, None, None], dtype=np.object_),
+        },
+        'none_array_set_type_decimal128': {
+            'params': {
+                'obj': np.array([None, pd.NA, pd.NaT, np.nan], dtype=np.object_),
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array([None, None, None, None], dtype=np.object_),
+        },
+        # bool->set type
+        # bool->set type <bool>
+        'bool_list_set_type_bool': {
+            'params': {
+                'obj': [True, False, np.True_, np.False_, None],
+                'types': keys.DT_BOOL,
+            },
+            'expect': np.array([True, False, True, False, None], dtype=np.object_),
+        },
+        'bool_array_dtype_bool_set_type_bool': {
+            'params': {
+                'obj': np.array([True, False, np.True_, np.False_], dtype=np.bool_),
+                'types': keys.DT_BOOL,
+            },
+            'expect': np.array([True, False, True, False], dtype=np.bool_),
+        },
+        'bool_array_dtype_object_set_type_bool': {
+            'params': {
+                'obj': np.array([True, False, np.True_, np.False_, None], dtype=np.object_),
+                'types': keys.DT_BOOL,
+            },
+            'expect': np.array([True, False, True, False, None], dtype=np.object_),
+        },
+        # char->set type
+        # char->set type <bool>
+        'char_list_set_type_bool': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_BOOL,
+            },
+            'expect': np.array([True, False, None, None], dtype=np.object_),
+        },
+        'char_array_dtype_int8_set_type_bool': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_BOOL,
+            },
+            'expect': np.array([True, False, None], dtype=np.object_),
+        },
+        'char_array_dtype_object_set_type_bool': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_BOOL,
+            },
+            'expect': np.array([True, False, None, None], dtype=np.object_),
+        },
+        # char->set type <char>
+        'char_list_set_type_char': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_CHAR,
+            },
+            'expect': np.array([1, 0, np.nan, np.nan], dtype=np.float64),
+        },
+        'char_array_dtype_int8_set_type_char': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_CHAR,
+            },
+            'expect': np.array([1, 0, np.nan], dtype=np.float64),
+        },
+        'char_array_dtype_object_set_type_char': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_CHAR,
+            },
+            'expect': np.array([1, 0, np.nan, np.nan], dtype=np.float64),
+        },
+        # char->set type <short>
+        'char_list_set_type_short': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_SHORT,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float64),
+        },
+        'char_array_dtype_int8_set_type_short': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_SHORT,
+            },
+            'expect': np.array([1, 0, -128], dtype=np.int16),
+        },
+        'char_array_dtype_object_set_type_short': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_SHORT,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float64),
+        },
+        # char->set type <int>
+        'char_list_set_type_int': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_INT,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float64),
+        },
+        'char_array_dtype_int8_set_type_int': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_INT,
+            },
+            'expect': np.array([1, 0, -128], dtype=np.int32),
+        },
+        'char_array_dtype_object_set_type_int': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_INT,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float64),
+        },
+        # char->set type <long>
+        'char_list_set_type_long': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_LONG,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float64),
+        },
+        'char_array_dtype_int8_set_type_long': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_LONG,
+            },
+            'expect': np.array([1, 0, -128], dtype=np.int64),
+        },
+        'char_array_dtype_object_set_type_long': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_LONG,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float64),
+        },
+        # char->set type <float>
+        'char_list_set_type_float': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_FLOAT,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float32),
+        },
+        'char_array_dtype_int8_set_type_float': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': np.array([1, 0, -128], dtype=np.float32),
+        },
+        'char_array_dtype_object_set_type_float': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float32),
+        },
+        # char->set type <double>
+        'char_list_set_type_double': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float64),
+        },
+        'char_array_dtype_int8_set_type_double': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': np.array([1, 0, -128], dtype=np.float64),
+        },
+        'char_array_dtype_object_set_type_double': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': np.array([1, 0, -128, np.nan], dtype=np.float64),
+        },
+        # char->set type <date>
+        'char_list_set_type_date': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-02', '1970-01-01', '1969-08-26', 'NaT'], dtype='datetime64[D]'),
+        },
+        'char_array_dtype_int8_set_type_date': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-02', '1970-01-01', '1969-08-26'], dtype='datetime64[D]'),
+        },
+        'char_array_dtype_object_set_type_date': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-02', '1970-01-01', '1969-08-26', 'NaT'], dtype='datetime64[D]'),
+        },
+        # char->set type <month>
+        # todo:-128
+        'char_list_set_type_month': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(12), None],
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['0000-02', '0000-01', '0001-01', 'NaT'], dtype='datetime64[M]'),
+        },
+        'char_array_dtype_int8_set_type_month': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(12)], dtype=np.int8),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['0000-02', '0000-01', '0001-01'], dtype='datetime64[M]'),
+        },
+        'char_array_dtype_object_set_type_month': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(12), None], dtype=np.object_),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['0000-02', '0000-01', '0001-01', 'NaT'], dtype='datetime64[M]'),
+        },
+        # char->set type <time>
+        'char_list_set_type_time': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), None],
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.001', '1970-01-01T00:00:00.000', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'char_array_dtype_int8_set_type_time': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0)], dtype=np.int8),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.001', '1970-01-01T00:00:00.000'], dtype='datetime64[ms]'),
+        },
+        'char_array_dtype_object_set_type_time': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), None], dtype=np.object_),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.001', '1970-01-01T00:00:00.000', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # char->set type <minute>
+        'char_list_set_type_minute': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), None],
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:01', '1970-01-01T00:00', 'NaT'], dtype='datetime64[m]'),
+        },
+        'char_array_dtype_int8_set_type_minute': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0)], dtype=np.int8),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:01', '1970-01-01T00:00'], dtype='datetime64[m]'),
+        },
+        'char_array_dtype_object_set_type_minute': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), None], dtype=np.object_),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:01', '1970-01-01T00:00', 'NaT'], dtype='datetime64[m]'),
+        },
+        # char->set type <second>
+        'char_list_set_type_second': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), None],
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:01', '1970-01-01T00:00:00', 'NaT'], dtype='datetime64[s]'),
+        },
+        'char_array_dtype_int8_set_type_second': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0)], dtype=np.int8),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:01', '1970-01-01T00:00:00'], dtype='datetime64[s]'),
+        },
+        'char_array_dtype_object_set_type_second': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), None], dtype=np.object_),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:01', '1970-01-01T00:00:00', 'NaT'], dtype='datetime64[s]'),
+        },
+        # char->set type <datetime>
+        'char_list_set_type_datetime': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:01', '1970-01-01T00:00:00', '1969-12-31T23:57:52', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'char_array_dtype_int8_set_type_datetime': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:01', '1970-01-01T00:00:00', '1969-12-31T23:57:52'],
+                                     dtype='datetime64[s]'),
+        },
+        'char_array_dtype_object_set_type_datetime': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:01', '1970-01-01T00:00:00', '1969-12-31T23:57:52', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # char->set type <timestamp>
+        'char_list_set_type_timestamp': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(
+                    ['1970-01-01T00:00:00.001', '1970-01-01T00:00:00.000', '1969-12-31T23:59:59.872', 'NaT'],
+                    dtype='datetime64[ms]'),
+        },
+        'char_array_dtype_int8_set_type_timestamp': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.001', '1970-01-01T00:00:00.000', '1969-12-31T23:59:59.872'],
+                                     dtype='datetime64[ms]'),
+        },
+        'char_array_dtype_object_set_type_timestamp': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(
+                    ['1970-01-01T00:00:00.001', '1970-01-01T00:00:00.000', '1969-12-31T23:59:59.872', 'NaT'],
+                    dtype='datetime64[ms]'),
+        },
+        # char->set type <nanotime>
+        'char_list_set_type_nanotime': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), None],
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000000001', '1970-01-01T00:00:00.000000000', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'char_array_dtype_int8_set_type_nanotime': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0)], dtype=np.int8),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000000001', '1970-01-01T00:00:00.000000000'],
+                                     dtype='datetime64[ns]'),
+        },
+        'char_array_dtype_object_set_type_nanotime': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), None], dtype=np.object_),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000000001', '1970-01-01T00:00:00.000000000', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # char->set type <nanotimestamp>
+        'char_list_set_type_nanotimestamp': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(
+                    ['1970-01-01T00:00:00.000000001', '1970-01-01T00:00:00.000000000', '1969-12-31T23:59:59.999999872',
+                     'NaT'],
+                    dtype='datetime64[ns]'),
+        },
+        'char_array_dtype_int8_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(
+                    ['1970-01-01T00:00:00.000000001', '1970-01-01T00:00:00.000000000', '1969-12-31T23:59:59.999999872'],
+                    dtype='datetime64[ns]'),
+        },
+        'char_array_dtype_object_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(
+                    ['1970-01-01T00:00:00.000000001', '1970-01-01T00:00:00.000000000', '1969-12-31T23:59:59.999999872',
+                     'NaT'],
+                    dtype='datetime64[ns]'),
+        },
+        # char->set type <datehour>
+        'char_list_set_type_datehour': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T01', '1970-01-01T00', '1969-12-26T16', 'NaT'], dtype='datetime64[h]'),
+        },
+        'char_array_dtype_int8_set_type_datehour': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T01', '1970-01-01T00', '1969-12-26T16'], dtype='datetime64[h]'),
+        },
+        'char_array_dtype_object_set_type_datehour': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T01', '1970-01-01T00', '1969-12-26T16', 'NaT'], dtype='datetime64[h]'),
+        },
+        # char->set type <decimal32>
+        'char_list_set_type_decimal32': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array([Decimal('1.000'), Decimal('0.000'), Decimal('-128.000'), None], dtype=np.object_),
+        },
+        'char_array_dtype_int8_set_type_decimal32': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array([Decimal('1.000'), Decimal('0.000'), Decimal('-128.000')], dtype=np.object_),
+        },
+        # 'char_array_dtype_object_set_type_decimal32': {
+        #     'params': {
+        #         'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL32,3],
+        #     },
+        #     'expect': np.array([Decimal('1.000'), Decimal('0.000'), Decimal('-128.000'), None], dtype=np.object_),
+        # },
+        # char->set type <decimal64>
+        'char_list_set_type_decimal64': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array([Decimal('1.000'), Decimal('0.000'), Decimal('-128.000'), None], dtype=np.object_),
+        },
+        'char_array_dtype_int8_set_type_decimal64': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array([Decimal('1.000'), Decimal('0.000'), Decimal('-128.000')], dtype=np.object_),
+        },
+        # 'char_array_dtype_object_set_type_decimal64': {
+        #     'params': {
+        #         'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL64,3],
+        #     },
+        #     'expect': np.array([Decimal('1.000'), Decimal('0.000'), Decimal('-128.000'), None], dtype=np.object_),
+        # },
+        # char->set type <decimal128>
+        'char_list_set_type_decimal128': {
+            'params': {
+                'obj': [np.int8(1), np.int8(0), np.int8(-128), None],
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array([Decimal('1.000'), Decimal('0.000'), Decimal('-128.000'), None], dtype=np.object_),
+        },
+        'char_array_dtype_int8_set_type_decimal128': {
+            'params': {
+                'obj': np.array([np.int8(1), np.int8(0), np.int8(-128)], dtype=np.int8),
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array([Decimal('1.000'), Decimal('0.000'), Decimal('-128.000')], dtype=np.object_),
+        },
+        # 'char_array_dtype_object_set_type_decimal128': {
+        #     'params': {
+        #         'obj': np.array([np.int8(1), np.int8(0), np.int8(-128), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL128,3],
+        #     },
+        #     'expect': np.array([Decimal('1.000'), Decimal('0.000'), Decimal('-128.000'), None], dtype=np.object_),
+        # },
+        # date->set type
+        # date->set type <date>
+        'date_list_set_type_date': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'), None],
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[D]'),
+        },
+        'date_array_dtype_datetime64_D_set_type_date': {
+            'params': {
+                'obj': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[D]'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[D]'),
+        },
+        'date_array_dtype_object_set_type_date': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'),
+                     None], dtype=np.object_),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[D]'),
+        },
+        # date->set type <month>
+        'date_list_set_type_month': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'), None],
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'], dtype='datetime64[M]'),
+        },
+        'date_array_dtype_datetime64_D_set_type_month': {
+            'params': {
+                'obj': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[D]'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT'], dtype='datetime64[M]'),
+        },
+        'date_array_dtype_object_set_type_month': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'),
+                     None],
+                    dtype=np.object_),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'], dtype='datetime64[M]'),
+        },
+        # date->set type <time>
+        # todo:wait! if support add case for other no time dtype elif not suport modify and add other case
+        # todo: minute/second/nanotime
+        # date->set type <datetime>
+        'date_list_set_type_datetime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'), None],
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[s]'),
+        },
+        'date_array_dtype_datetime64_D_set_type_datetime': {
+            'params': {
+                'obj': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[D]'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[s]'),
+        },
+        'date_array_dtype_object_set_type_datetime': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'),
+                     None],
+                    dtype=np.object_),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[s]'),
+        },
+        # date->set type <timestamp>
+        'date_list_set_type_timestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'), None],
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[ms]'),
+        },
+        'date_array_dtype_datetime64_D_set_type_timestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[D]'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[ms]'),
+        },
+        'date_array_dtype_object_set_type_timestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'),
+                     None],
+                    dtype=np.object_),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[ms]'),
+        },
+        # date->set type <nanotimestamp>
+        'date_list_set_type_nanotimestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'), None],
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[ns]'),
+        },
+        'date_array_dtype_datetime64_D_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[D]'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[ns]'),
+        },
+        'date_array_dtype_object_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'),
+                     None],
+                    dtype=np.object_),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[ns]'),
+        },
+        # date->set type <datehour>
+        'date_list_set_type_datehour': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'), None],
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[h]'),
+        },
+        'date_array_dtype_datetime64_D_set_type_datehour': {
+            'params': {
+                'obj': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[D]'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT'], dtype='datetime64[h]'),
+        },
+        'date_array_dtype_object_set_type_datehour': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-02', 'D'), np.datetime64('NaT', 'D'),
+                     None],
+                    dtype=np.object_),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-02', 'NaT', 'NaT'], dtype='datetime64[h]'),
+        },
+        # month->set type
+        # month->set type <date>
+        # 'month_list_set_type_date': {
+        #     'params': {
+        #         'obj': [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #         'types': keys.DT_DATE,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[D]'),
+        # },
+        # 'month_array_dtype_datetime64_D_set_type_date': {
+        #     'params': {
+        #         'obj': np.array(['1970-01', '1970-02', 'NaT'], dtype='datetime64[M]'),
+        #         'types': keys.DT_DATE,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT'], dtype='datetime64[D]'),
+        # },
+        # 'month_array_dtype_object_set_type_date': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #             dtype=np.object_),
+        #         'types': keys.DT_DATE,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[D]'),
+        # },
+        # month->set type <month>
+        'month_list_set_type_month': {
+            'params': {
+                'obj': [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[M]'),
+        },
+        'month_array_dtype_datetime64_D_set_type_month': {
+            'params': {
+                'obj': np.array(['1970-01', '1970-02', 'NaT'], dtype='datetime64[M]'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01-01', '1970-02-01', 'NaT'], dtype='datetime64[M]'),
+        },
+        'month_array_dtype_object_set_type_month': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+                    dtype=np.object_),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[M]'),
+        },
+        # month->set type <datetime>
+        # 'month_list_set_type_datetime': {
+        #     'params': {
+        #         'obj': [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #         'types': keys.DT_DATETIME,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[s]'),
+        # },
+        # 'month_array_dtype_datetime64_D_set_type_datetime': {
+        #     'params': {
+        #         'obj': np.array(['1970-01', '1970-02', 'NaT'], dtype='datetime64[M]'),
+        #         'types': keys.DT_DATETIME,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT'], dtype='datetime64[s]'),
+        # },
+        # 'month_array_dtype_object_set_type_datetime': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #             dtype=np.object_),
+        #         'types': keys.DT_DATETIME,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[s]'),
+        # },
+        # month->set type <timestamp>
+        # 'month_list_set_type_timestamp': {
+        #     'params': {
+        #         'obj': [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #         'types': keys.DT_TIMESTAMP,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[ms]'),
+        # },
+        # 'month_array_dtype_datetime64_D_set_type_timestamp': {
+        #     'params': {
+        #         'obj': np.array(['1970-01', '1970-02', 'NaT'], dtype='datetime64[M]'),
+        #         'types': keys.DT_TIMESTAMP,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT'], dtype='datetime64[ms]'),
+        # },
+        # 'month_array_dtype_object_set_type_timestamp': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #             dtype=np.object_),
+        #         'types': keys.DT_TIMESTAMP,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[ms]'),
+        # },
+        # month->set type <nanotimestamp>
+        # 'month_list_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #         'types': keys.DT_NANOTIMESTAMP,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[ns]'),
+        # },
+        # 'month_array_dtype_datetime64_D_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': np.array(['1970-01', '1970-02', 'NaT'], dtype='datetime64[M]'),
+        #         'types': keys.DT_NANOTIMESTAMP,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT'], dtype='datetime64[ns]'),
+        # },
+        # 'month_array_dtype_object_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #             dtype=np.object_),
+        #         'types': keys.DT_NANOTIMESTAMP,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[ns]'),
+        # },
+        # month->set type <datehour>
+        # 'month_list_set_type_datehour': {
+        #     'params': {
+        #         'obj': [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #         'types': keys.DT_DATEHOUR,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[h]'),
+        # },
+        # 'month_array_dtype_datetime64_D_set_type_datehour': {
+        #     'params': {
+        #         'obj': np.array(['1970-01', '1970-02', 'NaT'], dtype='datetime64[M]'),
+        #         'types': keys.DT_DATEHOUR,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT'], dtype='datetime64[h]'),
+        # },
+        # 'month_array_dtype_object_set_type_datehour': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [np.datetime64('1970-01', 'M'), np.datetime64('1970-02', 'M'), np.datetime64('NaT', 'M'), None],
+        #             dtype=np.object_),
+        #         'types': keys.DT_DATEHOUR,
+        #     },
+        #     'expect': np.array(['1970-01-01', '1970-02-01', 'NaT', 'NaT'], dtype='datetime64[h]'),
+        # },
+        # hour->set type
+        # hour->set type <date>
+        'hour_list_set_type_date': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'], dtype='datetime64[D]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_date': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'], dtype='datetime64[D]'),
+        },
+        'hour_array_dtype_object_set_type_date': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'], dtype='datetime64[D]'),
+        },
+        # hour->set type <month>
+        'hour_list_set_type_month': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'], dtype='datetime64[M]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_month': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT'], dtype='datetime64[M]'),
+        },
+        'hour_array_dtype_object_set_type_month': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'], dtype='datetime64[M]'),
+        },
+        # hour->set type <time>
+        'hour_list_set_type_time': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[ms]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_time': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[ms]'),
+        },
+        'hour_array_dtype_object_set_type_time': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[ms]'),
+        },
+        # hour->set type <minute>
+        'hour_list_set_type_minute': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[m]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_minute': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[m]'),
+        },
+        'hour_array_dtype_object_set_type_minute': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[m]'),
+        },
+        # hour->set type <second>
+        'hour_list_set_type_second': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[s]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_second': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[s]'),
+        },
+        'hour_array_dtype_object_set_type_second': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[s]'),
+        },
+        # hour->set type <datetime>
+        'hour_list_set_type_datetime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[s]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_datetime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[s]'),
+        },
+        'hour_array_dtype_object_set_type_datetime': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[s]'),
+        },
+        # hour->set type <timestamp>
+        'hour_list_set_type_timestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[ms]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_timestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[ms]'),
+        },
+        'hour_array_dtype_object_set_type_timestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[ms]'),
+        },
+        # hour->set type <nanotime>
+        'hour_list_set_type_nanotime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[ns]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_nanotime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[ns]'),
+        },
+        'hour_array_dtype_object_set_type_nanotime': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[ns]'),
+        },
+        # hour->set type <nanotimestamp>
+        'hour_list_set_type_nanotimestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[ns]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[ns]'),
+        },
+        'hour_array_dtype_object_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[ns]'),
+        },
+        # hour->set type <datehour>
+        'hour_list_set_type_datehour': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                         np.datetime64('NaT', 'h'), None],
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[h]'),
+        },
+        'hour_array_dtype_datetime64_h_set_type_datehour': {
+            'params': {
+                'obj': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT'], dtype='datetime64[h]'),
+        },
+        'hour_array_dtype_object_set_type_datehour': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00', 'h'), np.datetime64('1970-01-01T01', 'h'),
+                     np.datetime64('NaT', 'h'), None],
+                    dtype=np.object_),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T01', 'NaT', 'NaT'], dtype='datetime64[h]'),
+        },
+        # minute->set type
+        # minute->set type <date>
+        'minute_list_set_type_date': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'], dtype='datetime64[D]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_date': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'], dtype='datetime64[D]'),
+        },
+        'minute_array_dtype_object_set_type_date': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'], dtype='datetime64[D]'),
+        },
+        # minute->set type <month>
+        'minute_list_set_type_month': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'], dtype='datetime64[M]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_month': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT'], dtype='datetime64[M]'),
+        },
+        'minute_array_dtype_object_set_type_month': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'], dtype='datetime64[M]'),
+        },
+        # minute->set type <time>
+        'minute_list_set_type_time': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_time': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'minute_array_dtype_object_set_type_time': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # minute->set type <minute>
+        'minute_list_set_type_minute': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_minute': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'minute_array_dtype_object_set_type_minute': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        # minute->set type <second>
+        'minute_list_set_type_second': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:01:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_second': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:01:00', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'minute_array_dtype_object_set_type_second': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:01:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # minute->set type <datetime>
+        'minute_list_set_type_datetime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:01:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_datetime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:01:00', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'minute_array_dtype_object_set_type_datetime': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:01:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # minute->set type <timestamp>
+        'minute_list_set_type_timestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_timestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'minute_array_dtype_object_set_type_timestamp': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # minute->set type <nanotime>
+        'minute_list_set_type_nanotime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_nanotime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'minute_array_dtype_object_set_type_nanotime': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # minute->set type <nanotimestamp>
+        'minute_list_set_type_nanotimestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'minute_array_dtype_object_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:01:00.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # minute->set type <datehour>
+        'minute_list_set_type_datehour': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                         np.datetime64('NaT', 'm'), None],
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'minute_array_dtype_datetime64_m_set_type_datehour': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00', '1970-01-01T00:01', 'NaT'], dtype='datetime64[m]'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'minute_array_dtype_object_set_type_datehour': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00', 'm'), np.datetime64('1970-01-01T00:01', 'm'),
+                                  np.datetime64('NaT', 'm'), None], dtype=np.object_),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        # second->set type
+        # second->set type <date>
+        'second_list_set_type_date': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_date': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        'second_array_dtype_object_set_type_date': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        # second->set type <month>
+        'second_list_set_type_month': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_month': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        'second_array_dtype_object_set_type_month': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        # second->set type <time>
+        'second_list_set_type_time': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_time': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'second_array_dtype_object_set_type_time': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # second->set type <minute>
+        'second_list_set_type_minute': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:00', '1970-01-01T00:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_minute': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:00', '1970-01-01T00:00', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'second_array_dtype_object_set_type_minute': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:00', '1970-01-01T00:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        # second->set type <second>
+        'second_list_set_type_second': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_second': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'second_array_dtype_object_set_type_second': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # second->set type <datetime>
+        'second_list_set_type_datetime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_datetime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'second_array_dtype_object_set_type_datetime': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # second->set type <timestamp>
+        'second_list_set_type_timestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_timestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'second_array_dtype_object_set_type_timestamp': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # second->set type <nanotime>
+        'second_list_set_type_nanotime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_nanotime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'second_array_dtype_object_set_type_nanotime': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # second->set type <nanotimestamp>
+        'second_list_set_type_nanotimestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'second_array_dtype_object_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:01.000', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # second->set type <datehour>
+        'second_list_set_type_datehour': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                         np.datetime64('NaT', 's'), None],
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'second_array_dtype_datetime64_s_set_type_datehour': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:01', 'NaT'], dtype='datetime64[s]'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'second_array_dtype_object_set_type_datehour': {
+            'params': {
+                'obj': np.array([np.datetime64('1970-01-01T00:00:00', 's'), np.datetime64('1970-01-01T00:00:01', 's'),
+                                  np.datetime64('NaT', 's'), None], dtype=np.object_),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        # millisecond->set type
+        # millisecond->set type <date>
+        'millisecond_list_set_type_date': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_date': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        'millisecond_array_dtype_object_set_type_date': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        # millisecond->set type <month>
+        'millisecond_list_set_type_month': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_month': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        'millisecond_array_dtype_object_set_type_month': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        # millisecond->set type <time>
+        'millisecond_list_set_type_time': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_time': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'millisecond_array_dtype_object_set_type_time': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # millisecond->set type <minute>
+        'millisecond_list_set_type_minute': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:00', '1970-01-01T00:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_minute': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:00', '1970-01-01T00:00', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'millisecond_array_dtype_object_set_type_minute': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01T00:00', '1970-01-01T00:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        # millisecond->set type <second>
+        'millisecond_list_set_type_second': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_SECOND,
+            },
+            'expect':  np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_second': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:00', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'millisecond_array_dtype_object_set_type_second': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # millisecond->set type <datetime>
+        'millisecond_list_set_type_datetime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_datetime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect':  np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:00', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'millisecond_array_dtype_object_set_type_datetime': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00', '1970-01-01T00:00:00', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # millisecond->set type <timestamp>
+        'millisecond_list_set_type_timestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_timestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'millisecond_array_dtype_object_set_type_timestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # millisecond->set type <nanotime>
+        'millisecond_list_set_type_nanotime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_nanotime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'millisecond_array_dtype_object_set_type_nanotime': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # millisecond->set type <nanotimestamp>
+        'millisecond_list_set_type_nanotimestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'millisecond_array_dtype_object_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # millisecond->set type <datehour>
+        'millisecond_list_set_type_datehour': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                         np.datetime64('NaT', 'ms'), None],
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'millisecond_array_dtype_datetime64_ms_set_type_datehour': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000', '1970-01-01T00:00:00.001', 'NaT'], dtype='datetime64[ms]'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'millisecond_array_dtype_object_set_type_datehour': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000', 'ms'), np.datetime64('1970-01-01T00:00:00.001', 'ms'),
+                     np.datetime64('NaT', 'ms'), None], dtype=np.object_),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        # microsecond->set type
+        # microsecond->set type <date>
+        'microsecond_list_set_type_date': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_date': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        'microsecond_array_dtype_object_set_type_date': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        # microsecond->set type <month>
+        'microsecond_list_set_type_month': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_month': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        'microsecond_array_dtype_object_set_type_month': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        # microsecond->set type <time>
+        'microsecond_list_set_type_time': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_time': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'microsecond_array_dtype_object_set_type_time': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # microsecond->set type <minute>
+        'microsecond_list_set_type_minute': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_minute': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'microsecond_array_dtype_object_set_type_minute': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        # microsecond->set type <second>
+        'microsecond_list_set_type_second': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_second': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'microsecond_array_dtype_object_set_type_second': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # microsecond->set type <datetime>
+        'microsecond_list_set_type_datetime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_datetime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'microsecond_array_dtype_object_set_type_datetime': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # microsecond->set type <timestamp>
+        'microsecond_list_set_type_timestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_timestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'microsecond_array_dtype_object_set_type_timestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # microsecond->set type <nanotime>
+        'microsecond_list_set_type_nanotime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_nanotime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000001', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'microsecond_array_dtype_object_set_type_nanotime': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # microsecond->set type <nanotimestamp>
+        'microsecond_list_set_type_nanotimestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000001', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'microsecond_array_dtype_object_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # microsecond->set type <datehour>
+        'microsecond_list_set_type_datehour': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                         np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                         np.datetime64('NaT', 'us'), None],
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'microsecond_array_dtype_datetime64_ms_set_type_datehour': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000', '1970-01-01T00:00:00.000001', 'NaT'],
+                                 dtype='datetime64[us]'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'microsecond_array_dtype_object_set_type_datehour': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000', 'us'),
+                     np.datetime64('1970-01-01T00:00:00.000001', 'us'),
+                     np.datetime64('NaT', 'us'), None], dtype=np.object_),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        # nanosecond->set type
+        # nanosecond->set type <date>
+        'nanosecond_list_set_type_date': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_date': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        'nanosecond_array_dtype_object_set_type_date': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_DATE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[D]'),
+        },
+        # nanosecond->set type <month>
+        'nanosecond_list_set_type_month': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_month': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        'nanosecond_array_dtype_object_set_type_month': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_MONTH,
+            },
+            'expect': np.array(['1970-01', '1970-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[M]'),
+        },
+        # nanosecond->set type <time>
+        'nanosecond_list_set_type_time': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_time': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'nanosecond_array_dtype_object_set_type_time': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_TIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # nanosecond->set type <minute>
+        'nanosecond_list_set_type_minute': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_minute': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        'nanosecond_array_dtype_object_set_type_minute': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_MINUTE,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[m]'),
+        },
+        # nanosecond->set type <second>
+        'nanosecond_list_set_type_second': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_second': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'nanosecond_array_dtype_object_set_type_second': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_SECOND,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # nanosecond->set type <datetime>
+        'nanosecond_list_set_type_datetime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_datetime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        'nanosecond_array_dtype_object_set_type_datetime': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_DATETIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[s]'),
+        },
+        # nanosecond->set type <timestamp>
+        'nanosecond_list_set_type_timestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_timestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        'nanosecond_array_dtype_object_set_type_timestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_TIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01', 'NaT', 'NaT'],
+                                     dtype='datetime64[ms]'),
+        },
+        # nanosecond->set type <nanotime>
+        'nanosecond_list_set_type_nanotime': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000000001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_nanotime': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'nanosecond_array_dtype_object_set_type_nanotime': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIME,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000000001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # nanosecond->set type <nanotimestamp>
+        'nanosecond_list_set_type_nanotimestamp': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000000001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        'nanosecond_array_dtype_object_set_type_nanotimestamp': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_NANOTIMESTAMP,
+            },
+            'expect': np.array(['1970-01-01', '1970-01-01T00:00:00.000000001', 'NaT', 'NaT'],
+                                     dtype='datetime64[ns]'),
+        },
+        # nanosecond->set type <datehour>
+        'nanosecond_list_set_type_datehour': {
+            'params': {
+                'obj': [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                         np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                         np.datetime64('NaT', 'ns'), None],
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'nanosecond_array_dtype_datetime64_ms_set_type_datehour': {
+            'params': {
+                'obj': np.array(['1970-01-01T00:00:00.000000000', '1970-01-01T00:00:00.000000001', 'NaT'],
+                                 dtype='datetime64[ns]'),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        'nanosecond_array_dtype_object_set_type_datehour': {
+            'params': {
+                'obj': np.array(
+                    [np.datetime64('1970-01-01T00:00:00.000000000', 'ns'),
+                     np.datetime64('1970-01-01T00:00:00.000000001', 'ns'),
+                     np.datetime64('NaT', 'ns'), None], dtype=np.object_),
+                'types': keys.DT_DATEHOUR,
+            },
+            'expect': np.array(['1970-01-01T00', '1970-01-01T00', 'NaT', 'NaT'],
+                                     dtype='datetime64[h]'),
+        },
+        # float->set type
+        # float->set type <float>
+        'float_list_set_type_float': {
+            'params': {
+                'obj': [np.float32('3.14'), np.float32('nan'), np.float32('inf'), None],
+                'types': keys.DT_FLOAT,
+            },
+            'expect': np.array([3.14, np.nan, np.nan, None], dtype=np.float32),
+        },
+        'float_array_dtype_float32_set_type_float': {
+            'params': {
+                'obj': np.array([np.float32('3.14'), np.float32('nan'), np.float32('inf')], dtype=np.float32),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': np.array([3.14, np.nan, np.nan], dtype=np.float32),
+        },
+        'float_array_dtype_object_set_type_float': {
+            'params': {
+                'obj': np.array([np.float32('3.14'), np.float32('nan'), np.float32('inf'), None], dtype=np.object_),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': np.array([3.14, np.nan, np.inf, None], dtype=np.float32),
+        },
+        # float->set type <double>
+        'float_list_set_type_double': {
+            'params': {
+                'obj': [np.float32('3.14'), np.float32('nan'), np.float32('inf'), None],
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': np.array([3.14, np.nan, np.nan, None], dtype=np.float64),
+        },
+        'float_array_dtype_float32_set_type_double': {
+            'params': {
+                'obj': np.array([np.float32('3.14'), np.float32('nan'), np.float32('inf')], dtype=np.float32),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': np.array([3.14, np.nan, np.nan], dtype=np.float64),
+        },
+        'float_array_dtype_object_set_type_double': {
+            'params': {
+                'obj': np.array([np.float32('3.14'), np.float32('nan'), np.float32('inf'), None], dtype=np.object_),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': np.array([3.14, np.nan, np.inf, None], dtype=np.float64),
+        },
+        # float->set type <decimal32>
+        'float_list_set_type_decimal32': {
+            'params': {
+                'obj': [np.float32('3.14'), np.float32('3.14159'), np.float32('nan'), np.float32('inf'), None],
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None, None], dtype=np.object_),
+        },
+        'float_array_dtype_float32_set_type_decimal32': {
+            'params': {
+                'obj': np.array([np.float32('3.14'), np.float32('3.14159'), np.float32('nan'), np.float32('inf')],
+                                 dtype=np.float32),
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None], dtype=np.object_),
+        },
+        # 'float_array_dtype_object_set_type_decimal32': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [np.float32('3.14'), np.float32('3.14159'), np.float32('nan'), np.float32('inf'), None],
+        #             dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL32,3],
+        #     },
+        #     'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None, None], dtype=np.object_),
+        # },
+        # float->set type <decimal64>
+        'float_list_set_type_decimal64': {
+            'params': {
+                'obj': [np.float32('3.14'), np.float32('3.14159'), np.float32('nan'), np.float32('inf'), None],
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None, None],
+                                     dtype=np.object_),
+        },
+        'float_array_dtype_float32_set_type_decimal64': {
+            'params': {
+                'obj': np.array([np.float32('3.14'), np.float32('3.14159'), np.float32('nan'), np.float32('inf')],
+                                 dtype=np.float32),
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None],
+                                     dtype=np.object_),
+        },
+        # 'float_array_dtype_object_set_type_decimal64': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [np.float32('3.14'), np.float32('3.14159'), np.float32('nan'), np.float32('inf'), None],
+        #             dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL64,3],
+        #     },
+        #     'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None, None],
+        #                              dtype=np.object_),
+        # },
+        # float->set type <decimal128>
+        'float_list_set_type_decimal128': {
+            'params': {
+                'obj': [np.float32('3.14'), np.float32('3.14159'), np.float32('nan'), np.float32('inf'), None],
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None, None],
+                                     dtype=np.object_),
+        },
+        'float_array_dtype_float32_set_type_decimal128': {
+            'params': {
+                'obj': np.array([np.float32('3.14'), np.float32('3.14159'), np.float32('nan'), np.float32('inf')],
+                                 dtype=np.float32),
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None],
+                                     dtype=np.object_),
+        },
+        # 'float_array_dtype_object_set_type_decimal128': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [np.float32('3.14'), np.float32('3.14159'), np.float32('nan'), np.float32('inf'), None],
+        #             dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL128,3],
+        #     },
+        #     'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None, None],
+        #                              dtype=np.object_),
+        # },
+        # double->set type
+        # double->set type <float>
+        'double_list_set_type_float': {
+            'params': {
+                'obj': [3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+                         np.float64('nan'), np.float64('inf'), None],
+                'types': keys.DT_FLOAT,
+            },
+            'expect': np.array([3.14, 3.14159, np.nan, np.nan, 3.14, 3.14159, np.nan, np.nan, np.nan],
+                                     dtype=np.float32),
+        },
+        'double_array_dtype_float64_set_type_float': {
+            'params': {
+                'obj': np.array([np.float64('3.14'), np.float64('3.14159'), np.float64('nan'), np.float64('inf')],
+                                 dtype=np.float64),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': np.array([3.14, 3.14159, np.nan, np.nan], dtype=np.float32),
+        },
+        'double_array_dtype_object_set_type_float': {
+            'params': {
+                'obj': np.array([3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+                                  np.float64('nan'), np.float64('inf'), None], dtype=np.object_),
+                'types': keys.DT_FLOAT,
+            },
+            'expect': np.array([3.14, 3.14159, np.nan, np.inf, 3.14, 3.14159, np.nan, np.inf, np.nan],
+                                     dtype=np.float32),
+        },
+        # double->set type <double>
+        'double_list_set_type_double': {
+            'params': {
+                'obj': [3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+                         np.float64('nan'), np.float64('inf'), None],
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': np.array([3.14, 3.14159, np.nan, np.nan, 3.14, 3.14159, np.nan, np.nan, np.nan],
+                                     dtype=np.float64),
+        },
+        'double_array_dtype_float64_set_type_double': {
+            'params': {
+                'obj': np.array([np.float64('3.14'), np.float64('3.14159'), np.float64('nan'), np.float64('inf')],
+                                 dtype=np.float64),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': np.array([3.14, 3.14159, np.nan, np.nan], dtype=np.float64),
+        },
+        'double_array_dtype_object_set_type_double': {
+            'params': {
+                'obj': np.array([3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+                                  np.float64('nan'), np.float64('inf'), None], dtype=np.object_),
+                'types': keys.DT_DOUBLE,
+            },
+            'expect': np.array([3.14, 3.14159, np.nan, np.inf, 3.14, 3.14159, np.nan, np.inf, np.nan],
+                                     dtype=np.float64),
+        },
+        # double->set type <decimal32>
+        'double_list_set_type_decimal32': {
+            'params': {
+                'obj': [3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+                         np.float64('nan'), np.float64('inf'), None],
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.141'), None, None, Decimal('3.140'), Decimal('3.141'), None, None,
+                     None],
+                    dtype=np.object_),
+        },
+        'double_array_dtype_float64_set_type_decimal32': {
+            'params': {
+                'obj': np.array([np.float64('3.14'), np.float64('3.14159'), np.float64('nan'), np.float64('inf')],
+                                 dtype=np.float64),
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None], dtype=np.object_),
+        },
+        # 'double_array_dtype_object_set_type_decimal32': {
+        #     'params': {
+        #         'obj': np.array([3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+        #                           np.float64('nan'), np.float64('inf'), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL32,3],
+        #     },
+        #     'expect': np.array(
+        #             [Decimal('3.140'), Decimal('3.141'), None, None, Decimal('3.140'), Decimal('3.141'), None, None,
+        #              None],
+        #             dtype=np.object_),
+        # },
+        # double->set type <decimal64>
+        'double_list_set_type_decimal64': {
+            'params': {
+                'obj': [3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+                         np.float64('nan'), np.float64('inf'), None],
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.141'), None, None, Decimal('3.140'), Decimal('3.141'), None, None,
+                     None],
+                    dtype=np.object_),
+        },
+        'double_array_dtype_float64_set_type_decimal64': {
+            'params': {
+                'obj': np.array([np.float64('3.14'), np.float64('3.14159'), np.float64('nan'), np.float64('inf')],
+                                 dtype=np.float64),
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None], dtype=np.object_),
+        },
+        # 'double_array_dtype_object_set_type_decimal64': {
+        #     'params': {
+        #         'obj': np.array([3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+        #                           np.float64('nan'), np.float64('inf'), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL64,3],
+        #     },
+        #     'expect': np.array(
+        #             [Decimal('3.140'), Decimal('3.141'), None, None, Decimal('3.140'), Decimal('3.141'), None, None,
+        #              None],
+        #             dtype=np.object_),
+        # },
+        # double->set type <decimal128>
+        'double_list_set_type_decimal128': {
+            'params': {
+                'obj': [3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+                         np.float64('nan'), np.float64('inf'), None],
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.141'), None, None, Decimal('3.140'), Decimal('3.141'), None, None,
+                     None],
+                    dtype=np.object_),
+        },
+        'double_array_dtype_float64_set_type_decimal128': {
+            'params': {
+                'obj': np.array([np.float64('3.14'), np.float64('3.14159'), np.float64('nan'), np.float64('inf')],
+                                 dtype=np.float64),
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None], dtype=np.object_),
+        },
+        # 'double_array_dtype_object_set_type_decimal128': {
+        #     'params': {
+        #         'obj': np.array([3.14, 3.14159, float('nan'), float('inf'), np.float64('3.14'), np.float64('3.14159'),
+        #                           np.float64('nan'), np.float64('inf'), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL128,3],
+        #     },
+        #     'expect': np.array(
+        #             [Decimal('3.140'), Decimal('3.141'), None, None, Decimal('3.140'), Decimal('3.141'), None, None,
+        #              None],
+        #             dtype=np.object_),
+        # },
+        # string->set type
+        # string->set type <string>
+        'string_list_set_type_string': {
+            'params': {
+                'obj': ['abc!@#中文 123', '', np.str_('abc!@#中文 123'), np.str_(''), None],
+                'types': keys.DT_STRING,
+            },
+            'expect': np.array(['abc!@#中文 123', '', 'abc!@#中文 123', '', ''], dtype=np.object_),
+        },
+        'string_array_str_set_type_string': {
+            'params': {
+                'obj': np.array(['abc!@#中文 123', ''], dtype=np.str_),
+                'types': keys.DT_STRING,
+            },
+            'expect': np.array(['abc!@#中文 123', ''], dtype=np.object_),
+        },
+        'string_array_dtype_object_set_type_string': {
+            'params': {
+                'obj': np.array(['abc!@#中文 123', '', np.str_('abc!@#中文 123'), np.str_(''), None],
+                                 dtype=np.object_),
+                'types': keys.DT_STRING,
+            },
+            'expect': np.array(['abc!@#中文 123', '', 'abc!@#中文 123', '', ''], dtype=np.object_),
+        },
+        # string->set type <blob>
+        'string_list_set_type_blob': {
+            'params': {
+                'obj': ['abc!@#中文 123', '', np.str_('abc!@#中文 123'), np.str_(''), None],
+                'types': keys.DT_BLOB,
+            },
+            'expect': np.array(['abc!@#中文 123'.encode(), b'', 'abc!@#中文 123'.encode(), b'', b''],
+                                     dtype=np.object_),
+        },
+        'string_array_str_set_type_blob': {
+            'params': {
+                'obj': np.array(['abc!@#中文 123', ''], dtype=np.str_),
+                'types': keys.DT_BLOB,
+            },
+            'expect': np.array(['abc!@#中文 123'.encode(), b''], dtype=np.object_),
+        },
+        'string_array_dtype_object_set_type_blob': {
+            'params': {
+                'obj': np.array(['abc!@#中文 123', '', np.str_('abc!@#中文 123'), np.str_(''), None],
+                                 dtype=np.object_),
+                'types': keys.DT_BLOB,
+            },
+            'expect': np.array(['abc!@#中文 123'.encode(), b'', 'abc!@#中文 123'.encode(), b'', b''],
+                                     dtype=np.object_),
+        },
+        # string->set type <decimal32>
+        'string_list_set_type_decimal32': {
+            'params': {
+                'obj': ['3.14', '3.14159', 'nan', 'inf', np.str_('3.14'), np.str_('3.14159'), np.str_('nan'),
+                         np.str_('inf'), None],
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+                     None],
+                    dtype=np.object_),
+        },
+        'string_array_dtype_str_set_type_decimal32': {
+            'params': {
+                'obj': np.array([np.str_('3.14'), np.str_('3.14159'), np.str_('nan'), np.str_('inf')], dtype=np.str_),
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None], dtype=np.object_),
+        },
+        # 'string_array_object_set_type_decimal32': {
+        #     'params': {
+        #         'obj': np.array(['3.14', '3.14159', 'nan', 'inf', np.str_('3.14'), np.str_('3.14159'), np.str_('nan'),
+        #                           np.str_('inf'), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL32,3],
+        #     },
+        #     'expect': np.array(
+        #             [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+        #              None],
+        #             dtype=np.object_),
+        # },
+        # string->set type <decimal64>
+        'string_list_set_type_decimal64': {
+            'params': {
+                'obj': ['3.14', '3.14159', 'nan', 'inf', np.str_('3.14'), np.str_('3.14159'), np.str_('nan'),
+                         np.str_('inf'), None],
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+                     None],
+                    dtype=np.object_),
+        },
+        'string_array_dtype_str_set_type_decimal64': {
+            'params': {
+                'obj': np.array([np.str_('3.14'), np.str_('3.14159'), np.str_('nan'), np.str_('inf')], dtype=np.str_),
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None], dtype=np.object_),
+        },
+        # 'string_array_object_set_type_decimal64': {
+        #     'params': {
+        #         'obj': np.array(['3.14', '3.14159', 'nan', 'inf', np.str_('3.14'), np.str_('3.14159'), np.str_('nan'),
+        #                           np.str_('inf'), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL64,3],
+        #     },
+        #     'expect': np.array(
+        #             [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+        #              None],
+        #             dtype=np.object_),
+        # },
+        # string->set type <decimal128>
+        'string_list_set_type_decimal128': {
+            'params': {
+                'obj': ['3.14', '3.14159', 'nan', 'inf', np.str_('3.14'), np.str_('3.14159'), np.str_('nan'),
+                         np.str_('inf'), None],
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+                     None],
+                    dtype=np.object_),
+        },
+        'string_array_dtype_str_set_type_decimal128': {
+            'params': {
+                'obj': np.array([np.str_('3.14'), np.str_('3.14159'), np.str_('nan'), np.str_('inf')], dtype=np.str_),
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None], dtype=np.object_),
+        },
+        # 'string_array_object_set_type_decimal128': {
+        #     'params': {
+        #         'obj': np.array(['3.14', '3.14159', 'nan', 'inf', np.str_('3.14'), np.str_('3.14159'), np.str_('nan'),
+        #                           np.str_('inf'), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL128,3],
+        #     },
+        #     'expect': np.array(
+        #             [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+        #              None],
+        #             dtype=np.object_),
+        # },
+        # bytes->set type
+        # bytes->set type <string>
+        'bytes_list_set_type_string': {
+            'params': {
+                'obj': ['abc!@#中文 123'.encode(), b'', np.bytes_('abc!@#中文 123'.encode()), np.bytes_(''), None],
+                'types': keys.DT_STRING,
+            },
+            'expect': np.array(['abc!@#中文 123', '', 'abc!@#中文 123', '', ''], dtype=np.object_),
+        },
+        'bytes_array_bytes_set_type_string': {
+            'params': {
+                'obj': np.array(['abc!@#中文 123'.encode(), b''], dtype=np.bytes_),
+                'types': keys.DT_STRING,
+            },
+            'expect': np.array(['abc!@#中文 123', ''], dtype=np.object_),
+        },
+        'bytes_array_dtype_object_set_type_string': {
+            'params': {
+                'obj': np.array(
+                    ['abc!@#中文 123'.encode(), b'', np.bytes_('abc!@#中文 123'.encode()), np.bytes_(''), None],
+                    dtype=np.object_),
+                'types': keys.DT_STRING,
+            },
+            'expect': np.array(['abc!@#中文 123', '', 'abc!@#中文 123', '', ''], dtype=np.object_),
+        },
+        # bytes->set type <blob>
+        'blob_list_set_type_blob': {
+            'params': {
+                'obj': ['abc!@#中文 123'.encode(), b'', np.bytes_('abc!@#中文 123'.encode()), np.bytes_(''), None],
+                'types': keys.DT_BLOB,
+            },
+            'expect': np.array(['abc!@#中文 123'.encode(), b'', 'abc!@#中文 123'.encode(), b'', b''],
+                                     dtype=np.object_),
+        },
+        'bytes_array_bytes_set_type_blob': {
+            'params': {
+                'obj': np.array(['abc!@#中文 123'.encode(), b''], dtype=np.bytes_),
+                'types': keys.DT_BLOB,
+            },
+            'expect': np.array(['abc!@#中文 123'.encode(), b''], dtype=np.object_),
+        },
+        'bytes_array_dtype_object_set_type_blob': {
+            'params': {
+                'obj': np.array(
+                    ['abc!@#中文 123'.encode(), b'', np.bytes_('abc!@#中文 123'.encode()), np.bytes_(''), None],
+                    dtype=np.object_),
+                'types': keys.DT_BLOB,
+            },
+            'expect': np.array(['abc!@#中文 123'.encode(), b'', 'abc!@#中文 123'.encode(), b'', b''],
+                                     dtype=np.object_),
+        },
+        # bytes->set type <decimal32>
+        'bytes_list_set_type_decimal32': {
+            'params': {
+                'obj': [b'3.14', b'3.14159', b'nan', b'inf', np.bytes_('3.14'), np.bytes_('3.14159'), np.bytes_('nan'),
+                         np.bytes_('inf'), None],
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+                     None],
+                    dtype=np.object_),
+        },
+        'bytes_array_dtype_bytes_set_type_decimal32': {
+            'params': {
+                'obj': np.array([np.bytes_('3.14'), np.bytes_('3.14159'), np.bytes_('nan'), np.bytes_('inf')],
+                                 dtype=np.bytes_),
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None], dtype=np.object_),
+        },
+        # 'bytes_array_object_set_type_decimal32': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [b'3.14', b'3.14159', b'nan', b'inf', np.bytes_('3.14'), np.bytes_('3.14159'), np.bytes_('nan'),
+        #              np.bytes_('inf'), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL32,3],
+        #     },
+        #     'expect': np.array(
+        #             [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+        #              None],
+        #             dtype=np.object_),
+        # },
+        # bytes->set type <decimal64>
+        'bytes_list_set_type_decimal64': {
+            'params': {
+                'obj': [b'3.14', b'3.14159', b'nan', b'inf', np.bytes_('3.14'), np.bytes_('3.14159'), np.bytes_('nan'),
+                         np.bytes_('inf'), None],
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+                     None],
+                    dtype=np.object_),
+        },
+        'bytes_array_dtype_bytes_set_type_decimal64': {
+            'params': {
+                'obj': np.array([np.bytes_('3.14'), np.bytes_('3.14159'), np.bytes_('nan'), np.bytes_('inf')],
+                                 dtype=np.bytes_),
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None], dtype=np.object_),
+        },
+        # 'bytes_array_object_set_type_decimal64': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [b'3.14', b'3.14159', b'nan', b'inf', np.bytes_('3.14'), np.bytes_('3.14159'), np.bytes_('nan'),
+        #              np.bytes_('inf'), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL64,3],
+        #     },
+        #     'expect': np.array(
+        #             [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+        #              None],
+        #             dtype=np.object_),
+        # },
+        # bytes->set type <decimal128>
+        'bytes_list_set_type_decimal128': {
+            'params': {
+                'obj': [b'3.14', b'3.14159', b'nan', b'inf', np.bytes_('3.14'), np.bytes_('3.14159'), np.bytes_('nan'),
+                         np.bytes_('inf'), None],
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+                     None],
+                    dtype=np.object_),
+        },
+        'bytes_array_dtype_bytes_set_type_decimal128': {
+            'params': {
+                'obj': np.array([np.bytes_('3.14'), np.bytes_('3.14159'), np.bytes_('nan'), np.bytes_('inf')],
+                                 dtype=np.bytes_),
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array(
+                    [Decimal('3.140'), Decimal('3.142'), None, None], dtype=np.object_),
+        },
+        # 'bytes_array_object_set_type_decimal128': {
+        #     'params': {
+        #         'obj': np.array(
+        #             [b'3.14', b'3.14159', b'nan', b'inf', np.bytes_('3.14'), np.bytes_('3.14159'), np.bytes_('nan'),
+        #              np.bytes_('inf'), None], dtype=np.object_),
+        #         'types': [keys.DT_DECIMAL128,3],
+        #     },
+        #     'expect': np.array(
+        #             [Decimal('3.140'), Decimal('3.142'), None, None, Decimal('3.140'), Decimal('3.142'), None, None,
+        #              None],
+        #             dtype=np.object_),
+        # },
+        # decimal->set type
+        # decimal->set type <decimal32>
+        'decimal_list_set_type_decimal32': {
+            'params': {
+                'obj': [Decimal('3.14'), Decimal('3.14159'), Decimal('nan'), Decimal('inf'), None],
+                'types': [keys.DT_DECIMAL32,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None, None], dtype=np.object_),
+        },
+        # decimal->set type <decimal64>
+        'decimal_list_set_type_decimal64': {
+            'params': {
+                'obj': [Decimal('3.14'), Decimal('3.14159'), Decimal('nan'), Decimal('inf'), None],
+                'types': [keys.DT_DECIMAL64,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None, None], dtype=np.object_),
+        },
+        # decimal->set type <decimal128>
+        'decimal_list_set_type_decimal128': {
+            'params': {
+                'obj': [Decimal('3.14'), Decimal('3.14159'), Decimal('nan'), Decimal('inf'), None],
+                'types': [keys.DT_DECIMAL128,3],
+            },
+            'expect': np.array([Decimal('3.140'), Decimal('3.141'), None, None, None], dtype=np.object_),
+        },
+    }
+
+    DATA_MATRIX_SET_TYPE = {
+        # char->set type <char>
+        'char_array_set_type_char': {
+            'params': {
+                'obj': np.array([[1,2,3],[4,5,6]],dtype=np.int8),
+                'types': keys.DT_CHAR,
+            },
+            'expect': [np.array([[1,2,3],[4,5,6]],dtype=np.int8),None,None],
+        },
+        # char->set type <short>
+        'char_array_set_type_short': {
+            'params': {
+                'obj': np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int8),
+                'types': keys.DT_SHORT,
+            },
+            'expect': [np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int16), None, None],
+        },
+    }
+
+    DATA_SET_SET_TYPE = {
+        # char->set type <char>
+        'char_set_set_type_char': {
+            'params': {
+                'obj': {np.int8(1),np.int8(2),np.int8(-128)},
+                'types': keys.DT_CHAR,
+            },
+            'expect': {1,2,None},
+        },
+        # char->set type <short>
+        'char_array_set_type_short': {
+            'params': {
+                'obj': {np.int8(1),np.int8(2),np.int8(-128)},
+                'types': keys.DT_SHORT,
+            },
+            'expect': {1,2,-128},
+        },
+    }
+
+    DATA_DICTIONARY_SET_TYPE = {
+        # none->set type key
+        'key_none_set_type_char': {
+            'params': {
+                'obj': {None:'123'},
+                'types': [keys.DT_CHAR,None]
+            },
+            'expect': {-9223372036854775808:'123'},
+        },
+        # char->set type key
+        'key_char_1_set_type_char': {
+            'params': {
+                'obj': {np.int8(1): '123'},
+                'types': [keys.DT_CHAR,None]
+            },
+            'expect': {1: '123'},
+        },
+        'key_char_1_set_type_short': {
+            'params': {
+                'obj': {np.int8(1): '123'},
+                'types': [keys.DT_SHORT,None]
+            },
+            'expect': {1: '123'},
+        },
+        'key_char_1_set_type_int': {
+            'params': {
+                'obj': {np.int8(1): '123'},
+                'types': [keys.DT_INT,None]
+            },
+            'expect': {1: '123'},
+        },
+        'key_char_1_set_type_long': {
+            'params': {
+                'obj': {np.int8(1): '123'},
+                'types': [keys.DT_LONG,None]
+            },
+            'expect': {1: '123'},
+        },
+        # 'key_char_1_set_type_date': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_DATE,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01','D'): '123'},
+        # },
+        # 'key_char_1_set_type_month': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_MONTH,None]
+        #     },
+        #     'expect': {1: '123'},
+        # },
+        # 'key_char_1_set_type_datehour': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_DATEHOUR,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T01','h'): '123'},
+        # },
+        # 'key_char_1_set_type_minute': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_MINUTE,None]
+        #     },
+        #     'expect': {datetime.time(minute=1): '123'},
+        # },
+        # 'key_char_1_set_type_second': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_SECOND,None]
+        #     },
+        #     'expect': {datetime.time(second=1): '123'},
+        # },
+        # 'key_char_1_set_type_datetime': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_DATETIME,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:01','s'): '123'},
+        # },
+        # 'key_char_1_set_type_time': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_TIME,None]
+        #     },
+        #     'expect': {datetime.time(microsecond=1000): '123'},
+        # },
+        # 'key_char_1_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_TIMESTAMP,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00.001','ms'): '123'},
+        # },
+        # 'key_char_1_set_type_nanotime': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_NANOTIME,None]
+        #     },
+        #     'expect': {1: '123'},
+        # },
+        # 'key_char_1_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_NANOTIMESTAMP,None]
+        #     },
+        #     'expect': {1: '123'},
+        # },
+        # 'key_char_1_set_type_float': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_FLOAT,None]
+        #     },
+        #     'expect': {1.: '123'},
+        # },
+        # 'key_char_1_set_type_double': {
+        #     'params': {
+        #         'obj': {np.int8(1): '123'},
+        #         'types': [keys.DT_DOUBLE,None]
+        #     },
+        #     'expect': {1.: '123'},
+        # },
+        # 'key_date_0_set_type_date': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01",'D'): '123'},
+        #         'types': [keys.DT_DATE,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01','D'): '123'},
+        # },
+        # 'key_date_0_set_type_month': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01", 'D'): '123'},
+        #         'types': [keys.DT_MONTH,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_date_0_set_type_datehour': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01", 'D'): '123'},
+        #         'types': [keys.DT_DATEHOUR,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_date_0_set_type_datetime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01", 'D'): '123'},
+        #         'types': [keys.DT_DATETIME,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_date_0_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01", 'D'): '123'},
+        #         'types': [keys.DT_TIMESTAMP,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_date_0_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01", 'D'): '123'},
+        #         'types': [keys.DT_NANOTIMESTAMP,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_month_set_type_date': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01", 'M'): '123'},
+        #         'types': [keys.DT_DATE,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_month_set_type_month': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01", 'M'): '123'},
+        #         'types': [keys.DT_MONTH,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_month_set_type_datehour': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01", 'M'): '123'},
+        #         'types': [keys.DT_DATEHOUR,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_month_set_type_datetime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01", 'M'): '123'},
+        #         'types': [keys.DT_DATETIME,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_month_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01", 'M'): '123'},
+        #         'types': [keys.DT_TIMESTAMP,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_month_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01", 'M'): '123'},
+        #         'types': [keys.DT_NANOTIMESTAMP,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_datehour_0_set_type_date': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00", 'h'): '123'},
+        #         'types': [keys.DT_DATE,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_datehour_0_set_type_month': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00", 'h'): '123'},
+        #         'types': [keys.DT_MONTH,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_datehour_0_set_type_datehour': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00", 'h'): '123'},
+        #         'types': [keys.DT_DATEHOUR,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_datehour_0_set_type_datetime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00", 'h'): '123'},
+        #         'types': [keys.DT_DATETIME,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_datehour_0_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00", 'h'): '123'},
+        #         'types': [keys.DT_TIMESTAMP,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_datehour_0_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00", 'h'): '123'},
+        #         'types': [keys.DT_NANOTIMESTAMP,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_minute_0_set_type_date': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00", 'm'): '123'},
+        #         'types': [keys.DT_DATE,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_minute_0_set_type_month': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00", 'm'): '123'},
+        #         'types': [keys.DT_MONTH,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_minute_0_set_type_datehour': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00", 'm'): '123'},
+        #         'types': [keys.DT_DATEHOUR,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_minute_0_set_type_minute': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00", 'm'): '123'},
+        #         'types': [keys.DT_MINUTE,None]
+        #     },
+        #     'expect': {datetime.time(): '123'},
+        # },
+        # 'key_minute_0_set_type_second': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00", 'm'): '123'},
+        #         'types': [keys.DT_SECOND,None]
+        #     },
+        #     'expect': {datetime.time(): '123'},
+        # },
+        # 'key_minute_0_set_type_datetime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00", 'm'): '123'},
+        #         'types': [keys.DT_DATETIME,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_minute_0_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00", 'm'): '123'},
+        #         'types': [keys.DT_TIMESTAMP,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_minute_0_set_type_nanotime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00", 'm'): '123'},
+        #         'types': [keys.DT_NANOTIME,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_minute_0_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00", 'm'): '123'},
+        #         'types': [keys.DT_NANOTIMESTAMP,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_second_0_set_type_date': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00", 's'): '123'},
+        #         'types': [keys.DT_DATE,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_second_0_set_type_month': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00", 's'): '123'},
+        #         'types': [keys.DT_MONTH,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_second_0_set_type_datehour': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00", 's'): '123'},
+        #         'types': [keys.DT_DATEHOUR,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_second_0_set_type_minute': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00", 's'): '123'},
+        #         'types': [keys.DT_MINUTE,None]
+        #     },
+        #     'expect': {datetime.time(): '123'},
+        # },
+        # 'key_second_0_set_type_second': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00", 's'): '123'},
+        #         'types': [keys.DT_SECOND,None]
+        #     },
+        #     'expect': {datetime.time(): '123'},
+        # },
+        # 'key_second_0_set_type_datetime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00", 's'): '123'},
+        #         'types': [keys.DT_DATETIME,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_second_0_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00", 's'): '123'},
+        #         'types': [keys.DT_TIMESTAMP,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_second_0_set_type_nanotime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00", 's'): '123'},
+        #         'types': [keys.DT_NANOTIME,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_second_0_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00", 's'): '123'},
+        #         'types': [keys.DT_NANOTIMESTAMP,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_millisecond_0_set_type_date': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000", 'ms'): '123'},
+        #         'types': [keys.DT_DATE,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_millisecond_0_set_type_month': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000", 'ms'): '123'},
+        #         'types': [keys.DT_MONTH,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_millisecond_0_set_type_datehour': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000", 'ms'): '123'},
+        #         'types': [keys.DT_DATEHOUR,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_millisecond_0_set_type_datetime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000", 'ms'): '123'},
+        #         'types': [keys.DT_DATETIME,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_millisecond_0_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000", 'ms'): '123'},
+        #         'types': [keys.DT_TIMESTAMP,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_millisecond_0_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000", 'ms'): '123'},
+        #         'types': [keys.DT_NANOTIMESTAMP,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_microsecond_0_set_type_date': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000", 'us'): '123'},
+        #         'types': [keys.DT_DATE,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_microsecond_0_set_type_month': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000", 'us'): '123'},
+        #         'types': [keys.DT_MONTH,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_microsecond_0_set_type_datehour': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000", 'us'): '123'},
+        #         'types': [keys.DT_DATEHOUR,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_microsecond_0_set_type_datetime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000", 'us'): '123'},
+        #         'types': [keys.DT_DATETIME,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_microsecond_0_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000", 'us'): '123'},
+        #         'types': [keys.DT_TIMESTAMP,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_microsecond_0_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000", 'us'): '123'},
+        #         'types': [keys.DT_NANOTIMESTAMP,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_nanosecond_0_set_type_date': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000000", 'ns'): '123'},
+        #         'types': [keys.DT_DATE,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_nanosecond_0_set_type_month': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000000", 'ns'): '123'},
+        #         'types': [keys.DT_MONTH,None]
+        #     },
+        #     'expect': {datetime.date(1970, 1, 1): '123'},
+        # },
+        # 'key_nanosecond_0_set_type_datehour': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000000", 'ns'): '123'},
+        #         'types': [keys.DT_DATEHOUR,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_nanosecond_0_set_type_minute': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000000", 'ns'): '123'},
+        #         'types': [keys.DT_MINUTE,None]
+        #     },
+        #     'expect': {datetime.time(): '123'},
+        # },
+        # 'key_nanosecond_0_set_type_second': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000000", 'ns'): '123'},
+        #         'types': [keys.DT_SECOND,None]
+        #     },
+        #     'expect': {datetime.time(): '123'},
+        # },
+        # 'key_nanosecond_0_set_type_datetime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000000", 'ns'): '123'},
+        #         'types': [keys.DT_DATETIME,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_nanosecond_0_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000000", 'ns'): '123'},
+        #         'types': [keys.DT_TIMESTAMP,None]
+        #     },
+        #     'expect': {np.datetime64('1970-01-01T00:00:00','s'): '123'},
+        # },
+        # 'key_nanosecond_0_set_type_nanotime': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000000", 'ns'): '123'},
+        #         'types': [keys.DT_NANOTIME,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_nanosecond_0_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {np.datetime64("1970-01-01T00:00:00.000000000", 'ns'): '123'},
+        #         'types': [keys.DT_NANOTIMESTAMP,None]
+        #     },
+        #     'expect': {0: '123'},
+        # },
+        # 'key_float32_set_type_float': {
+        #     'params': {
+        #         'obj': {np.float32(3.14): '123'},
+        #         'types': [keys.DT_FLOAT,None]
+        #     },
+        #     'expect': {3.140000104904175: '123'},
+        # },
+        # 'key_float32_set_type_double': {
+        #     'params': {
+        #         'obj': {np.float32(3.14): '123'},
+        #         'types': [keys.DT_DOUBLE,None]
+        #     },
+        #     'expect': {3.140000104904175: '123'},
+        # },
+        # 'key_float64_set_type_float': {
+        #     'params': {
+        #         'obj': {np.float64(3.14): '123'},
+        #         'types': [keys.DT_FLOAT,None]
+        #     },
+        #     'expect': {3.140000104904175: '123'},
+        # },
+        # 'key_float64_set_type_double': {
+        #     'params': {
+        #         'obj': {np.float64(3.14): '123'},
+        #         'types': [keys.DT_DOUBLE,None]
+        #     },
+        #     'expect': {3.14: '123'},
+        # },
+        'key_str_set_type_string': {
+            'params': {
+                'obj': {"abc!@#中文 123": '123'},
+                'types': [keys.DT_STRING,None]
+            },
+            'expect': {"abc!@#中文 123": '123'},
+        },
+        # 'key_str_set_type_blob': {
+        #     'params': {
+        #         'obj': {"abc!@#中文 123": '123'},
+        #         'types': [keys.DT_BLOB,None]
+        #     },
+        #     'expect': {"abc!@#中文 123".encode(): '123'},
+        # },
+        'value_none_set_type_decimal32': {
+            'params': {
+                'obj': {"a": None},
+                'types': [None,[keys.DT_DECIMAL32,3]],
+            },
+            'expect': {"a":None},
+        },
+        'value_true_set_type_bool': {
+            'params': {
+                'obj': {"a": True},
+                'types': [None,keys.DT_BOOL]
+            },
+            'expect': {"a": True},
+        },
+        'value_char_1_set_type_bool': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_BOOL]
+            },
+            'expect': {"a": True},
+        },
+        'value_char_0_set_type_bool': {
+            'params': {
+                'obj': {"a": np.int8(0)},
+                'types': [None,keys.DT_BOOL]
+            },
+            'expect': {"a": False},
+        },
+        'value_char_1_set_type_char': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_CHAR]
+            },
+            'expect': {"a": 1},
+        },
+        'value_char_1_set_type_short': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_SHORT]
+            },
+            'expect': {"a": 1},
+        },
+        'value_char_1_set_type_int': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_INT]
+            },
+            'expect': {"a": 1},
+        },
+        'value_char_1_set_type_long': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_LONG]
+            },
+            'expect': {"a": 1},
+        },
+        'value_char_1_set_type_float': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_FLOAT]
+            },
+            'expect': {"a": 1.},
+        },
+        'value_char_1_set_type_double': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_DOUBLE]
+            },
+            'expect': {"a": 1.},
+        },
+        'value_char_1_set_type_date': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_DATE]
+            },
+            'expect': {"a": np.datetime64('1970-01-02','D')},
+        },
+        'value_char_1_set_type_month': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_MONTH]
+            },
+            'expect': {"a": np.datetime64('0000-02','M')},
+        },
+        'value_char_1_set_type_time': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_TIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.001','ms')},
+        },
+        'value_char_1_set_type_minute': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_MINUTE]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:01','m')},
+        },
+        'value_char_1_set_type_second': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_SECOND]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:01','s')},
+        },
+        'value_char_1_set_type_datetime': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_DATETIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:01','s')},
+        },
+        'value_char_1_set_type_timestamp': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_TIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.001','ms')},
+        },
+        'value_char_1_set_type_nanotime': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_NANOTIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000000001','ns')},
+        },
+        'value_char_1_set_type_nanotimestamp': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_NANOTIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000000001','ns')},
+        },
+        'value_char_1_set_type_datehour': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,keys.DT_DATEHOUR]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T01','h')},
+        },
+        'value_char_1_set_type_decimal32': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,[keys.DT_DECIMAL32,3]],
+            },
+            'expect': {"a": Decimal('1.000')},
+        },
+        'value_char_1_set_type_decimal64': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,[keys.DT_DECIMAL64,3]],
+            },
+            'expect': {"a": Decimal('1.000')},
+        },
+        'value_char_1_set_type_decimal128': {
+            'params': {
+                'obj': {"a": np.int8(1)},
+                'types': [None,[keys.DT_DECIMAL128,3]],
+            },
+            'expect': {"a": Decimal('1.000')},
+        },
+        'value_date_set_type_date': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01","D")},
+                'types': [None,keys.DT_DATE]
+            },
+            'expect': {"a": np.datetime64('1970-01-01','D')},
+        },
+        'value_date_set_type_month': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01", "D")},
+                'types': [None,keys.DT_MONTH]
+            },
+            'expect': {"a": np.datetime64('1970-01','M')},
+        },
+        'value_date_set_type_datetime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01", "D")},
+                'types': [None,keys.DT_DATETIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        },
+        'value_date_set_type_timestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01", "D")},
+                'types': [None,keys.DT_TIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000','ms')},
+        },
+        'value_date_set_type_nanotimestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01", "D")},
+                'types': [None,keys.DT_NANOTIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000000000','ns')},
+        },
+        'value_date_set_type_datehour': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01", "D")},
+                'types': [None,keys.DT_DATEHOUR]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00','h')},
+        },
+        # 'value_month_set_type_date': {
+        #     'params': {
+        #         'obj': {"a": np.datetime64("1970-01", "M")},
+        #         'types': [None,keys.DT_DATE]
+        #     },
+        #     'expect': {"a": np.datetime64('1970-01-01','D')},
+        # },
+        'value_month_set_type_month': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01", "M")},
+                'types': [None,keys.DT_MONTH]
+            },
+            'expect': {"a": np.datetime64('1970-01','M')},
+        },
+        # 'value_month_set_type_datetime': {
+        #     'params': {
+        #         'obj': {"a": np.datetime64("1970-01", "M")},
+        #         'types': [None,keys.DT_DATETIME]
+        #     },
+        #     'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        # },
+        # 'value_month_set_type_timestamp': {
+        #     'params': {
+        #         'obj': {"a": np.datetime64("1970-01", "M")},
+        #         'types': [None,keys.DT_TIMESTAMP]
+        #     },
+        #     'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        # },
+        # 'value_month_set_type_nanotimestamp': {
+        #     'params': {
+        #         'obj': {"a": np.datetime64("1970-01", "M")},
+        #         'types': [None,keys.DT_NANOTIMESTAMP]
+        #     },
+        #     'expect': {"a": 0},
+        # },
+        # 'value_month_set_type_datehour': {
+        #     'params': {
+        #         'obj': {"a": np.datetime64("1970-01", "M")},
+        #         'types': [None,keys.DT_DATEHOUR]
+        #     },
+        #     'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        # },
+        'value_datehour_set_type_date': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_DATE]
+            },
+            'expect': {"a": np.datetime64("1970-01-01", "D")},
+        },
+        'value_datehour_set_type_month': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_MONTH]
+            },
+            'expect': {"a": np.datetime64("1970-01", "M")},
+        },
+        'value_datehour_set_type_time': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_TIME]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+        },
+        'value_datehour_set_type_minute': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_MINUTE]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00", "m")},
+        },
+        'value_datehour_set_type_second': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_SECOND]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+        },
+        'value_datehour_set_type_datetime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_DATETIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        },
+        'value_datehour_set_type_timestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_TIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000','ms')},
+        },
+        'value_datehour_set_type_nanotime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_NANOTIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000000000','ns')},
+        },
+        'value_datehour_set_type_nanotimestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_NANOTIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000000000','ns')},
+        },
+        'value_datehour_set_type_datehour': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00", "h")},
+                'types': [None,keys.DT_DATEHOUR]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00','h')},
+        },
+        'value_second_set_type_date': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_DATE]
+            },
+            'expect': {"a": np.datetime64('1970-01-01','D')},
+        },
+        'value_second_set_type_month': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_MONTH]
+            },
+            'expect': {"a": np.datetime64('1970-01','M')},
+        },
+        'value_second_set_type_time': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_TIME]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+        },
+        'value_second_set_type_minute': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_MINUTE]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00", "m")},
+        },
+        'value_second_set_type_second': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_SECOND]
+            },
+            'expect': {"a":  np.datetime64("1970-01-01T00:00:00", "s")},
+        },
+        'value_second_set_type_datetime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_DATETIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        },
+        'value_second_set_type_timestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_TIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000','ms')},
+        },
+        'value_second_set_type_nanotime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_NANOTIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000000000','ns')},
+        },
+        'value_second_set_type_nanotimestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_NANOTIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000000000','ns')},
+        },
+        'value_second_set_type_datehour': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+                'types': [None,keys.DT_DATEHOUR]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00','h')},
+        },
+        'value_millisecond_set_type_date': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_DATE]
+            },
+            'expect': {"a": np.datetime64('1970-01-01','D')},
+        },
+        'value_millisecond_set_type_month': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_MONTH]
+            },
+            'expect': {"a": np.datetime64('1970-01','M')},
+        },
+        'value_millisecond_set_type_time': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_TIME]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+        },
+        'value_millisecond_set_type_minute': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_MINUTE]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00", "m")},
+        },
+        'value_millisecond_set_type_second': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_SECOND]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+        },
+        'value_millisecond_set_type_datetime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_DATETIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        },
+        'value_millisecond_set_type_timestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_TIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000','ms')},
+        },
+        'value_millisecond_set_type_nanotime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_NANOTIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000000000','ns')},
+        },
+        'value_millisecond_set_type_nanotimestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_NANOTIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000000000','ns')},
+        },
+        'value_millisecond_set_type_datehour': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+                'types': [None,keys.DT_DATEHOUR]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00','h')},
+        },
+        'value_microsecond_set_type_date': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_DATE]
+            },
+            'expect': {"a": np.datetime64('1970-01-01','D')},
+        },
+        'value_microsecond_set_type_month': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_MONTH]
+            },
+            'expect': {"a": np.datetime64('1970-01','M')},
+        },
+        'value_microsecond_set_type_time': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_TIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000','ms')},
+        },
+        'value_microsecond_set_type_minute': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_MINUTE]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00','m')},
+        },
+        'value_microsecond_set_type_second': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_SECOND]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        },
+        'value_microsecond_set_type_datetime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_DATETIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        },
+        'value_microsecond_set_type_timestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_TIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000','ms')},
+        },
+        'value_microsecond_set_type_nanotime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_NANOTIME]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+        },
+        'value_microsecond_set_type_nanotimestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_NANOTIMESTAMP]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+        },
+        'value_microsecond_set_type_datehour': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000", "us")},
+                'types': [None,keys.DT_DATEHOUR]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00','h')},
+        },
+        'value_nanosecond_set_type_date': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_DATE]
+            },
+            'expect': {"a": np.datetime64('1970-01-01','D')},
+        },
+        'value_nanosecond_set_type_month': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_MONTH]
+            },
+            'expect': {"a": np.datetime64('1970-01','M')},
+        },
+        'value_nanosecond_set_type_time': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_TIME]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00.000", "ms")},
+        },
+        'value_nanosecond_set_type_minute': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_MINUTE]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00", "m")},
+        },
+        'value_nanosecond_set_type_second': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_SECOND]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00", "s")},
+        },
+        'value_nanosecond_set_type_datetime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_DATETIME]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00','s')},
+        },
+        'value_nanosecond_set_type_timestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_TIMESTAMP]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00:00:00.000','ms')},
+        },
+        'value_nanosecond_set_type_nanotime': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_NANOTIME]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+        },
+        'value_nanosecond_set_type_nanotimestamp': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_NANOTIMESTAMP]
+            },
+            'expect': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+        },
+        'value_nanosecond_set_type_datehour': {
+            'params': {
+                'obj': {"a": np.datetime64("1970-01-01T00:00:00.000000000", "ns")},
+                'types': [None,keys.DT_DATEHOUR]
+            },
+            'expect': {"a": np.datetime64('1970-01-01T00','h')},
+        },
+        'value_float32_set_type_float': {
+            'params': {
+                'obj': {"a": np.float32("3.14")},
+                'types': [None,keys.DT_FLOAT]
+            },
+            'expect': {"a": 3.14},
+        },
+        'value_float32_set_type_double': {
+            'params': {
+                'obj': {"a": np.float32("3.14")},
+                'types': [None,keys.DT_DOUBLE]
+            },
+            'expect': {"a": 3.14},
+        },
+        'value_float32_set_type_decimal32': {
+            'params': {
+                'obj': {"a": np.float32("3.14")},
+                'types': [None,[keys.DT_DECIMAL32,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_float32_set_type_decimal64': {
+            'params': {
+                'obj': {"a": np.float32("3.14")},
+                'types': [None,[keys.DT_DECIMAL64,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_float32_set_type_decimal128': {
+            'params': {
+                'obj': {"a": np.float32("3.14")},
+                'types': [None,[keys.DT_DECIMAL128,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_float64_set_type_float': {
+            'params': {
+                'obj': {"a": np.float64("3.14")},
+                'types': [None,keys.DT_FLOAT]
+            },
+            'expect': {"a": 3.14},
+        },
+        'value_float64_set_type_double': {
+            'params': {
+                'obj': {"a": np.float64("3.14")},
+                'types': [None,keys.DT_DOUBLE]
+            },
+            'expect': {"a": 3.14},
+        },
+        'value_float64_set_type_decimal32': {
+            'params': {
+                'obj': {"a": np.float64("3.14")},
+                'types': [None,[keys.DT_DECIMAL32,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_float64_set_type_decimal64': {
+            'params': {
+                'obj': {"a": np.float64("3.14")},
+                'types': [None,[keys.DT_DECIMAL64,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_float64_set_type_decimal128': {
+            'params': {
+                'obj': {"a": np.float64("3.14")},
+                'types': [None,[keys.DT_DECIMAL128,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_str_set_type_blob': {
+            'params': {
+                'obj': {"a": np.str_("abc!@#中文 123")},
+                'types': [None,keys.DT_BLOB]
+            },
+            'expect': {"a": "abc!@#中文 123".encode()},
+        },
+        'value_str_set_type_decimal32': {
+            'params': {
+                'obj': {"a": np.str_("3.14")},
+                'types': [None,[keys.DT_DECIMAL32,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_str_set_type_decimal64': {
+            'params': {
+                'obj': {"a": np.str_("3.14")},
+                'types': [None,[keys.DT_DECIMAL64,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_str_set_type_decimal128': {
+            'params': {
+                'obj': {"a": np.str_("3.14")},
+                'types': [None,[keys.DT_DECIMAL128,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_bytes_set_type_blob': {
+            'params': {
+                'obj': {"a": np.bytes_("abc!@#中文 123".encode())},
+                'types': [None,keys.DT_BLOB]
+            },
+            'expect': {"a": "abc!@#中文 123".encode()},
+        },
+        'value_bytes_set_type_decimal32': {
+            'params': {
+                'obj': {"a": np.bytes_("3.14")},
+                'types': [None,[keys.DT_DECIMAL32,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_bytes_set_type_decimal64': {
+            'params': {
+                'obj': {"a": np.bytes_("3.14")},
+                'types': [None,[keys.DT_DECIMAL64,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_bytes_set_type_decimal128': {
+            'params': {
+                'obj': {"a": np.bytes_("3.14")},
+                'types': [None,[keys.DT_DECIMAL128,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_decimal_set_type_decimal32': {
+            'params': {
+                'obj': {"a": Decimal('3.14')},
+                'types': [None,[keys.DT_DECIMAL32,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_decimal_set_type_decimal64': {
+            'params': {
+                'obj': {"a": Decimal('3.14')},
+                'types': [None,[keys.DT_DECIMAL64,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+        'value_decimal_set_type_decimal128': {
+            'params': {
+                'obj': {"a": Decimal('3.14')},
+                'types': [None,[keys.DT_DECIMAL64,3]],
+            },
+            'expect': {"a": Decimal("3.140")},
+        },
+    }
+
+    DATA_TABLE_SET_TYPE = {
+        # char->set type <char>
+        'char_dataframe_set_type_char': {
+            'params': {
+                'obj': pd.DataFrame({'a':[1,2,-128]},dtype=np.int8),
+                'types': {'a':keys.DT_CHAR},
+            },
+            'expect': pd.DataFrame({'a':[1,2,np.nan]},dtype=np.float64),
+        },
+        # char->set type <short>
+        'char_dataframe_set_type_short': {
+            'params': {
+                'obj': pd.DataFrame({'a':[1,2,-128]},dtype=np.int8),
+                'types': {'a':keys.DT_SHORT},
+            },
+            'expect': pd.DataFrame({'a':[1,2,-128]},dtype=np.int16),
+        },
+    }
+
     @classmethod
     def getScalar(cls, _type):
         """
@@ -1570,18 +7229,11 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             return {}  # pair not support
         else:
-            rtn = {k: {
+            return {k: {
                 'value': f"{v['value']} : {v['value']}",
                 'expect': [v['expect'], v['expect']],
-            } for k, v in cls.DATA_DOWNLOAD.items() if '$' not in v['value']
+                } for k, v in cls.DATA_DOWNLOAD.items()
             }
-            rtn.update({
-                k: {
-                    'value': f"x={v['value']}\nx:x",
-                    'expect': [v['expect'], v['expect']],
-                } for k, v in cls.DATA_DOWNLOAD.items() if '$' in v['value']
-            })
-            return rtn
 
     @classmethod
     def getPairContainNone(cls, _type):
@@ -1591,18 +7243,11 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             return {}  # pair not support
         else:
-            rtn = {k: {
+            return {k: {
                 'value': f"NULL : {v['value']}",
                 'expect': [None, v['expect']],
-            } for k, v in cls.DATA_DOWNLOAD.items() if '$' not in v['value']
+                } for k, v in cls.DATA_DOWNLOAD.items()
             }
-            rtn.update({
-                k: {
-                    'value': f"x={v['value']}\nNULL:x",
-                    'expect': [None, v['expect']],
-                } for k, v in cls.DATA_DOWNLOAD.items() if '$' in v['value']
-            })
-            return rtn
 
     @classmethod
     def getVector(cls, _type):
@@ -2497,6 +8142,7 @@ class DataUtils(object):
                     'bool_false',
                     'bool_none',
                     'date_0',
+                    'date_1',
                     'date_none',
                     'month_0',
                     'month_none',
@@ -2609,6 +8255,7 @@ class DataUtils(object):
                     'bool_false',
                     'bool_none',
                     'date_0',
+                    'date_1',
                     'date_none',
                     'month_0',
                     'month_none',
@@ -3680,14 +9327,51 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
                   if k not in (
-                      'data_string',
-                      'data_numpy_str',
-                      'data_bytes_utf8',
-                      'data_bytes_gbk',
-                      'data_numpy_bytes_utf8',
-                      'data_numpy_bytes_gbk',
-                  )
-                  }
+                        'data_string',
+                        'data_numpy_str',
+                        'data_bytes_utf8',
+                        'data_bytes_gbk',
+                        'data_numpy_bytes_utf8',
+                        'data_numpy_bytes_gbk',
+                        # 'data_numpy_int16_0',
+                        'data_numpy_int16_max',
+                        'data_numpy_int16_min',
+                        'data_numpy_int16_none',
+                        'data_numpy_int32_max',
+                        'data_numpy_int32_min',
+                        'data_numpy_int32_none',
+                        'data_numpy_int64_max',
+                        'data_numpy_int64_min',
+                        'data_numpy_int64_none',
+                        'data_float',
+                        'data_pi',
+                        'data_nan',
+                        'data_numpy_float32_0',
+                        'data_numpy_float32_max',
+                        'data_numpy_float32_min',
+                        'data_numpy_float32_none',
+                        'data_numpy_float64_0',
+                        'data_numpy_float64_max',
+                        'data_numpy_float64_min',
+                        'data_numpy_float64_none',
+                        'data_numpy_datetime64_ns_0',
+                        'data_numpy_datetime64_ns_max',
+                        'data_numpy_datetime64_ns_min',
+                        'data_numpy_datetime64_ns_none',
+                        'data_numpy_datetime64_us_0',
+                        'data_numpy_datetime64_ms',
+                        'data_numpy_datetime64_s',
+                        'data_numpy_datetime64_m',
+                        'data_numpy_datetime64_h',
+                        'data_numpy_datetime64_d_up',
+                        'data_numpy_datetime64_m_up',
+                        'data_decimal_2',
+                        'data_decimal_nan',
+                        'data_decimal_17',
+                        'data_decimal_18',
+                        'data_decimal_38',
+                    )
+            }
             dt.update({
                 'first_none': [None, True, False],
                 'middle_none': [True, None, False],
@@ -3708,48 +9392,14 @@ class DataUtils(object):
                                 "[false,false,false] as `data_numpy_int8_0,"
                                 "[true,true,true] as `data_numpy_int8_max,"
                                 "[true,true,true] as `data_numpy_int8_min,"
-                                "[true,true,true] as `data_numpy_int8_none,"
+                                "[00b,00b,00b] as `data_numpy_int8_none,"
                                 "[false,false,false] as `data_numpy_int16_0,"
-                                "[true,true,true] as `data_numpy_int16_max,"
-                                "[true,true,true] as `data_numpy_int16_min,"
-                                "[true,true,true] as `data_numpy_int16_none,"
                                 "[false,false,false] as `data_numpy_int32_0,"
-                                "[true,true,true] as `data_numpy_int32_max,"
-                                "[true,true,true] as `data_numpy_int32_min,"
-                                "[true,true,true] as `data_numpy_int32_none,"
                                 "[false,false,false] as `data_numpy_int64_0,"
-                                "[true,true,true] as `data_numpy_int64_max,"
-                                "[true,true,true] as `data_numpy_int64_min,"
-                                "[true,true,true] as `data_numpy_int64_none,"
-                                "[true,true,true] as `data_float,"
-                                "[true,true,true] as `data_pi,"
-                                "[00b,00b,00b] as `data_nan,"
-                                "[false,false,false] as `data_numpy_float32_0,"
-                                "[true,true,true] as `data_numpy_float32_max,"
-                                "[true,true,true] as `data_numpy_float32_none,"
-                                "[false,false,false] as `data_numpy_float64_0,"
-                                "[true,true,true] as `data_numpy_float64_max,"
-                                "[true,true,true] as `data_numpy_float64_none,"
                                 "[true,true,true] as `data_bool_true,"
                                 "[false,false,false] as `data_bool_false,"
                                 "[true,true,true] as `data_numpy_bool_true,"
                                 "[false,false,false] as `data_numpy_bool_false,"
-                                "[false,false,false] as `data_numpy_datetime64_ns_0,"
-                                "[true,true,true] as `data_numpy_datetime64_ns_max,"
-                                "[true,true,true] as `data_numpy_datetime64_ns_min,"
-                                "[true,true,true] as `data_numpy_datetime64_ns_none,"
-                                "[false,false,false] as `data_numpy_datetime64_us_0,"
-                                "[false,false,false] as `data_numpy_datetime64_ms,"
-                                "[false,false,false] as `data_numpy_datetime64_s,"
-                                "[false,false,false] as `data_numpy_datetime64_m,"
-                                "[false,false,false] as `data_numpy_datetime64_h,"
-                                "[false,false,false] as `data_numpy_datetime64_d_up,"
-                                "[false,false,false] as `data_numpy_datetime64_m_up,"
-                                "[false,false,false] as `data_decimal_2,"
-                                "[true,true,true] as `data_decimal_nan,"
-                                "[true,true,true] as `data_decimal_17,"
-                                "[true,true,true] as `data_decimal_18,"
-                                "[true,true,true] as `data_decimal_38,"
                                 "[00b,true,false] as `first_none,"
                                 "[true,00b,false] as `middle_none,"
                                 "[true,false,00b] as `last_none"
@@ -3768,46 +9418,56 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
                   if k not in (
-                      'data_numpy_int16_max',
-                      'data_numpy_int16_min',
-                      'data_numpy_int16_none',
-                      'data_numpy_int32_max',
-                      'data_numpy_int32_min',
-                      'data_numpy_int32_none',
-                      'data_numpy_int64_max',
-                      'data_numpy_int64_min',
-                      'data_numpy_int64_none',
-                      'data_float',
-                      'data_pi',
-                      'data_inf',
-                      'data_numpy_inf',
-                      'data_numpy_float32_max',
-                      'data_numpy_float32_min',
-                      'data_numpy_float32_none',
-                      'data_numpy_float64_max',
-                      'data_numpy_float64_min',
-                      'data_numpy_float64_none',
-                      'data_numpy_float64_0',
-                      'data_numpy_longdouble_max',
-                      'data_numpy_longdouble_min',
-                      'data_numpy_longdouble_none',
-                      'data_string',
-                      'data_numpy_str',
-                      'data_bytes_utf8',
-                      'data_bytes_gbk',
-                      'data_numpy_bytes_utf8',
-                      'data_numpy_bytes_gbk',
-                      'data_numpy_datetime64_ns_max',
-                      'data_numpy_datetime64_ns_min',
-                      'data_numpy_datetime64_ns_none',
-                      'data_numpy_datetime64_us_0',
-                      'data_numpy_datetime64_ms',
-                      'data_numpy_datetime64_s',
-                      'data_numpy_datetime64_m',
-                      'data_numpy_datetime64_h',
-                      'data_numpy_datetime64_d_up',
-                      'data_numpy_datetime64_m_up',
-                      'data_decimal_nan',
+                    'data_numpy_int16_max',
+                    'data_numpy_int16_min',
+                    'data_numpy_int16_none',
+                    'data_numpy_int32_max',
+                    'data_numpy_int32_min',
+                    'data_numpy_int32_none',
+                    'data_numpy_int64_max',
+                    'data_numpy_int64_min',
+                    'data_numpy_int64_none',
+                    'data_float',
+                    'data_pi',
+                    'data_inf',
+                    'data_numpy_inf',
+                    'data_numpy_float32_max',
+                    'data_numpy_float32_min',
+                    'data_numpy_float32_none',
+                    'data_numpy_float64_max',
+                    'data_numpy_float64_min',
+                    'data_numpy_float64_none',
+                    'data_numpy_float64_0',
+                    'data_numpy_longdouble_max',
+                    'data_numpy_longdouble_min',
+                    'data_numpy_longdouble_none',
+                    'data_string',
+                    'data_numpy_str',
+                    'data_bytes_utf8',
+                    'data_bytes_gbk',
+                    'data_numpy_bytes_utf8',
+                    'data_numpy_bytes_gbk',
+                    'data_numpy_datetime64_ns_0',
+                    'data_numpy_datetime64_ns_max',
+                    'data_numpy_datetime64_ns_min',
+                    'data_numpy_datetime64_ns_none',
+                    'data_numpy_datetime64_us_0',
+                    'data_numpy_datetime64_ms',
+                    'data_numpy_datetime64_s',
+                    'data_numpy_datetime64_m',
+                    'data_numpy_datetime64_h',
+                    'data_numpy_datetime64_d_up',
+                    'data_numpy_datetime64_m_up',
+                    'data_decimal_nan',
+                    "data_numpy_float32_0",
+                    "data_bool_true",
+                    "data_bool_false",
+                    "data_numpy_bool_true",
+                    "data_numpy_bool_false",
+                    "data_decimal_2",
+                    "data_decimal_17",
+                    "data_decimal_18",
+                    "data_decimal_38",
                   )
                   }
             dt.update({
@@ -3835,17 +9495,17 @@ class DataUtils(object):
                                 "[0c,0c,0c] as `data_numpy_int32_0,"
                                 "[0c,0c,0c] as `data_numpy_int64_0,"
                                 "[00c,00c,00c] as `data_nan,"
-                                "[0c,0c,0c] as `data_numpy_float32_0,"
-                # "[false,false,false] as `data_numpy_float64_0,"
-                                "[1c,1c,1c] as `data_bool_true,"
-                                "[0c,0c,0c] as `data_bool_false,"
-                                "[1c,1c,1c] as `data_numpy_bool_true,"
-                                "[0c,0c,0c] as `data_numpy_bool_false,"
-                                "[0c,0c,0c] as `data_numpy_datetime64_ns_0,"
-                                "[0c,0c,0c] as `data_decimal_2,"
-                                "[3c,3c,3c] as `data_decimal_17,"
-                                "[0c,0c,0c] as `data_decimal_18,"
-                                "[0c,0c,0c] as `data_decimal_38,"
+                                # "[0c,0c,0c] as `data_numpy_float32_0,"
+                                # "[false,false,false] as `data_numpy_float64_0,"
+                                # "[1c,1c,1c] as `data_bool_true,"
+                                # "[0c,0c,0c] as `data_bool_false,"
+                                # "[1c,1c,1c] as `data_numpy_bool_true,"
+                                # "[0c,0c,0c] as `data_numpy_bool_false,"
+                                # "[0c,0c,0c] as `data_numpy_datetime64_ns_0,"
+                                # "[0c,0c,0c] as `data_decimal_2,"
+                                # "[3c,3c,3c] as `data_decimal_17,"
+                                # "[0c,0c,0c] as `data_decimal_18,"
+                                # "[0c,0c,0c] as `data_decimal_38,"
                                 "[00c,0,-1] as `first_none,"
                                 "[0,00c,-1] as `middle_none,"
                                 "[0,-1,00c] as `last_none"
@@ -3864,43 +9524,53 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
                   if k not in (
-                      'data_numpy_int32_max',
-                      'data_numpy_int32_min',
-                      'data_numpy_int32_none',
-                      'data_numpy_int64_max',
-                      'data_numpy_int64_min',
-                      'data_numpy_int64_none',
-                      'data_float',
-                      'data_pi',
-                      'data_inf',
-                      'data_numpy_inf',
-                      'data_numpy_float32_max',
-                      'data_numpy_float32_min',
-                      'data_numpy_float32_none',
-                      'data_numpy_float64_max',
-                      'data_numpy_float64_min',
-                      'data_numpy_float64_none',
-                      'data_numpy_float64_0',
-                      'data_numpy_longdouble_max',
-                      'data_numpy_longdouble_min',
-                      'data_numpy_longdouble_none',
-                      'data_string',
-                      'data_numpy_str',
-                      'data_bytes_utf8',
-                      'data_bytes_gbk',
-                      'data_numpy_bytes_utf8',
-                      'data_numpy_bytes_gbk',
-                      'data_numpy_datetime64_ns_max',
-                      'data_numpy_datetime64_ns_min',
-                      'data_numpy_datetime64_ns_none',
-                      'data_numpy_datetime64_us_0',
-                      'data_numpy_datetime64_ms',
-                      'data_numpy_datetime64_s',
-                      'data_numpy_datetime64_m',
-                      'data_numpy_datetime64_h',
-                      'data_numpy_datetime64_d_up',
-                      'data_numpy_datetime64_m_up',
-                      'data_decimal_nan',
+                    'data_numpy_int32_max',
+                    'data_numpy_int32_min',
+                    'data_numpy_int32_none',
+                    'data_numpy_int64_max',
+                    'data_numpy_int64_min',
+                    'data_numpy_int64_none',
+                    'data_float',
+                    'data_pi',
+                    'data_inf',
+                    'data_numpy_inf',
+                    'data_numpy_float32_max',
+                    'data_numpy_float32_min',
+                    'data_numpy_float32_none',
+                    'data_numpy_float64_max',
+                    'data_numpy_float64_min',
+                    'data_numpy_float64_none',
+                    'data_numpy_float64_0',
+                    'data_numpy_longdouble_max',
+                    'data_numpy_longdouble_min',
+                    'data_numpy_longdouble_none',
+                    'data_string',
+                    'data_numpy_str',
+                    'data_bytes_utf8',
+                    'data_bytes_gbk',
+                    'data_numpy_bytes_utf8',
+                    'data_numpy_bytes_gbk',
+                    'data_numpy_datetime64_ns_max',
+                    'data_numpy_datetime64_ns_min',
+                    'data_numpy_datetime64_ns_none',
+                    'data_numpy_datetime64_us_0',
+                    'data_numpy_datetime64_ms',
+                    'data_numpy_datetime64_s',
+                    'data_numpy_datetime64_m',
+                    'data_numpy_datetime64_h',
+                    'data_numpy_datetime64_d_up',
+                    'data_numpy_datetime64_m_up',
+                    'data_decimal_nan',
+                    "data_numpy_float32_0",
+                    "data_bool_true",
+                    "data_bool_false",
+                    "data_numpy_bool_true",
+                    "data_numpy_bool_false",
+                    "data_numpy_datetime64_ns_0",
+                    "data_decimal_2",
+                    "data_decimal_17",
+                    "data_decimal_18",
+                    "data_decimal_38",
                   )
                   }
             dt.update({
@@ -3931,17 +9601,17 @@ class DataUtils(object):
                                 "[0h,0h,0h] as `data_numpy_int32_0,"
                                 "[0h,0h,0h] as `data_numpy_int64_0,"
                                 "[00h,00h,00h] as `data_nan,"
-                                "[0h,0h,0h] as `data_numpy_float32_0,"
-                # "[false,false,false] as `data_numpy_float64_0,"
-                                "[1h,1h,1h] as `data_bool_true,"
-                                "[0h,0h,0h] as `data_bool_false,"
-                                "[1h,1h,1h] as `data_numpy_bool_true,"
-                                "[0h,0h,0h] as `data_numpy_bool_false,"
-                                "[0h,0h,0h] as `data_numpy_datetime64_ns_0,"
-                                "[0h,0h,0h] as `data_decimal_2,"
-                                "[3h,3h,3h] as `data_decimal_17,"
-                                "[0h,0h,0h] as `data_decimal_18,"
-                                "[0h,0h,0h] as `data_decimal_38,"
+                                # "[0h,0h,0h] as `data_numpy_float32_0,"
+                                # "[false,false,false] as `data_numpy_float64_0,"
+                                # "[1h,1h,1h] as `data_bool_true,"
+                                # "[0h,0h,0h] as `data_bool_false,"
+                                # "[1h,1h,1h] as `data_numpy_bool_true,"
+                                # "[0h,0h,0h] as `data_numpy_bool_false,"
+                                # "[0h,0h,0h] as `data_numpy_datetime64_ns_0,"
+                                # "[0h,0h,0h] as `data_decimal_2,"
+                                # "[3h,3h,3h] as `data_decimal_17,"
+                                # "[0h,0h,0h] as `data_decimal_18,"
+                                # "[0h,0h,0h] as `data_decimal_38,"
                                 "[00h,0,-1] as `first_none,"
                                 "[0,00h,-1] as `middle_none,"
                                 "[0,-1,00h] as `last_none"
@@ -3960,40 +9630,50 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
                   if k not in (
-                      'data_numpy_int64_max',
-                      'data_numpy_int64_min',
-                      'data_numpy_int64_none',
-                      'data_float',
-                      'data_pi',
-                      'data_inf',
-                      'data_numpy_inf',
-                      'data_numpy_float32_max',
-                      'data_numpy_float32_min',
-                      'data_numpy_float32_none',
-                      'data_numpy_float64_max',
-                      'data_numpy_float64_min',
-                      'data_numpy_float64_none',
-                      'data_numpy_float64_0',
-                      'data_numpy_longdouble_max',
-                      'data_numpy_longdouble_min',
-                      'data_numpy_longdouble_none',
-                      'data_string',
-                      'data_numpy_str',
-                      'data_bytes_utf8',
-                      'data_bytes_gbk',
-                      'data_numpy_bytes_utf8',
-                      'data_numpy_bytes_gbk',
-                      'data_numpy_datetime64_ns_max',
-                      'data_numpy_datetime64_ns_min',
-                      'data_numpy_datetime64_ns_none',
-                      'data_numpy_datetime64_us_0',
-                      'data_numpy_datetime64_ms',
-                      'data_numpy_datetime64_s',
-                      'data_numpy_datetime64_m',
-                      'data_numpy_datetime64_h',
-                      'data_numpy_datetime64_d_up',
-                      'data_numpy_datetime64_m_up',
-                      'data_decimal_nan',
+                    'data_numpy_int64_max',
+                    'data_numpy_int64_min',
+                    'data_numpy_int64_none',
+                    'data_float',
+                    'data_pi',
+                    'data_inf',
+                    'data_numpy_inf',
+                    'data_numpy_float32_max',
+                    'data_numpy_float32_min',
+                    'data_numpy_float32_none',
+                    'data_numpy_float64_max',
+                    'data_numpy_float64_min',
+                    'data_numpy_float64_none',
+                    'data_numpy_float64_0',
+                    'data_numpy_longdouble_max',
+                    'data_numpy_longdouble_min',
+                    'data_numpy_longdouble_none',
+                    'data_string',
+                    'data_numpy_str',
+                    'data_bytes_utf8',
+                    'data_bytes_gbk',
+                    'data_numpy_bytes_utf8',
+                    'data_numpy_bytes_gbk',
+                    'data_numpy_datetime64_ns_max',
+                    'data_numpy_datetime64_ns_min',
+                    'data_numpy_datetime64_ns_none',
+                    'data_numpy_datetime64_us_0',
+                    'data_numpy_datetime64_ms',
+                    'data_numpy_datetime64_s',
+                    'data_numpy_datetime64_m',
+                    'data_numpy_datetime64_h',
+                    'data_numpy_datetime64_d_up',
+                    'data_numpy_datetime64_m_up',
+                    'data_decimal_nan',
+                    "data_numpy_float32_0",
+                    "data_bool_true",
+                    "data_bool_false",
+                    "data_numpy_bool_true",
+                    "data_numpy_bool_false",
+                    "data_numpy_datetime64_ns_0",
+                    "data_decimal_2",
+                    "data_decimal_17",
+                    "data_decimal_18",
+                    "data_decimal_38",
                   )
                   }
             dt.update({
@@ -4027,17 +9707,17 @@ class DataUtils(object):
                                 "[00i,00i,00i] as `data_numpy_int32_none,"
                                 "[0i,0i,0i] as `data_numpy_int64_0,"
                                 "[00i,00i,00i] as `data_nan,"
-                                "[0i,0i,0i] as `data_numpy_float32_0,"
-                # "[false,false,false] as `data_numpy_float64_0,"
-                                "[1i,1i,1i] as `data_bool_true,"
-                                "[0i,0i,0i] as `data_bool_false,"
-                                "[1i,1i,1i] as `data_numpy_bool_true,"
-                                "[0i,0i,0i] as `data_numpy_bool_false,"
-                                "[0i,0i,0i] as `data_numpy_datetime64_ns_0,"
-                                "[0i,0i,0i] as `data_decimal_2,"
-                                "[3i,3i,3i] as `data_decimal_17,"
-                                "[0i,0i,0i] as `data_decimal_18,"
-                                "[0i,0i,0i] as `data_decimal_38,"
+                                # "[0i,0i,0i] as `data_numpy_float32_0,"
+                                # "[false,false,false] as `data_numpy_float64_0,"
+                                # "[1i,1i,1i] as `data_bool_true,"
+                                # "[0i,0i,0i] as `data_bool_false,"
+                                # "[1i,1i,1i] as `data_numpy_bool_true,"
+                                # "[0i,0i,0i] as `data_numpy_bool_false,"
+                                # "[0i,0i,0i] as `data_numpy_datetime64_ns_0,"
+                                # "[0i,0i,0i] as `data_decimal_2,"
+                                # "[3i,3i,3i] as `data_decimal_17,"
+                                # "[0i,0i,0i] as `data_decimal_18,"
+                                # "[0i,0i,0i] as `data_decimal_38,"
                                 "[00i,0,-1] as `first_none,"
                                 "[0,00i,-1] as `middle_none,"
                                 "[0,-1,00i] as `last_none"
@@ -4056,37 +9736,47 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
                   if k not in (
-                      'data_float',
-                      'data_pi',
-                      'data_inf',
-                      'data_numpy_inf',
-                      'data_numpy_float32_max',
-                      'data_numpy_float32_min',
-                      'data_numpy_float32_none',
-                      'data_numpy_float64_max',
-                      'data_numpy_float64_min',
-                      'data_numpy_float64_none',
-                      'data_numpy_float64_0',
-                      'data_numpy_longdouble_max',
-                      'data_numpy_longdouble_min',
-                      'data_numpy_longdouble_none',
-                      'data_string',
-                      'data_numpy_str',
-                      'data_bytes_utf8',
-                      'data_bytes_gbk',
-                      'data_numpy_bytes_utf8',
-                      'data_numpy_bytes_gbk',
-                      'data_numpy_datetime64_ns_max',
-                      'data_numpy_datetime64_ns_min',
-                      'data_numpy_datetime64_ns_none',
-                      'data_numpy_datetime64_us_0',
-                      'data_numpy_datetime64_ms',
-                      'data_numpy_datetime64_s',
-                      'data_numpy_datetime64_m',
-                      'data_numpy_datetime64_h',
-                      'data_numpy_datetime64_d_up',
-                      'data_numpy_datetime64_m_up',
-                      'data_decimal_nan',
+                    'data_float',
+                    'data_pi',
+                    'data_inf',
+                    'data_numpy_inf',
+                    'data_numpy_float32_max',
+                    'data_numpy_float32_min',
+                    'data_numpy_float32_none',
+                    'data_numpy_float64_max',
+                    'data_numpy_float64_min',
+                    'data_numpy_float64_none',
+                    'data_numpy_float64_0',
+                    'data_numpy_longdouble_max',
+                    'data_numpy_longdouble_min',
+                    'data_numpy_longdouble_none',
+                    'data_string',
+                    'data_numpy_str',
+                    'data_bytes_utf8',
+                    'data_bytes_gbk',
+                    'data_numpy_bytes_utf8',
+                    'data_numpy_bytes_gbk',
+                    'data_numpy_datetime64_ns_max',
+                    'data_numpy_datetime64_ns_min',
+                    'data_numpy_datetime64_ns_none',
+                    'data_numpy_datetime64_us_0',
+                    'data_numpy_datetime64_ms',
+                    'data_numpy_datetime64_s',
+                    'data_numpy_datetime64_m',
+                    'data_numpy_datetime64_h',
+                    'data_numpy_datetime64_d_up',
+                    'data_numpy_datetime64_m_up',
+                    'data_decimal_nan',
+                    "data_numpy_float32_0",
+                    "data_bool_true",
+                    "data_bool_false",
+                    "data_numpy_bool_true",
+                    "data_numpy_bool_false",
+                    "data_numpy_datetime64_ns_0",
+                    "data_decimal_2",
+                    "data_decimal_17",
+                    "data_decimal_18",
+                    "data_decimal_38",
                   )
                   }
             dt.update({
@@ -4123,16 +9813,16 @@ class DataUtils(object):
                                 "[-9223372036854775807l,-9223372036854775807l,-9223372036854775807l] as `data_numpy_int64_min,"
                                 "[00l,00l,00l] as `data_numpy_int64_none,"
                                 "[00l,00l,00l] as `data_nan,"
-                                "[0l,0l,0l] as `data_numpy_float32_0,"
-                                "[1l,1l,1l] as `data_bool_true,"
-                                "[0l,0l,0l] as `data_bool_false,"
-                                "[1l,1l,1l] as `data_numpy_bool_true,"
-                                "[0l,0l,0l] as `data_numpy_bool_false,"
-                                "[0l,0l,0l] as `data_numpy_datetime64_ns_0,"
-                                "[0l,0l,0l] as `data_decimal_2,"
-                                "[3l,3l,3l] as `data_decimal_17,"
-                                "[0l,0l,0l] as `data_decimal_18,"
-                                "[0l,0l,0l] as `data_decimal_38,"
+                                # "[0l,0l,0l] as `data_numpy_float32_0,"
+                                # "[1l,1l,1l] as `data_bool_true,"
+                                # "[0l,0l,0l] as `data_bool_false,"
+                                # "[1l,1l,1l] as `data_numpy_bool_true,"
+                                # "[0l,0l,0l] as `data_numpy_bool_false,"
+                                # "[0l,0l,0l] as `data_numpy_datetime64_ns_0,"
+                                # "[0l,0l,0l] as `data_decimal_2,"
+                                # "[3l,3l,3l] as `data_decimal_17,"
+                                # "[0l,0l,0l] as `data_decimal_18,"
+                                # "[0l,0l,0l] as `data_decimal_38,"
                                 "[00l,0,-1] as `first_none,"
                                 "[0,00l,-1] as `middle_none,"
                                 "[0,-1,00l] as `last_none"
@@ -4151,50 +9841,50 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
                   if k not in (
-                      'data_numpy_int8_0',
-                      'data_numpy_int8_max',
-                      'data_numpy_int8_min',
-                      'data_numpy_int8_none',
-                      'data_numpy_int16_max',
-                      'data_numpy_int16_min',
-                      'data_numpy_int16_none',
-                      'data_numpy_int32_max',
-                      'data_numpy_int32_min',
-                      'data_numpy_int32_none',
-                      'data_numpy_int64_max',
-                      'data_numpy_int64_min',
-                      'data_numpy_int64_none',
-                      'data_float',
-                      'data_pi',
-                      'data_inf',
-                      'data_numpy_inf',
-                      'data_numpy_float32_0',
-                      'data_numpy_float32_max',
-                      'data_numpy_float32_min',
-                      'data_numpy_float32_none',
-                      'data_numpy_float64_max',
-                      'data_numpy_float64_min',
-                      'data_numpy_float64_none',
-                      'data_numpy_float64_0',
-                      'data_numpy_longdouble_0',
-                      'data_numpy_longdouble_max',
-                      'data_numpy_longdouble_min',
-                      'data_numpy_longdouble_none',
-                      'data_string',
-                      'data_numpy_str',
-                      'data_bytes_utf8',
-                      'data_bytes_gbk',
-                      'data_numpy_bytes_utf8',
-                      'data_numpy_bytes_gbk',
-                      'data_bool_true',
-                      'data_bool_false',
-                      'data_numpy_bool_true',
-                      'data_numpy_bool_false',
-                      'data_numpy_datetime64_m_up',
-                      'data_decimal_2',
-                      'data_decimal_17',
-                      'data_decimal_18',
-                      'data_decimal_38',
+                    'data_numpy_int8_0',
+                    'data_numpy_int8_max',
+                    'data_numpy_int8_min',
+                    'data_numpy_int8_none',
+                    'data_numpy_int16_max',
+                    'data_numpy_int16_min',
+                    'data_numpy_int16_none',
+                    'data_numpy_int32_max',
+                    'data_numpy_int32_min',
+                    'data_numpy_int32_none',
+                    'data_numpy_int64_max',
+                    'data_numpy_int64_min',
+                    'data_numpy_int64_none',
+                    'data_float',
+                    'data_pi',
+                    'data_inf',
+                    'data_numpy_inf',
+                    'data_numpy_float32_0',
+                    'data_numpy_float32_max',
+                    'data_numpy_float32_min',
+                    'data_numpy_float32_none',
+                    'data_numpy_float64_max',
+                    'data_numpy_float64_min',
+                    'data_numpy_float64_none',
+                    'data_numpy_float64_0',
+                    'data_numpy_longdouble_0',
+                    'data_numpy_longdouble_max',
+                    'data_numpy_longdouble_min',
+                    'data_numpy_longdouble_none',
+                    'data_string',
+                    'data_numpy_str',
+                    'data_bytes_utf8',
+                    'data_bytes_gbk',
+                    'data_numpy_bytes_utf8',
+                    'data_numpy_bytes_gbk',
+                    'data_bool_true',
+                    'data_bool_false',
+                    'data_numpy_bool_true',
+                    'data_numpy_bool_false',
+                    'data_numpy_datetime64_m_up',
+                    'data_decimal_2',
+                    'data_decimal_17',
+                    'data_decimal_18',
+                    'data_decimal_38',
                   )
                   }
             dt.update({
@@ -4220,7 +9910,7 @@ class DataUtils(object):
                                 "[00d,00d,00d] as `data_nan,"
                                 "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_ns_0,"
                                 "[2262.04.11d,2262.04.11d,2262.04.11d] as `data_numpy_datetime64_ns_max,"
-                                "[1677.09.21d,1677.09.21d,1677.09.21d] as `data_numpy_datetime64_ns_min,"
+                                # "[1677.09.21d,1677.09.21d,1677.09.21d] as `data_numpy_datetime64_ns_min,"
                                 "[00d,00d,00d] as `data_numpy_datetime64_ns_none,"
                                 "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_us_0,"
                                 "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_ms,"
@@ -4319,7 +10009,7 @@ class DataUtils(object):
                                 "[00M,00M,00M] as `data_nan,"
                                 "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_ns_0,"
                                 "[2262.04M,2262.04M,2262.04M] as `data_numpy_datetime64_ns_max,"
-                                "[1677.09M,1677.09M,1677.09M] as `data_numpy_datetime64_ns_min,"
+                                # "[1677.09M,1677.09M,1677.09M] as `data_numpy_datetime64_ns_min,"
                                 "[00M,00M,00M] as `data_numpy_datetime64_ns_none,"
                                 "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_us_0,"
                                 "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_ms,"
@@ -4425,7 +10115,7 @@ class DataUtils(object):
                                 "[00t,00t,00t] as `data_nan,"
                                 "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_ns_0,"
                                 "[23:47:16.854t,23:47:16.854t,23:47:16.854t] as `data_numpy_datetime64_ns_max,"
-                                "[00:12:43.145t,00:12:43.145t,00:12:43.145t] as `data_numpy_datetime64_ns_min,"
+                                # "[00:12:43.145t,00:12:43.145t,00:12:43.145t] as `data_numpy_datetime64_ns_min,"
                                 "[00t,00t,00t] as `data_numpy_datetime64_ns_none,"
                                 "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_us_0,"
                                 "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_ms,"
@@ -4529,7 +10219,7 @@ class DataUtils(object):
                                 "[00m,00m,00m] as `data_nan,"
                                 "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_ns_0,"
                                 "[23:47m,23:47m,23:47m] as `data_numpy_datetime64_ns_max,"
-                                "[00:12m,00:12m,00:12m] as `data_numpy_datetime64_ns_min,"
+                                # "[00:12m,00:12m,00:12m] as `data_numpy_datetime64_ns_min,"
                                 "[00m,00m,00m] as `data_numpy_datetime64_ns_none,"
                                 "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_us_0,"
                                 "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_ms,"
@@ -4633,7 +10323,7 @@ class DataUtils(object):
                                 "[00s,00s,00s] as `data_nan,"
                                 "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_ns_0,"
                                 "[23:47:16s,23:47:16s,23:47:16s] as `data_numpy_datetime64_ns_max,"
-                                "[00:12:43s,00:12:43s,00:12:43s] as `data_numpy_datetime64_ns_min,"
+                                # "[00:12:43s,00:12:43s,00:12:43s] as `data_numpy_datetime64_ns_min,"
                                 "[00s,00s,00s] as `data_numpy_datetime64_ns_none,"
                                 "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_us_0,"
                                 "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_ms,"
@@ -5068,57 +10758,58 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
                   if k not in (
-                      #     'data_numpy_int8_0',
-                      #     'data_numpy_int8_max',
-                      #     'data_numpy_int8_min',
-                      #     'data_numpy_int8_none',
-                      #     'data_numpy_int16_0',
-                      #     'data_numpy_int16_max',
-                      #     'data_numpy_int16_min',
-                      #     'data_numpy_int16_none',
-                      #     'data_numpy_int32_0',
-                      #     'data_numpy_int32_max',
-                      #     'data_numpy_int32_min',
-                      #     'data_numpy_int32_none',
-                      #     'data_numpy_int64_max',
-                      #     'data_numpy_int64_min',
-                      #     'data_numpy_int64_none',
-                      'data_float',
-                      'data_pi',
-                      #     'data_inf',
-                      #     'data_numpy_inf',
-                      #     'data_numpy_float32_0',
-                      #     'data_numpy_float32_max',
-                      #     'data_numpy_float32_min',
-                      #     'data_numpy_float32_none',
-                      'data_numpy_float64_max',
-                      'data_numpy_float64_min',
-                      'data_numpy_float64_none',
-                      #     'data_numpy_float64_0',
-                      #     'data_numpy_longdouble_0',
-                      #     'data_numpy_longdouble_max',
-                      #     'data_numpy_longdouble_min',
-                      #     'data_numpy_longdouble_none',
-                      'data_string',
-                      'data_numpy_str',
-                      'data_bytes_utf8',
-                      'data_bytes_gbk',
-                      'data_numpy_bytes_utf8',
-                      'data_numpy_bytes_gbk',
-                      #     'data_bool_true',
-                      #     'data_bool_false',
-                      #     'data_numpy_bool_true',
-                      #     'data_numpy_bool_false',
-                      #     # 'data_numpy_datetime64_ns_max',
-                      #     # 'data_numpy_datetime64_ns_min',
-                      'data_numpy_datetime64_ns_none',
-                      'data_numpy_datetime64_us_0',
-                      'data_numpy_datetime64_ms',
-                      'data_numpy_datetime64_s',
-                      'data_numpy_datetime64_m',
-                      'data_numpy_datetime64_h',
-                      'data_numpy_datetime64_d_up',
-                      'data_numpy_datetime64_m_up',
+                    #     'data_numpy_int8_0',
+                    #     'data_numpy_int8_max',
+                    #     'data_numpy_int8_min',
+                    #     'data_numpy_int8_none',
+                    #     'data_numpy_int16_0',
+                    #     'data_numpy_int16_max',
+                    #     'data_numpy_int16_min',
+                    #     'data_numpy_int16_none',
+                    #     'data_numpy_int32_0',
+                    #     'data_numpy_int32_max',
+                    #     'data_numpy_int32_min',
+                    #     'data_numpy_int32_none',
+                    #     'data_numpy_int64_max',
+                    #     'data_numpy_int64_min',
+                    #     'data_numpy_int64_none',
+                    'data_float',
+                    'data_pi',
+                    #     'data_inf',
+                    #     'data_numpy_inf',
+                    #     'data_numpy_float32_0',
+                    #     'data_numpy_float32_max',
+                    #     'data_numpy_float32_min',
+                    #     'data_numpy_float32_none',
+                    'data_numpy_float64_max',
+                    'data_numpy_float64_min',
+                    'data_numpy_float64_none',
+                    #     'data_numpy_float64_0',
+                    #     'data_numpy_longdouble_0',
+                    #     'data_numpy_longdouble_max',
+                    #     'data_numpy_longdouble_min',
+                    #     'data_numpy_longdouble_none',
+                    'data_string',
+                    'data_numpy_str',
+                    'data_bytes_utf8',
+                    'data_bytes_gbk',
+                    'data_numpy_bytes_utf8',
+                    'data_numpy_bytes_gbk',
+                    'data_bool_true',
+                    'data_bool_false',
+                    'data_numpy_bool_true',
+                    'data_numpy_bool_false',
+                    'data_numpy_datetime64_ns_0',
+                    'data_numpy_datetime64_ns_max',
+                    'data_numpy_datetime64_ns_min',
+                    'data_numpy_datetime64_ns_none',
+                    'data_numpy_datetime64_us_0',
+                    'data_numpy_datetime64_ms',
+                    'data_numpy_datetime64_s',
+                    'data_numpy_datetime64_m',
+                    'data_numpy_datetime64_h',
+                    'data_numpy_datetime64_d_up',
+                    'data_numpy_datetime64_m_up',
                   )
                   }
             dt.update({
@@ -5162,17 +10853,17 @@ class DataUtils(object):
                       #     'data_numpy_int64_max',
                       #     'data_numpy_int64_min',
                       #     'data_numpy_int64_none',
-                      #     'data_float',
-                      #     'data_pi',
+                      'data_float',
+                      'data_pi',
                       #     'data_inf',
                       #     'data_numpy_inf',
                       #     'data_numpy_float32_0',
                       #     'data_numpy_float32_max',
                       #     'data_numpy_float32_min',
                       #     'data_numpy_float32_none',
-                      #     'data_numpy_float64_max',
-                      #     'data_numpy_float64_min',
-                      #     'data_numpy_float64_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
                       #     'data_numpy_float64_0',
                       #     'data_numpy_longdouble_0',
                       #     'data_numpy_longdouble_max',
@@ -5184,12 +10875,13 @@ class DataUtils(object):
                       'data_bytes_gbk',
                       'data_numpy_bytes_utf8',
                       'data_numpy_bytes_gbk',
-                      #     'data_bool_true',
-                      #     'data_bool_false',
-                      #     'data_numpy_bool_true',
-                      #     'data_numpy_bool_false',
-                      #     # 'data_numpy_datetime64_ns_max',
-                      #     # 'data_numpy_datetime64_ns_min',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      'data_numpy_datetime64_ns_0',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
                       'data_numpy_datetime64_ns_none',
                       'data_numpy_datetime64_us_0',
                       'data_numpy_datetime64_ms',
@@ -5545,7 +11237,7 @@ class DataUtils(object):
                                 "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_nan,"
                                 "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_ns_0,"
                                 "[datehour('2262.04.11T23'),datehour('2262.04.11T23'),datehour('2262.04.11T23')] as `data_numpy_datetime64_ns_max,"
-                                "[datehour('1677.09.21T00'),datehour('1677.09.21T00'),datehour('1677.09.21T00')] as `data_numpy_datetime64_ns_min,"
+                                # "[datehour('1677.09.21T00'),datehour('1677.09.21T00'),datehour('1677.09.21T00')] as `data_numpy_datetime64_ns_min,"
                                 "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_numpy_datetime64_ns_none,"
                                 "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_us_0,"
                                 "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_ms,"

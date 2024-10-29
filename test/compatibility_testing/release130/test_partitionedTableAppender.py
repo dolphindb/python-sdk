@@ -1,17 +1,16 @@
-import time
-import dolphindb as ddb
-import numpy as np
-import pandas as pd
-import pytest
-from setup.utils import get_pid
-from setup.prepare import *
-from setup.settings import *
-from numpy.testing import *
-from pandas.testing import *
 import decimal
 import random
 
-class TestPartitionedTableAppender:    
+import pytest
+from numpy.testing import *
+from pandas.testing import *
+
+from setup.prepare import *
+from setup.settings import *
+from setup.utils import get_pid
+
+
+class TestPartitionedTableAppender:
     conn = ddb.session(enablePickle=False)
 
     def setup_method(self):
@@ -28,7 +27,7 @@ class TestPartitionedTableAppender:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -55,18 +54,19 @@ class TestPartitionedTableAppender:
             "dfs://PartitionedTableAppender", "pt", "qty", pool)
         sym = list(map(str, np.arange(100000, 600000)))
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23',
-                        '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'], 50000), dtype="datetime64[D]")
+                                 '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'], 50000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '2015-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '2015-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '2015-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '2015-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         qty = np.arange(100000, 600000)
         data = pd.DataFrame({'sym': sym, 'date': date, 'month': month, 'time': time, 'minute': time,
-                            'second': second, 'datetime': second, 'timestamp': time, 'nanotimestamp': nanotime, 'qty': qty})
+                             'second': second, 'datetime': second, 'timestamp': time, 'nanotimestamp': nanotime,
+                             'qty': qty})
         num = appender.append(data)
         print(num)
         assert (num == self.conn.run(
@@ -98,9 +98,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -130,9 +130,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -161,9 +161,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -192,9 +192,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -222,9 +222,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -252,9 +252,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -282,9 +282,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -312,9 +312,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -342,9 +342,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -372,9 +372,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -402,9 +402,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -432,9 +432,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -462,9 +462,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -492,9 +492,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -522,9 +522,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -552,9 +552,9 @@ class TestPartitionedTableAppender:
         re = self.conn.run(
             "select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[
-                                    True, True, True, True])
+            True, True, True, True])
         expected.set_index(np.arange(0, 50000), inplace=True)
-        assert_frame_equal(re, expected, check_dtype=False,check_index_type=False)
+        assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -578,7 +578,7 @@ class TestPartitionedTableAppender:
         x = np.array(['aaa', 'bbb', 'ccc', 'ddd'])
         y = np.array(['IBM', 'ORCL', 'MSFT', 'GOOG', 'FB'])
         data = pd.DataFrame({"sym": np.repeat(x, 25000),
-                            "ticker": np.repeat(y, 20000)})
+                             "ticker": np.repeat(y, 20000)})
         re = appender.append(data)
         assert (re == n)
         re = self.conn.run(
@@ -721,7 +721,7 @@ class TestPartitionedTableAppender:
         x = np.array(['aaa', 'bbb', 'ccc', 'ddd'])
         y = np.array(['IBM', 'ORCL', 'MSFT', 'GOOG', 'FB'])
         data = pd.DataFrame({"sym": np.repeat(x, 25000),
-                            "ticker": np.repeat(y, 20000), 'id': range(0, n)})
+                             "ticker": np.repeat(y, 20000), 'id': range(0, n)})
         data['id'] = data["id"].astype("int32")
         re = appender.append(data)
         assert (re == n)
@@ -755,7 +755,7 @@ class TestPartitionedTableAppender:
     #     print(num)
     #     print(self.conn.run("select * from pt"))
 
-# -------------------------------------------------------------------------------------------------
+    # -------------------------------------------------------------------------------------------------
     # def test_PartitionedTableAppender_range_date_partitionColumn_date(self):
     #     self.conn.run('''
     #     dbPath = "dfs://PTA_test"
@@ -1091,18 +1091,19 @@ class TestPartitionedTableAppender:
             "dfs://test_PartitionedTableAppender_all_time_types", "pt", "qty", pool)
         sym = list(map(str, np.arange(100000, 600000)))
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23',
-                        '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'], 50000), dtype="datetime64[D]")
+                                 '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'], 50000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '2015-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '2015-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '2015-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '2015-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         qty = np.arange(100000, 600000)
         data = pd.DataFrame({'sym': sym, 'date': date, 'month': month, 'time': time, 'minute': time, 'second': second,
-                            'datetime': second, 'timestamp': time, 'nanotime': nanotime, 'nanotimestamp': nanotime, 'qty': qty})
+                             'datetime': second, 'timestamp': time, 'nanotime': nanotime, 'nanotimestamp': nanotime,
+                             'qty': qty})
         num = appender.append(data)
         assert (num == 500000)
         script = '''
@@ -1116,7 +1117,7 @@ class TestPartitionedTableAppender:
         '''
         re = self.conn.run(script)
         assert_array_equal(re, [True, True, True, True,
-                           True, True, True, True, True, True, True])
+                                True, True, True, True, True, True, True])
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -1136,7 +1137,7 @@ class TestPartitionedTableAppender:
             "dfs://test_PartitionedTableAppender_datehour", "pt", "qty", pool)
         n = 500000
         time = pd.date_range(start='2020-01-01T01', periods=n, freq='h')
-        qty = np.arange(1, n+1)
+        qty = np.arange(1, n + 1)
         data = pd.DataFrame({'time': time, 'qty': qty})
         num = appender.append(data)
         assert (num == n)
@@ -1168,17 +1169,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'date1': date, 'date2': month,
-                            'date3': time, 'date4': second, 'date5': nanotime})
+                             'date3': time, 'date4': second, 'date5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1216,17 +1217,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'month1': date, 'month2': month,
-                            'month3': time, 'month4': second, 'month5': nanotime})
+                             'month3': time, 'month4': second, 'month5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1264,17 +1265,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'time1': date, 'time2': month,
-                            'time3': time, 'time4': second, 'time5': nanotime})
+                             'time3': time, 'time4': second, 'time5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1312,17 +1313,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'minute1': date, 'minute2': month,
-                            'minute3': time, 'minute4': second, 'minute5': nanotime})
+                             'minute3': time, 'minute4': second, 'minute5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1360,17 +1361,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'second1': date, 'second2': month,
-                            'second3': time, 'second4': second, 'second5': nanotime})
+                             'second3': time, 'second4': second, 'second5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1408,17 +1409,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'datetime1': date, 'datetime2': month,
-                            'datetime3': time, 'datetime4': second, 'datetime5': nanotime})
+                             'datetime3': time, 'datetime4': second, 'datetime5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1456,17 +1457,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'timestamp1': date, 'timestamp2': month,
-                            'timestamp3': time, 'timestamp4': second, 'timestamp5': nanotime})
+                             'timestamp3': time, 'timestamp4': second, 'timestamp5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1504,17 +1505,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'nanotime1': date, 'nanotime2': month,
-                            'nanotime3': time, 'nanotime4': second, 'nanotime5': nanotime})
+                             'nanotime3': time, 'nanotime4': second, 'nanotime5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1552,17 +1553,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'nanotimestamp1': date, 'nanotimestamp2': month,
-                            'nanotimestamp3': time, 'nanotimestamp4': second, 'nanotimestamp5': nanotime})
+                             'nanotimestamp3': time, 'nanotimestamp4': second, 'nanotimestamp5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1600,17 +1601,17 @@ class TestPartitionedTableAppender:
         n = 500000
         id = np.arange(100000, 600000)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25',
-                        'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
+                                 'NaT', '1970-01-01'], 100000), dtype="datetime64[D]")
         month = np.array(np.tile(
             ['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
         time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426',
-                        'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
+                                 'NaT', 'NaT', '1965-06-09T23:59:59.999'], 100000), dtype="datetime64")
         second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48',
-                          'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
+                                   'NaT', 'NaT', '1965-06-09T23:59:59'], 100000), dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006',
-                            'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     'NaT', 'NaT', '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'datehour1': date, 'datehour2': month,
-                            'datehour3': time, 'datehour4': second, 'datehour5': nanotime})
+                             'datehour3': time, 'datehour4': second, 'datehour5': nanotime})
         num = appender.append(data)
         assert (num == n)
         script = '''
@@ -1665,7 +1666,7 @@ class TestPartitionedTableAppender:
 
         id = np.arange(100000, 600000)
         time1 = np.array(np.tile(['2010-01-01T00:00:00.000', '2010-02-01T05:12:48.426',
-                         'NaT', 'NaT', '2010-03-03T23:59:59.999'], 100000), dtype="datetime64")
+                                  'NaT', 'NaT', '2010-03-03T23:59:59.999'], 100000), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'date': time1})
         with pytest.raises(RuntimeError):
             n1 = appender.append(data)
@@ -1707,7 +1708,7 @@ class TestPartitionedTableAppender:
         db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001)
         pt = db.createPartitionedTable(t, `pt, `int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test","pt","int", pool)
+        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
 
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
@@ -1716,24 +1717,34 @@ class TestPartitionedTableAppender:
             'int': np.array([10, 1000], dtype=np.int32),
             'long': np.array([-100000000, 10000000000], dtype=np.int64),
             'date': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[m]"),
-            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]"),
-            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
-            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
+            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                             dtype="datetime64[ms]"),
+            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[m]"),
+            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[s]"),
+            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[s]"),
+            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[h]"),
+            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                  dtype="datetime64[ms]"),
+            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[ns]"),
+            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                      dtype="datetime64[ns]"),
             'float': np.array([2.2134500, np.nan], dtype='float32'),
             'double': np.array([3.214, np.nan], dtype='float64'),
-            'symbol': np.array(['sym1','sym2' ], dtype='object'),
+            'symbol': np.array(['sym1', 'sym2'], dtype='object'),
             'string': np.array(['str1', 'str2'], dtype='object'),
             'ipaddr': np.array(["192.168.1.1", "0.0.0.0"], dtype='object'),
-            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
+            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
+                             dtype='object'),
+            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
+                               dtype='object'),
         })
         num = appender.append(df)
-        assert(num == 2)
+        assert (num == 2)
         script = """
             symbolV = symbol[`sym1,'sym2'] 
             ipV = ipaddr["192.168.1.1", "0.0.0.0"]
@@ -1764,7 +1775,7 @@ class TestPartitionedTableAppender:
             each(eqObj,t.values(),re.values())
         """
         re = self.conn.run(script)
-        assert_array_equal(re, [ True for _ in range(21)])
+        assert_array_equal(re, [True for _ in range(21)])
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -1779,7 +1790,7 @@ class TestPartitionedTableAppender:
         db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'OLAP')
         pt = db.createPartitionedTable(t, `pt, `int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test","pt","int", pool)
+        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1789,22 +1800,32 @@ class TestPartitionedTableAppender:
             # 'long': np.array(['str1', 'str2'], dtype='object'),
             'date': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
             # 'date': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[m]"),
-            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]"),
-            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
-            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
+            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                             dtype="datetime64[ms]"),
+            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[m]"),
+            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[s]"),
+            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[s]"),
+            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[h]"),
+            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                  dtype="datetime64[ms]"),
+            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[ns]"),
+            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                      dtype="datetime64[ns]"),
             'float': np.array([2.2134500, np.nan], dtype='float32'),
             'double': np.array([3.214, np.nan], dtype='float64'),
-            'symbol': np.array(['sym1','sym2' ], dtype='object'),
+            'symbol': np.array(['sym1', 'sym2'], dtype='object'),
             'string': np.array(['str1', 'str2'], dtype='object'),
             'ipaddr': np.array(["192.168.1.1", "0.0.0.0"], dtype='object'),
             # 'ipaddr': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
+            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
+                             dtype='object'),
+            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
+                               dtype='object'),
             # 'int128': np.array([-100000000, 10000000000], dtype='object'),
         })
         try:
@@ -1813,7 +1834,7 @@ class TestPartitionedTableAppender:
             print(str(e))
             result = "must be of DATE type" in str(e)
             print(result)
-            assert(True == result)
+            assert (True == result)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
@@ -1828,7 +1849,7 @@ class TestPartitionedTableAppender:
         db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'OLAP')
         pt = db.createPartitionedTable(t, `pt, `int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test","pt","int", pool)
+        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1838,22 +1859,32 @@ class TestPartitionedTableAppender:
             'long': np.array(['str1', 'str2'], dtype='object'),
             # 'date': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
             'date': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[m]"),
-            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]"),
-            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
-            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
+            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                             dtype="datetime64[ms]"),
+            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[m]"),
+            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[s]"),
+            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[s]"),
+            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[h]"),
+            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                  dtype="datetime64[ms]"),
+            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[ns]"),
+            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                      dtype="datetime64[ns]"),
             'float': np.array([2.2134500, np.nan], dtype='float32'),
             'double': np.array([3.214, np.nan], dtype='float64'),
-            'symbol': np.array(['sym1','sym2' ], dtype='object'),
+            'symbol': np.array(['sym1', 'sym2'], dtype='object'),
             'string': np.array(['str1', 'str2'], dtype='object'),
             'ipaddr': np.array(["192.168.1.1", "0.0.0.0"], dtype='object'),
             # 'ipaddr': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
+            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
+                             dtype='object'),
+            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
+                               dtype='object'),
             # 'int128': np.array([-100000000, 10000000000], dtype='object'),
         })
 
@@ -1863,13 +1894,13 @@ class TestPartitionedTableAppender:
             print(str(e))
             result = "must be of LONG type" in str(e)
             print(result)
-            assert(True == result) 
+            assert (True == result)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
     def test_PartitionedTableAppender_dfs_table_column_dateType_not_match_3(self):
         pool = ddb.DBConnectionPool(
-            HOST, PORT, 10, "admin", "123456")           
+            HOST, PORT, 10, "admin", "123456")
         self.conn.run('''
         dbPath = "dfs://PartitionedTableAppender_test"
         if(existsDatabase(dbPath))
@@ -1878,7 +1909,7 @@ class TestPartitionedTableAppender:
         db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'OLAP')
         pt = db.createPartitionedTable(t, `pt, `int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test","pt","int", pool)
+        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1888,22 +1919,33 @@ class TestPartitionedTableAppender:
             # 'long': np.array(['str1', 'str2'], dtype='object'),
             # 'date': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
             'date': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[m]"),
-            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]"),
-            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
-            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
+            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                             dtype="datetime64[ms]"),
+            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[m]"),
+            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[s]"),
+            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[s]"),
+            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[h]"),
+            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                  dtype="datetime64[ms]"),
+            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[ns]"),
+            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                      dtype="datetime64[ns]"),
             'float': np.array([2.2134500, np.nan], dtype='float32'),
             'double': np.array([3.214, np.nan], dtype='float64'),
-            'symbol': np.array(['sym1','sym2' ], dtype='object'),
+            'symbol': np.array(['sym1', 'sym2'], dtype='object'),
             'string': np.array(['str1', 'str2'], dtype='object'),
             # 'ipaddr': np.array(["192.168.1.1", "0.0.0.0"], dtype='object'),
-            'ipaddr': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
+            'ipaddr': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
+                               dtype='object'),
+            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
+                             dtype='object'),
+            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
+                               dtype='object'),
             # 'int128': np.array([-100000000, 10000000000], dtype='object'),
         })
         try:
@@ -1912,13 +1954,13 @@ class TestPartitionedTableAppender:
             print(str(e))
             result = "must be of IPADDR type" in str(e)
             print(result)
-            assert(True == result)  
+            assert (True == result)
         pool.shutDown()
 
     @pytest.mark.PARTITIONEDTABLEAPPENDER
     def test_PartitionedTableAppender_dfs_table_column_dateType_not_match_4(self):
         pool = ddb.DBConnectionPool(
-            HOST, PORT, 10, "admin", "123456")    
+            HOST, PORT, 10, "admin", "123456")
         self.conn.run('''
         dbPath = "dfs://PartitionedTableAppender_test"
         if(existsDatabase(dbPath))
@@ -1927,7 +1969,7 @@ class TestPartitionedTableAppender:
         db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'OLAP')
         pt = db.createPartitionedTable(t, `pt, `int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test","pt","int", pool)
+        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1937,23 +1979,34 @@ class TestPartitionedTableAppender:
             # 'long': np.array(['str1', 'str2'], dtype='object'),
             # 'date': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
             'date': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[m]"),
-            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]"),
-            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
-            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
+            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                             dtype="datetime64[ms]"),
+            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[m]"),
+            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[s]"),
+            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[s]"),
+            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[h]"),
+            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                  dtype="datetime64[ms]"),
+            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[ns]"),
+            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                      dtype="datetime64[ns]"),
             'float': np.array([2.2134500, np.nan], dtype='float32'),
             'double': np.array([3.214, np.nan], dtype='float64'),
-            'symbol': np.array(['sym1','sym2' ], dtype='object'),
+            'symbol': np.array(['sym1', 'sym2'], dtype='object'),
             # 'string': np.array(['str1', 'str2'], dtype='object'),
-            'string': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
+            'string': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[s]"),
             'ipaddr': np.array(["192.168.1.1", "0.0.0.0"], dtype='object'),
             # 'ipaddr': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
+            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
+                             dtype='object'),
+            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
+                               dtype='object'),
             # 'int128': np.array([-100000000, 10000000000], dtype='object'),
         })
         try:
@@ -1962,12 +2015,12 @@ class TestPartitionedTableAppender:
             print(str(e))
             result = "must be of STRING type" in str(e)
             print(result)
-            assert(True == result)  
+            assert (True == result)
         pool.shutDown()
-            
+
     @pytest.mark.PARTITIONEDTABLEAPPENDER
     def test_PartitionedTableAppender_dfs_table_column_dateType_not_match_5(self):
-        pool = ddb.DBConnectionPool(HOST, PORT, 10, "admin", "123456")            
+        pool = ddb.DBConnectionPool(HOST, PORT, 10, "admin", "123456")
         self.conn.run('''
         dbPath = "dfs://PartitionedTableAppender_test"
         if(existsDatabase(dbPath))
@@ -1976,7 +2029,7 @@ class TestPartitionedTableAppender:
         db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'OLAP')
         pt = db.createPartitionedTable(t, `pt, `int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test","pt","int", pool)
+        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1986,32 +2039,43 @@ class TestPartitionedTableAppender:
             # 'long': np.array(['str1', 'str2'], dtype='object'),
             # 'date': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
             'date': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[m]"),
-            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]"),
-            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
-            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
+            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                             dtype="datetime64[ms]"),
+            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[m]"),
+            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[s]"),
+            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[s]"),
+            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[h]"),
+            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                  dtype="datetime64[ms]"),
+            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                 dtype="datetime64[ns]"),
+            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                                      dtype="datetime64[ns]"),
             'float': np.array([2.2134500, np.nan], dtype='float32'),
             'double': np.array([3.214, np.nan], dtype='float64'),
-            'symbol': np.array(['sym1','sym2' ], dtype='object'),
-            'string': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
+            'symbol': np.array(['sym1', 'sym2'], dtype='object'),
+            'string': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
+                               dtype="datetime64[s]"),
             'ipaddr': np.array(["192.168.1.1", "0.0.0.0"], dtype='object'),
-            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
-            'int128': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"], dtype='object'),
+            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
+                             dtype='object'),
+            'int128': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
+                               dtype='object'),
         })
         try:
             num = appender.append(df)
         except Exception as e:
             print(str(e))
-            assert "(column \"string\", row 0) must be of STRING type" in str(e)  
+            assert "(column \"string\", row 0) must be of STRING type" in str(e)
         pool.shutDown()
- 
+
     def test_PartitionedTableAppender_no_pandasWarning(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        pool = ddb.DBConnectionPool(HOST,PORT,10, 'admin','123456')
+        pool = ddb.DBConnectionPool(HOST, PORT, 10, 'admin', '123456')
         conn.run("""
             tglobal=table(`a`b`c as names,[date(1), date(2), date(3)] as dates,rand(100.0,3) as prices);
             login(`admin,`123456);
@@ -2024,7 +2088,7 @@ class TestPartitionedTableAppender:
         import warnings
         warnings.filterwarnings('error')
         try:
-            pta = ddb.PartitionedTableAppender("dfs://demodb2","pt", "dates", pool)
+            pta = ddb.PartitionedTableAppender("dfs://demodb2", "pt", "dates", pool)
             pta.append(df)
             del pta
         except Warning:
@@ -2032,52 +2096,52 @@ class TestPartitionedTableAppender:
         pool.shutDown()
 
     test_dataArray = [
-        [[None, None, None],[None, None, None], [None, None, None]],
-        [[pd.NaT, None, None],['', None, None], [decimal.Decimal('NaN'),None,None]],
-        [[np.nan, None, None],["", None, None], [np.nan,None,None]],
-        [[None, pd.NaT, None],[None, '', None], [None, decimal.Decimal('NaN'), None]],
-        [[None, np.nan, None],[None, "", None], [None, np.nan, None]],
-        [[None, None, pd.NaT],[None, None, ''], [None, None, decimal.Decimal('NaN')]],
-        [[None, None, np.nan],[None, None, ""], [None, None, np.nan]],
-        [[None, np.nan, pd.NaT],[None, "", ''], [None, np.nan, pd.NaT]],
-        [[None, pd.NaT, np.nan],[None, '', ""], [None, pd.NaT, np.nan]],
-        [[pd.NaT, np.nan, None],['', '', None], [pd.NaT,np.nan,None]],
-        [[np.nan, pd.NaT, None],["", "", None], [np.nan,pd.NaT,None]],
-        [[pd.NaT, pd.NaT, pd.NaT],['', '', ''], [pd.NaT,pd.NaT,pd.NaT]],
-        [[np.nan, np.nan, np.nan],["", "", ""], [np.nan,np.nan,np.nan]],
+        [[None, None, None], [None, None, None], [None, None, None]],
+        [[pd.NaT, None, None], ['', None, None], [decimal.Decimal('NaN'), None, None]],
+        [[np.nan, None, None], ["", None, None], [np.nan, None, None]],
+        [[None, pd.NaT, None], [None, '', None], [None, decimal.Decimal('NaN'), None]],
+        [[None, np.nan, None], [None, "", None], [None, np.nan, None]],
+        [[None, None, pd.NaT], [None, None, ''], [None, None, decimal.Decimal('NaN')]],
+        [[None, None, np.nan], [None, None, ""], [None, None, np.nan]],
+        [[None, np.nan, pd.NaT], [None, "", ''], [None, np.nan, pd.NaT]],
+        [[None, pd.NaT, np.nan], [None, '', ""], [None, pd.NaT, np.nan]],
+        [[pd.NaT, np.nan, None], ['', '', None], [pd.NaT, np.nan, None]],
+        [[np.nan, pd.NaT, None], ["", "", None], [np.nan, pd.NaT, None]],
+        [[pd.NaT, pd.NaT, pd.NaT], ['', '', ''], [pd.NaT, pd.NaT, pd.NaT]],
+        [[np.nan, np.nan, np.nan], ["", "", ""], [np.nan, np.nan, np.nan]],
     ]
 
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_PartitionedTableAppender_allNone_tables_with_numpyArray(self, val, valstr, valdecimal):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        pool = ddb.DBConnectionPool(HOST,PORT,1, 'admin','123456')
+        pool = ddb.DBConnectionPool(HOST, PORT, 1, 'admin', '123456')
         df = pd.DataFrame({
-                           'ckeycol': np.array([1,2,3], dtype='int32'),
-                           'cbool': np.array(val, dtype='object'),
-                           'cchar': np.array(val, dtype='object'),
-                           'cshort': np.array(val, dtype='object'),
-                           'cint': np.array(val, dtype='object'),
-                           'clong': np.array(val, dtype='object'),
-                           'cdate': np.array(val, dtype='object'),
-                           'cmonth': np.array(val, dtype='object'),
-                           'ctime': np.array(val, dtype='object'),
-                           'cminute': np.array(val, dtype='object'),
-                           'csecond': np.array(val, dtype='object'),
-                           'cdatetime': np.array(val, dtype='object'),
-                           'ctimestamp': np.array(val, dtype='object'),
-                           'cnanotime': np.array(val, dtype='object'),
-                           'cnanotimestamp': np.array(val, dtype='object'),
-                           'cfloat': np.array(val, dtype='object'),
-                           'cdouble': np.array(val, dtype='object'),
-                           'csymbol': np.array(valstr, dtype='object'),
-                           'cstring': np.array(valstr, dtype='object'),
-                           'cipaddr': np.array(valstr, dtype='object'),
-                           'cuuid': np.array(valstr, dtype='object'),
-                           'cint128': np.array(valstr, dtype='object'),
-                           # 'cblob': np.array(valstr, dtype='object'),
-                           # 'cdecimal32':np.array(valdecimal, dtype='object'),
-                           # 'cdecimal64':np.array(valdecimal, dtype='object')
-                           },dtype='object')
+            'ckeycol': np.array([1, 2, 3], dtype='int32'),
+            'cbool': np.array(val, dtype='object'),
+            'cchar': np.array(val, dtype='object'),
+            'cshort': np.array(val, dtype='object'),
+            'cint': np.array(val, dtype='object'),
+            'clong': np.array(val, dtype='object'),
+            'cdate': np.array(val, dtype='object'),
+            'cmonth': np.array(val, dtype='object'),
+            'ctime': np.array(val, dtype='object'),
+            'cminute': np.array(val, dtype='object'),
+            'csecond': np.array(val, dtype='object'),
+            'cdatetime': np.array(val, dtype='object'),
+            'ctimestamp': np.array(val, dtype='object'),
+            'cnanotime': np.array(val, dtype='object'),
+            'cnanotimestamp': np.array(val, dtype='object'),
+            'cfloat': np.array(val, dtype='object'),
+            'cdouble': np.array(val, dtype='object'),
+            'csymbol': np.array(valstr, dtype='object'),
+            'cstring': np.array(valstr, dtype='object'),
+            'cipaddr': np.array(valstr, dtype='object'),
+            'cuuid': np.array(valstr, dtype='object'),
+            'cint128': np.array(valstr, dtype='object'),
+            # 'cblob': np.array(valstr, dtype='object'),
+            # 'cdecimal32':np.array(valdecimal, dtype='object'),
+            # 'cdecimal64':np.array(valdecimal, dtype='object')
+        }, dtype='object')
         df.__DolphinDB_Type__ = {
             'cbool': keys.DT_BOOL,
             'cchar': keys.DT_CHAR,
@@ -2121,7 +2185,7 @@ class TestPartitionedTableAppender:
                             all(res)""")
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
-                    'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'FLOAT', 
+                    'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'FLOAT',
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
         assert_array_equal(schema, ex_types)
         conn.dropDatabase("dfs://test_dfs1")
@@ -2131,34 +2195,34 @@ class TestPartitionedTableAppender:
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_PartitionedTableAppender_allNone_tables_with_pythonList(self, val, valstr, valdecimal):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        pool = ddb.DBConnectionPool(HOST,PORT,1, 'admin','123456')
+        pool = ddb.DBConnectionPool(HOST, PORT, 1, 'admin', '123456')
         df = pd.DataFrame({
-                           'ckeycol': np.array([1,2,3], dtype='int32'),
-                           'cbool': val,
-                           'cchar': val,
-                           'cshort': val,
-                           'cint': val,
-                           'clong': val,
-                           'cdate': val,
-                           'cmonth': val,
-                           'ctime': val,
-                           'cminute': val,
-                           'csecond': val,
-                           'cdatetime': val,
-                           'ctimestamp': val,
-                           'cnanotime': val,
-                           'cnanotimestamp': val,
-                           'cfloat': val,
-                           'cdouble': val,
-                           'csymbol': valstr,
-                           'cstring': valstr,
-                           'cipaddr': valstr,
-                           'cuuid': valstr,
-                           'cint128': valstr,
-                           # 'cblob': valstr,
-                           # 'cdecimal32':valdecimal,
-                           # 'cdecimal64':valdecimal
-                           },dtype='object')
+            'ckeycol': np.array([1, 2, 3], dtype='int32'),
+            'cbool': val,
+            'cchar': val,
+            'cshort': val,
+            'cint': val,
+            'clong': val,
+            'cdate': val,
+            'cmonth': val,
+            'ctime': val,
+            'cminute': val,
+            'csecond': val,
+            'cdatetime': val,
+            'ctimestamp': val,
+            'cnanotime': val,
+            'cnanotimestamp': val,
+            'cfloat': val,
+            'cdouble': val,
+            'csymbol': valstr,
+            'cstring': valstr,
+            'cipaddr': valstr,
+            'cuuid': valstr,
+            'cint128': valstr,
+            # 'cblob': valstr,
+            # 'cdecimal32':valdecimal,
+            # 'cdecimal64':valdecimal
+        }, dtype='object')
         df.__DolphinDB_Type__ = {
             'cbool': keys.DT_BOOL,
             'cchar': keys.DT_CHAR,
@@ -2202,7 +2266,7 @@ class TestPartitionedTableAppender:
                             all(res)""")
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
-                    'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'FLOAT', 
+                    'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'FLOAT',
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
         assert_array_equal(schema, ex_types)
         conn.dropDatabase("dfs://test_dfs1")
@@ -2211,7 +2275,7 @@ class TestPartitionedTableAppender:
 
     def test_PartitionedTableAppender_append_after_pool_deconstructed(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        pool = ddb.DBConnectionPool(HOST,PORT,1, 'admin','123456')
+        pool = ddb.DBConnectionPool(HOST, PORT, 1, 'admin', '123456')
         conn.run("""
             dbPath = "dfs://test_dfs1"
             if(existsDatabase(dbPath))
@@ -2220,35 +2284,36 @@ class TestPartitionedTableAppender:
             tab = table(1 2 as c1, `a`b as c2)
             pt = db.createPartitionedTable(tab, `pt, `c1).append!(tab)
         """)
-        df = pd.DataFrame({'c1':[3,4], 'c2':['c','d']})
+        df = pd.DataFrame({'c1': [3, 4], 'c2': ['c', 'd']})
         # 主动关闭掉连接池，抛异常正常
         try:
-            pta = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName="pt", partitionColName='c1', dbConnectionPool=pool)
+            pta = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName="pt", partitionColName='c1',
+                                               dbConnectionPool=pool)
             pool.shutDown()
             pta.append(df)
         except RuntimeError as e:
             assert "DBConnectionPool has been shut down" in str(e)
-        
+
         # 析构掉pool引用，可继续append数据
-        pool = ddb.DBConnectionPool(HOST,PORT,2, 'admin','123456')
-        pta = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName="pt", partitionColName='c1', dbConnectionPool=pool)
+        pool = ddb.DBConnectionPool(HOST, PORT, 2, 'admin', '123456')
+        pta = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName="pt", partitionColName='c1',
+                                           dbConnectionPool=pool)
         del pool
-        assert pta.append(df)==2
+        assert pta.append(df) == 2
         assert conn.run("""res = select * from loadTable('dfs://test_dfs1', 'pt') order by c1;
                         ex = table(1 2 3 4 as c1, string(['a', 'b', 'c', 'd']) as c2);
                         each(eqObj, res.values(), ex.values())""").all()
         conn.dropDatabase('dfs://test_dfs1')
         conn.close()
 
-
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
-    def test_PartitionedTableAppender_append_dataframe_with_numpy_order(self,_compress,_order,_python_list):
-        pool = ddb.DBConnectionPool(HOST,PORT,1, 'admin','123456',compress=_compress)
+    def test_PartitionedTableAppender_append_dataframe_with_numpy_order(self, _compress, _order, _python_list):
+        pool = ddb.DBConnectionPool(HOST, PORT, 1, 'admin', '123456', compress=_compress)
         data = []
         for i in range(10):
-            row_data = [i, False, i,i,i,i, 
+            row_data = [i, False, i, i, i, i,
                         np.datetime64(i, "D").astype("datetime64[ns]"),
                         np.datetime64(i, "M").astype("datetime64[ns]"),
                         np.datetime64(i, "ms").astype("datetime64[ns]"),
@@ -2259,17 +2324,22 @@ class TestPartitionedTableAppender:
                         np.datetime64(i, "ns").astype("datetime64[ns]"),
                         np.datetime64(i, "ns").astype("datetime64[ns]"),
                         np.datetime64(i, "h").astype("datetime64[ns]"),
-                        i,i, 'sym','str', "1.1.1.1", "5d212a78-cc48-e3b1-4235-b4d91473ee87",
+                        i, i, 'sym', 'str', "1.1.1.1", "5d212a78-cc48-e3b1-4235-b4d91473ee87",
                         "e1671797c52e15f763380b45e841ec32"]
             data.append(row_data)
         if _python_list:
-            df = pd.DataFrame(data,columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate', 
-                            'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime', 'cnanotimestamp', 
-                            'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid', 'cint128'])
+            df = pd.DataFrame(data, columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
+                                             'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp',
+                                             'cnanotime', 'cnanotimestamp',
+                                             'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid',
+                                             'cint128'])
         else:
-            df = pd.DataFrame(np.array(data,dtype='object',order=_order),columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate', 
-                            'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime', 'cnanotimestamp', 
-                            'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid', 'cint128'])
+            df = pd.DataFrame(np.array(data, dtype='object', order=_order),
+                              columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
+                                       'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime',
+                                       'cnanotimestamp',
+                                       'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid',
+                                       'cint128'])
         df.__DolphinDB_Type__ = {
             'cbool': keys.DT_BOOL,
             'cchar': keys.DT_CHAR,
@@ -2305,7 +2375,8 @@ class TestPartitionedTableAppender:
         db=database(dbPath,HASH,[LONG,1],,'OLAP')
         pt = db.createPartitionedTable(t, `pt, `index)
         """)
-        append = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName='pt',partitionColName='index', dbConnectionPool=pool)
+        append = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName='pt', partitionColName='index',
+                                              dbConnectionPool=pool)
         append.append(df)
 
         self.conn.run("""
@@ -2318,9 +2389,9 @@ class TestPartitionedTableAppender:
                            all(each(eqObj, ex.values(), res.values()))""")
         assert res
         tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
-        ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE', 
-                            'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT', 
-                            'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
+        ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
+                    'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
+                    'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
         assert_array_equal(tys, ex_types)
         self.conn.dropDatabase("dfs://test_dfs1")
         pool.shutDown()
@@ -2328,25 +2399,30 @@ class TestPartitionedTableAppender:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
-    def test_PartitionedTableAppender_append_null_dataframe_with_numpy_order(self,_compress,_order,_python_list):
-        pool = ddb.DBConnectionPool(HOST,PORT,1, 'admin','123456',compress=_compress)
+    def test_PartitionedTableAppender_append_null_dataframe_with_numpy_order(self, _compress, _order, _python_list):
+        pool = ddb.DBConnectionPool(HOST, PORT, 1, 'admin', '123456', compress=_compress)
         data = []
-        origin_nulls = [None,np.nan,pd.NaT]
+        origin_nulls = [None, np.nan, pd.NaT]
         for i in range(7):
             row_data = random.choices(origin_nulls, k=22)
             print(f'row {i}:', row_data)
             data.append([i, *row_data])
-        data.append([7]+[None]*22)
-        data.append([8]+[pd.NaT]*22)
-        data.append([9]+[np.nan]*22)
+        data.append([7] + [None] * 22)
+        data.append([8] + [pd.NaT] * 22)
+        data.append([9] + [np.nan] * 22)
         if _python_list:
-            df = pd.DataFrame(data,columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
-                            'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime', 'cnanotimestamp',
-                            'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid', 'cint128'],dtype='object')
+            df = pd.DataFrame(data, columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
+                                             'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp',
+                                             'cnanotime', 'cnanotimestamp',
+                                             'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid',
+                                             'cint128'], dtype='object')
         else:
-            df = pd.DataFrame(np.array(data,dtype='object',order=_order),columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
-                            'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime', 'cnanotimestamp',
-                            'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid', 'cint128'],dtype='object')
+            df = pd.DataFrame(np.array(data, dtype='object', order=_order),
+                              columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
+                                       'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime',
+                                       'cnanotimestamp',
+                                       'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid',
+                                       'cint128'], dtype='object')
         df.__DolphinDB_Type__ = {
             'cbool': keys.DT_BOOL,
             'cchar': keys.DT_CHAR,
@@ -2381,7 +2457,8 @@ class TestPartitionedTableAppender:
         db=database(dbPath,HASH,[LONG,1],,'OLAP')
         pt = db.createPartitionedTable(t, `pt, `index)
         """)
-        append = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName='pt',partitionColName='index', dbConnectionPool=pool)
+        append = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName='pt', partitionColName='index',
+                                              dbConnectionPool=pool)
         append.append(df)
         self.conn.run("""
             for(i in 0:10){
@@ -2395,11 +2472,12 @@ class TestPartitionedTableAppender:
         assert res
         tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
-                            'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
-                            'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
+                    'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
+                    'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
         assert_array_equal(tys, ex_types)
         self.conn.dropDatabase("dfs://test_dfs1")
         pool.shutDown()
+
 
 if __name__ == '__main__':
     pytest.main(["-s", "test/test_partitionedTableAppender.py"])

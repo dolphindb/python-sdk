@@ -4,6 +4,7 @@
 #include "ConstantMarshall.h"
 #include "DdbPythonUtil.h"
 #include "Pickle.h"
+#include "Wrappers.h"
 
 #define APIMinVersionRequirement 300
 
@@ -562,7 +563,7 @@ py::object DBConnectionImpl::runPy(
             wrapper.setInputStream(in);
             pgil.acquire();
             py::object pywrapper = py::cast(wrapper);
-            py::object reader = DdbPythonUtil::preserved_->pyarrow_.attr("ipc").attr("RecordBatchStreamReader")(pywrapper);
+            py::object reader = converter::PyObjs::cache_->pyarrow_.attr("ipc").attr("RecordBatchStreamReader")(pywrapper);
             py::object pa = reader.attr("read_all")();
             return pa;
         }
@@ -584,7 +585,7 @@ py::object DBConnectionImpl::runPy(
                 PyObject * tem = PyList_GetItem(result, 0);
                 py::array mat = py::handle(tem).cast<py::array>();
                 py::object dtype = py::getattr(mat, "dtype");
-                if(UNLIKELY(dtype.equal(DdbPythonUtil::preserved_->npobject_))) {
+                if (UNLIKELY(CHECK_EQUAL(dtype, np_object_))) {
                     mat = mat.attr("transpose")();
                     Py_IncRef(mat.ptr());
                     PyList_SetItem(result, 0, mat.ptr());
@@ -620,9 +621,9 @@ py::object DBConnectionImpl::runPy(
         }
     }
     pgil.acquire();
-    DdbPythonUtil::ToPythonOption option;
-    option.table2List=pickleTableToList;
-    return DdbPythonUtil::toPython(result,false,&option);
+
+    converter::ToPythonOption option(pickleTableToList);
+    return converter::Converter::toPython_Old(result, option);
 }
 
 }

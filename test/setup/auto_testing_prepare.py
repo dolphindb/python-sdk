@@ -1,10 +1,9 @@
-import shutil
-import random
 import pickle
+import random
 import re
+import shutil
+
 from settings import *
-import os
-import sys
 
 if sys.platform.startswith('win'):
     cur_os = 'win'

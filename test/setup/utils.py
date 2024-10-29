@@ -1,11 +1,12 @@
-import os
-import threading
-import string
-import random
 import inspect
+import os
+import random
+import string
+import threading
+from stat import S_ISDIR as isdir
+
 import paramiko
 from tqdm import tqdm
-from stat import S_ISDIR as isdir
 
 
 class CountBatchDownLatch:

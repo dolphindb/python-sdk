@@ -4,7 +4,7 @@ import random
 import threading
 import time
 from threading import Event
-from setup.utils import get_pid
+
 import dolphindb as ddb
 import dolphindb.settings as keys
 import numpy as np
@@ -12,7 +12,9 @@ import pandas as pd
 import pytest
 from numpy.testing import *
 from pandas.testing import *
+
 from setup.settings import *
+from setup.utils import get_pid
 
 
 class msgCount:
@@ -43,7 +45,7 @@ class TestDocs:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -75,8 +77,8 @@ class TestDocs:
         s.connect(HOST, PORT, USER, PASSWD)
         n = 1000000
         df = pd.DataFrame({
-            'ID':   np.random.randint(0, 10, n),
-            'x':    np.random.rand(n),
+            'ID': np.random.randint(0, 10, n),
+            'x': np.random.rand(n),
         })
         s.run("schema_t = table(100000:0, `ID`x,[INT, DOUBLE])")
         schema_t = s.table(data="schema_t")
@@ -101,8 +103,8 @@ class TestDocs:
 
         n = 1000
         df = pd.DataFrame({
-            'ID':   np.random.randint(0, 3, n).astype("int32"),
-            'x':    np.random.rand(n),
+            'ID': np.random.randint(0, 3, n).astype("int32"),
+            'x': np.random.rand(n),
         })
 
         if s.existsDatabase("dfs://valuedb"):
@@ -132,13 +134,13 @@ class TestDocs:
         s.connect(HOST, PORT, USER, PASSWD)
 
         df = pd.DataFrame({
-            'ID':   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            'x':    ['a', 'b', 'b', 'c', 'a', 'c', 'a', 'b', 'b', 'a'],
+            'ID': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            'x': ['a', 'b', 'b', 'c', 'a', 'c', 'a', 'b', 'b', 'a'],
         })
-        t = s.table(data=df)    # Table对象
+        t = s.table(data=df)  # Table对象
         res = t.select(["ID", "x"]).where("ID>=5").executeAs("res")
         ex = pd.DataFrame({'ID': [5, 6, 7, 8, 9, 10], 'x': [
-                          'a', 'c', 'a', 'b', 'b', 'a']})
+            'a', 'c', 'a', 'b', 'b', 'a']})
         assert_frame_equal(res.toDF(), ex)
 
     def test_BasicOperation_Session_ParametersForConstructingSession(self):
@@ -149,14 +151,14 @@ class TestDocs:
         if s.existsDatabase("dfs://testdb"):
             s.dropDatabase("dfs://testdb")
         db = s.database("db", partitionType=keys.VALUE, partitions=[
-                        1, 2, 3], dbPath="dfs://testdb", chunkGranularity="DATABASE")
+            1, 2, 3], dbPath="dfs://testdb", chunkGranularity="DATABASE")
         assert s.run("schema(db)")["chunkGranularity"] == 'DATABASE'
 
         # 以下部分仅为展示参数chunkGranularity已失效
         if s.existsDatabase("dfs://testdb"):
             s.dropDatabase("dfs://testdb")
         db = s.database("db", partitionType=keys.VALUE, partitions=[
-                        1, 2, 3], dbPath="dfs://testdb", chunkGranularity="TABLE")
+            1, 2, 3], dbPath="dfs://testdb", chunkGranularity="TABLE")
         assert s.run("schema(db)")["chunkGranularity"] == 'TABLE'
         s.close()
 
@@ -184,10 +186,10 @@ class TestDocs:
         except Exception as e:
             print("catch e:")
             print(e)
-        print("time: ", time_ed-time_st)
+        print("time: ", time_ed - time_st)
 
         for i in range(len(tasks)):
-            assert tasks[i].result() == (i+1)*2
+            assert tasks[i].result() == (i + 1) * 2
 
         pool.shutDown()
 
@@ -207,7 +209,7 @@ class TestDocs:
                 task = loop.create_task(cls.test_run(script))
                 result = await asyncio.gather(task)
                 print(
-                    f"""[{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}] time: {time.time()-start} result: {result}""")
+                    f"""[{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}] time: {time.time() - start} result: {result}""")
                 return result
 
         # 定义一个跑事件循环的线程函数
@@ -260,7 +262,9 @@ class TestDocs:
         appender = ddb.TableAppender(tableName="t", ddbSession=s)
         data = pd.DataFrame({
             'sym': ['A1', 'A2', 'A3', 'A4', 'A5'],
-            'timestamp': np.array(['2012-06-13 13:30:10.008', 'NaT', '2012-06-13 13:30:10.008', '2012-06-13 15:30:10.008', 'NaT'], dtype="datetime64[ns]"),
+            'timestamp': np.array(
+                ['2012-06-13 13:30:10.008', 'NaT', '2012-06-13 13:30:10.008', '2012-06-13 15:30:10.008', 'NaT'],
+                dtype="datetime64[ns]"),
             'qty': np.arange(1, 6).astype("int32"),
         })
         num = appender.append(data)
@@ -269,9 +273,9 @@ class TestDocs:
         assert_frame_equal(t, data)
         schema = s.run("schema(t)")
         assert_array_equal(schema["colDefs"]['name'], [
-                           'sym', 'timestamp', 'qty'])
+            'sym', 'timestamp', 'qty'])
         assert_array_equal(schema["colDefs"]['typeString'], [
-                           'SYMBOL', 'TIMESTAMP', 'INT'])
+            'SYMBOL', 'TIMESTAMP', 'INT'])
         assert_array_equal(schema["colDefs"]['typeInt'], [17, 12, 4])
         assert_array_equal(schema["colDefs"]['comment'], ['', '', ''])
         s.close()
@@ -285,8 +289,10 @@ class TestDocs:
         appender = ddb.TableAppender(tableName="t", ddbSession=s)
         data = pd.DataFrame({
             'sym': ["A1", "A2", "A3"],
-            'uuid': ["5d212a78-cc48-e3b1-4235-b4d91473ee87", "b93b8253-8d5e-c609-260a-86522b99864e", "00000000-0000-0000-0000-000000000000"],
-            'int128': ['00000000000000000000000000000000', "073dc3bc505dd1643d11a4ac4271d2f2", "e60c84f21b6149959bcf0bd6b509ff6a"],
+            'uuid': ["5d212a78-cc48-e3b1-4235-b4d91473ee87", "b93b8253-8d5e-c609-260a-86522b99864e",
+                     "00000000-0000-0000-0000-000000000000"],
+            'int128': ['00000000000000000000000000000000', "073dc3bc505dd1643d11a4ac4271d2f2",
+                       "e60c84f21b6149959bcf0bd6b509ff6a"],
             'ipaddr': ["2c24:d056:2f77:62c0:c48d:6782:e50:6ad2", "0.0.0.0", "192.168.1.0"],
             'blob': ["testBLOB1", "testBLOB2", "testBLOB3"],
         })
@@ -386,7 +392,7 @@ class TestDocs:
         data = pd.DataFrame({
             "id": np.random.choice(['AMZN', 'IBM', 'APPL'], n),
             "date": dates,
-            "vol": pd.Series(np.random.randint(100, size=n),dtype='int64')
+            "vol": pd.Series(np.random.randint(100, size=n), dtype='int64')
         })
 
         re = appender.append(data)
@@ -394,7 +400,7 @@ class TestDocs:
         assert re == 100
         res = s.run(
             "pt = loadTable('dfs://valuedb', 'pt'); select * from pt order by date;")
-        assert_frame_equal(res, data.sort_values(by=['date','id'],ascending=True).reset_index(drop=True))
+        assert_frame_equal(res, data.sort_values(by=['date', 'id'], ascending=True).reset_index(drop=True))
 
     def test_BasicOperation_StreamingSubscription(self):
         script = """
@@ -412,11 +418,13 @@ class TestDocs:
             def handler(lst):
                 mc.setMsg()
                 print(lst)
+
             return handler
 
         s.subscribe(HOST, PORT, tmp_handler(msg_count), "trades",
                     "action", offset=-1, filter=np.array(["000905"]))
-        s.run("insert into trades values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0, 1..10)")
+        s.run(
+            "insert into trades values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0, 1..10)")
         Event().wait(timeout=5)
         assert msg_count.getTotalMsg() == 2
 
@@ -507,10 +515,10 @@ class TestDocs:
         for i in range(10):
             if i == 3:
                 res = writer.insert(np.datetime64(
-                    f'2022-03-2{i%6}'), random.randint(1, 10000))
+                    f'2022-03-2{i % 6}'), random.randint(1, 10000))
             else:
                 res = writer.insert(np.datetime64(
-                    f'2022-03-2{i%6}'), "AAAA", random.randint(1, 10000))
+                    f'2022-03-2{i % 6}'), "AAAA", random.randint(1, 10000))
             if res.hasError():
                 fail_rows += 1
                 print("insert error: ", res.errorInfo)
@@ -731,9 +739,9 @@ class TestDocs:
         })
         assert_frame_equal(s.run("schema(df1)")['colDefs'], ex1)
         df2 = pd.DataFrame({
-            'day_v': [np.datetime64("2012-01-02",'D'), np.datetime64("2022-02-05",'D')],
+            'day_v': [np.datetime64("2012-01-02", 'D'), np.datetime64("2022-02-05", 'D')],
             'month_v': [np.datetime64("2012-01", "M"), pd.NaT],
-        },dtype='object')
+        }, dtype='object')
         s.upload({'df2': df2})
         ex2 = pd.DataFrame({
             'name': ['day_v', 'month_v'],
@@ -802,11 +810,13 @@ class TestDocs:
             def handler(lst):
                 mc.setMsg()
                 print(lst)
+
             return handler
 
         s.subscribe(HOST, PORT, tmp_handler(msg_count),
                     "trades", "SingleMode", offset=-1)
-        s.run("insert into trades values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
+        s.run(
+            "insert into trades values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
         time.sleep(5)
 
         s.unsubscribe(HOST, PORT, "trades", "SingleMode")
@@ -829,11 +839,13 @@ class TestDocs:
                 for _ in range(len(lst)):
                     mc.setMsg()
                 print(lst)
+
             return handler
 
         s.subscribe(HOST, PORT, tmp_handler(msg_count), "trades", "MultiMode1",
                     offset=-1, batchSize=2, throttle=0.1, msgAsTable=False)
-        s.run("insert into trades values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
+        s.run(
+            "insert into trades values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
         time.sleep(5)
 
         s.unsubscribe(HOST, PORT, "trades", "MultiMode1")
@@ -856,11 +868,13 @@ class TestDocs:
                 for _ in range(lst.shape[0]):
                     mc.setMsg()
                 print(lst)
+
             return handler
 
         s.subscribe(HOST, PORT, tmp_handler(msg_count), "trades", "MultiMode2",
                     offset=-1, batchSize=1000, throttle=0.1, msgAsTable=True)
-        s.run("n=1500;insert into trades values(take(now(), n), take(`000905`600001`300201`000908`600002, n), rand(1000,n)/10.0, 1..n)")
+        s.run(
+            "n=1500;insert into trades values(take(now(), n), take(`000905`600001`300201`000908`600002, n), rand(1000,n)/10.0, 1..n)")
         time.sleep(5)
 
         s.unsubscribe(HOST, PORT, "trades", "MultiMode2")
@@ -907,6 +921,7 @@ class TestDocs:
                     print("Msg2: ", lst)
                 else:
                     print("Error: ", lst)
+
             return streamDeserializer_handler
 
         s.enableStreaming(SUBPORT)
@@ -914,7 +929,8 @@ class TestDocs:
             'msg1': ["dfs://test_StreamDeserializer_pair", "pt1"],
             'msg2': ["dfs://test_StreamDeserializer_pair", "pt2"],
         }, session=s)
-        s.subscribe(HOST, PORT, handler=tmp_handler(msg1_count, msg2_count), tableName="outTables", actionName="action", offset=0, resub=False,
+        s.subscribe(HOST, PORT, handler=tmp_handler(msg1_count, msg2_count), tableName="outTables", actionName="action",
+                    offset=0, resub=False,
                     msgAsTable=False, streamDeserializer=sd, userName="admin", password="123456")
 
         Event().wait(5)
@@ -961,6 +977,7 @@ class TestDocs:
                         print("Msg2: ", msg)
                     else:
                         print("Error: ", msg)
+
             return streamDeserializer_handler
 
         s.enableStreaming(SUBPORT)
@@ -968,7 +985,8 @@ class TestDocs:
             'msg1': "pt1",
             'msg2': "pt2",
         }, session=s)
-        s.subscribe(HOST, PORT, handler=tmp_handler(msg1_count, msg2_count), tableName="outTables", actionName="action", offset=0, resub=False, batchSize=4,
+        s.subscribe(HOST, PORT, handler=tmp_handler(msg1_count, msg2_count), tableName="outTables", actionName="action",
+                    offset=0, resub=False, batchSize=4,
                     msgAsTable=False, streamDeserializer=sd, userName="admin", password="123456")
 
         Event().wait(5)
@@ -1003,12 +1021,12 @@ class TestDocs:
         if s.existsDatabase(dbPath):
             s.dropDatabase(dbPath)
         db = s.database(partitionType=keys.VALUE, partitions=[
-                        1, 2, 3], dbPath=dbPath, engine="OLAP")
+            1, 2, 3], dbPath=dbPath, engine="OLAP")
         s.run(
             "schema_t = table(100:0, `ctime`csymbol`price`qty, [TIMESTAMP, SYMBOL, DOUBLE, INT])")
         schema_t = s.table(data="schema_t")
         db.createTable(schema_t, "t")
-        pt= s.table(dbPath=dbPath, data="t",tableAliasName='pt')
+        pt = s.table(dbPath=dbPath, data="t", tableAliasName='pt')
 
         assert pt.tableName() == 'pt'
         assert isinstance(pt, ddb.Table)
@@ -1040,7 +1058,7 @@ class TestDocs:
         if s.existsDatabase(dbPath):
             s.dropDatabase(dbPath)
         db = s.database(partitionType=keys.VALUE, partitions=[
-                        1, 2, 3], dbPath=dbPath, engine="OLAP")
+            1, 2, 3], dbPath=dbPath, engine="OLAP")
         s.run(
             "schema_t = table(100:0, `ctime`csymbol`price`qty, [TIMESTAMP, SYMBOL, DOUBLE, INT])")
         schema_t = s.table(data="schema_t")
@@ -1070,7 +1088,7 @@ class TestDocs:
         if s.existsDatabase(dbPath):
             s.dropDatabase(dbPath)
         db = s.database(partitionType=keys.VALUE, partitions=[
-                        1, 2, 3], dbPath=dbPath, engine="OLAP")
+            1, 2, 3], dbPath=dbPath, engine="OLAP")
         s.run(
             "schema_t = table(100:0, `ctime`csymbol`price`qty, [TIMESTAMP, SYMBOL, DOUBLE, INT])")
         schema_t = s.table(data="schema_t")
@@ -1082,7 +1100,7 @@ class TestDocs:
     def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_3(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        trade = s.loadText(DATA_DIR+"/example.csv")
+        trade = s.loadText(DATA_DIR + "/example.csv")
         # res1:pd.DataFrame = trade.select(["ticker", "date"]).toDF()
         # res2 = trade.select("ticker, date, bid").toDF()
         # assert_array_equal(res1.columns, ['ticker', 'date'])
@@ -1111,7 +1129,7 @@ class TestDocs:
         s.database(dbName='mydb', partitionType=keys.VALUE,
                    partitions=["AMZN", "NFLX", "NVDA"], dbPath=dbPath)
         trade = s.loadTextEx(dbPath=dbPath, partitionColumns=[
-                             "TICKER"], tableName='trade', remoteFilePath=DATA_DIR+"/example.csv")
+            "TICKER"], tableName='trade', remoteFilePath=DATA_DIR + "/example.csv")
         res1 = trade.select(['sum(vol)', 'sum(prc)']
                             ).groupby(['ticker']).toDF()
         ex1 = s.run(
@@ -1223,7 +1241,7 @@ class TestDocs:
         t2 = t1.select("TICKER as TICKER1, date(date) as date1, open")
         s.upload({'t2': t2.toDF()})
         res2 = trade.merge(t2, left_on=["TICKER", "date"], right_on=[
-                           "TICKER1", "date1"]).toDF()
+            "TICKER1", "date1"]).toDF()
         ex2 = s.run(
             "select * from ej((select * from loadTable('dfs://valuedb', `trade)) as left_t,(select TICKER as TICKER1, date(date) as date1, open from (select * from t1)) as right_t,`TICKER`date,`TICKER1`date1)")
         # print(res2)
@@ -1239,13 +1257,14 @@ class TestDocs:
         assert_frame_equal(res3, ex3)
 
         t4_1 = s.table(data={'TICKER': ['AMZN', 'AMZN', 'NFLX'], 'date': [
-                       '2015.12.29', '2015.12.30', '2015.12.31'], 'open': [674, 685, 942]})
+            '2015.12.29', '2015.12.30', '2015.12.31'], 'open': [674, 685, 942]})
         t4_2 = s.table(data={'TICKER': ['AMZN', 'NFLX', 'NFLX'], 'date': [
-                       '2015.12.29', '2015.12.30', '2015.12.31'], 'close': [690, 936, 951]})
+            '2015.12.29', '2015.12.30', '2015.12.31'], 'close': [690, 936, 951]})
         s.upload({'t4_1': t4_1.toDF(), 't4_2': t4_2.toDF()})
         res4 = t4_1.merge(t4_2, how="outer", on=["TICKER", "date"]).toDF()
         # print(res4)
-        ex4 = s.run("select * from fj((select * from t4_1) as lt,(select TICKER,date,close from t4_2) as rt,`TICKER`date,`TICKER`date)")
+        ex4 = s.run(
+            "select * from fj((select * from t4_1) as lt,(select TICKER,date,close from t4_2) as rt,`TICKER`date,`TICKER`date)")
         for i in range(ex4.shape[1]):
             # print('\n', res4.iloc[:, i].to_list(), '\n', ex4.iloc[:, i].to_list(), '\n\n')
             assert_array_equal(res4.iloc[:, i].to_list(), ex4.iloc[:, i].to_list())
@@ -1258,11 +1277,11 @@ class TestDocs:
         if s.existsDatabase(dbPath):
             s.dropDatabase(dbPath)
         s.database(partitionType=keys.VALUE, partitions=[
-                   "AAPL", "FB"], dbPath=dbPath)
+            "AAPL", "FB"], dbPath=dbPath)
         trades = s.loadTextEx(dbPath, tableName='trades', partitionColumns=[
-                              "Symbol"], remoteFilePath=DATA_DIR+"/trades.csv")
+            "Symbol"], remoteFilePath=DATA_DIR + "/trades.csv")
         quotes = s.loadTextEx(dbPath, tableName='quotes', partitionColumns=[
-                              "Symbol"], remoteFilePath=DATA_DIR+"/quotes.csv")
+            "Symbol"], remoteFilePath=DATA_DIR + "/quotes.csv")
 
         res1 = trades.top(5).toDF()
 
@@ -1276,13 +1295,14 @@ class TestDocs:
         assert_frame_equal(res2, ex2)
 
         res3 = trades.merge_asof(quotes, on=["Symbol", "Time"]).select(
-            ["Symbol", "Time", "Trade_Volume", "Trade_Price", "Bid_Price", "Bid_Size", "Offer_Price", "Offer_Size"]).top(5).toDF()
+            ["Symbol", "Time", "Trade_Volume", "Trade_Price", "Bid_Price", "Bid_Size", "Offer_Price",
+             "Offer_Size"]).top(5).toDF()
         ex3 = s.run(
             "select top 5 Symbol,Time,Trade_Volume,Trade_Price,Bid_Price,Bid_Size,Offer_Price,Offer_Size from (select Symbol,Time,Trade_Volume,Trade_Price,Bid_Price,Bid_Size,Offer_Price,Offer_Size from aj((select * from loadTable('dfs://tickDB', `trades) as lt),(select * from loadTable('dfs://tickDB', `quotes) as rt),`Symbol`Time,`Symbol`Time))")
         assert_frame_equal(res3, ex3)
 
         res4 = trades.merge_window(quotes, -5000000000, 0, aggFunctions=["avg(Bid_Price)", "avg(Offer_Price)"], on=[
-                                   "Symbol", "Time"]).where("Time>=07:59:59").top(10).toDF()
+            "Symbol", "Time"]).where("Time>=07:59:59").top(10).toDF()
         ex4 = s.run(
             "select top 10 * from wj((select * from loadTable('dfs://tickDB', `trades)) as lt,(select * from loadTable('dfs://tickDB', `quotes) as rt),-5000000000:0,<[avg(Bid_Price),avg(Offer_Price)]>,`Symbol`Time,`Symbol`Time) where (Time>=07:59:59)")
         assert_frame_equal(res4, ex4)
@@ -1310,41 +1330,49 @@ class TestDocs:
         if s.existsDatabase("dfs://US"):
             s.dropDatabase("dfs://US")
         s.database(dbName='USdb', partitionType=keys.VALUE, partitions=[
-                   "GFGC", "EWST", "EGAS"], dbPath="dfs://US")
+            "GFGC", "EWST", "EGAS"], dbPath="dfs://US")
         US = s.loadTextEx(dbPath="dfs://US", partitionColumns=[
-                          "TICKER"], tableName='US', remoteFilePath=DATA_DIR + "/US.csv")
+            "TICKER"], tableName='US', remoteFilePath=DATA_DIR + "/US.csv")
         US = s.loadTable(dbPath="dfs://US", tableName="US")
 
         def loadPriceData(inData):
             s.loadTable(inData).select("PERMNO, date, abs(PRC) as PRC, VOL, RET, SHROUT*abs(PRC) as MV").where(
-                "weekday(date) between 1:5, isValid(PRC), isValid(VOL)").sort(bys=["PERMNO", "date"]).executeAs("USstocks")
+                "weekday(date) between 1:5, isValid(PRC), isValid(VOL)").sort(bys=["PERMNO", "date"]).executeAs(
+                "USstocks")
             s.loadTable("USstocks").select(
-                "PERMNO, date, PRC, VOL, RET, MV, cumprod(1+RET) as cumretIndex").contextby("PERMNO").executeAs("USstocks")
-            return s.loadTable("USstocks").select("PERMNO, date, PRC, VOL, RET, MV, move(cumretIndex,21)/move(cumretIndex,252)-1 as signal").contextby("PERMNO").executeAs("priceData")
+                "PERMNO, date, PRC, VOL, RET, MV, cumprod(1+RET) as cumretIndex").contextby("PERMNO").executeAs(
+                "USstocks")
+            return s.loadTable("USstocks").select(
+                "PERMNO, date, PRC, VOL, RET, MV, move(cumretIndex,21)/move(cumretIndex,252)-1 as signal").contextby(
+                "PERMNO").executeAs("priceData")
 
         priceData = loadPriceData(US.tableName())
 
         def genTradeTables(inData):
-            return s.loadTable(inData).select(["date", "PERMNO", "MV", "signal"]).where("PRC>5, MV>100000, VOL>0, isValid(signal)").sort(bys=["date"]).executeAs("tradables")
+            return s.loadTable(inData).select(["date", "PERMNO", "MV", "signal"]).where(
+                "PRC>5, MV>100000, VOL>0, isValid(signal)").sort(bys=["date"]).executeAs("tradables")
 
         def formPortfolio(startDate, endDate, tradables, holdingDays, groups, WtScheme):
             holdingDays = str(holdingDays)
             groups = str(groups)
-            ports = tradables.select("date, PERMNO, MV, rank(signal,,"+groups+") as rank, count(PERMNO) as symCount, 0.0 as wt").where(
-                "date between "+startDate+":"+endDate).contextby("date").having("count(PERMNO)>=100").executeAs("ports")
+            ports = tradables.select(
+                "date, PERMNO, MV, rank(signal,," + groups + ") as rank, count(PERMNO) as symCount, 0.0 as wt").where(
+                "date between " + startDate + ":" + endDate).contextby("date").having("count(PERMNO)>=100").executeAs(
+                "ports")
             if WtScheme == 1:
                 ports.where("rank=0").contextby("date").update(
-                    cols=["wt"], vals=["-1.0/count(PERMNO)/"+holdingDays]).execute()
-                ports.where("rank="+groups+"-1").contextby("date").update(
-                    cols=["wt"], vals=["1.0/count(PERMNO)/"+holdingDays]).execute()
+                    cols=["wt"], vals=["-1.0/count(PERMNO)/" + holdingDays]).execute()
+                ports.where("rank=" + groups + "-1").contextby("date").update(
+                    cols=["wt"], vals=["1.0/count(PERMNO)/" + holdingDays]).execute()
             elif WtScheme == 2:
                 ports.contextby("date").update(cols=["wt"], vals=[
-                    "-MV/sum(MV)/"+holdingDays]).where("rank=0").execute()
+                    "-MV/sum(MV)/" + holdingDays]).where("rank=0").execute()
                 ports.contextby("date").update(cols=["wt"], vals=[
-                    "MV/sum(MV)/"+holdingDays]).where("rank="+groups+"-1").execute()
+                    "MV/sum(MV)/" + holdingDays]).where("rank=" + groups + "-1").execute()
             else:
                 raise Exception("Invalid WtScheme. valid values:1 or 2")
-            return ports.select("PERMNO, date as tranche, wt").where("wt!=0.0").sort(bys=["PERMNO", "date"]).executeAs("ports")
+            return ports.select("PERMNO, date as tranche, wt").where("wt!=0.0").sort(bys=["PERMNO", "date"]).executeAs(
+                "ports")
 
         tradables = genTradeTables(priceData.tableName())
         startDate = "2016.01.01"
@@ -1354,10 +1382,10 @@ class TestDocs:
         ports = formPortfolio(startDate=startDate, endDate=endDate,
                               tradables=tradables, holdingDays=holdingDays, groups=groups, WtScheme=2)
         dailyRtn = priceData.select("date, PERMNO, RET as dailyRet").where(
-            "date between "+startDate+":"+endDate).executeAs("dailyRtn")
+            "date between " + startDate + ":" + endDate).executeAs("dailyRtn")
 
         def calcStockPnL(ports, inData, dailyRtn, holdingDays, endDate):
-            s.table(data={'age': list(range(1, holdingDays+1))}
+            s.table(data={'age': list(range(1, holdingDays + 1))}
                     ).executeAs("ages")
             ports.select("tranche").sort("tranche").executeAs("dates")
             s.run("dates = sort distinct dates.tranche")
@@ -1366,8 +1394,10 @@ class TestDocs:
             inData.select("max(date) as date").groupby(
                 "PERMNO").executeAs("lastDaysTable")
             s.run("lastDays=dict(lastDaysTable.PERMNO,lastDaysTable.date)")
-            ports.merge_cross(s.table(data="ages")).select("dictIndexDate[dictDateIndex[tranche]+age] as date, PERMNO, tranche, age, take(0.0,age.size()) as ret, wt as expr, take(0.0,age.size()) as pnl").where(
-                "isValid(dictIndexDate[dictDateIndex[tranche]+age]), dictIndexDate[dictDateIndex[tranche]+age]<=min(lastDays[PERMNO],"+endDate+")").executeAs("pos")
+            ports.merge_cross(s.table(data="ages")).select(
+                "dictIndexDate[dictDateIndex[tranche]+age] as date, PERMNO, tranche, age, take(0.0,age.size()) as ret, wt as expr, take(0.0,age.size()) as pnl").where(
+                "isValid(dictIndexDate[dictDateIndex[tranche]+age]), dictIndexDate[dictDateIndex[tranche]+age]<=min(lastDays[PERMNO]," + endDate + ")").executeAs(
+                "pos")
             t1 = s.loadTable("pos")
             # t1.merge(dailyRtn, on=["date","PERMNO"], merge_for_update=True).update(["ret"],["dailyRet"]).execute()
             t1.merge(dailyRtn, on=["date", "PERMNO"]).update(

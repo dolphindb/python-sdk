@@ -1,13 +1,16 @@
-import numpy as np
-import pytest
 import dolphindb as ddb
+import numpy as np
+import pandas as pd
+import pytest
+
+from basic_testing.prepare import DataUtils
 from basic_testing.utils import assertPlus
 from setup.settings import *
-from basic_testing.prepare import DataUtils
 from setup.utils import get_pid
-import pandas as pd
 
-PANDAS_VERSION=tuple(int(i) for i in pd.__version__.split('.'))
+PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
+
+
 # todo:pickle,compress
 class TestUpload(object):
 
@@ -16,7 +19,7 @@ class TestUpload(object):
         cls.conn = ddb.Session(HOST, PORT, USER, PASSWD)
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -58,10 +61,10 @@ class TestUpload(object):
             else:
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-    @pytest.mark.parametrize('order',['K','A','C','F'],ids=['ORDER_K','ORDER_A','ORDER_C','ORDER_F'])
-    def test_upload_vector_np_order(self,order):
-        data=np.array([[1,2,3],[4,5,6]],dtype='int64',order=order)
-        self.__class__.conn.upload({'order_'+order:data[0]})
+    @pytest.mark.parametrize('order', ['K', 'A', 'C', 'F'], ids=['ORDER_K', 'ORDER_A', 'ORDER_C', 'ORDER_F'])
+    def test_upload_vector_np_order(self, order):
+        data = np.array([[1, 2, 3], [4, 5, 6]], dtype='int64', order=order)
+        self.__class__.conn.upload({'order_' + order: data[0]})
         assertPlus(self.__class__.conn.run(f"typestr(order_{order})=='FAST LONG VECTOR'"))
         assertPlus(self.__class__.conn.run(f"order_{order}==[1,2,3]"))
 
@@ -73,10 +76,10 @@ class TestUpload(object):
             assertPlus(self.__class__.conn.run(f"typestr({k})=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}")[0])
 
-    @pytest.mark.parametrize('order',['K','A','C','F'],ids=['ORDER_K','ORDER_A','ORDER_C','ORDER_F'])
-    def test_upload_matrix_np_order(self,order):
-        data=np.array([[1,2,3],[4,5,6],[7,8,9]],dtype='int64',order=order)
-        self.__class__.conn.upload({'order_'+order:data[0:2]})
+    @pytest.mark.parametrize('order', ['K', 'A', 'C', 'F'], ids=['ORDER_K', 'ORDER_A', 'ORDER_C', 'ORDER_F'])
+    def test_upload_matrix_np_order(self, order):
+        data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype='int64', order=order)
+        self.__class__.conn.upload({'order_' + order: data[0:2]})
         assertPlus(self.__class__.conn.run(f"typestr(order_{order})=='FAST LONG MATRIX'"))
         assertPlus(self.__class__.conn.run(f"order_{order}==matrix([[1,4],[2,5],[3,6]])")[0])
 
@@ -110,14 +113,14 @@ class TestUpload(object):
             else:
                 assertPlus(self.__class__.conn.run(f"{k}[`a]=={v['expect_value']}"))
 
-    @pytest.mark.parametrize('dtype',['object','int64','empty'],ids=['DTYPE_OBJECT','DTYPE_INT64','DTYPE_EMPTY'])
-    @pytest.mark.parametrize('order',['K','A','C','F'],ids=['ORDER_K','ORDER_A','ORDER_C','ORDER_F'])
-    def test_upload_table_np_order(self,order,dtype):
-        if dtype!='empty':
-            data=pd.DataFrame(np.array([[1,2],[3,4],[5,6]],dtype=dtype,order=order),columns=['a','b'])
+    @pytest.mark.parametrize('dtype', ['object', 'int64', 'empty'], ids=['DTYPE_OBJECT', 'DTYPE_INT64', 'DTYPE_EMPTY'])
+    @pytest.mark.parametrize('order', ['K', 'A', 'C', 'F'], ids=['ORDER_K', 'ORDER_A', 'ORDER_C', 'ORDER_F'])
+    def test_upload_table_np_order(self, order, dtype):
+        if dtype != 'empty':
+            data = pd.DataFrame(np.array([[1, 2], [3, 4], [5, 6]], dtype=dtype, order=order), columns=['a', 'b'])
         else:
             data = pd.DataFrame(np.array([[1, 2], [3, 4], [5, 6]], order=order), columns=['a', 'b'])
-        self.__class__.conn.upload({'order_'+order:data})
+        self.__class__.conn.upload({'order_' + order: data})
         assertPlus(self.__class__.conn.run(f"order_{order}==table([1,3,5] as `a,[2,4,6] as `b)"))
 
     @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getVectorContainNone('upload').items()],
@@ -215,11 +218,11 @@ class TestUpload(object):
         for k, v in data.items():
             self.__class__.conn.upload({k: v['value']})
             assertPlus(self.__class__.conn.run(f"typestr({k})=={v['expect_typestr']}"))
-            if k!='dictSpecial_composite':
+            if k != 'dictSpecial_composite':
                 assertPlus(self.__class__.conn.run(f"{k}[`1]=={v['expect_value']}"))
             else:
                 self.__class__.conn.run(f"expect={v['expect_value']}")
-                for i in ('1','2','3','4','5'):
+                for i in ('1', '2', '3', '4', '5'):
                     assertPlus(self.__class__.conn.run(f"{k}[`{i}]==expect[`{i}]"))
 
     @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableContainNone('upload').items()],
@@ -264,7 +267,6 @@ class TestUpload(object):
             for i in v['value'].columns:
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
-
 
     @pytest.mark.parametrize('data',
                              [{k: v} for k, v in DataUtils.getTableSetTypeSHORT('upload').items()],
@@ -367,7 +369,6 @@ class TestUpload(object):
             for i in v['value'].columns:
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
-
 
     @pytest.mark.parametrize('data',
                              [{k: v} for k, v in DataUtils.getTableSetTypeNANOTIME('upload').items()],
@@ -478,7 +479,7 @@ class TestUpload(object):
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
-    if PANDAS_VERSION>=(2,0,0):
+    if PANDAS_VERSION >= (2, 0, 0):
         @pytest.mark.parametrize('data', [{k: v} for k, v in DataUtils.getTableArrow('upload').items()],
                                  ids=[i for i in DataUtils.getTableArrow('upload')])
         def test_upload_table_arrow(self, data):

@@ -94,6 +94,7 @@ public:
     
 	bool isExit(){ return hasError_; }
     const DATA_TYPE* getColType(){ return colTypes_.data(); }
+    const int* getColExtra(){ return colExtras_.data(); }
     int getColSize(){ return colTypes_.size(); }
 private:
 	bool insert(std::vector<ConstantSP> **records, int recordCount, ErrorCodeInfo &errorInfo);

@@ -4,7 +4,7 @@ import random
 import threading
 import time
 from threading import Event
-from setup.utils import get_pid
+
 import dolphindb as ddb
 import dolphindb.settings as keys
 import numpy as np
@@ -12,7 +12,9 @@ import pandas as pd
 import pytest
 from numpy.testing import *
 from pandas.testing import *
+
 from setup.settings import *
+from setup.utils import get_pid
 
 
 class MsgCount:
@@ -249,7 +251,7 @@ class TestReadmeCn:
             'int128': ['00000000000000000000000000000000', "073dc3bc505dd1643d11a4ac4271d2f2",
                        "e60c84f21b6149959bcf0bd6b509ff6a"],
             'ipaddr': ["2c24:d056:2f77:62c0:c48d:6782:e50:6ad2", "0.0.0.0", "192.168.1.0"],
-            'blob': ["testBLOB1", "testBLOB2", "testBLOB3"],
+            'blob': [b"testBLOB1", b"testBLOB2", b"testBLOB3"],
         })
         appender.append(data)
         t = s.run("t")
@@ -331,7 +333,8 @@ class TestReadmeCn:
         n = 100
         dates = []
         for i in range(n):
-            dates.append(np.datetime64(f"201{random.randint(0, 9):d}-0{random.randint(1, 9):1d}-{random.randint(10, 28):2d}"))
+            dates.append(
+                np.datetime64(f"201{random.randint(0, 9):d}-0{random.randint(1, 9):1d}-{random.randint(10, 28):2d}"))
         data = pd.DataFrame({
             "id": np.random.choice(['AMZN', 'IBM', 'APPL'], n),
             "date": dates,

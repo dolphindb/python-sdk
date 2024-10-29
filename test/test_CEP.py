@@ -5,10 +5,11 @@
 @Time: 2024/3/22 10:38
 @Note: 
 """
-from importlib.util import find_spec
 import math
 from decimal import Decimal
+from importlib.util import find_spec
 from time import sleep
+
 import dolphindb as ddb
 import dolphindb.settings as keys
 import numpy as np
@@ -17,6 +18,7 @@ import pytest
 from dolphindb.cep import Event, EventSender, EventClient
 from dolphindb.typing import Scalar, Vector
 from pandas._testing import assert_almost_equal
+
 from basic_testing.prepare import PANDAS_VERSION
 from basic_testing.utils import equalPlus
 from setup.settings import *
@@ -1792,17 +1794,17 @@ class TestCEP(object):
             "eqObj(output['s_blob'],blob(['abc!@#中文 123',fromUTF8('abc!@#中文 123','gbk'),'abc!@#中文 123',fromUTF8('abc!@#中文 123','gbk'),\"\",\"\"]))")
         # check server deserialize
         df_expect = pd.DataFrame({
-            's_blob': np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", "", ""],
+            's_blob': np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b"", b""],
                                dtype='object'),
             'eventTime': np.array([f'2024-03-25T12:30:05.{i:03}' for i in range(6)], dtype='datetime64[ns]')
         })
         df = self.__class__.conn.run("eventTest")
         assert equalPlus(df, df_expect)
         expect = [
-            EventScalarBlob(s_blob="abc!@#中文 123", eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventScalarBlob(s_blob="abc!@# 123", eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventScalarBlob(s_blob="abc!@#中文 123", eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventScalarBlob(s_blob="abc!@# 123", eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
+            EventScalarBlob(s_blob="abc!@#中文 123".encode(), eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
+            EventScalarBlob(s_blob="abc!@#中文 123".encode('gbk'), eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
+            EventScalarBlob(s_blob="abc!@#中文 123".encode(), eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
+            EventScalarBlob(s_blob="abc!@#中文 123".encode('gbk'), eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
             EventScalarBlob(s_blob=None, eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
             EventScalarBlob(s_blob=None, eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
         ]
@@ -5310,23 +5312,23 @@ class TestCEP(object):
         # df=self.__class__.conn.run("eventTest")
         # assert equalPlus(df,df_expect)
         expect = [
-            EventVectorBlob(v_blob=np.array(["", "abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", ""],
+            EventVectorBlob(v_blob=np.array([b"", "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b""],
                                             dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.000', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "", "abc!@#中文 123", "abc!@# 123", ""],
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b"", "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b""],
                                             dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.001', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", "", ""],
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b"", b""],
                                             dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.002', 'ms')),
-            EventVectorBlob(v_blob=np.array(["", "abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", ""],
+            EventVectorBlob(v_blob=np.array([b"", "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b""],
                                             dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.003', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "", "abc!@#中文 123", "abc!@# 123", ""],
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b"", "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b""],
                                             dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.004', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", "", ""],
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b"", b""],
                                             dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.005', 'ms')),
-            EventVectorBlob(v_blob=np.array(["", "abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", ""],
+            EventVectorBlob(v_blob=np.array([b"", "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b""],
                                             dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.006', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "", "abc!@#中文 123", "abc!@# 123", ""],
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b"", "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b""],
                                             dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.007', 'ms')),
-            EventVectorBlob(v_blob=np.array(["abc!@#中文 123", "abc!@# 123", "abc!@#中文 123", "abc!@# 123", "", ""],
+            EventVectorBlob(v_blob=np.array(["abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), "abc!@#中文 123".encode(), "abc!@#中文 123".encode('gbk'), b"", b""],
                                             dtype='object'), eventTime=np.datetime64('2024-03-25T12:30:05.008', 'ms')),
         ]
         assert all(self.__class__.conn.run("each(eqObj, input.values(), output.values())"))

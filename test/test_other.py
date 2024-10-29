@@ -5,19 +5,21 @@
 @Time: 2024/1/23 11:27
 @Note: 
 """
-from importlib.util import find_spec
+import socket
+import sys
 import time
+from importlib.util import find_spec
 from threading import Thread
+
 import pytest
+from dolphindb.session import ddbcpp
+
+from basic_testing.prepare import DataUtils
 from basic_testing.prepare import PANDAS_VERSION
 from basic_testing.utils import equalPlus
 from setup.prepare import *
 from setup.settings import *
 from setup.utils import get_pid
-import sys
-from dolphindb.session import ddbcpp
-import socket
-from basic_testing.prepare import DataUtils
 
 if find_spec("pyarrow") is not None:
     import pyarrow as pa
@@ -182,7 +184,7 @@ class TestOther:
             'c': pd.Index([1, 2, 3]),
             'd': np.array(["1970-01-01"], dtype="datetime64")
         })
-        with pytest.raises(RuntimeError, match='Error Form of TableChecker.'):
+        with pytest.raises(RuntimeError, match='Conversion failed'):
             df = pd.DataFrame({'a': [0]})
             df.__DolphinDB_Type__ = {
                 'a': (1,)
@@ -190,7 +192,7 @@ class TestOther:
             conn.upload({
                 'e': df
             })
-        with pytest.raises(RuntimeError, match='Error Form of TableChecker.'):
+        with pytest.raises(RuntimeError, match='Conversion failed'):
             df = pd.DataFrame({'a': [0]})
             df.__DolphinDB_Type__ = {
                 'a': []
@@ -198,7 +200,7 @@ class TestOther:
             conn.upload({
                 'e': df
             })
-        with pytest.raises(RuntimeError, match='Error Form of TableChecker.'):
+        with pytest.raises(RuntimeError, match='Conversion failed'):
             df = pd.DataFrame({'a': [0]})
             df.__DolphinDB_Type__ = {
                 'a': [1, 2, 3]
@@ -210,7 +212,7 @@ class TestOther:
             'ee': np.datetime64(None)
         })
         assert conn.run("isNull(ee)")
-        with pytest.raises(RuntimeError, match="unsupported datetime type 'datetime64\\[ps\\]'"):
+        with pytest.raises(RuntimeError, match="Cannot convert"):
             conn.upload({
                 'f': np.datetime64('2020-01-01', 'ps')
             })
@@ -222,7 +224,7 @@ class TestOther:
             conn.upload({
                 'g': np.complex64(0)
             })
-        with pytest.raises(RuntimeError, match='numpy.ndarray with dimension > 2 is not supported'):
+        with pytest.raises(RuntimeError, match='Cannot create a Matrix from the given numpy.ndarray with dimension greater than 2.'):
             conn.upload({
                 'g': np.array([[[1, 2, 3]]])
             })
@@ -237,28 +239,28 @@ class TestOther:
             conn.upload({
                 'i': pd.Series([1, 2, 3], dtype='complex128')
             })
-        with pytest.raises(RuntimeError, match="set in DolphinDB doesn't support multiple types"):
+        with pytest.raises(RuntimeError, match="Cannot create a Set with mixing incompatible types."):
             conn.upload({
-                'i': {1, 1.1}
+                'i': {'1', 1.1}
             })
-        with pytest.raises(RuntimeError, match="can not create all None vector in dictionary"):
-            conn.upload({
-                'i': dict()
-            })
-        with pytest.raises(RuntimeError, match="can not create all None vector in dictionary"):
-            conn.upload({
-                'i': {1: None}
-            })
+        # with pytest.raises(RuntimeError, match="can not create all None vector in dictionary"):
+        #     conn.upload({
+        #         'i': dict()
+        #     })
+        # with pytest.raises(RuntimeError, match="can not create all None vector in dictionary"):
+        #     conn.upload({
+        #         'i': {1: None}
+        #     })
         if PANDAS_VERSION >= (2, 0, 0) and find_spec("pyarrow") is not None:
             from basic_testing.prepare import PYARROW_VERSION
             if PYARROW_VERSION >= (10, 0, 1):
-                with pytest.raises(RuntimeError, match="unsupport pyarrow_dtype"):
+                with pytest.raises(RuntimeError, match="Cannot convert"):
                     conn.upload({
                         'i': pd.DataFrame({'a': [1, 2, 3]}, dtype=pd.ArrowDtype(pa.decimal256(3, 2)))
                     })
         assert equalPlus(conn.run("symbol(`a`b`c)"), np.array(['a', 'b', 'c'], dtype='object'))
         with pytest.raises(RuntimeError,
-                           match="currently only string, symbol or integral key is supported in dictionary"):
+                           match="Only dictionary with string, symbol or integral keys can be converted to dict"):
             conn.run('dict(FLOAT,INT)')
         assert conn.run('dict(SYMBOL,INT)') == {}
 

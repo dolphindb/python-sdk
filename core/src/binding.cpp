@@ -13,6 +13,11 @@
 #include "Logger.h"
 #include "Wrappers.h"
 #include "EventHandler.h"
+
+#include "TypeConverter.h"
+#include "TypeHelper.h"
+#include "IOBinding.h"
+
 #include "pybind11/numpy.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/eval.h"
@@ -40,6 +45,12 @@ namespace ddb = dolphindb;
 
 using std::cout;
 using std::endl;
+
+using converter::Converter;
+using converter::createType;
+using converter::PyObjs;
+using converter::TableChecker;
+using converter::Type;
 
 #if defined(__GNUC__) && __GNUC__ >= 4
 #define LIKELY(x) (__builtin_expect((x), 1))
@@ -72,13 +83,11 @@ using std::endl;
 #define DEFAULT_PRIORITY 4
 #define DEFAULT_PARALLELISM 64
 
-static const ddb::Preserved *preserved_ = nullptr;
 
 void ddbinit() {
-	if (preserved_ == nullptr) {
-		preserved_ = new ddb::Preserved();
-		ddb::DdbPythonUtil::preservedinit();
-	}
+    if (converter::PyObjs::cache_ == nullptr) {
+        converter::PyObjs::Initialize();
+    }
 }
 
 class Defer {
@@ -139,7 +148,7 @@ public:
             std::vector<ddb::ConstantSP> ddbArgs;
             for (const auto &one : args) {
                 py::object pyobj = py::reinterpret_borrow<py::object>(one);
-                ddb::ConstantSP pcp = ddb::DdbPythonUtil::toDolphinDB(pyobj);
+                ddb::ConstantSP pcp = Converter::toDolphinDB(pyobj);
                 ddbArgs.push_back(pcp);
             }
             TRY dbConnectionPool_.runPy(script, ddbArgs, taskId, priority_, parallelism_, 0, clearMemory_,
@@ -207,7 +216,7 @@ public:
     py::object read(){
         py::object ret;
         TRY
-            ret = ddb::DdbPythonUtil::toPython(reader_->read());
+            ret = Converter::toPython_Old(reader_->read());
         CATCH_EXCEPTION("<Exception> in read: ")
         return ret;
     }
@@ -221,7 +230,7 @@ public:
     PartitionedTableAppender(string dbUrl, string tableName, string partitionColName, DBConnectionPoolImpl& pool)
     :partitionedTableAppender_(dbUrl,tableName,partitionColName,pool.getPool()){}
     int append(py::object table){
-        if(!py::isinstance(table, preserved_->pddataframe_))
+        if (!CHECK_INS(table, pd_dataframe_))
             throw std::runtime_error(std::string("table must be a DataFrame!"));
         int insertRows;
         vector<ddb::Type> colTypes = partitionedTableAppender_.getColTypes();
@@ -231,7 +240,7 @@ public:
             checker[colNames[i]] = colTypes[i];
         }
         TRY
-            insertRows = partitionedTableAppender_.append(ddb::DdbPythonUtil::toDolphinDB(table, {ddb::DT_UNK, EXPARAM_DEFAULT}, checker));
+            insertRows = partitionedTableAppender_.append(Converter::toDolphinDB_Table_fromDataFrame(table, checker));
         CATCH_EXCEPTION("<Exception> in append: ")
         return insertRows;
     }
@@ -257,23 +266,26 @@ private:
         for (auto it = pydict.begin(); it != pydict.end(); ++it) {
             string symbol=it->first.cast<std::string>();
             string dbpath,tablename;
-            if(py::isinstance(it->second, preserved_->pystr_)){
+            if (CHECK_INS(it->second, py_str_)) {
                 tablename=it->second.cast<std::string>();
-            }else if(py::isinstance(it->second, preserved_->pylist_)){
+            }
+            else if (CHECK_INS(it->second, py_list_)) {
                 py::list list=it->second.cast<py::list>();
                 if(list.size() != 2){
                     throw std::runtime_error(std::string("<Exception> in StreamDeserializer: list size must be 2"));
                 }
                 dbpath=list[0].cast<std::string>();
                 tablename=list[1].cast<std::string>();
-            }else if(py::isinstance(it->second, preserved_->pytuple_)){
+            }
+            else if (CHECK_INS(it->second, py_tuple_)) {
                 py::tuple list=it->second.cast<py::tuple>();
                 if(list.size() != 2){
                     throw std::runtime_error(std::string("<Exception> in StreamDeserializer: tuple size must be 2"));
                 }
                 dbpath=list[0].cast<std::string>();
                 tablename=list[1].cast<std::string>();
-            }else{
+            }
+            else {
                 throw std::runtime_error(std::string("<Exception> in StreamDeserializer: unsupported type in dict, support string, list and tuple."));
             }
             map[symbol]=std::make_pair(dbpath,tablename);
@@ -349,9 +361,9 @@ public:
         vector<std::string> names;
         vector<ddb::ConstantSP> objs;
         for (auto it = namedObjects.begin(); it != namedObjects.end(); ++it) {
-            if (!py::isinstance(it->first, preserved_->pystr_) && !py::isinstance(it->first, preserved_->pybytes_)) { throw std::runtime_error("non-string key in upload dictionary is not allowed"); }
+            if (!CHECK_INS(it->first, py_str_) && !CHECK_INS(it->first, py_bytes_)) { throw std::runtime_error("non-string key in upload dictionary is not allowed"); }
             names.push_back(it->first.cast<std::string>());
-            objs.push_back(ddb::DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(it->second)));
+            objs.push_back(Converter::toDolphinDB(it->second));
         }
         TRY
             auto addr = dbConnection_.upload(names, objs);
@@ -471,7 +483,7 @@ public:
             // function mode
             TRY std::vector<ddb::ConstantSP> ddbArgs;
             for (const auto &it : args) {
-                ddbArgs.push_back(ddb::DdbPythonUtil::toDolphinDB(py::reinterpret_borrow<py::object>(it)));
+                ddbArgs.push_back(Converter::toDolphinDB(it));
             }
             result = dbConnection_.runPy(script, ddbArgs, priority_, parallelism_, 0, clearMemory_, pickleTableToList_,
                                          disableDecimal_);
@@ -577,16 +589,13 @@ public:
         ddb::MessageHandler ddbHandler = [handler, this, hasStreamDeser](ddb::Message msg) {
             // handle GIL
             py::gil_scoped_acquire acquire;
-            //size_t size = msg->size();
-            //py::list pyMsg(size);
-            //for (size_t i = 0; i < size; ++i) { pyMsg.append(ddb::DdbPythonUtil::toPython(msg->get(i))); }
-            py::list row=ddb::DdbPythonUtil::toPython(msg);
+            py::list row = Converter::toPython_Old(msg);
             if(hasStreamDeser){
                 row.append(msg.getSymbol());
             }
             handler(row);
         };
-        ddb::VectorSP ddbFilter = filter.size() ? ddb::DdbPythonUtil::toDolphinDB(filter) : nullptr;
+        ddb::VectorSP ddbFilter = filter.size() ? Converter::toDolphinDB(filter) : nullptr;
         TRY
         vector<ddb::ThreadSP> threads;
         if(subscriber_.isNull() == false){
@@ -624,13 +633,13 @@ public:
             py::list pyMsg(size);
             if(hasStreamDeser){
                 for (size_t i = 0; i < size; ++i) {
-                    py::list row=ddb::DdbPythonUtil::toPython(msgs[i]);
+                    py::list row = Converter::toPython_Old(msgs[i]);
                     row.append(msgs[i].getSymbol());
                     pyMsg[i] = row;
                 }
             }else{
                 for (size_t i = 0; i < size; ++i) {
-                    pyMsg[i] = ddb::DdbPythonUtil::toPython(msgs[i]);
+                    pyMsg[i] = Converter::toPython_Old(msgs[i]);
                 }
             }
             if(msgAsTable && hasStreamDeser == false){
@@ -640,7 +649,7 @@ public:
                 handler(pyMsg);
             }
         };
-        ddb::VectorSP ddbFilter = filter.size() ? ddb::DdbPythonUtil::toDolphinDB(filter) : nullptr;
+        ddb::VectorSP ddbFilter = filter.size() ? Converter::toDolphinDB(filter) : nullptr;
         TRY
         vector<ddb::ThreadSP> threads;
         ddb::ThreadSP thread = subscriber_->subscribe(host, port, ddbHandler, tableName, actionName, offset, resub, ddbFilter, false, 
@@ -686,7 +695,7 @@ public:
     }
 
     py::object hashBucket(const py::object& obj, int nBucket) {
-        auto c = ddb::DdbPythonUtil::toDolphinDB(obj);
+        auto c = Converter::toDolphinDB(obj);
         const static auto errMsg = "Key must be integer, date/time, or string.";
         auto dt = c->getType();
         auto cat = ddb::Util::getCategory(dt);
@@ -811,7 +820,7 @@ public:
     AutoFitTableAppender(const std::string dbUrl, const std::string tableName, SessionImpl & session)
     : autoFitTableAppender_(dbUrl,tableName,session.getConnection()){}
     int append(py::object table){
-        if(!py::isinstance(table, preserved_->pddataframe_))
+        if (!CHECK_INS(table, pd_dataframe_))
             throw std::runtime_error(std::string("table must be a DataFrame!"));
         int insertRows;
         vector<ddb::Type> colTypes = autoFitTableAppender_.getColTypes();
@@ -821,7 +830,7 @@ public:
             checker[colNames[i]] = colTypes[i];
         }
         TRY
-            insertRows = autoFitTableAppender_.append(ddb::DdbPythonUtil::toDolphinDB(table, {ddb::DT_UNK, EXPARAM_DEFAULT}, checker));
+            insertRows = autoFitTableAppender_.append(Converter::toDolphinDB_Table_fromDataFrame(table, checker));
         CATCH_EXCEPTION("<Exception> in append: ")
         return insertRows;
     }
@@ -837,7 +846,7 @@ public:
                         pylist2Stringvector(keyColNames).get(),
                         pylist2Stringvector(sortColumns).get()){}
     int upsert(py::object table){
-        if(!py::isinstance(table, preserved_->pddataframe_))
+        if (!CHECK_INS(table, pd_dataframe_))
             throw std::runtime_error(std::string("table must be a DataFrame!"));
         int insertRows = 0;
         vector<ddb::Type> colTypes = autoFitTableUpsert_.getColTypes();
@@ -847,7 +856,7 @@ public:
             checker[colNames[i]] = colTypes[i];
         }
         TRY
-            insertRows = autoFitTableUpsert_.upsert(ddb::DdbPythonUtil::toDolphinDB(table, {ddb::DT_UNK, EXPARAM_DEFAULT}, checker));
+            insertRows = autoFitTableUpsert_.upsert(Converter::toDolphinDB_Table_fromDataFrame(table, checker));
         CATCH_EXCEPTION("<Exception> in append: ")
         return insertRows;
     }
@@ -883,13 +892,13 @@ public:
     py::object getAllStatus(){
         TRY
             ddb::ConstantSP ret = writer_.getAllStatus();
-            return ddb::DdbPythonUtil::toPython(ret);
+            return Converter::toPython_Old(ret);
         CATCH_EXCEPTION("<Exception> in getAllStatus: ")
     }
     py::object getUnwrittenData(const string& dbName, const string& tableName=""){
         TRY
             ddb::ConstantSP ret = writer_.getUnwrittenData(dbName, tableName);
-            return ddb::DdbPythonUtil::toPython(ret);
+            return Converter::toPython_Old(ret);
         CATCH_EXCEPTION("<Exception> in getUnwrittenData: ")
     }
     void removeTable(const string& dbName, const string& tableName=""){
@@ -902,7 +911,7 @@ public:
         int size = args.size();
         TRY
             for (int i = 0; i < size; ++i){
-                ddb::ConstantSP test = ddb::DdbPythonUtil::toDolphinDB(args[i]);
+                ddb::ConstantSP test = Converter::toDolphinDB(args[i]);
                 ddbArgs->push_back(test);
             }
             writer_.insertRow(dbName, tableName, ddbArgs.get());
@@ -970,7 +979,7 @@ public:
                 py::list pyrow(dbvec->size());
                 colindex=0;
                 for(auto &dvone : *dbvec){
-                    pyrow[colindex++] = ddb::DdbPythonUtil::toPython(dvone);
+                    pyrow[colindex++] = Converter::toPython_Old(dvone);
                 }
                 pyunwrite[rowindex++] = pyrow;
                 delete dbvec;
@@ -1121,7 +1130,7 @@ public:
         py::object event = pyScheme_();
         int len = scheme_.fieldNames_.size();
         for (int i = 0; i < len; ++i) {
-            py::setattr(event, scheme_.fieldNames_[i].c_str(), ddb::DdbPythonUtil::toPython(attrs[i]));
+            py::setattr(event, scheme_.fieldNames_[i].c_str(), Converter::toPython_Old(attrs[i]));
         }
         return std::move(event);
     }
@@ -1181,11 +1190,16 @@ public:
             switch (scheme.fieldForms_[i])
             {
             case ddb::DATA_FORM::DF_SCALAR: {
-                attributes.push_back(ddb::DdbPythonUtil::toDolphinDB_Scalar(obj, {scheme.fieldTypes_[i], scheme.fieldExtraParams_[i]}));
+                attributes.push_back(Converter::toDolphinDB_Scalar(
+                    obj, createType(scheme.fieldTypes_[i], scheme.fieldExtraParams_[i])
+                ));
                 break;
             }
             case ddb::DATA_FORM::DF_VECTOR: {
-                attributes.push_back(ddb::DdbPythonUtil::toDolphinDB_Vector(obj, {scheme.fieldTypes_[i], scheme.fieldExtraParams_[i]}, ddb::CHILD_VECTOR_OPTION::ARRAY_VECTOR));
+                attributes.push_back(Converter::toDolphinDB_Vector(
+                    obj, createType(scheme.fieldTypes_[i], scheme.fieldExtraParams_[i]),
+                    ddb::CHILD_VECTOR_OPTION::ARRAY_VECTOR
+                ));
                 break;
             }
             default:
@@ -1457,4 +1471,7 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
 #else
     m.attr("__version__") = "dev";
 #endif
+
+    pybind_dolphindb::Init_Module_Exception(m);
+    pybind_dolphindb::Init_Module_IO(m);
 }

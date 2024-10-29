@@ -1,18 +1,19 @@
-import time
 import asyncio
-import pytest
+import platform
+import random
 import subprocess
-from setup.prepare import *
-from setup.settings import *
-from setup.utils import get_pid, random_string
+import time
+
+import pytest
 from numpy.testing import *
 from pandas.testing import *
-import decimal
-import random
-import platform
-import sys
 
-PYTHON_VERSION=tuple(int(i) for i in platform.python_version().split('.'))
+from setup.prepare import *
+from setup.settings import *
+from setup.utils import get_pid
+
+PYTHON_VERSION = tuple(int(i) for i in platform.python_version().split('.'))
+
 
 def create_value_db():
     conn = ddb.session()
@@ -53,7 +54,7 @@ class TestDBConnectionPool:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -320,13 +321,21 @@ class TestDBConnectionPool:
                            # np.array(["2012.01.02T01:02:03.123456789", "2012.01.02"], dtype="datetime64[D]")
                            'cdate': np.array(['2020-01-02', '1970-12-21', 'nat'], dtype='datetime64[ns]'),
                            'cmonth': np.array(['2020-01', '1970-12', 'nat'], dtype='datetime64[ns]'),
-                           'ctime': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335', 'nat'], dtype='datetime64[ns]'),
+                           'ctime': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335', 'nat'],
+                                             dtype='datetime64[ns]'),
                            'cminute': np.array(['1970-01-01 13:30', '1970-01-01 05:15', 'nat'], dtype='datetime64[ns]'),
-                           'csecond': np.array(['1970-01-01 13:30:10', '1970-01-01 05:15:33', 'nat'], dtype='datetime64[ns]'),
-                           'cdatetime': np.array(['1970-01-01 13:30:10', '2022-10-03 05:15:33', 'nat'], dtype='datetime64[ns]'),
-                           'ctimestamp': np.array(['2012-06-13 13:30:10.008', '2001-04-22 15:18:29.118', 'nat'], dtype='datetime64[ns]'),
-                           'cnanotime': np.array(['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'], dtype='datetime64[ns]'),
-                           'cnanotimestamp': np.array(['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'], dtype='datetime64[ns]'),
+                           'csecond': np.array(['1970-01-01 13:30:10', '1970-01-01 05:15:33', 'nat'],
+                                               dtype='datetime64[ns]'),
+                           'cdatetime': np.array(['1970-01-01 13:30:10', '2022-10-03 05:15:33', 'nat'],
+                                                 dtype='datetime64[ns]'),
+                           'ctimestamp': np.array(['2012-06-13 13:30:10.008', '2001-04-22 15:18:29.118', 'nat'],
+                                                  dtype='datetime64[ns]'),
+                           'cnanotime': np.array(
+                               ['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'],
+                               dtype='datetime64[ns]'),
+                           'cnanotimestamp': np.array(
+                               ['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'],
+                               dtype='datetime64[ns]'),
                            'cfloat': np.array([2.2134500, -5.36411, np.nan], dtype='float32'),
                            'cdouble': np.array([3.214, -47.795324, np.nan], dtype='float64'),
                            'csymbol': np.array(['sym1', 'sym2', ''], dtype='object'),
@@ -367,13 +376,21 @@ class TestDBConnectionPool:
                            # np.array(["2012.01.02T01:02:03.123456789", "2012.01.02"], dtype="datetime64[D]")
                            'cdate': np.array(['2020-01-02', '1970-12-21', 'nat'], dtype='datetime64[ns]'),
                            'cmonth': np.array(['2020-01', '1970-12', 'nat'], dtype='datetime64[ns]'),
-                           'ctime': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335', 'nat'], dtype='datetime64[ns]'),
+                           'ctime': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335', 'nat'],
+                                             dtype='datetime64[ns]'),
                            'cminute': np.array(['1970-01-01 13:30', '1970-01-01 05:15', 'nat'], dtype='datetime64[ns]'),
-                           'csecond': np.array(['1970-01-01 13:30:10', '1970-01-01 05:15:33', 'nat'], dtype='datetime64[ns]'),
-                           'cdatetime': np.array(['1970-01-01 13:30:10', '2022-10-03 05:15:33', 'nat'], dtype='datetime64[ns]'),
-                           'ctimestamp': np.array(['2012-06-13 13:30:10.008', '2001-04-22 15:18:29.118', 'nat'], dtype='datetime64[ns]'),
-                           'cnanotime': np.array(['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'], dtype='datetime64[ns]'),
-                           'cnanotimestamp': np.array(['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'], dtype='datetime64[ns]'),
+                           'csecond': np.array(['1970-01-01 13:30:10', '1970-01-01 05:15:33', 'nat'],
+                                               dtype='datetime64[ns]'),
+                           'cdatetime': np.array(['1970-01-01 13:30:10', '2022-10-03 05:15:33', 'nat'],
+                                                 dtype='datetime64[ns]'),
+                           'ctimestamp': np.array(['2012-06-13 13:30:10.008', '2001-04-22 15:18:29.118', 'nat'],
+                                                  dtype='datetime64[ns]'),
+                           'cnanotime': np.array(
+                               ['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'],
+                               dtype='datetime64[ns]'),
+                           'cnanotimestamp': np.array(
+                               ['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'],
+                               dtype='datetime64[ns]'),
                            'cfloat': np.array([2.2134500, -5.36411, np.nan], dtype='float32'),
                            'cdouble': np.array([3.214, -47.795324, np.nan], dtype='float64'),
                            'csymbol': np.array(['sym1', 'sym2', ''], dtype='object'),
@@ -414,15 +431,26 @@ class TestDBConnectionPool:
                            'cshort': np.array([-10, 1000, 0], dtype=np.int16),
                            'cint': np.array([-10, 1000, 0], dtype=np.int32),
                            'clong': np.array([-10, 1000, 0], dtype=np.int64),
-                           'cdate': np.array(['2020-01-02 13:30:10.008', '1970-12-21 13:30:10.008', 'nat'], dtype='datetime64[D]'),
-                           'cmonth': np.array(['2020-01-02 13:30:10.008', '1970-12-21 13:30:10.008', 'nat'], dtype='datetime64[M]'),
-                           'ctime': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335245880', 'nat'], dtype='datetime64[ms]'),
-                           'cminute': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335245880', 'nat'], dtype='datetime64[m]'),
-                           'csecond': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335245880', 'nat'], dtype='datetime64[s]'),
-                           'cdatetime': np.array(['1970-01-01 13:30:10.008', '2022-10-03 05:15:33.335245880', 'nat'], dtype='datetime64[s]'),
-                           'ctimestamp': np.array(['2012-06-13 13:30:10.008', '2001-04-22 15:18:29.118325481', 'nat'], dtype='datetime64[ms]'),
-                           'cnanotime': np.array(['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'], dtype='datetime64[ns]'),
-                           'cnanotimestamp': np.array(['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'], dtype='datetime64[ns]'),
+                           'cdate': np.array(['2020-01-02 13:30:10.008', '1970-12-21 13:30:10.008', 'nat'],
+                                             dtype='datetime64[D]'),
+                           'cmonth': np.array(['2020-01-02 13:30:10.008', '1970-12-21 13:30:10.008', 'nat'],
+                                              dtype='datetime64[M]'),
+                           'ctime': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335245880', 'nat'],
+                                             dtype='datetime64[ms]'),
+                           'cminute': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335245880', 'nat'],
+                                               dtype='datetime64[m]'),
+                           'csecond': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335245880', 'nat'],
+                                               dtype='datetime64[s]'),
+                           'cdatetime': np.array(['1970-01-01 13:30:10.008', '2022-10-03 05:15:33.335245880', 'nat'],
+                                                 dtype='datetime64[s]'),
+                           'ctimestamp': np.array(['2012-06-13 13:30:10.008', '2001-04-22 15:18:29.118325481', 'nat'],
+                                                  dtype='datetime64[ms]'),
+                           'cnanotime': np.array(
+                               ['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'],
+                               dtype='datetime64[ns]'),
+                           'cnanotimestamp': np.array(
+                               ['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'],
+                               dtype='datetime64[ns]'),
                            'cfloat': np.array([2.2134500, -5.36411, np.nan], dtype='float32'),
                            'cdouble': np.array([3.214, -47.795324, np.nan], dtype='float64'),
                            'csymbol': np.array(['sym1', 'sym2', ''], dtype='object'),
@@ -431,7 +459,7 @@ class TestDBConnectionPool:
                            'cblob': np.array(['blob1', 'blob2', ''], dtype='object')
                            })
         df.__DolphinDB_Type__ = {
-            'clong' : keys.DT_LONG,
+            'clong': keys.DT_LONG,
             'cipaddr': keys.DT_IPPADDR,
             'cblob': keys.DT_BLOB,
         }
@@ -463,13 +491,21 @@ class TestDBConnectionPool:
                            'clong': np.array([-10, 1000, 0], dtype=np.int64),
                            'cdate': np.array(['2020-01-02', '1970-12-21', 'nat'], dtype='datetime64[ns]'),
                            'cmonth': np.array(['2020-01', '1970-12', 'nat'], dtype='datetime64[ns]'),
-                           'ctime': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335', 'nat'], dtype='datetime64[ns]'),
+                           'ctime': np.array(['1970-01-01 13:30:10.008', '1970-01-01 05:15:33.335', 'nat'],
+                                             dtype='datetime64[ns]'),
                            'cminute': np.array(['1970-01-01 13:30', '1970-01-01 05:15', 'nat'], dtype='datetime64[ns]'),
-                           'csecond': np.array(['1970-01-01 13:30:10', '1970-01-01 05:15:33', 'nat'], dtype='datetime64[ns]'),
-                           'cdatetime': np.array(['1970-01-01 13:30:10', '2022-10-03 05:15:33', 'nat'], dtype='datetime64[ns]'),
-                           'ctimestamp': np.array(['2012-06-13 13:30:10.008', '2001-04-22 15:18:29.118', 'nat'], dtype='datetime64[ns]'),
-                           'cnanotime': np.array(['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'], dtype='datetime64[ns]'),
-                           'cnanotimestamp': np.array(['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'], dtype='datetime64[ns]'),
+                           'csecond': np.array(['1970-01-01 13:30:10', '1970-01-01 05:15:33', 'nat'],
+                                               dtype='datetime64[ns]'),
+                           'cdatetime': np.array(['1970-01-01 13:30:10', '2022-10-03 05:15:33', 'nat'],
+                                                 dtype='datetime64[ns]'),
+                           'ctimestamp': np.array(['2012-06-13 13:30:10.008', '2001-04-22 15:18:29.118', 'nat'],
+                                                  dtype='datetime64[ns]'),
+                           'cnanotime': np.array(
+                               ['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'],
+                               dtype='datetime64[ns]'),
+                           'cnanotimestamp': np.array(
+                               ['1970-01-01 13:30:10.008007006', '1970-01-01 21:08:02.008007006', 'nat'],
+                               dtype='datetime64[ns]'),
                            'cfloat': np.array([2.2134500, -5.36411, np.nan], dtype='float32'),
                            'cdouble': np.array([3.214, -47.795324, np.nan], dtype='float64'),
                            'csymbol': np.array(['sym1', 'sym2', ''], dtype='object'),
@@ -482,7 +518,7 @@ class TestDBConnectionPool:
             'cchar': keys.DT_CHAR,
             'cshort': keys.DT_SHORT,
             'cint': keys.DT_INT,
-            'clong' : keys.DT_LONG,
+            'clong': keys.DT_LONG,
             'cipaddr': keys.DT_IPPADDR,
             'cblob': keys.DT_BLOB,
         }
@@ -491,7 +527,7 @@ class TestDBConnectionPool:
         pool.shutDown()
         res = self.conn.run("tab")
         assert_frame_equal(df, res)
-        self.conn.undef("tab","SHARED")
+        self.conn.undef("tab", "SHARED")
 
     @pytest.mark.CONNECTIONPOOL
     def test_DBConnectionPool_func_runTaskAsyn_warning(self):
@@ -548,15 +584,15 @@ class TestDBConnectionPool:
         ttt=blob(string[1]);\
         u=table(1 2 3 as col1, `a`b`c as col2);\
         print(a,b,c,d,ee,f,g,h,i,j,k,l,m,n,o,p,q,r,s,ttt,u)"
-        result=subprocess.run([sys.executable,'-c',
-                               "import dolphindb as ddb;"
-                               "import asyncio;"
-                               f"pool=ddb.DBConnectionPool('{HOST}', {PORT}, 10, '{USER}', '{PASSWD}');"
-                               "loop=asyncio.get_event_loop();"
-                               f"task=pool.run(\"\"\"{script}\"\"\");"
-                               "loop.run_until_complete(asyncio.wait([loop.create_task(task)]));"
-                               "loop.close();"
-                               ], stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8')
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 "import asyncio;"
+                                 f"pool=ddb.DBConnectionPool('{HOST}', {PORT}, 10, '{USER}', '{PASSWD}');"
+                                 "loop=asyncio.get_event_loop();"
+                                 f"task=pool.run(\"\"\"{script}\"\"\");"
+                                 "loop.run_until_complete(asyncio.wait([loop.create_task(task)]));"
+                                 "loop.close();"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         assert result.stdout == """1\n1\n1\n1\n1\n1970.01.02\n0000.02M\n00:00:00.001\n00:01m\n00:00:01\n1970.01.01T00:00:01\n1970.01.01T00:00:00.001\n00:00:00.000000001\n1970.01.01T00:00:00.000000001\n1\n1\n1\n5d212a78-cc48-e3b1-4235-b4d91473ee87\n["1"]\ncol1 col2\n---- ----\n1    a   \n2    b   \n3    c   \n\n"""
 
     @pytest.mark.CONNECTIONPOOL
@@ -583,24 +619,24 @@ class TestDBConnectionPool:
         ttt=blob(string[1]);\
         u=table(1 2 3 as col1, `a`b`c as col2);\
         print(a,b,c,d,ee,f,g,h,i,j,k,l,m,n,o,p,q,r,s,ttt,u)"
-        result=subprocess.run([sys.executable,'-c',
-                               "import dolphindb as ddb;"
-                               "import asyncio;"
-                               f"pool=ddb.DBConnectionPool('{HOST}', {PORT}, 10, '{USER}', '{PASSWD}',show_output=False);"
-                               "loop=asyncio.get_event_loop();"
-                               f"task=pool.run(\"\"\"{script}\"\"\");"
-                               "loop.run_until_complete(asyncio.wait([loop.create_task(task)]));"
-                               "loop.close();"
-                               ], stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8')
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 "import asyncio;"
+                                 f"pool=ddb.DBConnectionPool('{HOST}', {PORT}, 10, '{USER}', '{PASSWD}',show_output=False);"
+                                 "loop=asyncio.get_event_loop();"
+                                 f"task=pool.run(\"\"\"{script}\"\"\");"
+                                 "loop.run_until_complete(asyncio.wait([loop.create_task(task)]));"
+                                 "loop.close();"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         assert result.stdout == ""
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
-    def test_DBConnectionPool_insert_dataframe_with_numpy_order(self,_compress,_order,_python_list):
+    def test_DBConnectionPool_insert_dataframe_with_numpy_order(self, _compress, _order, _python_list):
         data = []
         for i in range(10):
-            row_data = [i, False, i,i,i,i,
+            row_data = [i, False, i, i, i, i,
                         np.datetime64(i, "D").astype("datetime64[ns]"),
                         np.datetime64(i, "M").astype("datetime64[ns]"),
                         np.datetime64(i, "ms").astype("datetime64[ns]"),
@@ -611,17 +647,22 @@ class TestDBConnectionPool:
                         np.datetime64(i, "ns").astype("datetime64[ns]"),
                         np.datetime64(i, "ns").astype("datetime64[ns]"),
                         np.datetime64(i, "h").astype("datetime64[ns]"),
-                        i,i, 'sym','str', "1.1.1.1", "5d212a78-cc48-e3b1-4235-b4d91473ee87",
+                        i, i, 'sym', 'str', "1.1.1.1", "5d212a78-cc48-e3b1-4235-b4d91473ee87",
                         "e1671797c52e15f763380b45e841ec32"]
             data.append(row_data)
         if _python_list:
-            df = pd.DataFrame(data,columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
-                            'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime', 'cnanotimestamp',
-                            'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid', 'cint128'])
+            df = pd.DataFrame(data, columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
+                                             'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp',
+                                             'cnanotime', 'cnanotimestamp',
+                                             'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid',
+                                             'cint128'])
         else:
-            df = pd.DataFrame(np.array(data,dtype='object',order=_order),columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
-                            'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime', 'cnanotimestamp',
-                            'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid', 'cint128'])
+            df = pd.DataFrame(np.array(data, dtype='object', order=_order),
+                              columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
+                                       'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime',
+                                       'cnanotimestamp',
+                                       'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid',
+                                       'cint128'])
         df.__DolphinDB_Type__ = {
             'cbool': keys.DT_BOOL,
             'cchar': keys.DT_CHAR,
@@ -646,7 +687,7 @@ class TestDBConnectionPool:
             'cuuid': keys.DT_UUID,
             'cint128': keys.DT_INT128,
         }
-        self.conn.upload({'t':df})
+        self.conn.upload({'t': df})
         self.conn.run("""
         colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cipaddr`cuuid`cint128;
         colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, IPADDR, UUID, INT128];
@@ -678,35 +719,40 @@ class TestDBConnectionPool:
         loop.close()
         tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
-                            'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
-                            'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
+                    'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
+                    'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
         assert_array_equal(tys, ex_types)
         self.conn.dropDatabase("dfs://test_dfs1")
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
-    def test_DBConnectionPool_insert_null_dataframe_with_numpy_order(self,_compress,_order,_python_list):
+    def test_DBConnectionPool_insert_null_dataframe_with_numpy_order(self, _compress, _order, _python_list):
         data = []
-        origin_nulls = [None,np.nan,pd.NaT]
+        origin_nulls = [None, np.nan, pd.NaT]
 
         for i in range(7):
             row_data = random.choices(origin_nulls, k=22)
             print(f'row {i}:', row_data)
             data.append([i, *row_data])
 
-        data.append([7]+[None]*22)
-        data.append([8]+[pd.NaT]*22)
-        data.append([9]+[np.nan]*22)
+        data.append([7] + [None] * 22)
+        data.append([8] + [pd.NaT] * 22)
+        data.append([9] + [np.nan] * 22)
 
         if _python_list:
-            df = pd.DataFrame(data,columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
-                            'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime', 'cnanotimestamp',
-                            'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid', 'cint128',],dtype='object')
+            df = pd.DataFrame(data, columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
+                                             'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp',
+                                             'cnanotime', 'cnanotimestamp',
+                                             'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid',
+                                             'cint128', ], dtype='object')
         else:
-            df = pd.DataFrame(np.array(data,dtype='object',order=_order),columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
-                            'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime', 'cnanotimestamp',
-                            'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid', 'cint128'],dtype='object')
+            df = pd.DataFrame(np.array(data, dtype='object', order=_order),
+                              columns=['index', 'cbool', 'cchar', 'cshort', 'cint', 'clong', 'cdate',
+                                       'cmonth', 'ctime', 'cminute', 'csecond', 'cdatetime', 'ctimestamp', 'cnanotime',
+                                       'cnanotimestamp',
+                                       'cdatehour', 'cfloat', 'cdouble', 'csymbol', 'cstring', 'cipaddr', 'cuuid',
+                                       'cint128'], dtype='object')
         df.__DolphinDB_Type__ = {
             'cbool': keys.DT_BOOL,
             'cchar': keys.DT_CHAR,
@@ -731,7 +777,7 @@ class TestDBConnectionPool:
             'cuuid': keys.DT_UUID,
             'cint128': keys.DT_INT128,
         }
-        self.conn.upload({'t':df})
+        self.conn.upload({'t': df})
         self.conn.run("""
         colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cipaddr`cuuid`cint128;
         colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, IPADDR, UUID, INT128];
@@ -758,13 +804,13 @@ class TestDBConnectionPool:
         loop.close()
         tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
-                            'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
-                            'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
+                    'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
+                    'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128']
         assert_array_equal(tys, ex_types)
         self.conn.dropDatabase("dfs://test_dfs1")
 
     @pytest.mark.CONNECTIONPOOL
-    @pytest.mark.parametrize('_priority', [-1, 'a', 1.1, dict(), list(), tuple(), set(), None,10])
+    @pytest.mark.parametrize('_priority', [-1, 'a', 1.1, dict(), list(), tuple(), set(), None, 10])
     def test_run_with_para_priority_exception(self, _priority):
         pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD)
         loop = asyncio.get_event_loop_policy().new_event_loop()
@@ -809,7 +855,7 @@ class TestDBConnectionPool:
 
         ]
         loop.run_until_complete(asyncio.wait(tasks))
-        expect = [[0,10], [4,64], [8,1]]
+        expect = [[0, 10], [4, 64], [8, 1]]
         for ind, task in enumerate(tasks):
             assert_array_equal(task.result(), expect[ind])
         pool1.shutDown()
@@ -818,38 +864,44 @@ class TestDBConnectionPool:
     def test_DBConnectionPool_scalar_overlenth(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop()
-        with pytest.raises(RuntimeError,match="String too long, Serialization failed, length must be less than 256K bytes") as e:
-            loop.run_until_complete(asyncio.gather(*[pool.run('print','0'*4*64*1024)]))
+        with pytest.raises(RuntimeError,
+                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+            loop.run_until_complete(asyncio.gather(*[pool.run('print', '0' * 4 * 64 * 1024)]))
         pool.shutDown()
 
     def test_DBConnectionPool_vector_overlenth(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop()
-        with pytest.raises(RuntimeError,match="String too long, Serialization failed, length must be less than 256K bytes") as e:
-            loop.run_until_complete(asyncio.gather(*[pool.run('print',['0'*4*64*1024])]))
+        with pytest.raises(RuntimeError,
+                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+            loop.run_until_complete(asyncio.gather(*[pool.run('print', ['0' * 4 * 64 * 1024])]))
         pool.shutDown()
 
     def test_DBConnectionPool_set_overlenth(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop()
-        with pytest.raises(RuntimeError,match="String too long, Serialization failed, length must be less than 256K bytes") as e:
-            loop.run_until_complete(asyncio.gather(*[pool.run('print', {'0'*256 * 1024})]))
+        with pytest.raises(RuntimeError,
+                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+            loop.run_until_complete(asyncio.gather(*[pool.run('print', {'0' * 256 * 1024})]))
         pool.shutDown()
 
     def test_DBConnectionPool_dicionary_overlenth(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop()
-        with pytest.raises(RuntimeError,match="String too long, Serialization failed, length must be less than 256K bytes") as e:
-            loop.run_until_complete(asyncio.gather(*[pool.run('print', {'a':'0'*256 * 1024})]))
+        with pytest.raises(RuntimeError,
+                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+            loop.run_until_complete(asyncio.gather(*[pool.run('print', {'a': '0' * 256 * 1024})]))
         pool.shutDown()
 
     def test_DBConnectionPool_table_overlenth(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop()
-        with pytest.raises(RuntimeError,match="String too long, Serialization failed, length must be less than 256K bytes") as e:
-            loop.run_until_complete(asyncio.gather(*[pool.run('print', pd.DataFrame({'a': [1, 2, 3], 'b': ['1'*256 * 1024, '2', '3']}))]))
+        with pytest.raises(RuntimeError,
+                           match="String too long, Serialization failed, length must be less than 256K bytes") as e:
+            loop.run_until_complete(
+                asyncio.gather(*[pool.run('print', pd.DataFrame({'a': [1, 2, 3], 'b': ['1' * 256 * 1024, '2', '3']}))]))
         pool.shutDown()
+
 
 if __name__ == '__main__':
     pytest.main(["-s", "test/test_DBConnectionPool.py"])
-

@@ -1,22 +1,22 @@
+import platform
 import subprocess
+import threading
+import time
 import warnings
-import pytest
-from setup.settings import *
-from setup.utils import get_pid, random_string
+
 import dolphindb as ddb
+import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import *
 from pandas.testing import *
-import dolphindb.settings as keys
-import time
-import sys
-import threading
-import platform
-import datetime
-import decimal
+
+from setup.settings import *
+from setup.utils import get_pid, random_string
 
 py_version = int(platform.python_version().split('.')[1])
+
 
 @pytest.mark.timeout(120)
 class TestSession:
@@ -36,7 +36,7 @@ class TestSession:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -48,10 +48,12 @@ class TestSession:
     @pytest.mark.SESSION
     @pytest.mark.parametrize('_pickle', [True, False], ids=["PICKLE_OPEN", "PICKLE_CLOSE"])
     @pytest.mark.parametrize('_protocol', [keys.PROTOCOL_ARROW, keys.PROTOCOL_DEFAULT,
-                                           keys.PROTOCOL_DDB, keys.PROTOCOL_PICKLE, None], ids=["ARROW", "DEFAULT", "DDB", "PICKLE", "UNSOUPPORTED"])
+                                           keys.PROTOCOL_DDB, keys.PROTOCOL_PICKLE, None],
+                             ids=["ARROW", "DEFAULT", "DDB", "PICKLE", "UNSOUPPORTED"])
     def test_session_parameter_enablePickle_protocol(self, _pickle, _protocol):
         if _pickle and _protocol != keys.PROTOCOL_DEFAULT:
-            with pytest.raises(RuntimeError, match='When enablePickle=true, the parameter protocol must not be specified. '):
+            with pytest.raises(RuntimeError,
+                               match='When enablePickle=true, the parameter protocol must not be specified. '):
                 conn1 = ddb.session(HOST, PORT, USER, PASSWD,
                                     enablePickle=_pickle, protocol=_protocol)
         elif _protocol == None:
@@ -86,7 +88,7 @@ class TestSession:
             result = subprocess.run([sys.executable, '-c',
                                      "import dolphindb as ddb;"
                                      f"conn=ddb.Session('{HOST}', {PORT}, '{user}', '{passwd}',compress={_compress},enablePickle={_pickle});"
-                                     ], stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8')
+                                     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
             assert "The user name or password is incorrect" in result.stderr
 
     @pytest.mark.SESSION
@@ -118,7 +120,7 @@ class TestSession:
     @pytest.mark.parametrize('_pickle', [True, False], ids=["PICKLE_OPEN", "PICKLE_CLOSE"])
     def test_session_init_enableChunkGranularityConfig(self, _compress, _pickle):
         num = 10
-        dbpath = "dfs://test_"+ random_string(5)
+        dbpath = "dfs://test_" + random_string(5)
         tablename = "dfs_tab"
         if self.conn.run("bool(getConfig()[`enableChunkGranularityConfig])") == "0":
             pytest.skip(
@@ -126,7 +128,7 @@ class TestSession:
         conn1 = ddb.session(HOST, PORT, "admin", "123456",
                             enableChunkGranularityConfig=True, compress=_compress, enablePickle=_pickle)
         dates = np.array(pd.date_range(start='2000-01-01',
-                         end='2000-12-30', freq="D"), dtype="datetime64[D]")
+                                       end='2000-12-30', freq="D"), dtype="datetime64[D]")
         conn1.run(
             """if(existsDatabase("{}")){{dropDatabase("{}")}};""".format(dbpath, dbpath))
         db = conn1.database(dbName="test_dfs", partitionType=keys.VALUE, partitions=dates,
@@ -136,6 +138,7 @@ class TestSession:
         db.createPartitionedTable(
             table=t, tableName=tablename, partitionColumns="col3")
         threads = []
+
         def insert_job(host: str, port: int, dbpath: str, tableName: str):
             conn = ddb.session()
             conn.connect(host, port, "admin", "123456")
@@ -147,9 +150,10 @@ class TestSession:
             except:
                 pass
             conn.close()
+
         for _ in range(num):
             threads.append(threading.Thread(target=insert_job,
-                           args=(HOST, PORT, dbpath, tablename)))
+                                            args=(HOST, PORT, dbpath, tablename)))
         for th in threads:
             th.start()
         for th in threads:
@@ -158,7 +162,7 @@ class TestSession:
         assert (int(self.conn.run(
             "exec count(*) from loadTable('{}',`{})".format(dbpath, tablename))) > 0)
         assert (int(self.conn.run(
-            "exec count(*) from loadTable('{}',`{})".format(dbpath, tablename))) < num*10)
+            "exec count(*) from loadTable('{}',`{})".format(dbpath, tablename))) < num * 10)
         conn1.dropDatabase(dbpath)
         conn1.close()
 
@@ -189,10 +193,9 @@ class TestSession:
         warnings.filterwarnings('error')
         try:
             ddb.session(HOST, PORT, USER, PASSWD, enableASYN=True,
-                compress=_compress, enablePickle=_pickle)
+                        compress=_compress, enablePickle=_pickle)
         except Warning as war:
             assert "Please use enableASYNC instead of enableASYN" in str(war)
-
 
     @pytest.mark.SESSION
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
@@ -223,7 +226,7 @@ class TestSession:
             result = subprocess.run([sys.executable, '-c',
                                      "import dolphindb as ddb;"
                                      f"conn=ddb.Session('{HOST}', {PORT}, '{user}', '{passwd}');"
-                                     ], stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8')
+                                     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
             assert "The user name or password is incorrect" in result.stderr
 
     @pytest.mark.SESSION
@@ -284,10 +287,10 @@ class TestSession:
         def startCurNodes(cur_node: str) -> bool:
             connCtl = ddb.session()
             connCtl.connect(HOST, CTL_PORT, USER, PASSWD)
-            connCtl.run("try{startDataNode(`"+cur_node+r")}catch(ex){}")
+            connCtl.run("try{startDataNode(`" + cur_node + r")}catch(ex){}")
             while connCtl.run("(exec state from getClusterPerf() where name = `{})[0]".format(cur_node)) != 1:
                 time.sleep(1)
-                connCtl.run("try{startDataNode(`"+cur_node+r")}catch(ex){}")
+                connCtl.run("try{startDataNode(`" + cur_node + r")}catch(ex){}")
 
             print("restart successfully")
             connCtl.close()
@@ -296,11 +299,11 @@ class TestSession:
         def stopCurNodes(cur_node: str) -> bool:
             connCtl = ddb.session()
             connCtl.connect(HOST, CTL_PORT, USER, PASSWD)
-            connCtl.run("try{stopDataNode(`"+cur_node+r")}catch(ex){}")
+            connCtl.run("try{stopDataNode(`" + cur_node + r")}catch(ex){}")
             time.sleep(1)
             while connCtl.run("(exec state from getClusterPerf() where name = `{})[0]".format(cur_node)) != 0:
                 time.sleep(1)
-                connCtl.run("try{stopDataNode(`"+cur_node+r")}catch(ex){}")
+                connCtl.run("try{stopDataNode(`" + cur_node + r")}catch(ex){}")
             print("stop successfully")
             connCtl.close()
             return True
@@ -355,8 +358,8 @@ class TestSession:
         if self.conn.existsDatabase(dbPath):
             self.conn.dropDatabase(dbPath)
         db = self.conn.database(dbName='mydb', partitionType=keys.VALUE, partitions=[
-                                1, 2, 3], dbPath=dbPath)
-        df = pd.DataFrame({'c1': np.array([1, 2, 3],dtype='int32'), 'c2': ['a', 'b', 'c']})
+            1, 2, 3], dbPath=dbPath)
+        df = pd.DataFrame({'c1': np.array([1, 2, 3], dtype='int32'), 'c2': ['a', 'b', 'c']})
 
         t = self.conn.table(data=df)
         db.createPartitionedTable(
@@ -364,7 +367,7 @@ class TestSession:
         self.conn.run("db = 'str_tmp'")
         res = self.conn.loadTableBySQL(
             tableName, dbPath, sql=f"select * from {tableName} where c1 =3").toDF()
-        assert_frame_equal(res, pd.DataFrame({'c1': np.array([3],dtype='int32'), 'c2': ['c']}))
+        assert_frame_equal(res, pd.DataFrame({'c1': np.array([3], dtype='int32'), 'c2': ['c']}))
 
         assert self.conn.run("db") == 'str_tmp'
 
@@ -410,12 +413,12 @@ class TestSession:
         ttt=blob(string[1]);\
         u=table(1 2 3 as col1, `a`b`c as col2);\
         print(a,b,c,d,ee,f,g,h,i,j,k,l,m,n,o,p,q,r,s,ttt,u)"
-        result=subprocess.run([sys.executable,'-c',
-                               "import dolphindb as ddb;"
-                               "import asyncio;"
-                               f"conn=ddb.Session('{HOST}', {PORT}, '{USER}', '{PASSWD}',compress={_compress},enablePickle={_pickle});"
-                               f"conn.run(\"\"\"{script}\"\"\")"
-                               ], stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8')
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 "import asyncio;"
+                                 f"conn=ddb.Session('{HOST}', {PORT}, '{USER}', '{PASSWD}',compress={_compress},enablePickle={_pickle});"
+                                 f"conn.run(\"\"\"{script}\"\"\")"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         assert result.stdout == """1\n1\n1\n1\n1\n1970.01.02\n0000.02M\n00:00:00.001\n00:01m\n00:00:01\n1970.01.01T00:00:01\n1970.01.01T00:00:00.001\n00:00:00.000000001\n1970.01.01T00:00:00.000000001\n1\n1\n1\n5d212a78-cc48-e3b1-4235-b4d91473ee87\n["1"]\ncol1 col2\n---- ----\n1    a   \n2    b   \n3    c   \n\n"""
 
     @pytest.mark.SESSION
@@ -450,12 +453,12 @@ class TestSession:
                                  "import asyncio;"
                                  f"conn=ddb.Session('{HOST}', {PORT}, '{USER}', '{PASSWD}',compress={_compress},enablePickle={_pickle},show_output=False);"
                                  f"conn.run(\"\"\"{script}\"\"\")"
-                                 ], stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8')
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         assert result.stdout == ""
 
     @pytest.mark.SESSION
     def test_session_enablessl_download_huge_table(self):
-        conn1 = ddb.session(HOST,PORT,USER,PASSWD,enableSSL=True)
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD, enableSSL=True)
         s = """
             login(`admin,`123456)
 
@@ -470,13 +473,13 @@ class TestSession:
         df = conn1.run("select * from tab")
         conn1.run('undef `tab,SHARED')
         assert df.shape[0] == 1000000
-        assert_array_equal(df['db_name'].to_list(), ["/DBA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA/Key1/8"]*1000000)
+        assert_array_equal(df['db_name'].to_list(), ["/DBA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA/Key1/8"] * 1000000)
 
     @pytest.mark.SESSION
     def test_session_enablessl_download_huge_array(self):
-        conn1 = ddb.session(HOST,PORT,USER,PASSWD,enableSSL=True)
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD, enableSSL=True)
         vec = conn1.run("take('/DBA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA/Key1/8', 3000000)")
-        assert_array_equal(vec, ["/DBA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA/Key1/8"]*3000000)
+        assert_array_equal(vec, ["/DBA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA.DBAA/Key1/8"] * 3000000)
 
     @pytest.mark.SESSION
     @pytest.mark.parametrize('_priority', [-1, 'a', 1.1, dict(), list(), tuple(), set(), None])
@@ -488,11 +491,11 @@ class TestSession:
     @pytest.mark.parametrize('_parallelism', [-1, 'a', 1.1, dict(), list(), tuple(), set(), None])
     def test_run_with_para_parallelism_exception(self, _parallelism):
         with pytest.raises(Exception, match="parallelism must be an integer greater than 0"):
-            self.conn.run("objs();sleep(2000)", parallelism=_parallelism)      
+            self.conn.run("objs();sleep(2000)", parallelism=_parallelism)
 
     @pytest.mark.SESSION
     def test_run_with_para_priority_parallelism(self):
-        def run_and_assert(conn:ddb.session, expect, priority = None, parallelism = None):
+        def run_and_assert(conn: ddb.session, expect, priority=None, parallelism=None):
             s = f"""
                 sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
                 priority = exec priority from getConsoleJobs() where sessionId=sessionid;
@@ -505,9 +508,9 @@ class TestSession:
                 res = conn.run(s, priority=priority, parallelism=parallelism)
             assert_array_equal(res, expect)
 
-        run_and_assert(self.conn, [0,10], 0, 10)
-        run_and_assert(self.conn, [4,64], None, None)
-        run_and_assert(self.conn, [8,1], 9, 1)
+        run_and_assert(self.conn, [0, 10], 0, 10)
+        run_and_assert(self.conn, [4, 64], None, None)
+        run_and_assert(self.conn, [8, 1], 9, 1)
 
 
 if __name__ == '__main__':

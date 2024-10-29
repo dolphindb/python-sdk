@@ -1,11 +1,13 @@
-import pytest
 import dolphindb as ddb
+import pytest
 from pandas.testing import assert_frame_equal
+
 from setup.settings import *
 from setup.utils import get_pid
 
+
 class TestLoadText:
-    conn = ddb.session() 
+    conn = ddb.session()
 
     def setup_method(self):
         try:
@@ -21,7 +23,7 @@ class TestLoadText:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -43,7 +45,6 @@ class TestLoadText:
         assert_frame_equal(tb.toDF(), rs)
 
 
-
 class DBInfo:
     dfsDBName = 'dfs://testLoadTextEx'
     diskDBName = WORK_DIR + '/testLoadTextEx'
@@ -51,7 +52,7 @@ class DBInfo:
     table2 = 'tb2'
 
 
-def create_dfs_range_db(s:ddb.session):
+def create_dfs_range_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -61,7 +62,8 @@ def create_dfs_range_db(s:ddb.session):
     '''.format(db=DBInfo.dfsDBName)
     s.run(ddb_script)
 
-def create_dfs_hash_db(s:ddb.session):
+
+def create_dfs_hash_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -72,7 +74,7 @@ def create_dfs_hash_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_value_db(s:ddb.session):
+def create_dfs_value_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -83,7 +85,7 @@ def create_dfs_value_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_list_db(s:ddb.session):
+def create_dfs_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -94,7 +96,7 @@ def create_dfs_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_range_db(s:ddb.session):
+def create_dfs_compo_range_range_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -107,7 +109,7 @@ def create_dfs_compo_range_range_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_hash_db(s:ddb.session):
+def create_dfs_compo_range_hash_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -120,7 +122,7 @@ def create_dfs_compo_range_hash_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_value_db(s:ddb.session):
+def create_dfs_compo_range_value_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -133,7 +135,7 @@ def create_dfs_compo_range_value_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_list_db(s:ddb.session):
+def create_dfs_compo_range_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -146,7 +148,7 @@ def create_dfs_compo_range_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_hash_list_db(s:ddb.session):
+def create_dfs_compo_range_hash_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -160,7 +162,7 @@ def create_dfs_compo_range_hash_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_dfs_compo_range_value_list_db(s:ddb.session):
+def create_dfs_compo_range_value_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -174,7 +176,7 @@ def create_dfs_compo_range_value_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_range_db(s:ddb.session):
+def create_disk_range_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -185,7 +187,7 @@ def create_disk_range_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_hash_db(s:ddb.session):
+def create_disk_hash_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -196,7 +198,7 @@ def create_disk_hash_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_value_db(s:ddb.session):
+def create_disk_value_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -207,7 +209,7 @@ def create_disk_value_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_list_db(s:ddb.session):
+def create_disk_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -218,7 +220,7 @@ def create_disk_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_range_db(s:ddb.session):
+def create_disk_compo_range_range_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -231,7 +233,7 @@ def create_disk_compo_range_range_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_hash_db(s:ddb.session):
+def create_disk_compo_range_hash_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -244,7 +246,7 @@ def create_disk_compo_range_hash_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_value_db(s:ddb.session):
+def create_disk_compo_range_value_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -257,7 +259,7 @@ def create_disk_compo_range_value_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_list_db(s:ddb.session):
+def create_disk_compo_range_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -270,7 +272,7 @@ def create_disk_compo_range_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_hash_list_db(s:ddb.session):
+def create_disk_compo_range_hash_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -284,7 +286,7 @@ def create_disk_compo_range_hash_list_db(s:ddb.session):
     s.run(ddb_script)
 
 
-def create_disk_compo_range_value_list_db(s:ddb.session):
+def create_disk_compo_range_value_list_db(s: ddb.session):
     ddb_script = '''
     login('admin','123456')
     dbPath='{db}'
@@ -317,7 +319,7 @@ class TestLoadTextEx:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -330,141 +332,142 @@ class TestLoadTextEx:
         create_dfs_range_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`id", self.data1)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `id, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_dfs_hash(self):
         create_dfs_hash_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`id", self.data1)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `id, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_dfs_value(self):
         create_dfs_value_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`date", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_dfs_list(self):
         create_dfs_list_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`sym", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `sym, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_dfs_compo_range_range(self):
         create_dfs_compo_range_range_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`date`id", self.data1)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_dfs_compo_range_hash(self):
         create_dfs_compo_range_hash_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`date`id", self.data1)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_dfs_compo_range_value(self):
         create_dfs_compo_range_value_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`date`id", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_dfs_compo_range_list(self):
         create_dfs_compo_range_list_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`date`sym", self.data1)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`sym, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_dfs_compo_range_hash_list(self):
         create_dfs_compo_range_hash_list_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`date`id`sym", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id`sym, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_dfs_compo_range_value_list(self):
         create_dfs_compo_range_value_list_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.dfsDBName, DBInfo.table1, "`date`id`sym", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id`sym, '{data}')"
-                        .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.dfsDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_range(self):
         create_disk_range_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`id", self.data1)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `id, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data1))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_hash(self):
         create_disk_hash_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`id", self.data1)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `id, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data1))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_value(self):
         create_disk_value_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`date", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_list(self):
         create_disk_list_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`sym", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `sym, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_compo_range_range(self):
         create_disk_compo_range_range_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`date`id", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_compo_range_hash(self):
         create_disk_compo_range_hash_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`date`id", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_compo_range_value(self):
         create_disk_compo_range_value_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`date`id", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_compo_range_list(self):
         create_disk_compo_range_list_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`date`sym", self.data1)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`sym, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data1))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_compo_range_hash_list(self):
         create_disk_compo_range_hash_list_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`date`id`sym", self.data1)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id`sym, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data1))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTextEx_disk_compo_range_value_list(self):
         create_disk_compo_range_value_list_db(self.conn)
         tmp = self.conn.loadTextEx(DBInfo.diskDBName, DBInfo.table1, "`date`id`sym", self.data2)
         rs = self.conn.run("select * from loadTextEx(database('{db}'), `{tb}, `date`id`sym, '{data}')"
-                        .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
+                           .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data2))
         assert_frame_equal(tmp.toDF(), rs)
+
 
 if __name__ == '__main__':
     pytest.main(['-s', '-v', 'test_loadText.py'])

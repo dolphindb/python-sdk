@@ -1,6 +1,6 @@
-import pytest
 import dolphindb as ddb
 from pandas.testing import assert_frame_equal
+
 from setup.settings import *
 from setup.utils import get_pid
 

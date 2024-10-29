@@ -1,12 +1,14 @@
-import time
-import pytest
-from setup.utils import get_pid
-from setup.prepare import *
-from setup.settings import *
-from numpy.testing import *
-from pandas.testing import *
 import decimal
 import random
+import time
+
+import pytest
+from numpy.testing import *
+from pandas.testing import *
+
+from setup.prepare import *
+from setup.settings import *
+from setup.utils import get_pid
 
 
 class TestPartitionedTableAppender:

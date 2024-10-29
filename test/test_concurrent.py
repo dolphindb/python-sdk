@@ -1,9 +1,10 @@
-import pytest
+import asyncio
+import threading
+
+import dolphindb as ddb
+
 from setup.settings import *
 from setup.utils import get_pid
-import dolphindb as ddb
-import threading
-import asyncio
 
 
 def insert_job(tablename, sleep_time, conn: ddb.Session = None):

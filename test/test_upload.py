@@ -1,17 +1,18 @@
+import decimal
+import random
+
+import dolphindb as ddb
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
 import pytest
+from numpy.testing import *
+
 from setup.prepare import get_Scalar, DATATYPE, TIMETYPE, generate_uuid, get_Vector, get_Matrix, get_Set, \
     get_Dictionary, get_Table, get_Table_arrayVetcor, get_PartitionedTable_Append_Upsert
 from setup.settings import *
 from setup.utils import get_pid
-import dolphindb as ddb
-import numpy as np
-import pandas as pd
-from numpy.testing import *
-import dolphindb.settings as keys
-import decimal
-import random
-
-PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
+from basic_testing.prepare import PANDAS_VERSION
 
 test_type = []
 for x in DATATYPE:
@@ -302,17 +303,23 @@ class TestUpload:
     def test_upload_numpyTimeTypesArray_Vector(self, data_type, np_dict, compress):
         conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         if data_type == 'TIME':
-            data_type = 'TIMESTAMP'
+            _data_type = 'TIMESTAMP'
         elif data_type == 'MINUTE' or data_type == 'SECOND':
-            data_type = 'DATETIME'
+            _data_type = 'DATETIME'
         elif data_type == 'NANOTIME':
-            data_type = 'NANOTIMESTAMP'
+            _data_type = 'NANOTIMESTAMP'
+        else:
+            _data_type = data_type
         if data_type == 'MONTH':
             ex_s = "v1 = array(MONTH, 0);v1.append!(1970.01M NULL 2053.05M)"
+        elif data_type == 'MINUTE':
+            ex_s = "v1 = array(DATETIME, 0);v1.append!(0 NULL 60000)"
         else:
-            ex_s = f"v1 = array({data_type}, 0);v1.append!(0 NULL 1000)"
+            ex_s = f"v1 = array({_data_type}, 0);v1.append!(0 NULL 1000)"
         conn.upload(np_dict)
         conn.run(ex_s)
+        conn.run('print v1')
+        conn.run('print a')
         assert conn.run("eqObj(v1, a)")
         conn.undefAll()
         conn.close()
@@ -489,7 +496,7 @@ class TestUpload:
             'cdecimal128': keys.DT_DECIMAL128_ARRAY
         }
         if valdecimal in [[1, 2, 3], [1.1, 2.1, 3.1]]:
-            with pytest.raises(RuntimeError, match=r'Cannot convert [A-Z]+ to DECIMAL32.'):
+            with pytest.raises(RuntimeError, match=r'Cannot convert object with ANY type to an ArrayVector'):
                 conn.upload({"tab": df})
             return
         conn.upload({"tab": df})
@@ -597,7 +604,7 @@ class TestUpload:
             1: [1, 2, 3],
             "2": [2, 3, 4],
         })
-        with pytest.raises(RuntimeError, match=r"Column names must be strings indicating a valid variable name"):
+        with pytest.raises(RuntimeError, match=r"DataFrame column names must be strings"):
             self.conn.upload({'tab': df})
 
         class MyDataFrame(pd.DataFrame):
@@ -614,13 +621,13 @@ class TestUpload:
             "b": [1, 2, 3],
         })
         with pytest.raises(RuntimeError,
-                           match=r"Table columns must be vectors \(np.array, series, tuple, or list\) for upload"):
+                           match=r"Table columns must be vectors"):
             self.conn.upload({'a': df})
         df.__DolphinDB_Type__ = {
             'a': keys.DT_INT
         }
         with pytest.raises(RuntimeError,
-                           match=r"Table columns must be vectors \(np.array, series, tuple, or list\) for upload"):
+                           match=r"Table columns must be vectors"):
             self.conn.upload({'a': df})
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
@@ -693,12 +700,11 @@ class TestUpload:
                 tableInsert(t1, i, false, i,i,i,i,i,i+23640,i,i,i,i,i,i,i,i,i,i, 'sym','str', 'blob', ipaddr("1.1.1.1"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),int128("e1671797c52e15f763380b45e841ec32"), decimal32('-2.11', 2), decimal64('0.0', 11), decimal128('-1.1', 36))
             }
         """)
-        res = conn1.run("""
+        assert conn1.run("""
             ex = select * from t1;
             res = select * from t;
-            all(each(eqObj, ex.values(), res.values()))"""
-                        )
-        assert res
+            all(each(eqObj, ex.values(), res.values()))
+        """)
         tys = conn1.run("schema(t).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',

@@ -879,9 +879,9 @@ void PartitionedTableAppender::init(string dbUrl, string tableName, string parti
         for (int i = 0; i < cols_; ++i) {
             DATA_TYPE type = (DATA_TYPE)typeInts->getInt(i);
             if (hasExtra)
-                columnTypes_[i] = {type, exparams->getInt(i)};
+                columnTypes_[i] = converter::createType(type, exparams->getInt(i));
             else
-                columnTypes_[i] = {type, 0};
+                columnTypes_[i] = converter::createType(type, 0);
             columnCategories_[i] = Util::getCategory(type);
             columnNames_[i] = colNames->getString(i);
         }
@@ -951,10 +951,10 @@ vector<string> PartitionedTableAppender::getColNames() {
 }
 
 void PartitionedTableAppender::checkColumnType(int col, DATA_CATEGORY category, DATA_TYPE type) {
-    if(columnTypes_[col].first != type){
+    if((DATA_TYPE)columnTypes_[col].first != type){
         DATA_CATEGORY expectCategory = columnCategories_[col];
         if (category != expectCategory) {
-            throw  RuntimeException("column [" + columnNames_[col] + "], expect type " + Util::getDataTypeString(columnTypes_[col].first) + ", got type " + Util::getDataTypeString(type));
+            throw RuntimeException("column [" + columnNames_[col] + "], expect type " + converter::getDataTypeString(columnTypes_[col]) + ", got type " + Util::getDataTypeString(type));
         }
     }
 }
@@ -997,9 +997,9 @@ AutoFitTableAppender::AutoFitTableAppender(string dbUrl, string tableName, DBCon
         for (int i = 0; i < cols_; ++i) {
             DATA_TYPE type = (DATA_TYPE)typeInts->getInt(i);
             if (hasExtra)
-                columnTypes_[i] = {type, exparams->getInt(i)};
+                columnTypes_[i] = converter::createType(type, exparams->getInt(i));
             else
-                columnTypes_[i] = {type, 0};
+                columnTypes_[i] = converter::createType(type, 0);
             columnCategories_[i] = Util::getCategory(type);
             columnNames_[i] = colNames->getString(i);
         }
@@ -1017,8 +1017,8 @@ int AutoFitTableAppender::append(TableSP table){
     for(int i = 0; i < cols_; i++){
         VectorSP curCol = table->getColumn(i);
         checkColumnType(i, curCol->getCategory(), curCol->getType());
-        if(columnCategories_[i] == TEMPORAL && curCol->getType() != columnTypes_[i].first){
-            columns.push_back(curCol->castTemporal(columnTypes_[i].first));
+        if(columnCategories_[i] == TEMPORAL && curCol->getType() != (DATA_TYPE)columnTypes_[i].first){
+            columns.push_back(curCol->castTemporal((DATA_TYPE)columnTypes_[i].first));
         }else{
             columns.push_back(curCol);
         }
@@ -1041,10 +1041,10 @@ vector<string> AutoFitTableAppender::getColNames() {
 }
 
 void AutoFitTableAppender::checkColumnType(int col, DATA_CATEGORY category, DATA_TYPE type) {
-    if(columnTypes_[col].first != type){
+    if((DATA_TYPE)columnTypes_[col].first != type){
         DATA_CATEGORY expectCategory = columnCategories_[col];
         if (category != expectCategory) {
-            throw  RuntimeException("column [" + columnNames_[col] + "], expect type " + Util::getDataTypeString(columnTypes_[col].first) + ", got type " + Util::getDataTypeString(type));
+            throw  RuntimeException("column [" + columnNames_[col] + "], expect type " + converter::getDataTypeString(columnTypes_[col]) + ", got type " + Util::getDataTypeString(type));
         }
     }
 }
@@ -1122,9 +1122,9 @@ AutoFitTableUpsert::AutoFitTableUpsert(string dbUrl, string tableName, DBConnect
         for (int i = 0; i < cols_; ++i) {
             DATA_TYPE type = (DATA_TYPE)typeInts->getInt(i);
             if (hasExtra)
-                columnTypes_[i] = {type, exparams->getInt(i)};
+                columnTypes_[i] = converter::createType(type, exparams->getInt(i));
             else
-                columnTypes_[i] = {type, 0};
+                columnTypes_[i] = converter::createType(type, 0);
             columnCategories_[i] = Util::getCategory(type);
             columnNames_[i] = colNames->getString(i);
         }
@@ -1143,8 +1143,8 @@ int AutoFitTableUpsert::upsert(TableSP table){
     for(int i = 0; i < cols_; i++){
         VectorSP curCol = table->getColumn(i);
         checkColumnType(i, curCol->getCategory(), curCol->getType());
-        if(columnCategories_[i] == TEMPORAL && curCol->getType() != columnTypes_[i].first){
-            columns.push_back(curCol->castTemporal(columnTypes_[i].first));
+        if(columnCategories_[i] == TEMPORAL && curCol->getType() != (DATA_TYPE)columnTypes_[i].first){
+            columns.push_back(curCol->castTemporal((DATA_TYPE)columnTypes_[i].first));
         }else{
             columns.push_back(curCol);
         }
@@ -1167,10 +1167,10 @@ vector<string> AutoFitTableUpsert::getColNames() {
 }
 
 void AutoFitTableUpsert::checkColumnType(int col, DATA_CATEGORY category, DATA_TYPE type) {
-    if(columnTypes_[col].first != type){
+    if((DATA_TYPE)columnTypes_[col].first != type){
         DATA_CATEGORY expectCategory = columnCategories_[col];
         if (category != expectCategory) {
-            throw  RuntimeException("column [" + columnNames_[col] + "], expect type " + Util::getDataTypeString(columnTypes_[col].first) + ", got type " + Util::getDataTypeString(type));
+            throw  RuntimeException("column [" + columnNames_[col] + "], expect type " + converter::getDataTypeString(columnTypes_[col]) + ", got type " + Util::getDataTypeString(type));
         }
     }
 }

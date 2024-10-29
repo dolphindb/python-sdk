@@ -1,17 +1,16 @@
 import subprocess
-
-import pytest
-from setup.utils import CountBatchDownLatch
 import time
+from itertools import chain
+
+import dolphindb as ddb
 import numpy as np
 import pandas as pd
-import dolphindb as ddb
-from numpy.testing import *
+import pytest
 from pandas.testing import *
+
 from setup.settings import *
+from setup.utils import CountBatchDownLatch
 from setup.utils import get_pid
-from itertools import chain
-import sys
 
 
 def gethandler(df, counter):
@@ -19,6 +18,7 @@ def gethandler(df, counter):
         index = len(df)
         df.loc[index] = lst
         counter.countDown(1)
+
     return handler
 
 
@@ -30,6 +30,7 @@ def gethandler_multi_row(df, counter):
             index = len(df)
             df.loc[index] = row
         counter.countDown(1)
+
     return handler
 
 
@@ -42,6 +43,7 @@ def streamDSgethandler(df1, df2, counter):
             index_2 = len(df2)
             df2.loc[index_2] = lst
         counter.countDown(1)
+
     return streamDeserializer_handler
 
 
@@ -73,7 +75,7 @@ class TestSubscribe:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -90,6 +92,7 @@ class TestSubscribe:
         def handler(lst):
             self.df = lst
             counter.countDown(1)
+
         return handler
 
     @pytest.mark.SUBSCRIBE
@@ -651,7 +654,7 @@ class TestSubscribe:
         counter = CountBatchDownLatch(1)
         counter.reset(2)
         conn1.subscribe(HOST, PORT, gethandler(df, counter),
-                        "trades16", "action", 0, False, np.array(["000905"],))
+                        "trades16", "action", 0, False, np.array(["000905"], ))
         assert counter.wait_s(20)
         df["id"] = df["id"].astype(np.int32)
         assert_frame_equal(df, conn1.run(
@@ -923,7 +926,7 @@ class TestSubscribe:
         counter = CountBatchDownLatch(1)
         counter.reset(20)
         sd = ddb.streamDeserializer({"msg1": ['dfs://test_StreamDeserializer_pair', "pt1"], "msg2": [
-                                    'dfs://test_StreamDeserializer_pair', "pt2"]}, None)
+            'dfs://test_StreamDeserializer_pair', "pt2"]}, None)
         conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2, counter), "outTables5", "action",
                         0, False, msgAsTable=False, streamDeserializer=sd, userName="admin", password="123456")
         assert counter.wait_s(20)
@@ -1048,7 +1051,7 @@ class TestSubscribe:
         counter = CountBatchDownLatch(1)
         counter.reset(20)
         sd = ddb.streamDeserializer({"msg1": ['dfs://test_StreamDeserializer_pair', "pt1"], "msg2": [
-                                    'dfs://test_StreamDeserializer_pair', "pt2"]}, conn1)
+            'dfs://test_StreamDeserializer_pair', "pt2"]}, conn1)
         conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2, counter), "outTables2", "action",
                         0, False, msgAsTable=False, streamDeserializer=sd, userName="admin", password="123456")
         assert counter.wait_s(20)
@@ -1093,7 +1096,7 @@ class TestSubscribe:
         counter = CountBatchDownLatch(1)
         counter.reset(10000)
         sd = ddb.streamDeserializer({"msg1": ['dfs://test_StreamDeserializer_pair', "pt1"], "msg2": [
-                                    'dfs://test_StreamDeserializer_pair', "pt2"]}, conn1)
+            'dfs://test_StreamDeserializer_pair', "pt2"]}, conn1)
         conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2, counter), "outTables1", "action",
                         0, False, msgAsTable=False, streamDeserializer=sd, userName="admin", password="123456")
         assert counter.wait_s(200)
@@ -1105,7 +1108,8 @@ class TestSubscribe:
         conn1.close()
 
     @pytest.mark.SUBSCRIBE
-    @pytest.mark.parametrize(argnames="error_host",  argvalues=[None, "sdjfk", "999.999.999.9"], ids=["host_none", "host_str", "host_error"])
+    @pytest.mark.parametrize(argnames="error_host", argvalues=[None, "sdjfk", "999.999.999.9"],
+                             ids=["host_none", "host_str", "host_error"])
     def test_enableStreaming_unsubscribe_error_host(self, error_host):
         conn1 = ddb.session()
         conn1.connect(HOST, PORT, "admin", "123456")
@@ -1134,7 +1138,8 @@ class TestSubscribe:
         conn1.close()
 
     @pytest.mark.SUBSCRIBE
-    @pytest.mark.parametrize(argnames="error_port",  argvalues=[None, "sdjfk", -1], ids=["port_none", "port_str", "port_error"])
+    @pytest.mark.parametrize(argnames="error_port", argvalues=[None, "sdjfk", -1],
+                             ids=["port_none", "port_str", "port_error"])
     def test_enableStreaming_unsubscribe_error_port(self, error_port):
         conn1 = ddb.session()
         conn1.connect(HOST, PORT, "admin", "123456")
@@ -1163,7 +1168,8 @@ class TestSubscribe:
         conn1.close()
 
     @pytest.mark.SUBSCRIBE
-    @pytest.mark.parametrize(argnames="error_tableName",  argvalues=[None, 12, "fddksj"], ids=["tableName_none", "tableName_str", "tableName_error"])
+    @pytest.mark.parametrize(argnames="error_tableName", argvalues=[None, 12, "fddksj"],
+                             ids=["tableName_none", "tableName_str", "tableName_error"])
     def test_enableStreaming_unsubscribe_error_tableName(self, error_tableName):
         conn1 = ddb.session()
         conn1.connect(HOST, PORT, "admin", "123456")
@@ -1192,7 +1198,8 @@ class TestSubscribe:
         conn1.close()
 
     @pytest.mark.SUBSCRIBE
-    @pytest.mark.parametrize(argnames="error_actionName",  argvalues=[None, 12, "fddksj"], ids=["actionName_none", "actionName_str", "actionName_error"])
+    @pytest.mark.parametrize(argnames="error_actionName", argvalues=[None, 12, "fddksj"],
+                             ids=["actionName_none", "actionName_str", "actionName_error"])
     def test_enableStreaming_unsubscribe_error_actionName(self, error_actionName):
         conn1 = ddb.session()
         conn1.connect(HOST, PORT, "admin", "123456")
@@ -1298,15 +1305,16 @@ class TestSubscribe:
         counter4 = CountBatchDownLatch(200000)
         counter5 = CountBatchDownLatch(200000)
         counters = [counter, counter2, counter3, counter4, counter5]
-        results = [[],[],[],[],[]]
+        results = [[], [], [], [], []]
         tables = ['trades', 'trades2', 'trades3', 'trades4', 'trades5']
 
-        def tmp_handle(ndlist:list, counter):
+        def tmp_handle(ndlist: list, counter):
             print("get msg")
 
             def handler(lst):
                 ndlist.append(lst)
                 counter.countDown(len(lst))
+
             return handler
 
         for ind, tab in enumerate(tables):
@@ -1324,7 +1332,7 @@ class TestSubscribe:
         for ind, co in enumerate(counters):
             assert co.wait_s(200)
             ex_df = self.conn.run(f"select * from {tables[ind]}")
-            
+
             for res in results:
                 print(len(res))
             res1 = list(chain.from_iterable(results[ind]))
@@ -1340,26 +1348,26 @@ class TestSubscribe:
             "undef(`trades,SHARED);undef(`trades2,SHARED);undef(`trades3,SHARED);undef(`trades4,SHARED);undef(`trades5,SHARED);go")
 
     def test_enalbeStreaming_exception_in_handler(self):
-        script="""
+        script = """
             colName=["time","x"]
             colType=["timestamp","int"]
             t = streamTable(100:0, colName, colType);
             share t as st;go
             insert into st values(now(), rand(100.00,1))
         """
-        result=subprocess.run([sys.executable,'-c',
-                                "import dolphindb as ddb;"
-                                "from time import sleep;"
-                                f"conn=ddb.Session('{HOST}', {PORT}, '{USER}', '{PASSWD}');"
-                                f"conn.enableStreaming({SUBPORT});"
-                                f"conn.run(\"\"\"{script}\"\"\");"
-                                f"conn.subscribe('{HOST}',{PORT},lambda :raise RuntimeError('this should be catched'),'st','test',0,True);"
-                                "conn.run('insert into st values(now(), rand(100.00,1))');"
-                                "sleep(3);"
-                                "conn.unsubscribe('{HOST}',{PORT},'st','test');"
-                                "conn.run('undef(`st,SHARED)');"
-                                "conn.close();"
-                               ], stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8')
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 "from time import sleep;"
+                                 f"conn=ddb.Session('{HOST}', {PORT}, '{USER}', '{PASSWD}');"
+                                 f"conn.enableStreaming({SUBPORT});"
+                                 f"conn.run(\"\"\"{script}\"\"\");"
+                                 f"conn.subscribe('{HOST}',{PORT},lambda :raise RuntimeError('this should be catched'),'st','test',0,True);"
+                                 "conn.run('insert into st values(now(), rand(100.00,1))');"
+                                 "sleep(3);"
+                                 "conn.unsubscribe('{HOST}',{PORT},'st','test');"
+                                 "conn.run('undef(`st,SHARED)');"
+                                 "conn.close();"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         assert "this should be catched" in result.stderr
 
     def test_enalbeStreaming_subscribe_keyededStreamTable(self):
@@ -1367,7 +1375,7 @@ class TestSubscribe:
         conn1.connect(HOST, PORT, "admin", "123456")
         conn1.enableStreaming(SUBPORT)
 
-        script="""
+        script = """
             colName=["time","sym", "p1", "p2", "ind"]
             colType=["timestamp","symbol","double","double","int"]
             t = keyedStreamTable(`time, 100:0, colName, colType);
@@ -1379,19 +1387,21 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         res = []
+
         def tmp_handle(array, co):
             def myhandler(lst):
                 array.append(lst)
                 co.countDown(1)
+
             return myhandler
-        
-        conn1.subscribe(HOST,PORT,tmp_handle(res, counter),"st","test",0,True)
+
+        conn1.subscribe(HOST, PORT, tmp_handle(res, counter), "st", "test", 0, True)
         assert counter.wait_s(10)
-        conn1.unsubscribe(HOST, PORT, "st","test")
+        conn1.unsubscribe(HOST, PORT, "st", "test")
         ex_df = conn1.run('select * from st order by time')
         for i in range(len(res)):
             assert res[i] == list(ex_df.iloc[i])
-        
+
         conn1.undef('st', 'SHARED')
         conn1.close()
 

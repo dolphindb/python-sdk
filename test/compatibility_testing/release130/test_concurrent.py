@@ -1,9 +1,12 @@
+import asyncio
+import threading
+
+import dolphindb as ddb
 import pytest
+
 from setup.settings import *
 from setup.utils import get_pid
-import dolphindb as ddb
-import threading
-import asyncio
+
 
 def insert_job(tablename, sleep_time):
     conn = ddb.session(HOST, PORT, USER, PASSWD)
@@ -17,8 +20,9 @@ def insert_job(tablename, sleep_time):
     conn.close()
     assert conn.isClosed()
 
+
 class TestConcurrent:
-    conn = ddb.session(enablePickle=False) # pickle=True时，不支持decimal
+    conn = ddb.session(enablePickle=False)  # pickle=True时，不支持decimal
 
     def setup_method(self):
         try:
@@ -34,7 +38,7 @@ class TestConcurrent:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -76,6 +80,7 @@ class TestConcurrent:
             go
             exec count(*) from loadTable('{dbpath}', `{tab})
         """
+
         async def insert_task():
             while True:
                 try:

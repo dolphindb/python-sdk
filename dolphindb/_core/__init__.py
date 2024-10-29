@@ -15,7 +15,8 @@ class DolphinDBRuntime:
     def __init__(self) -> None:
         if not DolphinDBRuntime._ddbcpp:
             sys.path.append(str(Path(os.path.dirname(__file__)).parent))
-            DolphinDBRuntime._ddbcpp = __import__("_dolphindbcpp")
+            from .. import _dolphindbcpp as _ddbcpp
+            DolphinDBRuntime._ddbcpp = _ddbcpp
             DolphinDBRuntime._ddbcpp.init()
 
 

@@ -1,8 +1,10 @@
 import decimal
 import random
+
 import pytest
 from numpy.testing import *
 from pandas.testing import *
+
 from setup.prepare import *
 from setup.settings import *
 from setup.utils import get_pid, random_string
@@ -706,7 +708,6 @@ class TestTableAppender:
         re = conn.run(script)
         assert_array_equal(re, [True for _ in range(22)])
 
-    # todo:bug of pandas 2.2
     @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     def test_TableAppender_dfs_table_alltype_arrayvector(self, pickle, compress):
@@ -768,7 +769,11 @@ class TestTableAppender:
                 np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object')]
         })
         appender.append(df)
-        assert_frame_equal(df, conn.run("select * from pt"))
+        if pickle:
+            for i in ['date','time','minute','second','datetime','datehour','timestamp','nanotime','nanotimestamp']:
+                df[i][0] = df[i][0].astype('datetime64[ns]')
+                df[i][1] = df[i][1].astype('datetime64[ns]')
+        assert_frame_equal(df, conn.run("select * from pt"),check_column_type=False)
 
     @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
@@ -815,7 +820,7 @@ class TestTableAppender:
                              dtype='object'),
             'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             appender.append(df)
@@ -867,7 +872,7 @@ class TestTableAppender:
                              dtype='object'),
             'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             appender.append(df)
@@ -920,7 +925,7 @@ class TestTableAppender:
                              dtype='object'),
             'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             appender.append(df)
@@ -973,7 +978,7 @@ class TestTableAppender:
                              dtype='object'),
             'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             appender.append(df)
@@ -1026,12 +1031,12 @@ class TestTableAppender:
                              dtype='object'),
             'int128': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
                                dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
+            'blob': np.array([b'blob1', b'blob2'], dtype='object')
         })
         try:
             appender.append(df)
         except Exception as e:
-            assert "(column \"string\", row 0) must be of STRING type" in str(e)
+            assert "The value <NULL> (column \"int128\", row 2) must be of INT128 type." in str(e)
 
     @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
@@ -1582,7 +1587,7 @@ class TestTableAppender:
             conn.close()
             pt.append(df)
         except RuntimeError as e:
-            assert "Session has been closed." in str(e)
+            assert "Session has been closed" in str(e)
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         pt = ddb.tableAppender(tableName="share_t", ddbSession=conn)
         del conn

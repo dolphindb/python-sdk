@@ -1,10 +1,11 @@
 import pytest
-from setup.prepare import *
-from setup.settings import *
-import dolphindb as ddb
 from numpy.testing import *
 from pandas.testing import *
+
+from setup.prepare import *
+from setup.settings import *
 from setup.utils import get_pid
+
 
 class TestDownloadBasicDataTypes:
     conn = ddb.session()
@@ -23,7 +24,7 @@ class TestDownloadBasicDataTypes:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -97,7 +98,7 @@ class TestDownloadBasicDataTypes:
         for s, p in tmp_p:
             res = conn.run(s)
             if data_type in [DATATYPE.DT_FLOAT, DATATYPE.DT_DOUBLE] and p is not None:
-                assert len(res)==len(p)
+                assert len(res) == len(p)
                 for i in res:
                     assert i in p
             else:
@@ -141,7 +142,7 @@ class TestDownloadBasicDataTypes:
     @pytest.mark.parametrize('tabletype', ['table'], ids=['table'])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
     def test_download_Table(self, tabletype, data_type, pickle, compress, isShare):
-        if data_type==DATATYPE.DT_BLOB:
+        if data_type == DATATYPE.DT_BLOB:
             return
         tmp_s, tmp_p = get_Table(
             typeTable=tabletype, types=data_type, ishare=isShare, names="download")
@@ -151,21 +152,22 @@ class TestDownloadBasicDataTypes:
         # todo:bug?
         for s, p in tmp_p:
             res = conn.run(s)
-            conn.run('print '+s)
-            if data_type==DATATYPE.DT_MONTH and not pickle:
-                p['month_0']=p['month_0'].astype('datetime64[ns]')
-                p['month_1']=p['month_1'].astype('datetime64[ns]')
-                p['month_2']=p['month_2'].astype('datetime64[ns]')
+            conn.run('print ' + s)
+            if data_type == DATATYPE.DT_MONTH and not pickle:
+                p['month_0'] = p['month_0'].astype('datetime64[ns]')
+                p['month_1'] = p['month_1'].astype('datetime64[ns]')
+                p['month_2'] = p['month_2'].astype('datetime64[ns]')
             assert_frame_equal(res, p)
         conn.undefAll()
         conn.close()
+
 
 class TestDownloadHugeData:
     # expect string value
     tmp = "abcd中文123"
     ex = ""
     for _ in range(100000):
-        ex = ex+tmp
+        ex = ex + tmp
     conn = ddb.session()
 
     def setup_method(self):
@@ -182,7 +184,7 @@ class TestDownloadHugeData:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -243,13 +245,13 @@ class TestDownloadHugeData:
         if data_type in ['string', 'symbol']:
             try:
                 conn1.run(
-                    "table("+data_type + """([concat(take(`abcd中文123,100000))]) as col1)""")
+                    "table(" + data_type + """([concat(take(`abcd中文123,100000))]) as col1)""")
             except Exception as err:
                 assert 'IO error type 4' in str(err)
 
         elif not pickle:
             tab = conn1.run(
-                "table("+data_type + """([concat(take(`abcd中文123,100000))]) as col1)""")
+                "table(" + data_type + """([concat(take(`abcd中文123,100000))]) as col1)""")
             assert tab.size == 1
             assert tab['col1'].size == 1
             assert tab['col1'][0] == self.ex
@@ -264,8 +266,9 @@ class TestDownloadHugeData:
                             compress=compress, enablePickle=pickle)
         if data_type in ['string', 'symbol']:
             try:
-                conn1.run("""{}([concat(take(`abcd中文123,100000))])[0]:{}([concat(take(`abcd中文123,100000))])[0]""".format(
-                    data_type, data_type))
+                conn1.run(
+                    """{}([concat(take(`abcd中文123,100000))])[0]:{}([concat(take(`abcd中文123,100000))])[0]""".format(
+                        data_type, data_type))
             except Exception as err:
                 assert 'IO error type 4' in str(err)
         else:

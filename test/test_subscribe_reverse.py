@@ -1,19 +1,20 @@
 import platform
 import subprocess
+import sys
 import time
 from itertools import chain
-from setup.utils import CountBatchDownLatch
+
 import dolphindb as ddb
 import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import *
 from pandas.testing import *
-from setup.settings import *
-import sys
-from setup.utils import get_pid
 
-PYTHON_VERSION = tuple(int(i) for i in platform.python_version().split('.'))
+from setup.settings import *
+from setup.utils import CountBatchDownLatch
+from setup.utils import get_pid
+from basic_testing.prepare import PYTHON_VERSION
 
 
 def gethandler(df, counter):

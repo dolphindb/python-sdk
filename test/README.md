@@ -24,9 +24,9 @@ docker build -t python-coverage:3.10.13 python-sdk/.dockerfiles/linux_coverage/
 
 ### build with docker
 
-> **NOTICE:** 
-> During execution, the 'python-sdk' should be included  in the current directory and the current directory should be mapped to '/project'.
-
+> **NOTICE:**
+> During execution, the 'python-sdk' should be included in the current directory and the current directory should be
+> mapped to '/project'.
 
 #### 1. build python-sdk whl
 
@@ -45,12 +45,14 @@ sudo docker run --rm -v `pwd`:/project -v /opt/BullseyeCoverage/:/opt/BullseyeCo
 if using BullseyeCoverage, excute `export COVFILE=python-sdk/test3.10.cov`
 
 1- test with pytest
+
 ```
 pip install --force-reinstall python-sdk/dist/xxxxx.whl
 pytest test_files.py
 ```
 
 2- test with gtest
+
 ```
 export LD_LIBRARY_PATH=/path_to_python_lib/
 python-sdk/core/test/build/gt_main

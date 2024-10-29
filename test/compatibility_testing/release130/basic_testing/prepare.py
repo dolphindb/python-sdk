@@ -1,17 +1,20 @@
+import math
 import platform
 import re
-from uuid import UUID
-import numpy as np
-import math
 from decimal import Decimal
-import pandas as pd
-import dolphindb.settings as keys
 from importlib.util import find_spec
+from uuid import UUID
+
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
+
 if find_spec("pyarrow") is not None:
     import pyarrow as pa
 
-PANDAS_VERSION=tuple(int(i) for i in pd.__version__.split('.'))
-PYTHON_VERSION=tuple(int(i) for i in platform.python_version().split('.'))
+PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
+PYTHON_VERSION = tuple(int(i) for i in platform.python_version().split('.'))
+
 
 # todo:exception(a_[] is not a qualified variable name.)
 # todo:str & bytes empty
@@ -23,19 +26,19 @@ class DataUtils(object):
             'value': None,
             'expect_typestr': 'VOID',
             'expect_value': 'NULL',
-            'dtype':'object',
+            'dtype': 'object',
         },
         'data_numpy_nan': {
             'value': np.NAN,
             'expect_typestr': 'DOUBLE',
-            'expect_value':'00F',
-            'dtype':np.float64,
+            'expect_value': '00F',
+            'dtype': np.float64,
         },
         'data_pandas_nat': {
             'value': pd.NaT,
             'expect_typestr': 'NANOTIMESTAMP',
             'expect_value': '00N',
-            'dtype':'datetime64[ns]',
+            'dtype': 'datetime64[ns]',
         },
         # 'data_numpy_void':np.void,
         # 'data_pandas_na':pd.NA,
@@ -46,7 +49,7 @@ class DataUtils(object):
             'value': 0,
             'expect_typestr': 'LONG',
             'expect_value': '0',
-            'dtype':np.int64,
+            'dtype': np.int64,
         },
         'data_numpy_int8_0': {
             'value': np.int8(0),
@@ -313,7 +316,7 @@ class DataUtils(object):
             'value': np.datetime64(0, 'ns'),
             'expect_typestr': 'NANOTIMESTAMP',
             'expect_value': "1970.01.01T00:00:00.000000000",
-            'dtype':'datetime64[ns]',
+            'dtype': 'datetime64[ns]',
         },
         'data_numpy_datetime64_ns_max': {
             'value': np.datetime64('2262-04-11T23:47:16.854775807', 'ns'),
@@ -429,12 +432,12 @@ class DataUtils(object):
     DATA_DOWNLOAD = {
         # null
         'void': {
-            'value': 'NULL',# ddb script
-            'expect': None,# python expect
-            'dtype':'object',# python numpy expect dtype
-            'contain_none':{ # contain none special
-                'expect':None,# python none expect
-                'dtype':'object',# python contain none numpy expect dtype
+            'value': 'NULL',  # ddb script
+            'expect': None,  # python expect
+            'dtype': 'object',  # python numpy expect dtype
+            'contain_none': {  # contain none special
+                'expect': None,  # python none expect
+                'dtype': 'object',  # python contain none numpy expect dtype
             },
         },
 
@@ -616,7 +619,7 @@ class DataUtils(object):
             'expect': np.datetime64('1970-01-01', 'D'),
             'dtype': 'datetime64[D]',
             'contain_none': {
-                'expect': np.datetime64('nat','D'),
+                'expect': np.datetime64('nat', 'D'),
                 'dtype': 'datetime64[D]',
             },
         },
@@ -1047,302 +1050,303 @@ class DataUtils(object):
         # },
     }
     if find_spec("pyarrow") is not None:
-        DATA_UPLOAD_ARROW={
-        'data_arrow_int8_0':{
-            'value':0,
-            'dtype_arrow':pa.int8(),
-            'expect_typestr':"'FAST CHAR VECTOR'",
-            'expect_value':0,
-        },
-        'data_arrow_int8_max': {
-            'value': 2**7-1,
-            'dtype_arrow': pa.int8(),
-            'expect_typestr': "'FAST CHAR VECTOR'",
-            'expect_value': 127,
-        },
-        'data_arrow_int8_min': {
-            'value': -2 ** 7 + 1,
-            'dtype_arrow': pa.int8(),
-            'expect_typestr': "'FAST CHAR VECTOR'",
-            'expect_value': -127,
-        },
-        'data_arrow_int8_none': {
-            'value': -2 ** 7,
-            'dtype_arrow': pa.int8(),
-            'expect_typestr': "'FAST CHAR VECTOR'",
-            'expect_value': '00c',
-        },
-        'data_arrow_int16_0': {
-            'value': 0,
-            'dtype_arrow': pa.int16(),
-            'expect_typestr': "'FAST SHORT VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_int16_max': {
-            'value': 2 ** 15 - 1,
-            'dtype_arrow': pa.int16(),
-            'expect_typestr': "'FAST SHORT VECTOR'",
-            'expect_value': 2 ** 15 - 1,
-        },
-        'data_arrow_int16_min': {
-            'value': -2 ** 15 + 1,
-            'dtype_arrow': pa.int16(),
-            'expect_typestr': "'FAST SHORT VECTOR'",
-            'expect_value': -2 ** 15 + 1,
-        },
-        'data_arrow_int16_none': {
-            'value': -2 ** 15,
-            'dtype_arrow': pa.int16(),
-            'expect_typestr': "'FAST SHORT VECTOR'",
-            'expect_value': '00h',
-        },
-        'data_arrow_int32_0': {
-            'value': 0,
-            'dtype_arrow': pa.int32(),
-            'expect_typestr': "'FAST INT VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_int32_max': {
-            'value': 2 ** 31 - 1,
-            'dtype_arrow': pa.int32(),
-            'expect_typestr': "'FAST INT VECTOR'",
-            'expect_value': 2 ** 31 - 1,
-        },
-        'data_arrow_int32_min': {
-            'value': -2 ** 31 + 1,
-            'dtype_arrow': pa.int32(),
-            'expect_typestr': "'FAST INT VECTOR'",
-            'expect_value': -2 ** 31 + 1,
-        },
-        'data_arrow_int32_none': {
-            'value': -2 ** 31,
-            'dtype_arrow': pa.int32(),
-            'expect_typestr': "'FAST INT VECTOR'",
-            'expect_value': '00i',
-        },
-        'data_arrow_int64_0': {
-            'value': 0,
-            'dtype_arrow': pa.int64(),
-            'expect_typestr': "'FAST LONG VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_int64_max': {
-            'value': 2 ** 63 - 1,
-            'dtype_arrow': pa.int64(),
-            'expect_typestr': "'FAST LONG VECTOR'",
-            'expect_value': 2 ** 63 - 1,
-        },
-        'data_arrow_int64_min': {
-            'value': -2 ** 63 + 1,
-            'dtype_arrow': pa.int64(),
-            'expect_typestr': "'FAST LONG VECTOR'",
-            'expect_value': -2 ** 63 + 1,
-        },
-        'data_arrow_int64_none': {
-            'value': -2 ** 63,
-            'dtype_arrow': pa.int64(),
-            'expect_typestr': "'FAST LONG VECTOR'",
-            'expect_value': '00l',
-        },
-        'data_arrow_float32_0': {
-            'value': 0,
-            'dtype_arrow': pa.float32(),
-            'expect_typestr': "'FAST FLOAT VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_float32_nan': {
-            'value': float('nan'),
-            'dtype_arrow': pa.float32(),
-            'expect_typestr': "'FAST FLOAT VECTOR'",
-            'expect_value': '00f',
-        },
-        # 'data_arrow_float32_inf': {
-        #     'value': float('inf'),
-        #     'dtype_arrow': pa.float32(),
-        #     'expect_typestr': "'FAST FLOAT VECTOR'",
-        # },
-        'data_arrow_float32_max': {
-            'value': 3.4028235e+38,
-            'dtype_arrow': pa.float32(),
-            'expect_typestr': "'FAST FLOAT VECTOR'",
-            'expect_value': 'float(3.4028235e+38)',
-        },
-        'data_arrow_float32_none': {
-            'value': -3.4028235e+38,
-            'dtype_arrow': pa.float32(),
-            'expect_typestr': "'FAST FLOAT VECTOR'",
-            'expect_value': '00f',
-        },
-        'data_arrow_float64_0': {
-            'value': 0,
-            'dtype_arrow': pa.float64(),
-            'expect_typestr': "'FAST DOUBLE VECTOR'",
-            'expect_value': 0,
-        },
-        'data_arrow_float64_nan': {
-            'value': float('nan'),
-            'dtype_arrow': pa.float64(),
-            'expect_typestr': "'FAST DOUBLE VECTOR'",
-            'expect_value': '00F',
-        },
-        # 'data_arrow_float64_inf': {
-        #     'value': float('inf'),
-        #     'dtype_arrow': pa.float64(),
-        #     'expect_typestr': "'FAST DOUBLE VECTOR'",
-        # },
-        'data_arrow_float64_max': {
-            'value': 1.7976931348623157e+308,
-            'dtype_arrow': pa.float64(),
-            'expect_typestr': "'FAST DOUBLE VECTOR'",
-            'expect_value': 'double(1.7976931348623157e+308)',
-        },
-        'data_arrow_float64_none': {
-            'value': -1.7976931348623157e+308,
-            'dtype_arrow': pa.float64(),
-            'expect_typestr': "'FAST DOUBLE VECTOR'",
-            'expect_value': '00F',
-        },
-        'data_arrow_string':{
-            'value':'abc!@#中文 123',
-            'dtype_arrow':pa.utf8(),
-            'expect_typestr': "'STRING VECTOR'",
-            'expect_value': "'abc!@#中文 123'",
-        },
-        'data_arrow_bytes_utf8': {
-            'value': 'abc!@#中文 123'.encode(),
-            'dtype_arrow': pa.large_binary(),
-            'expect_typestr': "'BLOB VECTOR'",
-            'expect_value': "'abc!@#中文 123'",
-        },
-        'data_arrow_bytes_gbk': {
-            'value': 'abc!@#中文 123'.encode('gbk'),
-            'dtype_arrow': pa.large_binary(),
-            'expect_typestr': "'BLOB VECTOR'",
-            'expect_value': "fromUTF8('abc!@#中文 123','gbk')",
-        },
-        'data_arrow_bool_true': {
-            'value': True,
-            'dtype_arrow': pa.bool_(),
-            'expect_typestr': "'FAST BOOL VECTOR'",
-            'expect_value': 'true',
-        },
-        'data_arrow_bool_false': {
-            'value': False,
-            'dtype_arrow': pa.bool_(),
-            'expect_typestr': "'FAST BOOL VECTOR'",
-            'expect_value': 'false',
-        },
-        'data_arrow_date32_0':{
-            'value':0,
-            'dtype_arrow': pa.date32(),
-            'expect_typestr': "'FAST DATE VECTOR'",
-            'expect_value':"1970.01.01",
-        },
-        # not support
-        # 'data_arrow_date64_0': {
-        #     'value': 0,
-        #     'dtype_arrow': pa.date64(),
-        # },
-        'data_arrow_time32_ms_0': {
-            'value': 0,
-            'dtype_arrow': pa.time32('ms'),
-            'expect_typestr': "'FAST TIME VECTOR'",
-            'expect_value': "00:00:00.000",
-        },
-        'data_arrow_time32_s_0': {
-            'value': 0,
-            'dtype_arrow': pa.time32('s'),
-            'expect_typestr': "'FAST SECOND VECTOR'",
-            'expect_value': "00:00:00",
-        },
-        'data_arrow_time64_ns_0': {
-            'value': 0,
-            'dtype_arrow': pa.time64('ns'),
-            'expect_typestr': "'FAST NANOTIME VECTOR'",
-            'expect_value': "00:00:00.000000000",
-        },
-        # not support
-        # 'data_arrow_time64_us_0': {
-        #     'value': 0,
-        #     'dtype_arrow': pa.time64('us'),
-        # },
-        'data_arrow_timestamp_ns_0': {
-            'value': 0,
-            'dtype_arrow': pa.timestamp('ns'),
-            'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
-            'expect_value': "1970.01.01T00:00:00.000000000",
-        },
-        'data_arrow_timestamp_ns_max': {
-            'value': np.datetime64('2262-04-11T23:47:16.854775807', 'ns'),
-            'dtype_arrow': pa.timestamp('ns'),
-            'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
-            'expect_value': "2262.04.11T23:47:16.854775807",
-        },
-        'data_arrow_timestamp_ns_min': {
-            'value': np.datetime64('1677-09-21T00:12:43.145224193', 'ns'),
-            'dtype_arrow': pa.timestamp('ns'),
-            'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
-            'expect_value': "1677.09.21T00:12:43.145224193",
-        },
-        'data_arrow_timestamp_ns_none': {
-            'value': np.datetime64('1677-09-21T00:12:43.145224192', 'ns'),
-            'dtype_arrow': pa.timestamp('ns'),
-            'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
-            'expect_value': "00N",
-        },
-        # not support
-        # 'data_arrow_timestamp_us_0': {
-        #     'value': 0,
-        #     'dtype_arrow': pa.timestamp('us'),
-        # },
-        'data_arrow_timestamp_ms_0': {
-            'value': 0,
-            'dtype_arrow': pa.timestamp('ms'),
-            'expect_typestr': "'FAST TIMESTAMP VECTOR'",
-            'expect_value': "1970.01.01T00:00:00.000",
-        },
-        'data_arrow_timestamp_s_0': {
-            'value': 0,
-            'dtype_arrow': pa.timestamp('s'),
-            'expect_typestr': "'FAST DATETIME VECTOR'",
-            'expect_value': "1970.01.01T00:00:00",
-        },
-        # 'data_arrow_decimal128': {
-        #     'value': Decimal('0.00'),
-        #     'dtype_arrow': pa.decimal128(3,2),
-        #     'expect_typestr': "'FAST DECIMAL128 VECTOR'",
-        #     'expect_value': "decimal128('0.00',2)",
-        # },
-        # 'data_arrow_decimal128_nan': {
-        #     'value': Decimal('nan'),
-        #     'dtype_arrow': pa.decimal128(3, 2),
-        #     'expect_typestr': "'FAST DECIMAL128 VECTOR'",
-        #     'expect_value': "decimal64(NULL,2)",
-        # },
-        # not support
-        # 'data_arrow_decimal256_0': {
-        #     'value': 0,
-        #     'dtype_arrow': pa.decimal256(2),
-        # },
-        'data_arrow_symbol':{
-            'value':'aaa',
-            'dtype_arrow': pa.dictionary(pa.int32(),pa.utf8()),
-            'expect_typestr':"'FAST SYMBOL VECTOR'",
-            'expect_value':"'aaa'",
-        },
-        'data_arrow_uuid': {
-            'value': UUID('5d212a78-cc48-e3b1-4235-b4d91473ee87').bytes,
-            'dtype_arrow': pa.binary(16),
-            'expect_typestr': "'FAST UUID VECTOR'",
-            'expect_value':"uuid('5d212a78-cc48-e3b1-4235-b4d91473ee87')"
-        },
-        'data_arrow_int128': {
-            'value': UUID('e1671797c52e15f763380b45e841ec32').bytes,
-            'dtype_arrow': pa.binary(16),
-            'expect_typestr': "'FAST INT128 VECTOR'",
-            'expect_value': "int128('e1671797c52e15f763380b45e841ec32')"
-        },
-    }
+        DATA_UPLOAD_ARROW = {
+            'data_arrow_int8_0': {
+                'value': 0,
+                'dtype_arrow': pa.int8(),
+                'expect_typestr': "'FAST CHAR VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_int8_max': {
+                'value': 2 ** 7 - 1,
+                'dtype_arrow': pa.int8(),
+                'expect_typestr': "'FAST CHAR VECTOR'",
+                'expect_value': 127,
+            },
+            'data_arrow_int8_min': {
+                'value': -2 ** 7 + 1,
+                'dtype_arrow': pa.int8(),
+                'expect_typestr': "'FAST CHAR VECTOR'",
+                'expect_value': -127,
+            },
+            'data_arrow_int8_none': {
+                'value': -2 ** 7,
+                'dtype_arrow': pa.int8(),
+                'expect_typestr': "'FAST CHAR VECTOR'",
+                'expect_value': '00c',
+            },
+            'data_arrow_int16_0': {
+                'value': 0,
+                'dtype_arrow': pa.int16(),
+                'expect_typestr': "'FAST SHORT VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_int16_max': {
+                'value': 2 ** 15 - 1,
+                'dtype_arrow': pa.int16(),
+                'expect_typestr': "'FAST SHORT VECTOR'",
+                'expect_value': 2 ** 15 - 1,
+            },
+            'data_arrow_int16_min': {
+                'value': -2 ** 15 + 1,
+                'dtype_arrow': pa.int16(),
+                'expect_typestr': "'FAST SHORT VECTOR'",
+                'expect_value': -2 ** 15 + 1,
+            },
+            'data_arrow_int16_none': {
+                'value': -2 ** 15,
+                'dtype_arrow': pa.int16(),
+                'expect_typestr': "'FAST SHORT VECTOR'",
+                'expect_value': '00h',
+            },
+            'data_arrow_int32_0': {
+                'value': 0,
+                'dtype_arrow': pa.int32(),
+                'expect_typestr': "'FAST INT VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_int32_max': {
+                'value': 2 ** 31 - 1,
+                'dtype_arrow': pa.int32(),
+                'expect_typestr': "'FAST INT VECTOR'",
+                'expect_value': 2 ** 31 - 1,
+            },
+            'data_arrow_int32_min': {
+                'value': -2 ** 31 + 1,
+                'dtype_arrow': pa.int32(),
+                'expect_typestr': "'FAST INT VECTOR'",
+                'expect_value': -2 ** 31 + 1,
+            },
+            'data_arrow_int32_none': {
+                'value': -2 ** 31,
+                'dtype_arrow': pa.int32(),
+                'expect_typestr': "'FAST INT VECTOR'",
+                'expect_value': '00i',
+            },
+            'data_arrow_int64_0': {
+                'value': 0,
+                'dtype_arrow': pa.int64(),
+                'expect_typestr': "'FAST LONG VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_int64_max': {
+                'value': 2 ** 63 - 1,
+                'dtype_arrow': pa.int64(),
+                'expect_typestr': "'FAST LONG VECTOR'",
+                'expect_value': 2 ** 63 - 1,
+            },
+            'data_arrow_int64_min': {
+                'value': -2 ** 63 + 1,
+                'dtype_arrow': pa.int64(),
+                'expect_typestr': "'FAST LONG VECTOR'",
+                'expect_value': -2 ** 63 + 1,
+            },
+            'data_arrow_int64_none': {
+                'value': -2 ** 63,
+                'dtype_arrow': pa.int64(),
+                'expect_typestr': "'FAST LONG VECTOR'",
+                'expect_value': '00l',
+            },
+            'data_arrow_float32_0': {
+                'value': 0,
+                'dtype_arrow': pa.float32(),
+                'expect_typestr': "'FAST FLOAT VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_float32_nan': {
+                'value': float('nan'),
+                'dtype_arrow': pa.float32(),
+                'expect_typestr': "'FAST FLOAT VECTOR'",
+                'expect_value': '00f',
+            },
+            # 'data_arrow_float32_inf': {
+            #     'value': float('inf'),
+            #     'dtype_arrow': pa.float32(),
+            #     'expect_typestr': "'FAST FLOAT VECTOR'",
+            # },
+            'data_arrow_float32_max': {
+                'value': 3.4028235e+38,
+                'dtype_arrow': pa.float32(),
+                'expect_typestr': "'FAST FLOAT VECTOR'",
+                'expect_value': 'float(3.4028235e+38)',
+            },
+            'data_arrow_float32_none': {
+                'value': -3.4028235e+38,
+                'dtype_arrow': pa.float32(),
+                'expect_typestr': "'FAST FLOAT VECTOR'",
+                'expect_value': '00f',
+            },
+            'data_arrow_float64_0': {
+                'value': 0,
+                'dtype_arrow': pa.float64(),
+                'expect_typestr': "'FAST DOUBLE VECTOR'",
+                'expect_value': 0,
+            },
+            'data_arrow_float64_nan': {
+                'value': float('nan'),
+                'dtype_arrow': pa.float64(),
+                'expect_typestr': "'FAST DOUBLE VECTOR'",
+                'expect_value': '00F',
+            },
+            # 'data_arrow_float64_inf': {
+            #     'value': float('inf'),
+            #     'dtype_arrow': pa.float64(),
+            #     'expect_typestr': "'FAST DOUBLE VECTOR'",
+            # },
+            'data_arrow_float64_max': {
+                'value': 1.7976931348623157e+308,
+                'dtype_arrow': pa.float64(),
+                'expect_typestr': "'FAST DOUBLE VECTOR'",
+                'expect_value': 'double(1.7976931348623157e+308)',
+            },
+            'data_arrow_float64_none': {
+                'value': -1.7976931348623157e+308,
+                'dtype_arrow': pa.float64(),
+                'expect_typestr': "'FAST DOUBLE VECTOR'",
+                'expect_value': '00F',
+            },
+            'data_arrow_string': {
+                'value': 'abc!@#中文 123',
+                'dtype_arrow': pa.utf8(),
+                'expect_typestr': "'STRING VECTOR'",
+                'expect_value': "'abc!@#中文 123'",
+            },
+            'data_arrow_bytes_utf8': {
+                'value': 'abc!@#中文 123'.encode(),
+                'dtype_arrow': pa.large_binary(),
+                'expect_typestr': "'BLOB VECTOR'",
+                'expect_value': "'abc!@#中文 123'",
+            },
+            'data_arrow_bytes_gbk': {
+                'value': 'abc!@#中文 123'.encode('gbk'),
+                'dtype_arrow': pa.large_binary(),
+                'expect_typestr': "'BLOB VECTOR'",
+                'expect_value': "fromUTF8('abc!@#中文 123','gbk')",
+            },
+            'data_arrow_bool_true': {
+                'value': True,
+                'dtype_arrow': pa.bool_(),
+                'expect_typestr': "'FAST BOOL VECTOR'",
+                'expect_value': 'true',
+            },
+            'data_arrow_bool_false': {
+                'value': False,
+                'dtype_arrow': pa.bool_(),
+                'expect_typestr': "'FAST BOOL VECTOR'",
+                'expect_value': 'false',
+            },
+            'data_arrow_date32_0': {
+                'value': 0,
+                'dtype_arrow': pa.date32(),
+                'expect_typestr': "'FAST DATE VECTOR'",
+                'expect_value': "1970.01.01",
+            },
+            # not support
+            # 'data_arrow_date64_0': {
+            #     'value': 0,
+            #     'dtype_arrow': pa.date64(),
+            # },
+            'data_arrow_time32_ms_0': {
+                'value': 0,
+                'dtype_arrow': pa.time32('ms'),
+                'expect_typestr': "'FAST TIME VECTOR'",
+                'expect_value': "00:00:00.000",
+            },
+            'data_arrow_time32_s_0': {
+                'value': 0,
+                'dtype_arrow': pa.time32('s'),
+                'expect_typestr': "'FAST SECOND VECTOR'",
+                'expect_value': "00:00:00",
+            },
+            'data_arrow_time64_ns_0': {
+                'value': 0,
+                'dtype_arrow': pa.time64('ns'),
+                'expect_typestr': "'FAST NANOTIME VECTOR'",
+                'expect_value': "00:00:00.000000000",
+            },
+            # not support
+            # 'data_arrow_time64_us_0': {
+            #     'value': 0,
+            #     'dtype_arrow': pa.time64('us'),
+            # },
+            'data_arrow_timestamp_ns_0': {
+                'value': 0,
+                'dtype_arrow': pa.timestamp('ns'),
+                'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
+                'expect_value': "1970.01.01T00:00:00.000000000",
+            },
+            'data_arrow_timestamp_ns_max': {
+                'value': np.datetime64('2262-04-11T23:47:16.854775807', 'ns'),
+                'dtype_arrow': pa.timestamp('ns'),
+                'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
+                'expect_value': "2262.04.11T23:47:16.854775807",
+            },
+            'data_arrow_timestamp_ns_min': {
+                'value': np.datetime64('1677-09-21T00:12:43.145224193', 'ns'),
+                'dtype_arrow': pa.timestamp('ns'),
+                'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
+                'expect_value': "1677.09.21T00:12:43.145224193",
+            },
+            'data_arrow_timestamp_ns_none': {
+                'value': np.datetime64('1677-09-21T00:12:43.145224192', 'ns'),
+                'dtype_arrow': pa.timestamp('ns'),
+                'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
+                'expect_value': "00N",
+            },
+            # not support
+            # 'data_arrow_timestamp_us_0': {
+            #     'value': 0,
+            #     'dtype_arrow': pa.timestamp('us'),
+            # },
+            'data_arrow_timestamp_ms_0': {
+                'value': 0,
+                'dtype_arrow': pa.timestamp('ms'),
+                'expect_typestr': "'FAST TIMESTAMP VECTOR'",
+                'expect_value': "1970.01.01T00:00:00.000",
+            },
+            'data_arrow_timestamp_s_0': {
+                'value': 0,
+                'dtype_arrow': pa.timestamp('s'),
+                'expect_typestr': "'FAST DATETIME VECTOR'",
+                'expect_value': "1970.01.01T00:00:00",
+            },
+            # 'data_arrow_decimal128': {
+            #     'value': Decimal('0.00'),
+            #     'dtype_arrow': pa.decimal128(3,2),
+            #     'expect_typestr': "'FAST DECIMAL128 VECTOR'",
+            #     'expect_value': "decimal128('0.00',2)",
+            # },
+            # 'data_arrow_decimal128_nan': {
+            #     'value': Decimal('nan'),
+            #     'dtype_arrow': pa.decimal128(3, 2),
+            #     'expect_typestr': "'FAST DECIMAL128 VECTOR'",
+            #     'expect_value': "decimal64(NULL,2)",
+            # },
+            # not support
+            # 'data_arrow_decimal256_0': {
+            #     'value': 0,
+            #     'dtype_arrow': pa.decimal256(2),
+            # },
+            'data_arrow_symbol': {
+                'value': 'aaa',
+                'dtype_arrow': pa.dictionary(pa.int32(), pa.utf8()),
+                'expect_typestr': "'FAST SYMBOL VECTOR'",
+                'expect_value': "'aaa'",
+            },
+            'data_arrow_uuid': {
+                'value': UUID('5d212a78-cc48-e3b1-4235-b4d91473ee87').bytes,
+                'dtype_arrow': pa.binary(16),
+                'expect_typestr': "'FAST UUID VECTOR'",
+                'expect_value': "uuid('5d212a78-cc48-e3b1-4235-b4d91473ee87')"
+            },
+            'data_arrow_int128': {
+                'value': UUID('e1671797c52e15f763380b45e841ec32').bytes,
+                'dtype_arrow': pa.binary(16),
+                'expect_typestr': "'FAST INT128 VECTOR'",
+                'expect_value': "int128('e1671797c52e15f763380b45e841ec32')"
+            },
+        }
+
     @classmethod
     def getScalar(cls, _type):
         """
@@ -1352,17 +1356,17 @@ class DataUtils(object):
             rtn = {k.replace('data', 'scalar'): v
                    for k, v in cls.DATA_UPLOAD.items()
                    if k not in (
-                        'data_decimal_2',
-                        'data_decimal_nan',
-                        'data_decimal_17',
-                        'data_decimal_18',
-                        'data_decimal_38',
+                       'data_decimal_2',
+                       'data_decimal_nan',
+                       'data_decimal_17',
+                       'data_decimal_18',
+                       'data_decimal_38',
                    )}
             rtn.update({k.replace('data', 'scalar'): {
                 'value': v['value'],
                 'expect_typestr': "'DECIMAL64'",
                 'expect_value': v['expect_value'],
-            }for k, v in cls.DATA_UPLOAD.items()
+            } for k, v in cls.DATA_UPLOAD.items()
                 if k in (
                     'data_decimal_2',
                     'data_decimal_nan',
@@ -1373,7 +1377,7 @@ class DataUtils(object):
                 'value': v['value'],
                 'expect_typestr': "'DECIMAL128'",
                 'expect_value': v['expect_value'],
-            }for k, v in cls.DATA_UPLOAD.items()
+            } for k, v in cls.DATA_UPLOAD.items()
                 if k in (
                     'data_decimal_18',
                     'data_decimal_38',
@@ -1397,9 +1401,9 @@ class DataUtils(object):
             } for k, v in cls.DATA_DOWNLOAD.items() if '$' not in v['value']
             }
             rtn.update({
-                k:{
-                    'value':f"x={v['value']}\nx:x",
-                    'expect':[v['expect'],v['expect']],
+                k: {
+                    'value': f"x={v['value']}\nx:x",
+                    'expect': [v['expect'], v['expect']],
                 } for k, v in cls.DATA_DOWNLOAD.items() if '$' in v['value']
             })
             return rtn
@@ -1418,9 +1422,9 @@ class DataUtils(object):
             } for k, v in cls.DATA_DOWNLOAD.items() if '$' not in v['value']
             }
             rtn.update({
-                k:{
-                    'value':f"x={v['value']}\nNULL:x",
-                    'expect':[None,v['expect']],
+                k: {
+                    'value': f"x={v['value']}\nNULL:x",
+                    'expect': [None, v['expect']],
                 } for k, v in cls.DATA_DOWNLOAD.items() if '$' in v['value']
             })
             return rtn
@@ -1532,7 +1536,7 @@ class DataUtils(object):
                     'STRING',
                     'BLOB',
                 ) else f"'{v['expect_typestr']} VECTOR'",
-                'expect_value':f"[,{v['expect_value']},{v['expect_value']}]",
+                'expect_value': f"[,{v['expect_value']},{v['expect_value']}]",
             } for k, v in cls.DATA_UPLOAD.items()
                 if k not in (
                     'data_none',
@@ -1541,7 +1545,7 @@ class DataUtils(object):
             noneFirstVector.update({k.replace('data', 'noneFirstVector'): {
                 'value': [None, v['value'], v['value']],
                 'expect_typestr': "'ANY VECTOR'",
-                'expect_value':"(,,)",
+                'expect_value': "(,,)",
             } for k, v in cls.DATA_UPLOAD.items()
                 if k in (
                     'data_none',
@@ -1627,7 +1631,8 @@ class DataUtils(object):
         else:
             rtn = {k: {
                 'value': f"[NULL,{v['value']},{v['value']}]",
-                'expect':np.array([v['contain_none']['expect'],v['expect'],v['expect']],dtype=v['contain_none']['dtype'])
+                'expect': np.array([v['contain_none']['expect'], v['expect'], v['expect']],
+                                   dtype=v['contain_none']['dtype'])
             } for k, v in cls.DATA_DOWNLOAD.items()
                 if k not in (
                     'void',
@@ -1642,7 +1647,7 @@ class DataUtils(object):
             rtn.update({
                 'any': {
                     'value': '(NULL,2,3)',
-                    'expect':[None,2,3]
+                    'expect': [None, 2, 3]
                 },
             })
             return rtn
@@ -1756,13 +1761,13 @@ class DataUtils(object):
             return rtn
         else:
             return {
-                'vecorSpecial_empty':{
-                    'value':'()',
-                    'expect':[],
+                'vecorSpecial_empty': {
+                    'value': '()',
+                    'expect': [],
                 },
                 'vectorSpecial_vector': {
                     'value': '[[1]]',
-                    'expect': [np.array([1],dtype=np.int32)],
+                    'expect': [np.array([1], dtype=np.int32)],
                 },
                 'vectorSpecial_set': {
                     'value': '[set([1])]',
@@ -1785,10 +1790,10 @@ class DataUtils(object):
         """
         if _type.lower() == 'upload':
             rtn = {k.replace('data', 'matrix'): {
-                'value':np.array([[v['value'], v['value'], v['value']], [v['value'], v['value'], v['value']]],
-                               dtype='object'),
-                'expect_typestr':f"'FAST {v['expect_typestr']} MATRIX'",
-                'expect_value':f"matrix([[{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']}]])"}
+                'value': np.array([[v['value'], v['value'], v['value']], [v['value'], v['value'], v['value']]],
+                                  dtype='object'),
+                'expect_typestr': f"'FAST {v['expect_typestr']} MATRIX'",
+                'expect_value': f"matrix([[{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']}]])"}
                 for k, v in cls.DATA_UPLOAD.items()
                 if k not in (
                     'data_none',
@@ -1896,7 +1901,8 @@ class DataUtils(object):
         else:
             rtn = {k: {
                 'value': f"matrix([NULL,{v['value']},{v['value']}])",
-                'expect': [np.array([[v['contain_none']['expect']], [v['expect']], [v['expect']]], dtype=v['contain_none']['dtype']), None, None],
+                'expect': [np.array([[v['contain_none']['expect']], [v['expect']], [v['expect']]],
+                                    dtype=v['contain_none']['dtype']), None, None],
             } for k, v in cls.DATA_DOWNLOAD.items()
                 if k not in (
                     'void',
@@ -2064,7 +2070,7 @@ class DataUtils(object):
         else:
             return {k: {
                 'value': f"set([{v['value']},NULL])",
-                'expect': {v['expect'],None}
+                'expect': {v['expect'], None}
             } for k, v in cls.DATA_DOWNLOAD.items()
                 if k not in (
                     'void',
@@ -2185,7 +2191,7 @@ class DataUtils(object):
         else:
             return {k: {
                 'value': f"dict([1,2],[{v['value']},NULL])",
-                'expect': {1: v['expect'],2:None},
+                'expect': {1: v['expect'], 2: None},
             } for k, v in cls.DATA_DOWNLOAD.items()
                 if k not in (
                     'void',
@@ -2199,7 +2205,7 @@ class DataUtils(object):
         """
         if _type.lower() == 'upload':
             rtn = {'dictMix': {
-                'value': {k: v['value'] for k,v in cls.DATA_UPLOAD.items()},
+                'value': {k: v['value'] for k, v in cls.DATA_UPLOAD.items()},
                 'expect_typestr': "'STRING->ANY DICTIONARY'",
                 'expect_value': f"dict([{','.join('`' + i for i in cls.DATA_UPLOAD)}],[{','.join(i['expect_value'] for i in cls.DATA_UPLOAD.values())}])"
             }
@@ -2251,11 +2257,11 @@ class DataUtils(object):
             return {k: {
                 'value': f"dict([{v['value']}],[1])",
                 'expect': {v['expect'] if k not in (
-                'char_none',
-                'short_none',
-                'int_none',
-                'long_none',
-            ) else -9223372036854775808:1},
+                    'char_none',
+                    'short_none',
+                    'int_none',
+                    'long_none',
+                ) else -9223372036854775808: 1},
             } for k, v in cls.DATA_DOWNLOAD.items()
                 if k not in (
                     'void',
@@ -2455,7 +2461,7 @@ class DataUtils(object):
             return {
                 'dictSpecial_vector': {
                     'value': 'dict(["1"],[[1]])',
-                    'expect': {'1': np.array([1],dtype=np.int32)},
+                    'expect': {'1': np.array([1], dtype=np.int32)},
                 },
                 'dictSpecial_set': {
                     'value': 'dict(["1"],[set([1])])',
@@ -2510,14 +2516,17 @@ class DataUtils(object):
                     'data_none',
                 )
             })
-            if PANDAS_VERSION<(2,0,0):
-                rtn['table_dtype_numpy_datetime64_ms']['expect_typestr']="'FAST NANOTIMESTAMP VECTOR'"
+            if PANDAS_VERSION < (2, 0, 0):
+                rtn['table_dtype_numpy_datetime64_ms']['expect_typestr'] = "'FAST NANOTIMESTAMP VECTOR'"
                 rtn['table_dtype_numpy_datetime64_s']['expect_typestr'] = "'FAST NANOTIMESTAMP VECTOR'"
             return rtn
         else:
             rtn = {k: {
                 'value': f"table([{v['value']},{v['value']}] as a)",
-                'expect': pd.DataFrame({'a': [v['expect'], v['expect']]}, dtype=v['dtype'] if not isinstance(v['dtype'],str) else re.sub(r'\[.*\]','[ns]',v['dtype'])),
+                'expect': pd.DataFrame({'a': [v['expect'], v['expect']]},
+                                       dtype=v['dtype'] if not isinstance(v['dtype'], str) else re.sub(r'\[.*\]',
+                                                                                                       '[ns]',
+                                                                                                       v['dtype'])),
             } for k, v in cls.DATA_DOWNLOAD.items()
                 if k not in (
                     'void',
@@ -2547,7 +2556,7 @@ class DataUtils(object):
         """
         if _type.lower() == 'upload':
             rtn_first = {k.replace('data', 'table_firstNone'): {
-                'value': pd.DataFrame({'a': [None,v['value'], v['value']]}, dtype='object'),
+                'value': pd.DataFrame({'a': [None, v['value'], v['value']]}, dtype='object'),
                 'expect_typestr': f"'FAST {v['expect_typestr']} VECTOR'" if v['expect_typestr'] not in (
                     'STRING',
                     'BLOB'
@@ -2559,7 +2568,7 @@ class DataUtils(object):
                 )
             }
             rtn_first.update({k.replace('data', 'table_firstNone'): {
-                'value': pd.DataFrame({'a': [None,v['value'], v['value']]}, dtype='object'),
+                'value': pd.DataFrame({'a': [None, v['value'], v['value']]}, dtype='object'),
                 'expect_typestr': f"'STRING VECTOR'",
                 'expect_value': "(,,)",
             } for k, v in cls.DATA_UPLOAD.items()
@@ -2589,7 +2598,7 @@ class DataUtils(object):
                 )
             })
             rtn_last = {k.replace('data', 'table_lastNone'): {
-                'value': pd.DataFrame({'a': [v['value'], v['value'],None]}, dtype='object'),
+                'value': pd.DataFrame({'a': [v['value'], v['value'], None]}, dtype='object'),
                 'expect_typestr': f"'FAST {v['expect_typestr']} VECTOR'" if v['expect_typestr'] not in (
                     'STRING',
                     'BLOB'
@@ -2601,7 +2610,7 @@ class DataUtils(object):
                 )
             }
             rtn_last.update({k.replace('data', 'table_lastNone'): {
-                'value': pd.DataFrame({'a': [v['value'], v['value'],None]}, dtype='object'),
+                'value': pd.DataFrame({'a': [v['value'], v['value'], None]}, dtype='object'),
                 'expect_typestr': f"'STRING VECTOR'",
                 'expect_value': "(,,)",
             } for k, v in cls.DATA_UPLOAD.items()
@@ -2609,11 +2618,16 @@ class DataUtils(object):
                     'data_none',
                 )
             })
-            return {**rtn_first,**rtn_middle,**rtn_last}
+            return {**rtn_first, **rtn_middle, **rtn_last}
         else:
             rtn = {k: {
                 'value': f"table([{v['value']},NULL] as a)",
-                'expect': pd.DataFrame({'a': [v['expect'], v['contain_none']['expect']]},dtype=v['contain_none']['dtype'] if not isinstance(v['contain_none']['dtype'],str) else re.sub(r'\[.*\]','[ns]',v['contain_none']['dtype'])),
+                'expect': pd.DataFrame({'a': [v['expect'], v['contain_none']['expect']]},
+                                       dtype=v['contain_none']['dtype'] if not isinstance(v['contain_none']['dtype'],
+                                                                                          str) else re.sub(r'\[.*\]',
+                                                                                                           '[ns]', v[
+                                                                                                               'contain_none'][
+                                                                                                               'dtype'])),
             } for k, v in cls.DATA_DOWNLOAD.items()
                 if k not in (
                     'void',
@@ -2629,20 +2643,20 @@ class DataUtils(object):
         if _type.lower() == 'upload':
             rtn = {'tableMix': {
                 'value': pd.DataFrame({
-                    k:[v['value'], v['value'], v['value']]
-                       for k,v in cls.DATA_UPLOAD.items()
-                        if k not in ('data_none',)
-                    }, dtype='object'),
-                }
+                    k: [v['value'], v['value'], v['value']]
+                    for k, v in cls.DATA_UPLOAD.items()
+                    if k not in ('data_none',)
+                }, dtype='object'),
+            }
             }
             rtn.update(
                 {'tableMix_dtype': {
                     'value': pd.DataFrame({
-                        k:pd.Series([v['value'], v['value'], v['value']],dtype=v['dtype'])
-                           for k,v in cls.DATA_UPLOAD.items()
-                            if k not in ('data_none',)
-                        }),
-                    }
+                        k: pd.Series([v['value'], v['value'], v['value']], dtype=v['dtype'])
+                        for k, v in cls.DATA_UPLOAD.items()
+                        if k not in ('data_none',)
+                    }),
+                }
                 }
             )
             return rtn
@@ -2671,8 +2685,10 @@ class DataUtils(object):
                     'bool': "'FAST BOOL VECTOR'",
                     'datetime64[ns]': "'FAST NANOTIMESTAMP VECTOR'",
                     'datetime64[us]': "'FAST NANOTIMESTAMP VECTOR'",
-                    'datetime64[ms]': "'FAST TIMESTAMP VECTOR'" if PANDAS_VERSION>=(2,0,0) else "'FAST NANOTIMESTAMP VECTOR'",
-                    'datetime64[s]': "'FAST DATETIME VECTOR'" if PANDAS_VERSION>=(2,0,0) else "'FAST NANOTIMESTAMP VECTOR'",
+                    'datetime64[ms]': "'FAST TIMESTAMP VECTOR'" if PANDAS_VERSION >= (
+                        2, 0, 0) else "'FAST NANOTIMESTAMP VECTOR'",
+                    'datetime64[s]': "'FAST DATETIME VECTOR'" if PANDAS_VERSION >= (
+                        2, 0, 0) else "'FAST NANOTIMESTAMP VECTOR'",
                     'object': "'FAST DOUBLE VECTOR'",
                 }.items()
             }
@@ -2687,9 +2703,11 @@ class DataUtils(object):
         """
         if _type.lower() == 'upload':
             rtn = {k.replace('data', 'arrayVector'): {
-                'value': pd.DataFrame({'a': [[v['value'], v['value'], v['value']]],'b': [[v['value'], v['value'], v['value']]]}, dtype='object'),
+                'value': pd.DataFrame(
+                    {'a': [[v['value'], v['value'], v['value']]], 'b': [[v['value'], v['value'], v['value']]]},
+                    dtype='object'),
                 'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
-                'expect_value':f"table(array({v['expect_typestr']}[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a,array({v['expect_typestr']}[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `b)"
+                'expect_value': f"table(array({v['expect_typestr']}[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a,array({v['expect_typestr']}[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `b)"
             } for k, v in cls.DATA_UPLOAD.items()
                 if k not in (
                     'data_none',
@@ -2699,7 +2717,7 @@ class DataUtils(object):
                     'data_numpy_bytes_gbk',
                     'data_string',
                     'data_numpy_str',
-                    'data_numpy_nan',# __DolphinDB_Type__
+                    'data_numpy_nan',  # __DolphinDB_Type__
                     'data_pandas_nat',
                     'data_nan',
                     'data_numpy_datetime64_ns_none',
@@ -2711,13 +2729,13 @@ class DataUtils(object):
                 )
             }
             rtn.update({k.replace('data', 'arrayVector'): {
-                    'value': pd.DataFrame(
-                        {'a': [[v['value'], v['value'], v['value']]], 'b': [[v['value'], v['value'], v['value']]]},
-                        dtype='object'),
-                    'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
-                    'expect_value': f"table(array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a,array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `b)"
-                } for k,v in cls.DATA_UPLOAD.items()
-                    if k in (
+                'value': pd.DataFrame(
+                    {'a': [[v['value'], v['value'], v['value']]], 'b': [[v['value'], v['value'], v['value']]]},
+                    dtype='object'),
+                'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
+                'expect_value': f"table(array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a,array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `b)"
+            } for k, v in cls.DATA_UPLOAD.items()
+                if k in (
                     'data_decimal_2',
                     'data_decimal_17',
                     'data_decimal_18',
@@ -2735,7 +2753,8 @@ class DataUtils(object):
         """
         if _type.lower() == 'upload':
             arrayVector_firstNone = {k.replace('data', 'arrayVector_firstNone'): {
-                'value': pd.DataFrame({'a': [[None,None,None],[v['value'], v['value'], v['value']],[v['value']]]}, dtype='object'),
+                'value': pd.DataFrame({'a': [[None, None, None], [v['value'], v['value'], v['value']], [v['value']]]},
+                                      dtype='object'),
                 'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                 'expect_value': f"table(array({v['expect_typestr']}[],0,3).append!([[{v['expect_typestr'].lower()}(NULL),{v['expect_typestr'].lower()}(NULL),{v['expect_typestr'].lower()}(NULL)],[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']}]]) as `a)"
             } for k, v in cls.DATA_UPLOAD.items()
@@ -2747,7 +2766,7 @@ class DataUtils(object):
                     'data_numpy_bytes_gbk',
                     'data_string',
                     'data_numpy_str',
-                    'data_numpy_nan',# __DolphinDB_Type__
+                    'data_numpy_nan',  # __DolphinDB_Type__
                     'data_pandas_nat',
                     'data_nan',
                     'data_numpy_datetime64_ns_none',
@@ -2761,7 +2780,7 @@ class DataUtils(object):
             arrayVector_firstNone.update(
                 {k.replace('data', 'arrayVector_firstNone'): {
                     'value': pd.DataFrame(
-                        {'a': [[None,None,None],[v['value'], v['value'], v['value']],[v['value']]]},
+                        {'a': [[None, None, None], [v['value'], v['value'], v['value']], [v['value']]]},
                         dtype='object'),
                     'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                     'expect_value': f"table(array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]}),{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]}),{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]})],[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']}]]) as `a)"
@@ -2776,7 +2795,8 @@ class DataUtils(object):
             )
 
             arrayVector_middleNone = {k.replace('data', 'arrayVector_middleNone'): {
-                'value': pd.DataFrame({'a': [[v['value'], v['value'], v['value']],[None,None,None],[v['value']]]}, dtype='object'),
+                'value': pd.DataFrame({'a': [[v['value'], v['value'], v['value']], [None, None, None], [v['value']]]},
+                                      dtype='object'),
                 'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                 'expect_value': f"table(array({v['expect_typestr']}[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_typestr'].lower()}(NULL),{v['expect_typestr'].lower()}(NULL),{v['expect_typestr'].lower()}(NULL)],[{v['expect_value']}]]) as `a)"
             } for k, v in cls.DATA_UPLOAD.items()
@@ -2788,7 +2808,7 @@ class DataUtils(object):
                     'data_numpy_bytes_gbk',
                     'data_string',
                     'data_numpy_str',
-                    'data_numpy_nan',# __DolphinDB_Type__
+                    'data_numpy_nan',  # __DolphinDB_Type__
                     'data_pandas_nat',
                     'data_nan',
                     'data_numpy_datetime64_ns_none',
@@ -2802,7 +2822,7 @@ class DataUtils(object):
             arrayVector_middleNone.update(
                 {k.replace('data', 'arrayVector_middleNone'): {
                     'value': pd.DataFrame(
-                        {'a': [[v['value'], v['value'], v['value']],[None,None,None],[v['value']]]},
+                        {'a': [[v['value'], v['value'], v['value']], [None, None, None], [v['value']]]},
                         dtype='object'),
                     'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                     'expect_value': f"table(array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]}),{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]}),{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]})],[{v['expect_value']}]]) as `a)"
@@ -2816,7 +2836,8 @@ class DataUtils(object):
                 }
             )
             arrayVector_lastNone = {k.replace('data', 'arrayVector_lastNone'): {
-                'value': pd.DataFrame({'a': [[v['value'], v['value'], v['value']],[v['value']],[None,None,None]]}, dtype='object'),
+                'value': pd.DataFrame({'a': [[v['value'], v['value'], v['value']], [v['value']], [None, None, None]]},
+                                      dtype='object'),
                 'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                 'expect_value': f"table(array({v['expect_typestr']}[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']}],[{v['expect_typestr'].lower()}(NULL),{v['expect_typestr'].lower()}(NULL),{v['expect_typestr'].lower()}(NULL)]]) as `a)"
             } for k, v in cls.DATA_UPLOAD.items()
@@ -2828,7 +2849,7 @@ class DataUtils(object):
                     'data_numpy_bytes_gbk',
                     'data_string',
                     'data_numpy_str',
-                    'data_numpy_nan',# __DolphinDB_Type__
+                    'data_numpy_nan',  # __DolphinDB_Type__
                     'data_pandas_nat',
                     'data_nan',
                     'data_numpy_datetime64_ns_none',
@@ -2842,7 +2863,7 @@ class DataUtils(object):
             arrayVector_lastNone.update(
                 {k.replace('data', 'arrayVector_lastNone'): {
                     'value': pd.DataFrame(
-                        {'a': [[v['value'], v['value'], v['value']],[v['value']],[None,None,None]]},
+                        {'a': [[v['value'], v['value'], v['value']], [v['value']], [None, None, None]]},
                         dtype='object'),
                     'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                     'expect_value': f"table(array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']}],[{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]}),{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]}),{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]})]]) as `a)"
@@ -2856,7 +2877,7 @@ class DataUtils(object):
                 }
             )
             arrayVector_innerNone_first = {k.replace('data', 'arrayVector_innerNone_first'): {
-                'value': pd.DataFrame({'a': [[None,v['value'], v['value']]]}, dtype='object'),
+                'value': pd.DataFrame({'a': [[None, v['value'], v['value']]]}, dtype='object'),
                 'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                 'expect_value': f"table(array({v['expect_typestr']}[],0,3).append!([[{v['expect_typestr'].lower()}(NULL),{v['expect_value']},{v['expect_value']}]]) as `a)"
             } for k, v in cls.DATA_UPLOAD.items()
@@ -2868,7 +2889,7 @@ class DataUtils(object):
                     'data_numpy_bytes_gbk',
                     'data_string',
                     'data_numpy_str',
-                    'data_numpy_nan',# __DolphinDB_Type__
+                    'data_numpy_nan',  # __DolphinDB_Type__
                     'data_pandas_nat',
                     'data_nan',
                     'data_numpy_datetime64_ns_none',
@@ -2882,7 +2903,7 @@ class DataUtils(object):
             arrayVector_innerNone_first.update(
                 {k.replace('data', 'arrayVector_innerNone_first'): {
                     'value': pd.DataFrame(
-                        {'a':  [[None, v['value'], v['value']]]},
+                        {'a': [[None, v['value'], v['value']]]},
                         dtype='object'),
                     'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                     'expect_value': f"table(array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]}),{v['expect_value']},{v['expect_value']}]]) as `a)"
@@ -2908,7 +2929,7 @@ class DataUtils(object):
                     'data_numpy_bytes_gbk',
                     'data_string',
                     'data_numpy_str',
-                    'data_numpy_nan',# __DolphinDB_Type__
+                    'data_numpy_nan',  # __DolphinDB_Type__
                     'data_pandas_nat',
                     'data_nan',
                     'data_numpy_datetime64_ns_none',
@@ -2922,7 +2943,7 @@ class DataUtils(object):
             arrayVector_innerNone_middle.update(
                 {k.replace('data', 'arrayVector_innerNone_middle'): {
                     'value': pd.DataFrame(
-                        {'a':  [[v['value'], None, v['value']]]},
+                        {'a': [[v['value'], None, v['value']]]},
                         dtype='object'),
                     'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                     'expect_value': f"table(array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_value']},{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]}),{v['expect_value']}]]) as `a)"
@@ -2936,7 +2957,7 @@ class DataUtils(object):
                 }
             )
             arrayVector_innerNone_last = {k.replace('data', 'arrayVector_innerNone_last'): {
-                'value': pd.DataFrame({'a': [[v['value'], v['value'],None]]}, dtype='object'),
+                'value': pd.DataFrame({'a': [[v['value'], v['value'], None]]}, dtype='object'),
                 'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                 'expect_value': f"table(array({v['expect_typestr']}[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_typestr'].lower()}(NULL)]]) as `a)"
             } for k, v in cls.DATA_UPLOAD.items()
@@ -2948,7 +2969,7 @@ class DataUtils(object):
                     'data_numpy_bytes_gbk',
                     'data_string',
                     'data_numpy_str',
-                    'data_numpy_nan',# __DolphinDB_Type__
+                    'data_numpy_nan',  # __DolphinDB_Type__
                     'data_pandas_nat',
                     'data_nan',
                     'data_numpy_datetime64_ns_none',
@@ -2962,7 +2983,7 @@ class DataUtils(object):
             arrayVector_innerNone_last.update(
                 {k.replace('data', 'arrayVector_innerNone_last'): {
                     'value': pd.DataFrame(
-                        {'a':  [[v['value'], v['value'],None]]},
+                        {'a': [[v['value'], v['value'], None]]},
                         dtype='object'),
                     'expect_typestr': f"'FAST {v['expect_typestr']}[] VECTOR'",
                     'expect_value': f"table(array({v['expect_typestr']}({k.split('_')[-1]})[],0,3).append!([[{v['expect_value']},{v['expect_value']},{v['expect_typestr'].lower()}(NULL,{k.split('_')[-1]})]]) as `a)"
@@ -2975,7 +2996,8 @@ class DataUtils(object):
                 )
                 }
             )
-            return {**arrayVector_firstNone,**arrayVector_middleNone,**arrayVector_lastNone,**arrayVector_innerNone_first,**arrayVector_innerNone_middle,**arrayVector_innerNone_last}
+            return {**arrayVector_firstNone, **arrayVector_middleNone, **arrayVector_lastNone,
+                    **arrayVector_innerNone_first, **arrayVector_innerNone_middle, **arrayVector_innerNone_last}
         else:
             return {}
 
@@ -2986,23 +3008,23 @@ class DataUtils(object):
         """
         if _type.lower() == 'upload':
             rtn = {'arrayVectorTableMix': {
-                'value': pd.DataFrame({k:[[v['value'],v['value'],v['value']]] for k,v in cls.DATA_UPLOAD.items()
-                                          if k not in (
-                                              'data_none',
-                                              'data_bytes_utf8',
-                                              'data_bytes_gbk',
-                                              'data_numpy_bytes_utf8',
-                                              'data_numpy_bytes_gbk',
-                                              'data_string',
-                                              'data_numpy_str',
-                                              'data_numpy_nan',# __DolphinDB_Type__
-                                              'data_pandas_nat',
-                                              'data_nan',
-                                              'data_numpy_datetime64_ns_none',
-                                              'data_decimal_nan',
-                                          )
-                                    }, dtype='object'),
-                }
+                'value': pd.DataFrame({k: [[v['value'], v['value'], v['value']]] for k, v in cls.DATA_UPLOAD.items()
+                                       if k not in (
+                                           'data_none',
+                                           'data_bytes_utf8',
+                                           'data_bytes_gbk',
+                                           'data_numpy_bytes_utf8',
+                                           'data_numpy_bytes_gbk',
+                                           'data_string',
+                                           'data_numpy_str',
+                                           'data_numpy_nan',  # __DolphinDB_Type__
+                                           'data_pandas_nat',
+                                           'data_nan',
+                                           'data_numpy_datetime64_ns_none',
+                                           'data_decimal_nan',
+                                       )
+                                       }, dtype='object'),
+            }
             }
             return rtn
         else:
@@ -3037,82 +3059,82 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                  )
+                  }
             dt.update({
-                'first_none':[None,True,False],
-                'middle_none': [True,None, False],
+                'first_none': [None, True, False],
+                'middle_none': [True, None, False],
                 'last_none': [True, False, None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_BOOL for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_BOOL for k in dt
             }
-            rtn={'tableSetTypeBOOL':{
-                    'value':df,
-                    'expect_typestr':"'FAST BOOL VECTOR'",
-                    'expect_value': "table("
-                                    "[00b,00b,00b] as `data_none,"
-                                    "[00b,00b,00b] as `data_numpy_nan,"
-                                    "[00b,00b,00b] as `data_pandas_nat,"
-                                    "[false,false,false] as `data_int_0,"
-                                    "[false,false,false] as `data_numpy_int8_0,"
-                                    "[true,true,true] as `data_numpy_int8_max,"
-                                    "[true,true,true] as `data_numpy_int8_min,"
-                                    "[true,true,true] as `data_numpy_int8_none,"
-                                    "[false,false,false] as `data_numpy_int16_0,"
-                                    "[true,true,true] as `data_numpy_int16_max,"
-                                    "[true,true,true] as `data_numpy_int16_min,"
-                                    "[true,true,true] as `data_numpy_int16_none,"
-                                    "[false,false,false] as `data_numpy_int32_0,"
-                                    "[true,true,true] as `data_numpy_int32_max,"
-                                    "[true,true,true] as `data_numpy_int32_min,"
-                                    "[true,true,true] as `data_numpy_int32_none,"
-                                    "[false,false,false] as `data_numpy_int64_0,"
-                                    "[true,true,true] as `data_numpy_int64_max,"
-                                    "[true,true,true] as `data_numpy_int64_min,"
-                                    "[true,true,true] as `data_numpy_int64_none,"
-                                    "[true,true,true] as `data_float,"
-                                    "[true,true,true] as `data_pi,"
-                                    "[00b,00b,00b] as `data_nan,"
-                                    "[false,false,false] as `data_numpy_float32_0,"
-                                    "[true,true,true] as `data_numpy_float32_max,"
-                                    "[true,true,true] as `data_numpy_float32_none,"
-                                    "[false,false,false] as `data_numpy_float64_0,"
-                                    "[true,true,true] as `data_numpy_float64_max,"
-                                    "[true,true,true] as `data_numpy_float64_none,"
-                                    "[true,true,true] as `data_bool_true,"
-                                    "[false,false,false] as `data_bool_false,"
-                                    "[true,true,true] as `data_numpy_bool_true,"
-                                    "[false,false,false] as `data_numpy_bool_false,"
-                                    "[false,false,false] as `data_numpy_datetime64_ns_0,"
-                                    "[true,true,true] as `data_numpy_datetime64_ns_max,"
-                                    "[true,true,true] as `data_numpy_datetime64_ns_min,"
-                                    "[true,true,true] as `data_numpy_datetime64_ns_none,"
-                                    "[false,false,false] as `data_numpy_datetime64_us_0,"
-                                    "[false,false,false] as `data_numpy_datetime64_ms,"
-                                    "[false,false,false] as `data_numpy_datetime64_s,"
-                                    "[false,false,false] as `data_numpy_datetime64_m,"
-                                    "[false,false,false] as `data_numpy_datetime64_h,"
-                                    "[false,false,false] as `data_numpy_datetime64_d_up,"
-                                    "[false,false,false] as `data_numpy_datetime64_m_up,"
-                                    # "[false,false,false] as `data_decimal_2,"
-                                    # "[true,true,true] as `data_decimal_nan,"
-                                    # "[true,true,true] as `data_decimal_17,"
-                                    # "[true,true,true] as `data_decimal_18,"
-                                    # "[true,true,true] as `data_decimal_38,"
-                                    "[00b,true,false] as `first_none,"
-                                    "[true,00b,false] as `middle_none,"
-                                    "[true,false,00b] as `last_none"
-                                    ")"
+            rtn = {'tableSetTypeBOOL': {
+                'value': df,
+                'expect_typestr': "'FAST BOOL VECTOR'",
+                'expect_value': "table("
+                                "[00b,00b,00b] as `data_none,"
+                                "[00b,00b,00b] as `data_numpy_nan,"
+                                "[00b,00b,00b] as `data_pandas_nat,"
+                                "[false,false,false] as `data_int_0,"
+                                "[false,false,false] as `data_numpy_int8_0,"
+                                "[true,true,true] as `data_numpy_int8_max,"
+                                "[true,true,true] as `data_numpy_int8_min,"
+                                "[true,true,true] as `data_numpy_int8_none,"
+                                "[false,false,false] as `data_numpy_int16_0,"
+                                "[true,true,true] as `data_numpy_int16_max,"
+                                "[true,true,true] as `data_numpy_int16_min,"
+                                "[true,true,true] as `data_numpy_int16_none,"
+                                "[false,false,false] as `data_numpy_int32_0,"
+                                "[true,true,true] as `data_numpy_int32_max,"
+                                "[true,true,true] as `data_numpy_int32_min,"
+                                "[true,true,true] as `data_numpy_int32_none,"
+                                "[false,false,false] as `data_numpy_int64_0,"
+                                "[true,true,true] as `data_numpy_int64_max,"
+                                "[true,true,true] as `data_numpy_int64_min,"
+                                "[true,true,true] as `data_numpy_int64_none,"
+                                "[true,true,true] as `data_float,"
+                                "[true,true,true] as `data_pi,"
+                                "[00b,00b,00b] as `data_nan,"
+                                "[false,false,false] as `data_numpy_float32_0,"
+                                "[true,true,true] as `data_numpy_float32_max,"
+                                "[true,true,true] as `data_numpy_float32_none,"
+                                "[false,false,false] as `data_numpy_float64_0,"
+                                "[true,true,true] as `data_numpy_float64_max,"
+                                "[true,true,true] as `data_numpy_float64_none,"
+                                "[true,true,true] as `data_bool_true,"
+                                "[false,false,false] as `data_bool_false,"
+                                "[true,true,true] as `data_numpy_bool_true,"
+                                "[false,false,false] as `data_numpy_bool_false,"
+                                "[false,false,false] as `data_numpy_datetime64_ns_0,"
+                                "[true,true,true] as `data_numpy_datetime64_ns_max,"
+                                "[true,true,true] as `data_numpy_datetime64_ns_min,"
+                                "[true,true,true] as `data_numpy_datetime64_ns_none,"
+                                "[false,false,false] as `data_numpy_datetime64_us_0,"
+                                "[false,false,false] as `data_numpy_datetime64_ms,"
+                                "[false,false,false] as `data_numpy_datetime64_s,"
+                                "[false,false,false] as `data_numpy_datetime64_m,"
+                                "[false,false,false] as `data_numpy_datetime64_h,"
+                                "[false,false,false] as `data_numpy_datetime64_d_up,"
+                                "[false,false,false] as `data_numpy_datetime64_m_up,"
+                # "[false,false,false] as `data_decimal_2,"
+                # "[true,true,true] as `data_decimal_nan,"
+                # "[true,true,true] as `data_decimal_17,"
+                # "[true,true,true] as `data_decimal_18,"
+                # "[true,true,true] as `data_decimal_38,"
+                                "[00b,true,false] as `first_none,"
+                                "[true,00b,false] as `middle_none,"
+                                "[true,false,00b] as `last_none"
+                                ")"
             }
             }
             return rtn
@@ -3125,90 +3147,90 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    'data_numpy_datetime64_ns_none',
-                    'data_numpy_datetime64_us_0',
-                    'data_numpy_datetime64_ms',
-                    'data_numpy_datetime64_s',
-                    'data_numpy_datetime64_m',
-                    'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_nan',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      'data_numpy_datetime64_ns_none',
+                      'data_numpy_datetime64_us_0',
+                      'data_numpy_datetime64_ms',
+                      'data_numpy_datetime64_s',
+                      'data_numpy_datetime64_m',
+                      'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_nan',
+                  )
+                  }
             dt.update({
-                'first_none':[None,0,-1],
-                'middle_none': [0,None, -1],
+                'first_none': [None, 0, -1],
+                'middle_none': [0, None, -1],
                 'last_none': [0, -1, None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_CHAR for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_CHAR for k in dt
             }
-            rtn={'tableSetTypeCHAR':{
-                    'value':df,
-                    'expect_typestr':"'FAST CHAR VECTOR'",
-                    'expect_value': "table("
-                                    "[00c,00c,00c] as `data_none,"
-                                    "[00c,00c,00c] as `data_numpy_nan,"
-                                    "[00c,00c,00c] as `data_pandas_nat,"
-                                    "[0c,0c,0c] as `data_int_0,"
-                                    "[0c,0c,0c] as `data_numpy_int8_0,"
-                                    "[127c,127c,127c] as `data_numpy_int8_max,"
-                                    "[-127c,-127c,-127c] as `data_numpy_int8_min,"
-                                    "[00c,00c,00c] as `data_numpy_int8_none,"
-                                    "[0c,0c,0c] as `data_numpy_int16_0,"
-                                    "[0c,0c,0c] as `data_numpy_int32_0,"
-                                    "[0c,0c,0c] as `data_numpy_int64_0,"
-                                    "[00c,00c,00c] as `data_nan,"
-                                    "[0c,0c,0c] as `data_numpy_float32_0,"
-                                    # "[false,false,false] as `data_numpy_float64_0,"
-                                    "[1c,1c,1c] as `data_bool_true,"
-                                    "[0c,0c,0c] as `data_bool_false,"
-                                    "[1c,1c,1c] as `data_numpy_bool_true,"
-                                    "[0c,0c,0c] as `data_numpy_bool_false,"
-                                    "[0c,0c,0c] as `data_numpy_datetime64_ns_0,"
-                                    # "[0c,0c,0c] as `data_decimal_2,"
-                                    # "[3c,3c,3c] as `data_decimal_17,"
-                                    # "[0c,0c,0c] as `data_decimal_18,"
-                                    # "[0c,0c,0c] as `data_decimal_38,"
-                                    "[00c,0,-1] as `first_none,"
-                                    "[0,00c,-1] as `middle_none,"
-                                    "[0,-1,00c] as `last_none"
-                                    ")"
+            rtn = {'tableSetTypeCHAR': {
+                'value': df,
+                'expect_typestr': "'FAST CHAR VECTOR'",
+                'expect_value': "table("
+                                "[00c,00c,00c] as `data_none,"
+                                "[00c,00c,00c] as `data_numpy_nan,"
+                                "[00c,00c,00c] as `data_pandas_nat,"
+                                "[0c,0c,0c] as `data_int_0,"
+                                "[0c,0c,0c] as `data_numpy_int8_0,"
+                                "[127c,127c,127c] as `data_numpy_int8_max,"
+                                "[-127c,-127c,-127c] as `data_numpy_int8_min,"
+                                "[00c,00c,00c] as `data_numpy_int8_none,"
+                                "[0c,0c,0c] as `data_numpy_int16_0,"
+                                "[0c,0c,0c] as `data_numpy_int32_0,"
+                                "[0c,0c,0c] as `data_numpy_int64_0,"
+                                "[00c,00c,00c] as `data_nan,"
+                                "[0c,0c,0c] as `data_numpy_float32_0,"
+                # "[false,false,false] as `data_numpy_float64_0,"
+                                "[1c,1c,1c] as `data_bool_true,"
+                                "[0c,0c,0c] as `data_bool_false,"
+                                "[1c,1c,1c] as `data_numpy_bool_true,"
+                                "[0c,0c,0c] as `data_numpy_bool_false,"
+                                "[0c,0c,0c] as `data_numpy_datetime64_ns_0,"
+                # "[0c,0c,0c] as `data_decimal_2,"
+                # "[3c,3c,3c] as `data_decimal_17,"
+                # "[0c,0c,0c] as `data_decimal_18,"
+                # "[0c,0c,0c] as `data_decimal_38,"
+                                "[00c,0,-1] as `first_none,"
+                                "[0,00c,-1] as `middle_none,"
+                                "[0,-1,00c] as `last_none"
+                                ")"
             }
             }
             return rtn
@@ -3221,90 +3243,90 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    'data_numpy_datetime64_ns_none',
-                    'data_numpy_datetime64_us_0',
-                    'data_numpy_datetime64_ms',
-                    'data_numpy_datetime64_s',
-                    'data_numpy_datetime64_m',
-                    'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_nan',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      'data_numpy_datetime64_ns_none',
+                      'data_numpy_datetime64_us_0',
+                      'data_numpy_datetime64_ms',
+                      'data_numpy_datetime64_s',
+                      'data_numpy_datetime64_m',
+                      'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_nan',
+                  )
+                  }
             dt.update({
-                'first_none':[None,0,-1],
-                'middle_none': [0,None, -1],
+                'first_none': [None, 0, -1],
+                'middle_none': [0, None, -1],
                 'last_none': [0, -1, None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_SHORT for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_SHORT for k in dt
             }
-            rtn={'tableSetTypeSHORT':{
-                    'value':df,
-                    'expect_typestr':"'FAST SHORT VECTOR'",
-                    'expect_value': "table("
-                                    "[00h,00h,00h] as `data_none,"
-                                    "[00h,00h,00h] as `data_numpy_nan,"
-                                    "[00h,00h,00h] as `data_pandas_nat,"
-                                    "[0h,0h,0h] as `data_int_0,"
-                                    "[0h,0h,0h] as `data_numpy_int8_0,"
-                                    "[127h,127h,127h] as `data_numpy_int8_max,"
-                                    "[-127h,-127h,-127h] as `data_numpy_int8_min,"
-                                    "[-128h,-128h,-128h] as `data_numpy_int8_none,"
-                                    "[0h,0h,0h] as `data_numpy_int16_0,"
-                                    "[32767h,32767h,32767h] as `data_numpy_int16_max,"
-                                    "[-32767h,-32767h,-32767h] as `data_numpy_int16_min,"
-                                    "[00h,00h,00h] as `data_numpy_int16_none,"
-                                    "[0h,0h,0h] as `data_numpy_int32_0,"
-                                    "[0h,0h,0h] as `data_numpy_int64_0,"
-                                    "[00h,00h,00h] as `data_nan,"
-                                    "[0h,0h,0h] as `data_numpy_float32_0,"
-                                    # "[false,false,false] as `data_numpy_float64_0,"
-                                    "[1h,1h,1h] as `data_bool_true,"
-                                    "[0h,0h,0h] as `data_bool_false,"
-                                    "[1h,1h,1h] as `data_numpy_bool_true,"
-                                    "[0h,0h,0h] as `data_numpy_bool_false,"
-                                    "[0h,0h,0h] as `data_numpy_datetime64_ns_0,"
-                                    # "[0h,0h,0h] as `data_decimal_2,"
-                                    # "[3h,3h,3h] as `data_decimal_17,"
-                                    # "[0h,0h,0h] as `data_decimal_18,"
-                                    # "[0h,0h,0h] as `data_decimal_38,"
-                                    "[00h,0,-1] as `first_none,"
-                                    "[0,00h,-1] as `middle_none,"
-                                    "[0,-1,00h] as `last_none"
-                                    ")"
+            rtn = {'tableSetTypeSHORT': {
+                'value': df,
+                'expect_typestr': "'FAST SHORT VECTOR'",
+                'expect_value': "table("
+                                "[00h,00h,00h] as `data_none,"
+                                "[00h,00h,00h] as `data_numpy_nan,"
+                                "[00h,00h,00h] as `data_pandas_nat,"
+                                "[0h,0h,0h] as `data_int_0,"
+                                "[0h,0h,0h] as `data_numpy_int8_0,"
+                                "[127h,127h,127h] as `data_numpy_int8_max,"
+                                "[-127h,-127h,-127h] as `data_numpy_int8_min,"
+                                "[-128h,-128h,-128h] as `data_numpy_int8_none,"
+                                "[0h,0h,0h] as `data_numpy_int16_0,"
+                                "[32767h,32767h,32767h] as `data_numpy_int16_max,"
+                                "[-32767h,-32767h,-32767h] as `data_numpy_int16_min,"
+                                "[00h,00h,00h] as `data_numpy_int16_none,"
+                                "[0h,0h,0h] as `data_numpy_int32_0,"
+                                "[0h,0h,0h] as `data_numpy_int64_0,"
+                                "[00h,00h,00h] as `data_nan,"
+                                "[0h,0h,0h] as `data_numpy_float32_0,"
+                # "[false,false,false] as `data_numpy_float64_0,"
+                                "[1h,1h,1h] as `data_bool_true,"
+                                "[0h,0h,0h] as `data_bool_false,"
+                                "[1h,1h,1h] as `data_numpy_bool_true,"
+                                "[0h,0h,0h] as `data_numpy_bool_false,"
+                                "[0h,0h,0h] as `data_numpy_datetime64_ns_0,"
+                # "[0h,0h,0h] as `data_decimal_2,"
+                # "[3h,3h,3h] as `data_decimal_17,"
+                # "[0h,0h,0h] as `data_decimal_18,"
+                # "[0h,0h,0h] as `data_decimal_38,"
+                                "[00h,0,-1] as `first_none,"
+                                "[0,00h,-1] as `middle_none,"
+                                "[0,-1,00h] as `last_none"
+                                ")"
             }
             }
             return rtn
@@ -3317,90 +3339,90 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    'data_numpy_datetime64_ns_none',
-                    'data_numpy_datetime64_us_0',
-                    'data_numpy_datetime64_ms',
-                    'data_numpy_datetime64_s',
-                    'data_numpy_datetime64_m',
-                    'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_nan',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      'data_numpy_datetime64_ns_none',
+                      'data_numpy_datetime64_us_0',
+                      'data_numpy_datetime64_ms',
+                      'data_numpy_datetime64_s',
+                      'data_numpy_datetime64_m',
+                      'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_nan',
+                  )
+                  }
             dt.update({
-                'first_none':[None,0,-1],
-                'middle_none': [0,None, -1],
+                'first_none': [None, 0, -1],
+                'middle_none': [0, None, -1],
                 'last_none': [0, -1, None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_INT for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_INT for k in dt
             }
-            rtn={'tableSetTypeINT':{
-                    'value':df,
-                    'expect_typestr':"'FAST INT VECTOR'",
-                    'expect_value': "table("
-                                    "[00i,00i,00i] as `data_none,"
-                                    "[00i,00i,00i] as `data_numpy_nan,"
-                                    "[00i,00i,00i] as `data_pandas_nat,"
-                                    "[0i,0i,0i] as `data_int_0,"
-                                    "[0i,0i,0i] as `data_numpy_int8_0,"
-                                    "[127i,127i,127i] as `data_numpy_int8_max,"
-                                    "[-127i,-127i,-127i] as `data_numpy_int8_min,"
-                                    "[-128i,-128i,-128i] as `data_numpy_int8_none,"
-                                    "[0i,0i,0i] as `data_numpy_int16_0,"
-                                    "[32767i,32767i,32767i] as `data_numpy_int16_max,"
-                                    "[-32767i,-32767i,-32767i] as `data_numpy_int16_min,"
-                                    "[-32768i,-32768i,-32768i] as `data_numpy_int16_none,"
-                                    "[0i,0i,0i] as `data_numpy_int32_0,"
-                                    "[2147483647i,2147483647i,2147483647i] as `data_numpy_int32_max,"
-                                    "[-2147483647i,-2147483647i,-2147483647i] as `data_numpy_int32_min,"
-                                    "[00i,00i,00i] as `data_numpy_int32_none,"
-                                    "[0i,0i,0i] as `data_numpy_int64_0,"
-                                    "[00i,00i,00i] as `data_nan,"
-                                    "[0i,0i,0i] as `data_numpy_float32_0,"
-                                    # "[false,false,false] as `data_numpy_float64_0,"
-                                    "[1i,1i,1i] as `data_bool_true,"
-                                    "[0i,0i,0i] as `data_bool_false,"
-                                    "[1i,1i,1i] as `data_numpy_bool_true,"
-                                    "[0i,0i,0i] as `data_numpy_bool_false,"
-                                    "[0i,0i,0i] as `data_numpy_datetime64_ns_0,"
-                                    # "[0i,0i,0i] as `data_decimal_2,"
-                                    # "[3i,3i,3i] as `data_decimal_17,"
-                                    # "[0i,0i,0i] as `data_decimal_18,"
-                                    # "[0i,0i,0i] as `data_decimal_38,"
-                                    "[00i,0,-1] as `first_none,"
-                                    "[0,00i,-1] as `middle_none,"
-                                    "[0,-1,00i] as `last_none"
-                                    ")"
+            rtn = {'tableSetTypeINT': {
+                'value': df,
+                'expect_typestr': "'FAST INT VECTOR'",
+                'expect_value': "table("
+                                "[00i,00i,00i] as `data_none,"
+                                "[00i,00i,00i] as `data_numpy_nan,"
+                                "[00i,00i,00i] as `data_pandas_nat,"
+                                "[0i,0i,0i] as `data_int_0,"
+                                "[0i,0i,0i] as `data_numpy_int8_0,"
+                                "[127i,127i,127i] as `data_numpy_int8_max,"
+                                "[-127i,-127i,-127i] as `data_numpy_int8_min,"
+                                "[-128i,-128i,-128i] as `data_numpy_int8_none,"
+                                "[0i,0i,0i] as `data_numpy_int16_0,"
+                                "[32767i,32767i,32767i] as `data_numpy_int16_max,"
+                                "[-32767i,-32767i,-32767i] as `data_numpy_int16_min,"
+                                "[-32768i,-32768i,-32768i] as `data_numpy_int16_none,"
+                                "[0i,0i,0i] as `data_numpy_int32_0,"
+                                "[2147483647i,2147483647i,2147483647i] as `data_numpy_int32_max,"
+                                "[-2147483647i,-2147483647i,-2147483647i] as `data_numpy_int32_min,"
+                                "[00i,00i,00i] as `data_numpy_int32_none,"
+                                "[0i,0i,0i] as `data_numpy_int64_0,"
+                                "[00i,00i,00i] as `data_nan,"
+                                "[0i,0i,0i] as `data_numpy_float32_0,"
+                # "[false,false,false] as `data_numpy_float64_0,"
+                                "[1i,1i,1i] as `data_bool_true,"
+                                "[0i,0i,0i] as `data_bool_false,"
+                                "[1i,1i,1i] as `data_numpy_bool_true,"
+                                "[0i,0i,0i] as `data_numpy_bool_false,"
+                                "[0i,0i,0i] as `data_numpy_datetime64_ns_0,"
+                # "[0i,0i,0i] as `data_decimal_2,"
+                # "[3i,3i,3i] as `data_decimal_17,"
+                # "[0i,0i,0i] as `data_decimal_18,"
+                # "[0i,0i,0i] as `data_decimal_38,"
+                                "[00i,0,-1] as `first_none,"
+                                "[0,00i,-1] as `middle_none,"
+                                "[0,-1,00i] as `last_none"
+                                ")"
             }
             }
             return rtn
@@ -3413,90 +3435,90 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    'data_numpy_datetime64_ns_none',
-                    'data_numpy_datetime64_us_0',
-                    'data_numpy_datetime64_ms',
-                    'data_numpy_datetime64_s',
-                    'data_numpy_datetime64_m',
-                    'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_nan',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      'data_numpy_datetime64_ns_none',
+                      'data_numpy_datetime64_us_0',
+                      'data_numpy_datetime64_ms',
+                      'data_numpy_datetime64_s',
+                      'data_numpy_datetime64_m',
+                      'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_nan',
+                  )
+                  }
             dt.update({
-                'first_none':[None,0,-1],
-                'middle_none': [0,None, -1],
+                'first_none': [None, 0, -1],
+                'middle_none': [0, None, -1],
                 'last_none': [0, -1, None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_LONG for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_LONG for k in dt
             }
-            rtn={'tableSetTypeLONG':{
-                    'value':df,
-                    'expect_typestr':"'FAST LONG VECTOR'",
-                    'expect_value': "table("
-                                    "[00l,00l,00l] as `data_none,"
-                                    "[00l,00l,00l] as `data_numpy_nan,"
-                                    "[00l,00l,00l] as `data_pandas_nat,"
-                                    "[0l,0l,0l] as `data_int_0,"
-                                    "[0l,0l,0l] as `data_numpy_int8_0,"
-                                    "[127l,127l,127l] as `data_numpy_int8_max,"
-                                    "[-127l,-127l,-127l] as `data_numpy_int8_min,"
-                                    "[-128l,-128l,-128l] as `data_numpy_int8_none,"
-                                    "[0l,0l,0l] as `data_numpy_int16_0,"
-                                    "[32767l,32767l,32767l] as `data_numpy_int16_max,"
-                                    "[-32767l,-32767l,-32767l] as `data_numpy_int16_min,"
-                                    "[-32768l,-32768l,-32768l] as `data_numpy_int16_none,"
-                                    "[0l,0l,0l] as `data_numpy_int32_0,"
-                                    "[2147483647l,2147483647l,2147483647l] as `data_numpy_int32_max,"
-                                    "[-2147483647l,-2147483647l,-2147483647l] as `data_numpy_int32_min,"
-                                    "[-2147483648l,-2147483648l,-2147483648l] as `data_numpy_int32_none,"
-                                    "[0l,0l,0l] as `data_numpy_int64_0,"
-                                    "[9223372036854775807l,9223372036854775807l,9223372036854775807l] as `data_numpy_int64_max,"
-                                    "[-9223372036854775807l,-9223372036854775807l,-9223372036854775807l] as `data_numpy_int64_min,"
-                                    "[00l,00l,00l] as `data_numpy_int64_none,"
-                                    "[00l,00l,00l] as `data_nan,"
-                                    "[0l,0l,0l] as `data_numpy_float32_0,"
-                                    "[1l,1l,1l] as `data_bool_true,"
-                                    "[0l,0l,0l] as `data_bool_false,"
-                                    "[1l,1l,1l] as `data_numpy_bool_true,"
-                                    "[0l,0l,0l] as `data_numpy_bool_false,"
-                                    "[0l,0l,0l] as `data_numpy_datetime64_ns_0,"
-                                    # "[0l,0l,0l] as `data_decimal_2,"
-                                    # "[3l,3l,3l] as `data_decimal_17,"
-                                    # "[0l,0l,0l] as `data_decimal_18,"
-                                    # "[0l,0l,0l] as `data_decimal_38,"
-                                    "[00l,0,-1] as `first_none,"
-                                    "[0,00l,-1] as `middle_none,"
-                                    "[0,-1,00l] as `last_none"
-                                    ")"
-                }
+            rtn = {'tableSetTypeLONG': {
+                'value': df,
+                'expect_typestr': "'FAST LONG VECTOR'",
+                'expect_value': "table("
+                                "[00l,00l,00l] as `data_none,"
+                                "[00l,00l,00l] as `data_numpy_nan,"
+                                "[00l,00l,00l] as `data_pandas_nat,"
+                                "[0l,0l,0l] as `data_int_0,"
+                                "[0l,0l,0l] as `data_numpy_int8_0,"
+                                "[127l,127l,127l] as `data_numpy_int8_max,"
+                                "[-127l,-127l,-127l] as `data_numpy_int8_min,"
+                                "[-128l,-128l,-128l] as `data_numpy_int8_none,"
+                                "[0l,0l,0l] as `data_numpy_int16_0,"
+                                "[32767l,32767l,32767l] as `data_numpy_int16_max,"
+                                "[-32767l,-32767l,-32767l] as `data_numpy_int16_min,"
+                                "[-32768l,-32768l,-32768l] as `data_numpy_int16_none,"
+                                "[0l,0l,0l] as `data_numpy_int32_0,"
+                                "[2147483647l,2147483647l,2147483647l] as `data_numpy_int32_max,"
+                                "[-2147483647l,-2147483647l,-2147483647l] as `data_numpy_int32_min,"
+                                "[-2147483648l,-2147483648l,-2147483648l] as `data_numpy_int32_none,"
+                                "[0l,0l,0l] as `data_numpy_int64_0,"
+                                "[9223372036854775807l,9223372036854775807l,9223372036854775807l] as `data_numpy_int64_max,"
+                                "[-9223372036854775807l,-9223372036854775807l,-9223372036854775807l] as `data_numpy_int64_min,"
+                                "[00l,00l,00l] as `data_numpy_int64_none,"
+                                "[00l,00l,00l] as `data_nan,"
+                                "[0l,0l,0l] as `data_numpy_float32_0,"
+                                "[1l,1l,1l] as `data_bool_true,"
+                                "[0l,0l,0l] as `data_bool_false,"
+                                "[1l,1l,1l] as `data_numpy_bool_true,"
+                                "[0l,0l,0l] as `data_numpy_bool_false,"
+                                "[0l,0l,0l] as `data_numpy_datetime64_ns_0,"
+                # "[0l,0l,0l] as `data_decimal_2,"
+                # "[3l,3l,3l] as `data_decimal_17,"
+                # "[0l,0l,0l] as `data_decimal_18,"
+                # "[0l,0l,0l] as `data_decimal_38,"
+                                "[00l,0,-1] as `first_none,"
+                                "[0,00l,-1] as `middle_none,"
+                                "[0,-1,00l] as `last_none"
+                                ")"
+            }
             }
             return rtn
         else:
@@ -3508,91 +3530,91 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','D'),np.datetime64('1970-01-01','D')],
-                'middle_none': [np.datetime64('1970-01-01','D'),None, np.datetime64('1970-01-01','D')],
-                'last_none': [np.datetime64('1970-01-01','D'), np.datetime64('1970-01-01','D'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-01', 'D')],
+                'middle_none': [np.datetime64('1970-01-01', 'D'), None, np.datetime64('1970-01-01', 'D')],
+                'last_none': [np.datetime64('1970-01-01', 'D'), np.datetime64('1970-01-01', 'D'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DATE for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DATE for k in dt
             }
-            rtn={'tableSetTypeDATE':{
-                    'value':df,
-                    'expect_typestr':"'FAST DATE VECTOR'",
-                    'expect_value': "table("
-                                    "[00d,00d,00d] as `data_none,"
-                                    "[00d,00d,00d] as `data_numpy_nan,"
-                                    "[00d,00d,00d] as `data_pandas_nat,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_int_0,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_int16_0,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_int32_0,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_int64_0,"
-                                    "[00d,00d,00d] as `data_nan,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_ns_0,"
-                                    "[2262.04.11d,2262.04.11d,2262.04.11d] as `data_numpy_datetime64_ns_max,"
-                                    "[1677.09.21d,1677.09.21d,1677.09.21d] as `data_numpy_datetime64_ns_min,"
-                                    "[00d,00d,00d] as `data_numpy_datetime64_ns_none,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_us_0,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_ms,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_s,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_m,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_h,"
-                                    "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_d_up,"
-                                    # "[00d,00d,00d] as `data_decimal_nan,"
-                                    "[00d,1970.01.01d,1970.01.01d] as `first_none,"
-                                    "[1970.01.01d,00d,1970.01.01d] as `middle_none,"
-                                    "[1970.01.01d,1970.01.01d,00d] as `last_none"
-                                    ")"
-                }
+            rtn = {'tableSetTypeDATE': {
+                'value': df,
+                'expect_typestr': "'FAST DATE VECTOR'",
+                'expect_value': "table("
+                                "[00d,00d,00d] as `data_none,"
+                                "[00d,00d,00d] as `data_numpy_nan,"
+                                "[00d,00d,00d] as `data_pandas_nat,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_int_0,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_int16_0,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_int32_0,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_int64_0,"
+                                "[00d,00d,00d] as `data_nan,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_ns_0,"
+                                "[2262.04.11d,2262.04.11d,2262.04.11d] as `data_numpy_datetime64_ns_max,"
+                                "[1677.09.21d,1677.09.21d,1677.09.21d] as `data_numpy_datetime64_ns_min,"
+                                "[00d,00d,00d] as `data_numpy_datetime64_ns_none,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_us_0,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_ms,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_s,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_m,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_h,"
+                                "[1970.01.01d,1970.01.01d,1970.01.01d] as `data_numpy_datetime64_d_up,"
+                # "[00d,00d,00d] as `data_decimal_nan,"
+                                "[00d,1970.01.01d,1970.01.01d] as `first_none,"
+                                "[1970.01.01d,00d,1970.01.01d] as `middle_none,"
+                                "[1970.01.01d,1970.01.01d,00d] as `last_none"
+                                ")"
+            }
             }
             return rtn
         else:
@@ -3604,94 +3626,94 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_int_0',
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_0',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_0',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_0',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    'data_decimal_2',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_int_0',
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_0',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_0',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_0',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      'data_decimal_2',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','M'),np.datetime64('1970-01-01','M')],
-                'middle_none': [np.datetime64('1970-01-01','M'),None, np.datetime64('1970-01-01','M')],
-                'last_none': [np.datetime64('1970-01-01','M'), np.datetime64('1970-01-01','M'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'M'), np.datetime64('1970-01-01', 'M')],
+                'middle_none': [np.datetime64('1970-01-01', 'M'), None, np.datetime64('1970-01-01', 'M')],
+                'last_none': [np.datetime64('1970-01-01', 'M'), np.datetime64('1970-01-01', 'M'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_MONTH for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_MONTH for k in dt
             }
-            rtn={'tableSetTypeMONTH':{
-                    'value':df,
-                    'expect_typestr':"'FAST MONTH VECTOR'",
-                    'expect_value': "table("
-                                    "[00M,00M,00M] as `data_none,"
-                                    "[00M,00M,00M] as `data_numpy_nan,"
-                                    "[00M,00M,00M] as `data_pandas_nat,"
-                                    # "[0000.01M,0000.01M,0000.01M] as `data_int_0,"
-                                    # "[0000.01M,0000.01M,0000.01M] as `data_numpy_int16_0,"
-                                    # "[0000.01M,0000.01M,0000.01M] as `data_numpy_int32_0,"
-                                    # "[0000.01M,0000.01M,0000.01M] as `data_numpy_int64_0,"
-                                    "[00M,00M,00M] as `data_nan,"
-                                    "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_ns_0,"
-                                    "[2262.04M,2262.04M,2262.04M] as `data_numpy_datetime64_ns_max,"
-                                    "[1677.09M,1677.09M,1677.09M] as `data_numpy_datetime64_ns_min,"
-                                    "[00M,00M,00M] as `data_numpy_datetime64_ns_none,"
-                                    "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_us_0,"
-                                    "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_ms,"
-                                    "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_s,"
-                                    "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_m,"
-                                    "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_h,"
-                                    "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_d_up,"
-                                    "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_m_up,"
-                                    # "[00M,00M,00M] as `data_decimal_nan,"
-                                    "[00M,1970.01M,1970.01M] as `first_none,"
-                                    "[1970.01M,00M,1970.01M] as `middle_none,"
-                                    "[1970.01M,1970.01M,00M] as `last_none"
-                                    ")"
+            rtn = {'tableSetTypeMONTH': {
+                'value': df,
+                'expect_typestr': "'FAST MONTH VECTOR'",
+                'expect_value': "table("
+                                "[00M,00M,00M] as `data_none,"
+                                "[00M,00M,00M] as `data_numpy_nan,"
+                                "[00M,00M,00M] as `data_pandas_nat,"
+                # "[0000.01M,0000.01M,0000.01M] as `data_int_0,"
+                # "[0000.01M,0000.01M,0000.01M] as `data_numpy_int16_0,"
+                # "[0000.01M,0000.01M,0000.01M] as `data_numpy_int32_0,"
+                # "[0000.01M,0000.01M,0000.01M] as `data_numpy_int64_0,"
+                                "[00M,00M,00M] as `data_nan,"
+                                "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_ns_0,"
+                                "[2262.04M,2262.04M,2262.04M] as `data_numpy_datetime64_ns_max,"
+                                "[1677.09M,1677.09M,1677.09M] as `data_numpy_datetime64_ns_min,"
+                                "[00M,00M,00M] as `data_numpy_datetime64_ns_none,"
+                                "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_us_0,"
+                                "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_ms,"
+                                "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_s,"
+                                "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_m,"
+                                "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_h,"
+                                "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_d_up,"
+                                "[1970.01M,1970.01M,1970.01M] as `data_numpy_datetime64_m_up,"
+                # "[00M,00M,00M] as `data_decimal_nan,"
+                                "[00M,1970.01M,1970.01M] as `first_none,"
+                                "[1970.01M,00M,1970.01M] as `middle_none,"
+                                "[1970.01M,1970.01M,00M] as `last_none"
+                                ")"
             }
             }
             return rtn
@@ -3704,98 +3726,98 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    # 'data_numpy_datetime64_ns_max',
-                    # 'data_numpy_datetime64_ns_min',
-                    # 'data_numpy_datetime64_ns_none',
-                    # 'data_numpy_datetime64_us_0',
-                    # 'data_numpy_datetime64_ms',
-                    # 'data_numpy_datetime64_s',
-                    # 'data_numpy_datetime64_m',
-                    # 'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      # 'data_numpy_datetime64_ns_max',
+                      # 'data_numpy_datetime64_ns_min',
+                      # 'data_numpy_datetime64_ns_none',
+                      # 'data_numpy_datetime64_us_0',
+                      # 'data_numpy_datetime64_ms',
+                      # 'data_numpy_datetime64_s',
+                      # 'data_numpy_datetime64_m',
+                      # 'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','ns'),np.datetime64('1970-01-01','ns')],
-                'middle_none': [np.datetime64('1970-01-01','ns'),None, np.datetime64('1970-01-01','ns')],
-                'last_none': [np.datetime64('1970-01-01','ns'), np.datetime64('1970-01-01','ns'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns')],
+                'middle_none': [np.datetime64('1970-01-01', 'ns'), None, np.datetime64('1970-01-01', 'ns')],
+                'last_none': [np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_TIME for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_TIME for k in dt
             }
-            rtn={'tableSetTypeTIME':{
-                    'value':df,
-                    'expect_typestr':"'FAST TIME VECTOR'",
-                    'expect_value': "table("
-                                    "[00t,00t,00t] as `data_none,"
-                                    "[00t,00t,00t] as `data_numpy_nan,"
-                                    "[00t,00t,00t] as `data_pandas_nat,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_int_0,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_int16_0,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_int32_0,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_int64_0,"
-                                    "[00t,00t,00t] as `data_nan,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_ns_0,"
-                                    "[23:47:16.854t,23:47:16.854t,23:47:16.854t] as `data_numpy_datetime64_ns_max,"
-                                    "[00:12:43.145t,00:12:43.145t,00:12:43.145t] as `data_numpy_datetime64_ns_min,"
-                                    "[00t,00t,00t] as `data_numpy_datetime64_ns_none,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_us_0,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_ms,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_s,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_m,"
-                                    "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_h,"
-                                    # "[00t,00t,00t] as `data_decimal_nan,"
-                                    "[00t,00:00:00.000t,00:00:00.000t] as `first_none,"
-                                    "[00:00:00.000t,00t,00:00:00.000t] as `middle_none,"
-                                    "[00:00:00.000t,00:00:00.000t,00t] as `last_none"
-                                    ")"
+            rtn = {'tableSetTypeTIME': {
+                'value': df,
+                'expect_typestr': "'FAST TIME VECTOR'",
+                'expect_value': "table("
+                                "[00t,00t,00t] as `data_none,"
+                                "[00t,00t,00t] as `data_numpy_nan,"
+                                "[00t,00t,00t] as `data_pandas_nat,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_int_0,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_int16_0,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_int32_0,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_int64_0,"
+                                "[00t,00t,00t] as `data_nan,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_ns_0,"
+                                "[23:47:16.854t,23:47:16.854t,23:47:16.854t] as `data_numpy_datetime64_ns_max,"
+                                "[00:12:43.145t,00:12:43.145t,00:12:43.145t] as `data_numpy_datetime64_ns_min,"
+                                "[00t,00t,00t] as `data_numpy_datetime64_ns_none,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_us_0,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_ms,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_s,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_m,"
+                                "[00:00:00.000t,00:00:00.000t,00:00:00.000t] as `data_numpy_datetime64_h,"
+                # "[00t,00t,00t] as `data_decimal_nan,"
+                                "[00t,00:00:00.000t,00:00:00.000t] as `first_none,"
+                                "[00:00:00.000t,00t,00:00:00.000t] as `middle_none,"
+                                "[00:00:00.000t,00:00:00.000t,00t] as `last_none"
+                                ")"
             }
             }
             return rtn
@@ -3808,99 +3830,99 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    # 'data_numpy_datetime64_ns_max',
-                    # 'data_numpy_datetime64_ns_min',
-                    # 'data_numpy_datetime64_ns_none',
-                    # 'data_numpy_datetime64_us_0',
-                    # 'data_numpy_datetime64_ms',
-                    # 'data_numpy_datetime64_s',
-                    # 'data_numpy_datetime64_m',
-                    # 'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      # 'data_numpy_datetime64_ns_max',
+                      # 'data_numpy_datetime64_ns_min',
+                      # 'data_numpy_datetime64_ns_none',
+                      # 'data_numpy_datetime64_us_0',
+                      # 'data_numpy_datetime64_ms',
+                      # 'data_numpy_datetime64_s',
+                      # 'data_numpy_datetime64_m',
+                      # 'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','ns'),np.datetime64('1970-01-01','ns')],
-                'middle_none': [np.datetime64('1970-01-01','ns'),None, np.datetime64('1970-01-01','ns')],
-                'last_none': [np.datetime64('1970-01-01','ns'), np.datetime64('1970-01-01','ns'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns')],
+                'middle_none': [np.datetime64('1970-01-01', 'ns'), None, np.datetime64('1970-01-01', 'ns')],
+                'last_none': [np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_MINUTE for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_MINUTE for k in dt
             }
-            rtn={'tableSetTypeMINUTE':{
-                    'value':df,
-                    'expect_typestr':"'FAST MINUTE VECTOR'",
-                    'expect_value': "table("
-                                    "[00m,00m,00m] as `data_none,"
-                                    "[00m,00m,00m] as `data_numpy_nan,"
-                                    "[00m,00m,00m] as `data_pandas_nat,"
-                                    "[00:00m,00:00m,00:00m] as `data_int_0,"
-                                    "[00:00m,00:00m,00:00m] as `data_numpy_int16_0,"
-                                    "[00:00m,00:00m,00:00m] as `data_numpy_int32_0,"
-                                    "[00:00m,00:00m,00:00m] as `data_numpy_int64_0,"
-                                    "[00m,00m,00m] as `data_nan,"
-                                    "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_ns_0,"
-                                    "[23:47m,23:47m,23:47m] as `data_numpy_datetime64_ns_max,"
-                                    "[00:12m,00:12m,00:12m] as `data_numpy_datetime64_ns_min,"
-                                    "[00m,00m,00m] as `data_numpy_datetime64_ns_none,"
-                                    "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_us_0,"
-                                    "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_ms,"
-                                    "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_s,"
-                                    "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_m,"
-                                    "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_h,"
-                                    # "[00m,00m,00m] as `data_decimal_nan,"
-                                    "[00m,00:00m,00:00m] as `first_none,"
-                                    "[00:00m,00m,00:00m] as `middle_none,"
-                                    "[00:00m,00:00m,00m] as `last_none"
-                                    ")"
-                }
+            rtn = {'tableSetTypeMINUTE': {
+                'value': df,
+                'expect_typestr': "'FAST MINUTE VECTOR'",
+                'expect_value': "table("
+                                "[00m,00m,00m] as `data_none,"
+                                "[00m,00m,00m] as `data_numpy_nan,"
+                                "[00m,00m,00m] as `data_pandas_nat,"
+                                "[00:00m,00:00m,00:00m] as `data_int_0,"
+                                "[00:00m,00:00m,00:00m] as `data_numpy_int16_0,"
+                                "[00:00m,00:00m,00:00m] as `data_numpy_int32_0,"
+                                "[00:00m,00:00m,00:00m] as `data_numpy_int64_0,"
+                                "[00m,00m,00m] as `data_nan,"
+                                "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_ns_0,"
+                                "[23:47m,23:47m,23:47m] as `data_numpy_datetime64_ns_max,"
+                                "[00:12m,00:12m,00:12m] as `data_numpy_datetime64_ns_min,"
+                                "[00m,00m,00m] as `data_numpy_datetime64_ns_none,"
+                                "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_us_0,"
+                                "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_ms,"
+                                "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_s,"
+                                "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_m,"
+                                "[00:00m,00:00m,00:00m] as `data_numpy_datetime64_h,"
+                # "[00m,00m,00m] as `data_decimal_nan,"
+                                "[00m,00:00m,00:00m] as `first_none,"
+                                "[00:00m,00m,00:00m] as `middle_none,"
+                                "[00:00m,00:00m,00m] as `last_none"
+                                ")"
+            }
             }
             return rtn
         else:
@@ -3912,99 +3934,99 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    # 'data_numpy_datetime64_ns_max',
-                    # 'data_numpy_datetime64_ns_min',
-                    # 'data_numpy_datetime64_ns_none',
-                    # 'data_numpy_datetime64_us_0',
-                    # 'data_numpy_datetime64_ms',
-                    # 'data_numpy_datetime64_s',
-                    # 'data_numpy_datetime64_m',
-                    # 'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      # 'data_numpy_datetime64_ns_max',
+                      # 'data_numpy_datetime64_ns_min',
+                      # 'data_numpy_datetime64_ns_none',
+                      # 'data_numpy_datetime64_us_0',
+                      # 'data_numpy_datetime64_ms',
+                      # 'data_numpy_datetime64_s',
+                      # 'data_numpy_datetime64_m',
+                      # 'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','ns'),np.datetime64('1970-01-01','ns')],
-                'middle_none': [np.datetime64('1970-01-01','ns'),None, np.datetime64('1970-01-01','ns')],
-                'last_none': [np.datetime64('1970-01-01','ns'), np.datetime64('1970-01-01','ns'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns')],
+                'middle_none': [np.datetime64('1970-01-01', 'ns'), None, np.datetime64('1970-01-01', 'ns')],
+                'last_none': [np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_SECOND for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_SECOND for k in dt
             }
-            rtn={'tableSetTypeSECOND':{
-                    'value':df,
-                    'expect_typestr':"'FAST SECOND VECTOR'",
-                    'expect_value': "table("
-                                    "[00s,00s,00s] as `data_none,"
-                                    "[00s,00s,00s] as `data_numpy_nan,"
-                                    "[00s,00s,00s] as `data_pandas_nat,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_int_0,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_int16_0,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_int32_0,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_int64_0,"
-                                    "[00s,00s,00s] as `data_nan,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_ns_0,"
-                                    "[23:47:16s,23:47:16s,23:47:16s] as `data_numpy_datetime64_ns_max,"
-                                    "[00:12:43s,00:12:43s,00:12:43s] as `data_numpy_datetime64_ns_min,"
-                                    "[00s,00s,00s] as `data_numpy_datetime64_ns_none,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_us_0,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_ms,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_s,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_m,"
-                                    "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_h,"
-                                    # "[00s,00s,00s] as `data_decimal_nan,"
-                                    "[00s,00:00:00s,00:00:00s] as `first_none,"
-                                    "[00:00:00s,00s,00:00:00s] as `middle_none,"
-                                    "[00:00:00s,00:00:00s,00s] as `last_none"
-                                    ")"
-                }
+            rtn = {'tableSetTypeSECOND': {
+                'value': df,
+                'expect_typestr': "'FAST SECOND VECTOR'",
+                'expect_value': "table("
+                                "[00s,00s,00s] as `data_none,"
+                                "[00s,00s,00s] as `data_numpy_nan,"
+                                "[00s,00s,00s] as `data_pandas_nat,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_int_0,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_int16_0,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_int32_0,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_int64_0,"
+                                "[00s,00s,00s] as `data_nan,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_ns_0,"
+                                "[23:47:16s,23:47:16s,23:47:16s] as `data_numpy_datetime64_ns_max,"
+                                "[00:12:43s,00:12:43s,00:12:43s] as `data_numpy_datetime64_ns_min,"
+                                "[00s,00s,00s] as `data_numpy_datetime64_ns_none,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_us_0,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_ms,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_s,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_m,"
+                                "[00:00:00s,00:00:00s,00:00:00s] as `data_numpy_datetime64_h,"
+                # "[00s,00s,00s] as `data_decimal_nan,"
+                                "[00s,00:00:00s,00:00:00s] as `first_none,"
+                                "[00:00:00s,00s,00:00:00s] as `middle_none,"
+                                "[00:00:00s,00:00:00s,00s] as `last_none"
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4016,97 +4038,97 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    # 'data_numpy_datetime64_ns_none',
-                    # 'data_numpy_datetime64_us_0',
-                    # 'data_numpy_datetime64_ms',
-                    # 'data_numpy_datetime64_s',
-                    # 'data_numpy_datetime64_m',
-                    # 'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      # 'data_numpy_datetime64_ns_none',
+                      # 'data_numpy_datetime64_us_0',
+                      # 'data_numpy_datetime64_ms',
+                      # 'data_numpy_datetime64_s',
+                      # 'data_numpy_datetime64_m',
+                      # 'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','ns'),np.datetime64('1970-01-01','ns')],
-                'middle_none': [np.datetime64('1970-01-01','ns'),None, np.datetime64('1970-01-01','ns')],
-                'last_none': [np.datetime64('1970-01-01','ns'), np.datetime64('1970-01-01','ns'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns')],
+                'middle_none': [np.datetime64('1970-01-01', 'ns'), None, np.datetime64('1970-01-01', 'ns')],
+                'last_none': [np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DATETIME for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DATETIME for k in dt
             }
-            rtn={'tableSetTypeDATETIME':{
-                    'value':df,
-                    'expect_typestr':"'FAST DATETIME VECTOR'",
-                    'expect_value': "table("
-                                    "[00D,00D,00D] as `data_none,"
-                                    "[00D,00D,00D] as `data_numpy_nan,"
-                                    "[00D,00D,00D] as `data_pandas_nat,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_int_0,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_int16_0,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_int32_0,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_int64_0,"
-                                    "[00D,00D,00D] as `data_nan,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_ns_0,"
-                                    "[00D,00D,00D] as `data_numpy_datetime64_ns_none,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_us_0,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_ms,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_s,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_m,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_h,"
-                                    # "[00D,00D,00D] as `data_decimal_nan,"
-                                    "[00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `first_none,"
-                                    "[1970.01.01T00:00:00D,00D,1970.01.01T00:00:00D] as `middle_none,"
-                                    "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,00D] as `last_none"
-                                    ")"
-                }
+            rtn = {'tableSetTypeDATETIME': {
+                'value': df,
+                'expect_typestr': "'FAST DATETIME VECTOR'",
+                'expect_value': "table("
+                                "[00D,00D,00D] as `data_none,"
+                                "[00D,00D,00D] as `data_numpy_nan,"
+                                "[00D,00D,00D] as `data_pandas_nat,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_int_0,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_int16_0,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_int32_0,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_int64_0,"
+                                "[00D,00D,00D] as `data_nan,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_ns_0,"
+                                "[00D,00D,00D] as `data_numpy_datetime64_ns_none,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_us_0,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_ms,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_s,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_m,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `data_numpy_datetime64_h,"
+                # "[00D,00D,00D] as `data_decimal_nan,"
+                                "[00D,1970.01.01T00:00:00D,1970.01.01T00:00:00D] as `first_none,"
+                                "[1970.01.01T00:00:00D,00D,1970.01.01T00:00:00D] as `middle_none,"
+                                "[1970.01.01T00:00:00D,1970.01.01T00:00:00D,00D] as `last_none"
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4118,98 +4140,98 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_0',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_0',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    # 'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    # 'data_numpy_datetime64_ns_none',
-                    # 'data_numpy_datetime64_us_0',
-                    # 'data_numpy_datetime64_ms',
-                    # 'data_numpy_datetime64_s',
-                    # 'data_numpy_datetime64_m',
-                    # 'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_0',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_0',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      # 'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      # 'data_numpy_datetime64_ns_none',
+                      # 'data_numpy_datetime64_us_0',
+                      # 'data_numpy_datetime64_ms',
+                      # 'data_numpy_datetime64_s',
+                      # 'data_numpy_datetime64_m',
+                      # 'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','ns'),np.datetime64('1970-01-01','ns')],
-                'middle_none': [np.datetime64('1970-01-01','ns'),None, np.datetime64('1970-01-01','ns')],
-                'last_none': [np.datetime64('1970-01-01','ns'), np.datetime64('1970-01-01','ns'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns')],
+                'middle_none': [np.datetime64('1970-01-01', 'ns'), None, np.datetime64('1970-01-01', 'ns')],
+                'last_none': [np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_TIMESTAMP for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_TIMESTAMP for k in dt
             }
-            rtn={'tableSetTypeTIMESTAMP':{
-                    'value':df,
-                    'expect_typestr':"'FAST TIMESTAMP VECTOR'",
-                    'expect_value': "table("
-                                    "[00T,00T,00T] as `data_none,"
-                                    "[00T,00T,00T] as `data_numpy_nan,"
-                                    "[00T,00T,00T] as `data_pandas_nat,"
-                                    "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_int_0,"
-                                    "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_int64_0,"
-                                    "[00T,00T,00T] as `data_nan,"
-                                    "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_ns_0,"
-                                    "[2262.04.11T23:47:16.854T,2262.04.11T23:47:16.854T,2262.04.11T23:47:16.854T] as `data_numpy_datetime64_ns_max,"
-                                    "[00T,00T,00T] as `data_numpy_datetime64_ns_none,"
-                                    "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_us_0,"
-                                    "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_ms,"
-                                    "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_s,"
-                                    "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_m,"
-                                    "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_h,"
-                                    # "[00T,00T,00T] as `data_decimal_nan,"
-                                    "[00T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `first_none,"
-                                    "[1970.01.01T00:00:00.000T,00T,1970.01.01T00:00:00.000T] as `middle_none,"
-                                    "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,00T] as `last_none"
-                                    ")"
-                }
+            rtn = {'tableSetTypeTIMESTAMP': {
+                'value': df,
+                'expect_typestr': "'FAST TIMESTAMP VECTOR'",
+                'expect_value': "table("
+                                "[00T,00T,00T] as `data_none,"
+                                "[00T,00T,00T] as `data_numpy_nan,"
+                                "[00T,00T,00T] as `data_pandas_nat,"
+                                "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_int_0,"
+                                "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_int64_0,"
+                                "[00T,00T,00T] as `data_nan,"
+                                "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_ns_0,"
+                                "[2262.04.11T23:47:16.854T,2262.04.11T23:47:16.854T,2262.04.11T23:47:16.854T] as `data_numpy_datetime64_ns_max,"
+                                "[00T,00T,00T] as `data_numpy_datetime64_ns_none,"
+                                "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_us_0,"
+                                "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_ms,"
+                                "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_s,"
+                                "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_m,"
+                                "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `data_numpy_datetime64_h,"
+                # "[00T,00T,00T] as `data_decimal_nan,"
+                                "[00T,1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T] as `first_none,"
+                                "[1970.01.01T00:00:00.000T,00T,1970.01.01T00:00:00.000T] as `middle_none,"
+                                "[1970.01.01T00:00:00.000T,1970.01.01T00:00:00.000T,00T] as `last_none"
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4221,97 +4243,97 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_0',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_0',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    # 'data_numpy_datetime64_ns_none',
-                    # 'data_numpy_datetime64_us_0',
-                    # 'data_numpy_datetime64_ms',
-                    # 'data_numpy_datetime64_s',
-                    # 'data_numpy_datetime64_m',
-                    # 'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_0',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_0',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      # 'data_numpy_datetime64_ns_none',
+                      # 'data_numpy_datetime64_us_0',
+                      # 'data_numpy_datetime64_ms',
+                      # 'data_numpy_datetime64_s',
+                      # 'data_numpy_datetime64_m',
+                      # 'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','ns'),np.datetime64('1970-01-01','ns')],
-                'middle_none': [np.datetime64('1970-01-01','ns'),None, np.datetime64('1970-01-01','ns')],
-                'last_none': [np.datetime64('1970-01-01','ns'), np.datetime64('1970-01-01','ns'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns')],
+                'middle_none': [np.datetime64('1970-01-01', 'ns'), None, np.datetime64('1970-01-01', 'ns')],
+                'last_none': [np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_NANOTIME for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_NANOTIME for k in dt
             }
-            rtn={'tableSetTypeNANOTIME':{
-                    'value':df,
-                    'expect_typestr':"'FAST NANOTIME VECTOR'",
-                    'expect_value': "table("
-                                    "[00n,00n,00n] as `data_none,"
-                                    "[00n,00n,00n] as `data_numpy_nan,"
-                                    "[00n,00n,00n] as `data_pandas_nat,"
-                                    "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_int_0,"
-                                    "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_int64_0,"
-                                    "[00n,00n,00n] as `data_nan,"
-                                    "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_ns_0,"
-                                    "[00n,00n,00n] as `data_numpy_datetime64_ns_none,"
-                                    "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_us_0,"
-                                    "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_ms,"
-                                    "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_s,"
-                                    "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_m,"
-                                    "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_h,"
-                                    # "[00n,00n,00n] as `data_decimal_nan,"
-                                    "[00n,00:00:00.000000000n,00:00:00.000000000n] as `first_none,"
-                                    "[00:00:00.000000000n,00n,00:00:00.000000000n] as `middle_none,"
-                                    "[00:00:00.000000000n,00:00:00.000000000n,00n] as `last_none"
-                                    ")"
-                }
+            rtn = {'tableSetTypeNANOTIME': {
+                'value': df,
+                'expect_typestr': "'FAST NANOTIME VECTOR'",
+                'expect_value': "table("
+                                "[00n,00n,00n] as `data_none,"
+                                "[00n,00n,00n] as `data_numpy_nan,"
+                                "[00n,00n,00n] as `data_pandas_nat,"
+                                "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_int_0,"
+                                "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_int64_0,"
+                                "[00n,00n,00n] as `data_nan,"
+                                "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_ns_0,"
+                                "[00n,00n,00n] as `data_numpy_datetime64_ns_none,"
+                                "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_us_0,"
+                                "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_ms,"
+                                "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_s,"
+                                "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_m,"
+                                "[00:00:00.000000000n,00:00:00.000000000n,00:00:00.000000000n] as `data_numpy_datetime64_h,"
+                # "[00n,00n,00n] as `data_decimal_nan,"
+                                "[00n,00:00:00.000000000n,00:00:00.000000000n] as `first_none,"
+                                "[00:00:00.000000000n,00n,00:00:00.000000000n] as `middle_none,"
+                                "[00:00:00.000000000n,00:00:00.000000000n,00n] as `last_none"
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4323,97 +4345,97 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_0',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_0',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    # 'data_numpy_datetime64_ns_none',
-                    # 'data_numpy_datetime64_us_0',
-                    # 'data_numpy_datetime64_ms',
-                    # 'data_numpy_datetime64_s',
-                    # 'data_numpy_datetime64_m',
-                    # 'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_0',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_0',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      # 'data_numpy_datetime64_ns_none',
+                      # 'data_numpy_datetime64_us_0',
+                      # 'data_numpy_datetime64_ms',
+                      # 'data_numpy_datetime64_s',
+                      # 'data_numpy_datetime64_m',
+                      # 'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','ns'),np.datetime64('1970-01-01','ns')],
-                'middle_none': [np.datetime64('1970-01-01','ns'),None, np.datetime64('1970-01-01','ns')],
-                'last_none': [np.datetime64('1970-01-01','ns'), np.datetime64('1970-01-01','ns'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns')],
+                'middle_none': [np.datetime64('1970-01-01', 'ns'), None, np.datetime64('1970-01-01', 'ns')],
+                'last_none': [np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_NANOTIMESTAMP for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_NANOTIMESTAMP for k in dt
             }
-            rtn={'tableSetTypeNANOTIMESTAMP':{
-                    'value':df,
-                    'expect_typestr':"'FAST NANOTIMESTAMP VECTOR'",
-                    'expect_value': "table("
-                                    "[00N,00N,00N] as `data_none,"
-                                    "[00N,00N,00N] as `data_numpy_nan,"
-                                    "[00N,00N,00N] as `data_pandas_nat,"
-                                    "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_int_0,"
-                                    "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_int64_0,"
-                                    "[00N,00N,00N] as `data_nan,"
-                                    "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_ns_0,"
-                                    "[00N,00N,00N] as `data_numpy_datetime64_ns_none,"
-                                    "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_us_0,"
-                                    "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_ms,"
-                                    "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_s,"
-                                    "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_m,"
-                                    "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_h,"
-                                    # "[00N,00N,00N] as `data_decimal_nan,"
-                                    "[00N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `first_none,"
-                                    "[1970.01.01T00:00:00.000000000N,00N,1970.01.01T00:00:00.000000000N] as `middle_none,"
-                                    "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,00N] as `last_none"
-                                    ")"
-                }
+            rtn = {'tableSetTypeNANOTIMESTAMP': {
+                'value': df,
+                'expect_typestr': "'FAST NANOTIMESTAMP VECTOR'",
+                'expect_value': "table("
+                                "[00N,00N,00N] as `data_none,"
+                                "[00N,00N,00N] as `data_numpy_nan,"
+                                "[00N,00N,00N] as `data_pandas_nat,"
+                                "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_int_0,"
+                                "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_int64_0,"
+                                "[00N,00N,00N] as `data_nan,"
+                                "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_ns_0,"
+                                "[00N,00N,00N] as `data_numpy_datetime64_ns_none,"
+                                "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_us_0,"
+                                "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_ms,"
+                                "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_s,"
+                                "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_m,"
+                                "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `data_numpy_datetime64_h,"
+                # "[00N,00N,00N] as `data_decimal_nan,"
+                                "[00N,1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N] as `first_none,"
+                                "[1970.01.01T00:00:00.000000000N,00N,1970.01.01T00:00:00.000000000N] as `middle_none,"
+                                "[1970.01.01T00:00:00.000000000N,1970.01.01T00:00:00.000000000N,00N] as `last_none"
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4425,74 +4447,74 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                #     'data_numpy_int8_0',
-                #     'data_numpy_int8_max',
-                #     'data_numpy_int8_min',
-                #     'data_numpy_int8_none',
-                #     'data_numpy_int16_0',
-                #     'data_numpy_int16_max',
-                #     'data_numpy_int16_min',
-                #     'data_numpy_int16_none',
-                #     'data_numpy_int32_0',
-                #     'data_numpy_int32_max',
-                #     'data_numpy_int32_min',
-                #     'data_numpy_int32_none',
-                #     'data_numpy_int64_max',
-                #     'data_numpy_int64_min',
-                #     'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                #     'data_inf',
-                #     'data_numpy_inf',
-                #     'data_numpy_float32_0',
-                #     'data_numpy_float32_max',
-                #     'data_numpy_float32_min',
-                #     'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                #     'data_numpy_float64_0',
-                #     'data_numpy_longdouble_0',
-                #     'data_numpy_longdouble_max',
-                #     'data_numpy_longdouble_min',
-                #     'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                #     'data_bool_true',
-                #     'data_bool_false',
-                #     'data_numpy_bool_true',
-                #     'data_numpy_bool_false',
-                #     # 'data_numpy_datetime64_ns_max',
-                #     # 'data_numpy_datetime64_ns_min',
-                    'data_numpy_datetime64_ns_none',
-                    'data_numpy_datetime64_us_0',
-                    'data_numpy_datetime64_ms',
-                    'data_numpy_datetime64_s',
-                    'data_numpy_datetime64_m',
-                    'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      #     'data_numpy_int8_0',
+                      #     'data_numpy_int8_max',
+                      #     'data_numpy_int8_min',
+                      #     'data_numpy_int8_none',
+                      #     'data_numpy_int16_0',
+                      #     'data_numpy_int16_max',
+                      #     'data_numpy_int16_min',
+                      #     'data_numpy_int16_none',
+                      #     'data_numpy_int32_0',
+                      #     'data_numpy_int32_max',
+                      #     'data_numpy_int32_min',
+                      #     'data_numpy_int32_none',
+                      #     'data_numpy_int64_max',
+                      #     'data_numpy_int64_min',
+                      #     'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      #     'data_inf',
+                      #     'data_numpy_inf',
+                      #     'data_numpy_float32_0',
+                      #     'data_numpy_float32_max',
+                      #     'data_numpy_float32_min',
+                      #     'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      #     'data_numpy_float64_0',
+                      #     'data_numpy_longdouble_0',
+                      #     'data_numpy_longdouble_max',
+                      #     'data_numpy_longdouble_min',
+                      #     'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      #     'data_bool_true',
+                      #     'data_bool_false',
+                      #     'data_numpy_bool_true',
+                      #     'data_numpy_bool_false',
+                      #     # 'data_numpy_datetime64_ns_max',
+                      #     # 'data_numpy_datetime64_ns_min',
+                      'data_numpy_datetime64_ns_none',
+                      'data_numpy_datetime64_us_0',
+                      'data_numpy_datetime64_ms',
+                      'data_numpy_datetime64_s',
+                      'data_numpy_datetime64_m',
+                      'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                  )
+                  }
             dt.update({
-                'first_none':[None,0,-1],
-                'middle_none': [0,None, -1],
+                'first_none': [None, 0, -1],
+                'middle_none': [0, None, -1],
                 'last_none': [0, -1, None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_FLOAT for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_FLOAT for k in dt
             }
-            rtn={'tableSetTypeFLOAT':{
-                    'value':df,
-                    'expect_typestr':"'FAST FLOAT VECTOR'",
-                }
+            rtn = {'tableSetTypeFLOAT': {
+                'value': df,
+                'expect_typestr': "'FAST FLOAT VECTOR'",
+            }
             }
             return rtn
         else:
@@ -4504,74 +4526,74 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                #     'data_numpy_int8_0',
-                #     'data_numpy_int8_max',
-                #     'data_numpy_int8_min',
-                #     'data_numpy_int8_none',
-                #     'data_numpy_int16_0',
-                #     'data_numpy_int16_max',
-                #     'data_numpy_int16_min',
-                #     'data_numpy_int16_none',
-                #     'data_numpy_int32_0',
-                #     'data_numpy_int32_max',
-                #     'data_numpy_int32_min',
-                #     'data_numpy_int32_none',
-                #     'data_numpy_int64_max',
-                #     'data_numpy_int64_min',
-                #     'data_numpy_int64_none',
-                #     'data_float',
-                #     'data_pi',
-                #     'data_inf',
-                #     'data_numpy_inf',
-                #     'data_numpy_float32_0',
-                #     'data_numpy_float32_max',
-                #     'data_numpy_float32_min',
-                #     'data_numpy_float32_none',
-                #     'data_numpy_float64_max',
-                #     'data_numpy_float64_min',
-                #     'data_numpy_float64_none',
-                #     'data_numpy_float64_0',
-                #     'data_numpy_longdouble_0',
-                #     'data_numpy_longdouble_max',
-                #     'data_numpy_longdouble_min',
-                #     'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                #     'data_bool_true',
-                #     'data_bool_false',
-                #     'data_numpy_bool_true',
-                #     'data_numpy_bool_false',
-                #     # 'data_numpy_datetime64_ns_max',
-                #     # 'data_numpy_datetime64_ns_min',
-                    'data_numpy_datetime64_ns_none',
-                    'data_numpy_datetime64_us_0',
-                    'data_numpy_datetime64_ms',
-                    'data_numpy_datetime64_s',
-                    'data_numpy_datetime64_m',
-                    'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      #     'data_numpy_int8_0',
+                      #     'data_numpy_int8_max',
+                      #     'data_numpy_int8_min',
+                      #     'data_numpy_int8_none',
+                      #     'data_numpy_int16_0',
+                      #     'data_numpy_int16_max',
+                      #     'data_numpy_int16_min',
+                      #     'data_numpy_int16_none',
+                      #     'data_numpy_int32_0',
+                      #     'data_numpy_int32_max',
+                      #     'data_numpy_int32_min',
+                      #     'data_numpy_int32_none',
+                      #     'data_numpy_int64_max',
+                      #     'data_numpy_int64_min',
+                      #     'data_numpy_int64_none',
+                      #     'data_float',
+                      #     'data_pi',
+                      #     'data_inf',
+                      #     'data_numpy_inf',
+                      #     'data_numpy_float32_0',
+                      #     'data_numpy_float32_max',
+                      #     'data_numpy_float32_min',
+                      #     'data_numpy_float32_none',
+                      #     'data_numpy_float64_max',
+                      #     'data_numpy_float64_min',
+                      #     'data_numpy_float64_none',
+                      #     'data_numpy_float64_0',
+                      #     'data_numpy_longdouble_0',
+                      #     'data_numpy_longdouble_max',
+                      #     'data_numpy_longdouble_min',
+                      #     'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      #     'data_bool_true',
+                      #     'data_bool_false',
+                      #     'data_numpy_bool_true',
+                      #     'data_numpy_bool_false',
+                      #     # 'data_numpy_datetime64_ns_max',
+                      #     # 'data_numpy_datetime64_ns_min',
+                      'data_numpy_datetime64_ns_none',
+                      'data_numpy_datetime64_us_0',
+                      'data_numpy_datetime64_ms',
+                      'data_numpy_datetime64_s',
+                      'data_numpy_datetime64_m',
+                      'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                  )
+                  }
             dt.update({
-                'first_none':[None,0,-1],
-                'middle_none': [0,None, -1],
+                'first_none': [None, 0, -1],
+                'middle_none': [0, None, -1],
                 'last_none': [0, -1, None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DOUBLE for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DOUBLE for k in dt
             }
-            rtn={'tableSetTypeDOUBLE':{
-                    'value':df,
-                    'expect_typestr':"'FAST DOUBLE VECTOR'",
-                }
+            rtn = {'tableSetTypeDOUBLE': {
+                'value': df,
+                'expect_typestr': "'FAST DOUBLE VECTOR'",
+            }
             }
             return rtn
         else:
@@ -4583,93 +4605,93 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_int_0',
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_0',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_0',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_0',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                #     'data_string',
-                #     'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    'data_numpy_datetime64_ns_0',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    'data_numpy_datetime64_ns_none',
-                    'data_numpy_datetime64_us_0',
-                    'data_numpy_datetime64_ms',
-                    'data_numpy_datetime64_s',
-                    'data_numpy_datetime64_m',
-                    'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_int_0',
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_0',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_0',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_0',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      #     'data_string',
+                      #     'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      'data_numpy_datetime64_ns_0',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      'data_numpy_datetime64_ns_none',
+                      'data_numpy_datetime64_us_0',
+                      'data_numpy_datetime64_ms',
+                      'data_numpy_datetime64_s',
+                      'data_numpy_datetime64_m',
+                      'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,'0','-1'],
-                'middle_none': ['0',None, '-1'],
+                'first_none': [None, '0', '-1'],
+                'middle_none': ['0', None, '-1'],
                 'last_none': ['0', '-1', None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_SYMBOL for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_SYMBOL for k in dt
             }
-            rtn={'tableSetTypeSYMBOL':{
-                    'value':df,
-                    'expect_typestr':"'FAST SYMBOL VECTOR'",
-                    'expect_value': "table("
-                                    '["","",""] as `data_none,'
-                                    '["","",""] as `data_numpy_nan,'
-                                    '["","",""] as `data_pandas_nat,'
-                                    '["","",""] as `data_nan,'
-                                    '["abc!@#中文 123","abc!@#中文 123","abc!@#中文 123"] as `data_string,'
-                                    '["abc!@#中文 123","abc!@#中文 123","abc!@#中文 123"] as `data_numpy_str,'
-                                    '["","0","-1"] as `first_none,'
-                                    '["0","","-1"] as `middle_none,'
-                                    '["0","-1",""] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeSYMBOL': {
+                'value': df,
+                'expect_typestr': "'FAST SYMBOL VECTOR'",
+                'expect_value': "table("
+                                '["","",""] as `data_none,'
+                                '["","",""] as `data_numpy_nan,'
+                                '["","",""] as `data_pandas_nat,'
+                                '["","",""] as `data_nan,'
+                                '["abc!@#中文 123","abc!@#中文 123","abc!@#中文 123"] as `data_string,'
+                                '["abc!@#中文 123","abc!@#中文 123","abc!@#中文 123"] as `data_numpy_str,'
+                                '["","0","-1"] as `first_none,'
+                                '["0","","-1"] as `middle_none,'
+                                '["0","-1",""] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4681,93 +4703,93 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_int_0',
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_0',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_0',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_0',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                #     'data_string',
-                #     'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    'data_numpy_datetime64_ns_0',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    'data_numpy_datetime64_ns_none',
-                    'data_numpy_datetime64_us_0',
-                    'data_numpy_datetime64_ms',
-                    'data_numpy_datetime64_s',
-                    'data_numpy_datetime64_m',
-                    'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_int_0',
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_0',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_0',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_0',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      #     'data_string',
+                      #     'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      'data_numpy_datetime64_ns_0',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      'data_numpy_datetime64_ns_none',
+                      'data_numpy_datetime64_us_0',
+                      'data_numpy_datetime64_ms',
+                      'data_numpy_datetime64_s',
+                      'data_numpy_datetime64_m',
+                      'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,'0','-1'],
-                'middle_none': ['0',None, '-1'],
+                'first_none': [None, '0', '-1'],
+                'middle_none': ['0', None, '-1'],
                 'last_none': ['0', '-1', None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_STRING for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_STRING for k in dt
             }
-            rtn={'tableSetTypeSTRING':{
-                    'value':df,
-                    'expect_typestr':"'STRING VECTOR'",
-                    'expect_value': "table("
-                                    '["","",""] as `data_none,'
-                                    '["","",""] as `data_numpy_nan,'
-                                    '["","",""] as `data_pandas_nat,'
-                                    '["","",""] as `data_nan,'
-                                    '["abc!@#中文 123","abc!@#中文 123","abc!@#中文 123"] as `data_string,'
-                                    '["abc!@#中文 123","abc!@#中文 123","abc!@#中文 123"] as `data_numpy_str,'
-                                    '["","0","-1"] as `first_none,'
-                                    '["0","","-1"] as `middle_none,'
-                                    '["0","-1",""] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeSTRING': {
+                'value': df,
+                'expect_typestr': "'STRING VECTOR'",
+                'expect_value': "table("
+                                '["","",""] as `data_none,'
+                                '["","",""] as `data_numpy_nan,'
+                                '["","",""] as `data_pandas_nat,'
+                                '["","",""] as `data_nan,'
+                                '["abc!@#中文 123","abc!@#中文 123","abc!@#中文 123"] as `data_string,'
+                                '["abc!@#中文 123","abc!@#中文 123","abc!@#中文 123"] as `data_numpy_str,'
+                                '["","0","-1"] as `first_none,'
+                                '["0","","-1"] as `middle_none,'
+                                '["0","-1",""] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4779,38 +4801,39 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_none',
-                    'data_numpy_nan',
-                    'data_pandas_nat',
-                    'data_nan'
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_none',
+                      'data_numpy_nan',
+                      'data_pandas_nat',
+                      'data_nan'
+                  )
+                  }
             dt.update({
-                'uuid':['5d212a78-cc48-e3b1-4235-b4d91473ee87','5d212a78-cc48-e3b1-4235-b4d91473ee88','5d212a78-cc48-e3b1-4235-b4d91473ee89'],
+                'uuid': ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '5d212a78-cc48-e3b1-4235-b4d91473ee88',
+                         '5d212a78-cc48-e3b1-4235-b4d91473ee89'],
                 'first_none': [None, '5d212a78-cc48-e3b1-4235-b4d91473ee87', '5d212a78-cc48-e3b1-4235-b4d91473ee88'],
                 'middle_none': ['5d212a78-cc48-e3b1-4235-b4d91473ee87', None, '5d212a78-cc48-e3b1-4235-b4d91473ee88'],
                 'last_none': ['5d212a78-cc48-e3b1-4235-b4d91473ee87', '5d212a78-cc48-e3b1-4235-b4d91473ee88', None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_UUID for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_UUID for k in dt
             }
-            rtn={'tableSetTypeUUID':{
-                    'value':df,
-                    'expect_typestr':"'FAST UUID VECTOR'",
-                    'expect_value': "table("
-                                    '[uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000")] as `data_none,'
-                                    '[uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000")] as `data_numpy_nan,'
-                                    '[uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000")] as `data_pandas_nat,'
-                                    '[uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000")] as `data_nan,'
-                                    '[uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee88"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee89")] as `uuid,'
-                                    '[uuid("00000000-0000-0000-0000-000000000000"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee88")] as `first_none,'
-                                    '[uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),uuid("00000000-0000-0000-0000-000000000000"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee88")] as `middle_none,'
-                                    '[uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee88"),uuid("00000000-0000-0000-0000-000000000000")] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeUUID': {
+                'value': df,
+                'expect_typestr': "'FAST UUID VECTOR'",
+                'expect_value': "table("
+                                '[uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000")] as `data_none,'
+                                '[uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000")] as `data_numpy_nan,'
+                                '[uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000")] as `data_pandas_nat,'
+                                '[uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000"),uuid("00000000-0000-0000-0000-000000000000")] as `data_nan,'
+                                '[uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee88"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee89")] as `uuid,'
+                                '[uuid("00000000-0000-0000-0000-000000000000"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee88")] as `first_none,'
+                                '[uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),uuid("00000000-0000-0000-0000-000000000000"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee88")] as `middle_none,'
+                                '[uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee88"),uuid("00000000-0000-0000-0000-000000000000")] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4822,100 +4845,100 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_0',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_0',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                    'data_string',
-                    'data_numpy_str',
-                    'data_bytes_utf8',
-                    'data_bytes_gbk',
-                    'data_numpy_bytes_utf8',
-                    'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    # 'data_numpy_datetime64_ns_max',
-                    # 'data_numpy_datetime64_ns_min',
-                    # 'data_numpy_datetime64_ns_none',
-                    # 'data_numpy_datetime64_us_0',
-                    # 'data_numpy_datetime64_ms',
-                    # 'data_numpy_datetime64_s',
-                    # 'data_numpy_datetime64_m',
-                    # 'data_numpy_datetime64_h',
-                    # 'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_0',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_0',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      'data_string',
+                      'data_numpy_str',
+                      'data_bytes_utf8',
+                      'data_bytes_gbk',
+                      'data_numpy_bytes_utf8',
+                      'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      # 'data_numpy_datetime64_ns_max',
+                      # 'data_numpy_datetime64_ns_min',
+                      # 'data_numpy_datetime64_ns_none',
+                      # 'data_numpy_datetime64_us_0',
+                      # 'data_numpy_datetime64_ms',
+                      # 'data_numpy_datetime64_s',
+                      # 'data_numpy_datetime64_m',
+                      # 'data_numpy_datetime64_h',
+                      # 'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,np.datetime64('1970-01-01','ns'),np.datetime64('1970-01-01','ns')],
-                'middle_none': [np.datetime64('1970-01-01','ns'),None, np.datetime64('1970-01-01','ns')],
-                'last_none': [np.datetime64('1970-01-01','ns'), np.datetime64('1970-01-01','ns'), None],
+                'first_none': [None, np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns')],
+                'middle_none': [np.datetime64('1970-01-01', 'ns'), None, np.datetime64('1970-01-01', 'ns')],
+                'last_none': [np.datetime64('1970-01-01', 'ns'), np.datetime64('1970-01-01', 'ns'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DATEHOUR for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DATEHOUR for k in dt
             }
-            rtn={'tableSetTypeDATEHOUR':{
-                    'value':df,
-                    'expect_typestr':"'FAST DATEHOUR VECTOR'",
-                    'expect_value': "table("
-                                    "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_none,"
-                                    "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_numpy_nan,"
-                                    "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_pandas_nat,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_int_0,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_int64_0,"
-                                    "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_nan,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_ns_0,"
-                                    "[datehour('2262.04.11T23'),datehour('2262.04.11T23'),datehour('2262.04.11T23')] as `data_numpy_datetime64_ns_max,"
-                                    "[datehour('1677.09.21T00'),datehour('1677.09.21T00'),datehour('1677.09.21T00')] as `data_numpy_datetime64_ns_min,"
-                                    "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_numpy_datetime64_ns_none,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_us_0,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_ms,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_s,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_m,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_h,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_d_up,"
-                                    "[datehour(NULL),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `first_none,"
-                                    "[datehour('1970.01.01T00'),datehour(NULL),datehour('1970.01.01T00')] as `middle_none,"
-                                    "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour(NULL)] as `last_none"
-                                    ")"
-                }
+            rtn = {'tableSetTypeDATEHOUR': {
+                'value': df,
+                'expect_typestr': "'FAST DATEHOUR VECTOR'",
+                'expect_value': "table("
+                                "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_none,"
+                                "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_numpy_nan,"
+                                "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_pandas_nat,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_int_0,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_int64_0,"
+                                "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_nan,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_ns_0,"
+                                "[datehour('2262.04.11T23'),datehour('2262.04.11T23'),datehour('2262.04.11T23')] as `data_numpy_datetime64_ns_max,"
+                                "[datehour('1677.09.21T00'),datehour('1677.09.21T00'),datehour('1677.09.21T00')] as `data_numpy_datetime64_ns_min,"
+                                "[datehour(NULL),datehour(NULL),datehour(NULL)] as `data_numpy_datetime64_ns_none,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_us_0,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_ms,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_s,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_m,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_h,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `data_numpy_datetime64_d_up,"
+                                "[datehour(NULL),datehour('1970.01.01T00'),datehour('1970.01.01T00')] as `first_none,"
+                                "[datehour('1970.01.01T00'),datehour(NULL),datehour('1970.01.01T00')] as `middle_none,"
+                                "[datehour('1970.01.01T00'),datehour('1970.01.01T00'),datehour(NULL)] as `last_none"
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4927,38 +4950,38 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_none',
-                    'data_numpy_nan',
-                    'data_pandas_nat',
-                    'data_nan'
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_none',
+                      'data_numpy_nan',
+                      'data_pandas_nat',
+                      'data_nan'
+                  )
+                  }
             dt.update({
-                'ipaddr':['127.0.0.1','127.0.0.2','127.0.0.3'],
+                'ipaddr': ['127.0.0.1', '127.0.0.2', '127.0.0.3'],
                 'first_none': [None, '127.0.0.1', '127.0.0.2'],
                 'middle_none': ['127.0.0.1', None, '127.0.0.2'],
                 'last_none': ['127.0.0.1', '127.0.0.2', None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_IPADDR for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_IPADDR for k in dt
             }
-            rtn={'tableSetTypeIPADDR':{
-                    'value':df,
-                    'expect_typestr':"'FAST IPADDR VECTOR'",
-                    'expect_value': "table("
-                                    '[ipaddr("0.0.0.0"),ipaddr("0.0.0.0"),ipaddr("0.0.0.0")] as `data_none,'
-                                    '[ipaddr("0.0.0.0"),ipaddr("0.0.0.0"),ipaddr("0.0.0.0")] as `data_numpy_nan,'
-                                    '[ipaddr("0.0.0.0"),ipaddr("0.0.0.0"),ipaddr("0.0.0.0")] as `data_pandas_nat,'
-                                    '[ipaddr("0.0.0.0"),ipaddr("0.0.0.0"),ipaddr("0.0.0.0")] as `data_nan,'
-                                    '[ipaddr("127.0.0.1"),ipaddr("127.0.0.2"),ipaddr("127.0.0.3")] as `uuid,'
-                                    '[ipaddr("0.0.0.0"),ipaddr("127.0.0.1"),ipaddr("127.0.0.2")] as `first_none,'
-                                    '[ipaddr("127.0.0.1"),ipaddr("0.0.0.0"),ipaddr("127.0.0.2")] as `middle_none,'
-                                    '[ipaddr("127.0.0.1"),ipaddr("127.0.0.2"),ipaddr("0.0.0.0")] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeIPADDR': {
+                'value': df,
+                'expect_typestr': "'FAST IPADDR VECTOR'",
+                'expect_value': "table("
+                                '[ipaddr("0.0.0.0"),ipaddr("0.0.0.0"),ipaddr("0.0.0.0")] as `data_none,'
+                                '[ipaddr("0.0.0.0"),ipaddr("0.0.0.0"),ipaddr("0.0.0.0")] as `data_numpy_nan,'
+                                '[ipaddr("0.0.0.0"),ipaddr("0.0.0.0"),ipaddr("0.0.0.0")] as `data_pandas_nat,'
+                                '[ipaddr("0.0.0.0"),ipaddr("0.0.0.0"),ipaddr("0.0.0.0")] as `data_nan,'
+                                '[ipaddr("127.0.0.1"),ipaddr("127.0.0.2"),ipaddr("127.0.0.3")] as `uuid,'
+                                '[ipaddr("0.0.0.0"),ipaddr("127.0.0.1"),ipaddr("127.0.0.2")] as `first_none,'
+                                '[ipaddr("127.0.0.1"),ipaddr("0.0.0.0"),ipaddr("127.0.0.2")] as `middle_none,'
+                                '[ipaddr("127.0.0.1"),ipaddr("127.0.0.2"),ipaddr("0.0.0.0")] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -4970,38 +4993,39 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_none',
-                    'data_numpy_nan',
-                    'data_pandas_nat',
-                    'data_nan'
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_none',
+                      'data_numpy_nan',
+                      'data_pandas_nat',
+                      'data_nan'
+                  )
+                  }
             dt.update({
-                'int128':['e1671797c52e15f763380b45e841ec32','e1671797c52e15f763380b45e841ec33','e1671797c52e15f763380b45e841ec34'],
+                'int128': ['e1671797c52e15f763380b45e841ec32', 'e1671797c52e15f763380b45e841ec33',
+                           'e1671797c52e15f763380b45e841ec34'],
                 'first_none': [None, 'e1671797c52e15f763380b45e841ec32', 'e1671797c52e15f763380b45e841ec33'],
                 'middle_none': ['e1671797c52e15f763380b45e841ec32', None, 'e1671797c52e15f763380b45e841ec33'],
                 'last_none': ['e1671797c52e15f763380b45e841ec32', 'e1671797c52e15f763380b45e841ec33', None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_INT128 for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_INT128 for k in dt
             }
-            rtn={'tableSetTypeINT128':{
-                    'value':df,
-                    'expect_typestr':"'FAST INT128 VECTOR'",
-                    'expect_value': "table("
-                                    '[int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000")] as `data_none,'
-                                    '[int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000")] as `data_numpy_nan,'
-                                    '[int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000")] as `data_pandas_nat,'
-                                    '[int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000")] as `data_nan,'
-                                    '[int128("e1671797c52e15f763380b45e841ec32"),int128("e1671797c52e15f763380b45e841ec33"),int128("e1671797c52e15f763380b45e841ec34")] as `uuid,'
-                                    '[int128("00000000000000000000000000000000"),int128("e1671797c52e15f763380b45e841ec32"),int128("e1671797c52e15f763380b45e841ec33")] as `first_none,'
-                                    '[int128("e1671797c52e15f763380b45e841ec32"),int128("00000000000000000000000000000000"),int128("e1671797c52e15f763380b45e841ec33")] as `middle_none,'
-                                    '[int128("e1671797c52e15f763380b45e841ec32"),int128("e1671797c52e15f763380b45e841ec33"),int128("00000000000000000000000000000000")] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeINT128': {
+                'value': df,
+                'expect_typestr': "'FAST INT128 VECTOR'",
+                'expect_value': "table("
+                                '[int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000")] as `data_none,'
+                                '[int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000")] as `data_numpy_nan,'
+                                '[int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000")] as `data_pandas_nat,'
+                                '[int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000"),int128("00000000000000000000000000000000")] as `data_nan,'
+                                '[int128("e1671797c52e15f763380b45e841ec32"),int128("e1671797c52e15f763380b45e841ec33"),int128("e1671797c52e15f763380b45e841ec34")] as `uuid,'
+                                '[int128("00000000000000000000000000000000"),int128("e1671797c52e15f763380b45e841ec32"),int128("e1671797c52e15f763380b45e841ec33")] as `first_none,'
+                                '[int128("e1671797c52e15f763380b45e841ec32"),int128("00000000000000000000000000000000"),int128("e1671797c52e15f763380b45e841ec33")] as `middle_none,'
+                                '[int128("e1671797c52e15f763380b45e841ec32"),int128("e1671797c52e15f763380b45e841ec33"),int128("00000000000000000000000000000000")] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -5013,97 +5037,97 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k not in (
-                    'data_int_0',
-                    'data_numpy_int8_0',
-                    'data_numpy_int8_max',
-                    'data_numpy_int8_min',
-                    'data_numpy_int8_none',
-                    'data_numpy_int16_0',
-                    'data_numpy_int16_max',
-                    'data_numpy_int16_min',
-                    'data_numpy_int16_none',
-                    'data_numpy_int32_0',
-                    'data_numpy_int32_max',
-                    'data_numpy_int32_min',
-                    'data_numpy_int32_none',
-                    'data_numpy_int64_0',
-                    'data_numpy_int64_max',
-                    'data_numpy_int64_min',
-                    'data_numpy_int64_none',
-                    'data_float',
-                    'data_pi',
-                    'data_inf',
-                    'data_numpy_inf',
-                    'data_numpy_float32_0',
-                    'data_numpy_float32_max',
-                    'data_numpy_float32_min',
-                    'data_numpy_float32_none',
-                    'data_numpy_float64_max',
-                    'data_numpy_float64_min',
-                    'data_numpy_float64_none',
-                    'data_numpy_float64_0',
-                    'data_numpy_longdouble_0',
-                    'data_numpy_longdouble_max',
-                    'data_numpy_longdouble_min',
-                    'data_numpy_longdouble_none',
-                #     'data_string',
-                #     'data_numpy_str',
-                #     'data_bytes_utf8',
-                #     'data_bytes_gbk',
-                #     'data_numpy_bytes_utf8',
-                #     'data_numpy_bytes_gbk',
-                    'data_bool_true',
-                    'data_bool_false',
-                    'data_numpy_bool_true',
-                    'data_numpy_bool_false',
-                    'data_numpy_datetime64_ns_0',
-                    'data_numpy_datetime64_ns_max',
-                    'data_numpy_datetime64_ns_min',
-                    'data_numpy_datetime64_ns_none',
-                    'data_numpy_datetime64_us_0',
-                    'data_numpy_datetime64_ms',
-                    'data_numpy_datetime64_s',
-                    'data_numpy_datetime64_m',
-                    'data_numpy_datetime64_h',
-                    'data_numpy_datetime64_d_up',
-                    'data_numpy_datetime64_m_up',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k not in (
+                      'data_int_0',
+                      'data_numpy_int8_0',
+                      'data_numpy_int8_max',
+                      'data_numpy_int8_min',
+                      'data_numpy_int8_none',
+                      'data_numpy_int16_0',
+                      'data_numpy_int16_max',
+                      'data_numpy_int16_min',
+                      'data_numpy_int16_none',
+                      'data_numpy_int32_0',
+                      'data_numpy_int32_max',
+                      'data_numpy_int32_min',
+                      'data_numpy_int32_none',
+                      'data_numpy_int64_0',
+                      'data_numpy_int64_max',
+                      'data_numpy_int64_min',
+                      'data_numpy_int64_none',
+                      'data_float',
+                      'data_pi',
+                      'data_inf',
+                      'data_numpy_inf',
+                      'data_numpy_float32_0',
+                      'data_numpy_float32_max',
+                      'data_numpy_float32_min',
+                      'data_numpy_float32_none',
+                      'data_numpy_float64_max',
+                      'data_numpy_float64_min',
+                      'data_numpy_float64_none',
+                      'data_numpy_float64_0',
+                      'data_numpy_longdouble_0',
+                      'data_numpy_longdouble_max',
+                      'data_numpy_longdouble_min',
+                      'data_numpy_longdouble_none',
+                      #     'data_string',
+                      #     'data_numpy_str',
+                      #     'data_bytes_utf8',
+                      #     'data_bytes_gbk',
+                      #     'data_numpy_bytes_utf8',
+                      #     'data_numpy_bytes_gbk',
+                      'data_bool_true',
+                      'data_bool_false',
+                      'data_numpy_bool_true',
+                      'data_numpy_bool_false',
+                      'data_numpy_datetime64_ns_0',
+                      'data_numpy_datetime64_ns_max',
+                      'data_numpy_datetime64_ns_min',
+                      'data_numpy_datetime64_ns_none',
+                      'data_numpy_datetime64_us_0',
+                      'data_numpy_datetime64_ms',
+                      'data_numpy_datetime64_s',
+                      'data_numpy_datetime64_m',
+                      'data_numpy_datetime64_h',
+                      'data_numpy_datetime64_d_up',
+                      'data_numpy_datetime64_m_up',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,'0','-1'],
-                'middle_none': ['0',None, '-1'],
+                'first_none': [None, '0', '-1'],
+                'middle_none': ['0', None, '-1'],
                 'last_none': ['0', '-1', None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_BLOB for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_BLOB for k in dt
             }
-            rtn={'tableSetTypeBLOB':{
-                    'value':df,
-                    'expect_typestr':"'BLOB VECTOR'",
-                    'expect_value': "table("
-                                    '[blob(""),blob(""),blob("")] as `data_none,'
-                                    '[blob(""),blob(""),blob("")] as `data_numpy_nan,'
-                                    '[blob(""),blob(""),blob("")] as `data_pandas_nat,'
-                                    '[blob(""),blob(""),blob("")] as `data_nan,'
-                                    '[blob("abc!@#中文 123"),blob("abc!@#中文 123"),blob("abc!@#中文 123")] as `data_string,'
-                                    '[blob("abc!@#中文 123"),blob("abc!@#中文 123"),blob("abc!@#中文 123")] as `data_numpy_str,'
-                                    '[blob("abc!@#中文 123"),blob("abc!@#中文 123"),blob("abc!@#中文 123")] as `data_bytes_utf8,'
-                                    '[fromUTF8("abc!@#中文 123","gbk"),fromUTF8("abc!@#中文 123","gbk"),fromUTF8("abc!@#中文 123","gbk")] as `data_bytes_gbk,'
-                                    '[blob("abc!@#中文 123"),blob("abc!@#中文 123"),blob("abc!@#中文 123")] as `data_numpy_bytes_utf8,'
-                                    '[fromUTF8("abc!@#中文 123","gbk"),fromUTF8("abc!@#中文 123","gbk"),fromUTF8("abc!@#中文 123","gbk")] as `data_numpy_bytes_gbk,'
-                                    '[blob(""),blob("0"),blob("-1")] as `first_none,'
-                                    '[blob("0"),blob(""),blob("-1")] as `middle_none,'
-                                    '[blob("0"),blob("-1"),blob("")] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeBLOB': {
+                'value': df,
+                'expect_typestr': "'BLOB VECTOR'",
+                'expect_value': "table("
+                                '[blob(""),blob(""),blob("")] as `data_none,'
+                                '[blob(""),blob(""),blob("")] as `data_numpy_nan,'
+                                '[blob(""),blob(""),blob("")] as `data_pandas_nat,'
+                                '[blob(""),blob(""),blob("")] as `data_nan,'
+                                '[blob("abc!@#中文 123"),blob("abc!@#中文 123"),blob("abc!@#中文 123")] as `data_string,'
+                                '[blob("abc!@#中文 123"),blob("abc!@#中文 123"),blob("abc!@#中文 123")] as `data_numpy_str,'
+                                '[blob("abc!@#中文 123"),blob("abc!@#中文 123"),blob("abc!@#中文 123")] as `data_bytes_utf8,'
+                                '[fromUTF8("abc!@#中文 123","gbk"),fromUTF8("abc!@#中文 123","gbk"),fromUTF8("abc!@#中文 123","gbk")] as `data_bytes_gbk,'
+                                '[blob("abc!@#中文 123"),blob("abc!@#中文 123"),blob("abc!@#中文 123")] as `data_numpy_bytes_utf8,'
+                                '[fromUTF8("abc!@#中文 123","gbk"),fromUTF8("abc!@#中文 123","gbk"),fromUTF8("abc!@#中文 123","gbk")] as `data_numpy_bytes_gbk,'
+                                '[blob(""),blob("0"),blob("-1")] as `first_none,'
+                                '[blob("0"),blob(""),blob("-1")] as `middle_none,'
+                                '[blob("0"),blob("-1"),blob("")] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -5115,40 +5139,40 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_none',
-                    'data_numpy_nan',
-                    'data_pandas_nat',
-                    'data_nan',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_none',
+                      'data_numpy_nan',
+                      'data_pandas_nat',
+                      'data_nan',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                  )
+                  }
             dt.update({
-                'first_none':[None,Decimal('0'),Decimal('-1')],
-                'middle_none': [Decimal('0'),None, Decimal('-1')],
+                'first_none': [None, Decimal('0'), Decimal('-1')],
+                'middle_none': [Decimal('0'), None, Decimal('-1')],
                 'last_none': [Decimal('0'), Decimal('-1'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DECIMAL32 for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DECIMAL32 for k in dt
             }
-            rtn={'tableSetTypeDECIMAL32':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL32 VECTOR'",
-                    'expect_value': "table("
-                                    '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_none,'
-                                    '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_numpy_nan,'
-                                    '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_pandas_nat,'
-                                    '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_nan,'
-                                    '[decimal32("0",2),decimal32("0",2),decimal32("0",2)] as `data_decimal_2,'
-                                    '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_decimal_nan,'
-                                    '[decimal32(NULL,0),decimal32("0",0),decimal32("-1",0)] as `first_none,'
-                                    '[decimal32("0",0),decimal32(NULL,0),decimal32("-1",0)] as `middle_none,'
-                                    '[decimal32("0",0),decimal32("-1",0),decimal32(NULL,0)] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeDECIMAL32': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL32 VECTOR'",
+                'expect_value': "table("
+                                '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_none,'
+                                '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_numpy_nan,'
+                                '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_pandas_nat,'
+                                '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_nan,'
+                                '[decimal32("0",2),decimal32("0",2),decimal32("0",2)] as `data_decimal_2,'
+                                '[decimal32(NULL,0),decimal32(NULL,0),decimal32(NULL,0)] as `data_decimal_nan,'
+                                '[decimal32(NULL,0),decimal32("0",0),decimal32("-1",0)] as `first_none,'
+                                '[decimal32("0",0),decimal32(NULL,0),decimal32("-1",0)] as `middle_none,'
+                                '[decimal32("0",0),decimal32("-1",0),decimal32(NULL,0)] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -5160,40 +5184,40 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_none',
-                    'data_numpy_nan',
-                    'data_pandas_nat',
-                    'data_nan',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_none',
+                      'data_numpy_nan',
+                      'data_pandas_nat',
+                      'data_nan',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                  )
+                  }
             dt.update({
-                'first_none':[None,Decimal('0'),Decimal('-1')],
-                'middle_none': [Decimal('0'),None, Decimal('-1')],
+                'first_none': [None, Decimal('0'), Decimal('-1')],
+                'middle_none': [Decimal('0'), None, Decimal('-1')],
                 'last_none': [Decimal('0'), Decimal('-1'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:[keys.DT_DECIMAL32,5] for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: [keys.DT_DECIMAL32, 5] for k in dt
             }
-            rtn={'tableSetTypeDECIMAL32':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL32 VECTOR'",
-                    'expect_value': "table("
-                                    '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_none,'
-                                    '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_numpy_nan,'
-                                    '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_pandas_nat,'
-                                    '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_nan,'
-                                    '[decimal32("0",5),decimal32("0",5),decimal32("0",5)] as `data_decimal_2,'
-                                    '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_decimal_nan,'
-                                    '[decimal32(NULL,5),decimal32("0",5),decimal32("-1",5)] as `first_none,'
-                                    '[decimal32("0",5),decimal32(NULL,5),decimal32("-1",5)] as `middle_none,'
-                                    '[decimal32("0",5),decimal32("-1",5),decimal32(NULL,5)] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeDECIMAL32': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL32 VECTOR'",
+                'expect_value': "table("
+                                '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_none,'
+                                '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_numpy_nan,'
+                                '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_pandas_nat,'
+                                '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_nan,'
+                                '[decimal32("0",5),decimal32("0",5),decimal32("0",5)] as `data_decimal_2,'
+                                '[decimal32(NULL,5),decimal32(NULL,5),decimal32(NULL,5)] as `data_decimal_nan,'
+                                '[decimal32(NULL,5),decimal32("0",5),decimal32("-1",5)] as `first_none,'
+                                '[decimal32("0",5),decimal32(NULL,5),decimal32("-1",5)] as `middle_none,'
+                                '[decimal32("0",5),decimal32("-1",5),decimal32(NULL,5)] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -5205,44 +5229,44 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_none',
-                    'data_numpy_nan',
-                    'data_pandas_nat',
-                    'data_nan',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_none',
+                      'data_numpy_nan',
+                      'data_pandas_nat',
+                      'data_nan',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                  )
+                  }
             dt.update({
-                'first_none':[None,Decimal('0'),Decimal('-1')],
-                'middle_none': [Decimal('0'),None, Decimal('-1')],
+                'first_none': [None, Decimal('0'), Decimal('-1')],
+                'middle_none': [Decimal('0'), None, Decimal('-1')],
                 'last_none': [Decimal('0'), Decimal('-1'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DECIMAL64 for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DECIMAL64 for k in dt
             }
-            rtn={'tableSetTypeDECIMAL64':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL64 VECTOR'",
-                    'expect_value': "table("
-                                    '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_none,'
-                                    '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_numpy_nan,'
-                                    '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_pandas_nat,'
-                                    '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_nan,'
-                                    '[decimal64("0",2),decimal64("0",2),decimal64("0",2)] as `data_decimal_2,'
-                                    '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_decimal_nan,'
-                                    '[decimal64("3.14159265358979323",17),decimal64("3.14159265358979323",17),decimal64("3.14159265358979323",17)] as `data_decimal_17,'
-                                    '[decimal64("-0.141592653589793238",18),decimal64("-0.141592653589793238",18),decimal64("-0.141592653589793238",18)] as `data_decimal_18,'
-                                    '[decimal64(NULL,0),decimal64("0",0),decimal64("-1",0)] as `first_none,'
-                                    '[decimal64("0",0),decimal64(NULL,0),decimal64("-1",0)] as `middle_none,'
-                                    '[decimal64("0",0),decimal64("-1",0),decimal64(NULL,0)] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeDECIMAL64': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL64 VECTOR'",
+                'expect_value': "table("
+                                '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_none,'
+                                '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_numpy_nan,'
+                                '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_pandas_nat,'
+                                '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_nan,'
+                                '[decimal64("0",2),decimal64("0",2),decimal64("0",2)] as `data_decimal_2,'
+                                '[decimal64(NULL,0),decimal64(NULL,0),decimal64(NULL,0)] as `data_decimal_nan,'
+                                '[decimal64("3.14159265358979323",17),decimal64("3.14159265358979323",17),decimal64("3.14159265358979323",17)] as `data_decimal_17,'
+                                '[decimal64("-0.141592653589793238",18),decimal64("-0.141592653589793238",18),decimal64("-0.141592653589793238",18)] as `data_decimal_18,'
+                                '[decimal64(NULL,0),decimal64("0",0),decimal64("-1",0)] as `first_none,'
+                                '[decimal64("0",0),decimal64(NULL,0),decimal64("-1",0)] as `middle_none,'
+                                '[decimal64("0",0),decimal64("-1",0),decimal64(NULL,0)] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -5254,44 +5278,44 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_none',
-                    'data_numpy_nan',
-                    'data_pandas_nat',
-                    'data_nan',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_none',
+                      'data_numpy_nan',
+                      'data_pandas_nat',
+                      'data_nan',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                  )
+                  }
             dt.update({
-                'first_none':[None,Decimal('0'),Decimal('-1')],
-                'middle_none': [Decimal('0'),None, Decimal('-1')],
+                'first_none': [None, Decimal('0'), Decimal('-1')],
+                'middle_none': [Decimal('0'), None, Decimal('-1')],
                 'last_none': [Decimal('0'), Decimal('-1'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:[keys.DT_DECIMAL64,15] for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: [keys.DT_DECIMAL64, 15] for k in dt
             }
-            rtn={'tableSetTypeDECIMAL64':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL64 VECTOR'",
-                    'expect_value': "table("
-                                    '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_none,'
-                                    '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_numpy_nan,'
-                                    '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_pandas_nat,'
-                                    '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_nan,'
-                                    '[decimal64("0",15),decimal64("0",15),decimal64("0",15)] as `data_decimal_2,'
-                                    '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_decimal_nan,'
-                                    '[decimal64("3.14159265358979323",15),decimal64("3.14159265358979323",15),decimal64("3.14159265358979323",15)] as `data_decimal_17,'
-                                    '[decimal64("-0.141592653589793238",15),decimal64("-0.141592653589793238",15),decimal64("-0.141592653589793238",15)] as `data_decimal_18,'
-                                    '[decimal64(NULL,15),decimal64("0",15),decimal64("-1",15)] as `first_none,'
-                                    '[decimal64("0",15),decimal64(NULL,15),decimal64("-1",15)] as `middle_none,'
-                                    '[decimal64("0",15),decimal64("-1",15),decimal64(NULL,15)] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeDECIMAL64': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL64 VECTOR'",
+                'expect_value': "table("
+                                '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_none,'
+                                '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_numpy_nan,'
+                                '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_pandas_nat,'
+                                '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_nan,'
+                                '[decimal64("0",15),decimal64("0",15),decimal64("0",15)] as `data_decimal_2,'
+                                '[decimal64(NULL,15),decimal64(NULL,15),decimal64(NULL,15)] as `data_decimal_nan,'
+                                '[decimal64("3.14159265358979323",15),decimal64("3.14159265358979323",15),decimal64("3.14159265358979323",15)] as `data_decimal_17,'
+                                '[decimal64("-0.141592653589793238",15),decimal64("-0.141592653589793238",15),decimal64("-0.141592653589793238",15)] as `data_decimal_18,'
+                                '[decimal64(NULL,15),decimal64("0",15),decimal64("-1",15)] as `first_none,'
+                                '[decimal64("0",15),decimal64(NULL,15),decimal64("-1",15)] as `middle_none,'
+                                '[decimal64("0",15),decimal64("-1",15),decimal64(NULL,15)] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -5303,46 +5327,46 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_none',
-                    'data_numpy_nan',
-                    'data_pandas_nat',
-                    'data_nan',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_none',
+                      'data_numpy_nan',
+                      'data_pandas_nat',
+                      'data_nan',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,Decimal('0'),Decimal('-1')],
-                'middle_none': [Decimal('0'),None, Decimal('-1')],
+                'first_none': [None, Decimal('0'), Decimal('-1')],
+                'middle_none': [Decimal('0'), None, Decimal('-1')],
                 'last_none': [Decimal('0'), Decimal('-1'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DECIMAL128 for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DECIMAL128 for k in dt
             }
-            rtn={'tableSetTypeDECIMAL128':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL128 VECTOR'",
-                    'expect_value': "table("
-                                    '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_none,'
-                                    '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_numpy_nan,'
-                                    '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_pandas_nat,'
-                                    '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_nan,'
-                                    '[decimal128("0",2),decimal128("0",2),decimal128("0",2)] as `data_decimal_2,'
-                                    '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_decimal_nan,'
-                                    '[decimal128("3.14159265358979323",17),decimal128("3.14159265358979323",17),decimal128("3.14159265358979323",17)] as `data_decimal_17,'
-                                    '[decimal128("-0.141592653589793238",18),decimal128("-0.141592653589793238",18),decimal128("-0.141592653589793238",18)] as `data_decimal_18,'
-                                    '[decimal128("0.14159265358979323846264338327950288419",38),decimal128("0.14159265358979323846264338327950288419",38),decimal128("0.14159265358979323846264338327950288419",38)] as `data_decimal_38,'
-                                    '[decimal128(NULL,0),decimal128("0",0),decimal128("-1",0)] as `first_none,'
-                                    '[decimal128("0",0),decimal128(NULL,0),decimal128("-1",0)] as `middle_none,'
-                                    '[decimal128("0",0),decimal128("-1",0),decimal128(NULL,0)] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeDECIMAL128': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL128 VECTOR'",
+                'expect_value': "table("
+                                '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_none,'
+                                '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_numpy_nan,'
+                                '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_pandas_nat,'
+                                '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_nan,'
+                                '[decimal128("0",2),decimal128("0",2),decimal128("0",2)] as `data_decimal_2,'
+                                '[decimal128(NULL,0),decimal128(NULL,0),decimal128(NULL,0)] as `data_decimal_nan,'
+                                '[decimal128("3.14159265358979323",17),decimal128("3.14159265358979323",17),decimal128("3.14159265358979323",17)] as `data_decimal_17,'
+                                '[decimal128("-0.141592653589793238",18),decimal128("-0.141592653589793238",18),decimal128("-0.141592653589793238",18)] as `data_decimal_18,'
+                                '[decimal128("0.14159265358979323846264338327950288419",38),decimal128("0.14159265358979323846264338327950288419",38),decimal128("0.14159265358979323846264338327950288419",38)] as `data_decimal_38,'
+                                '[decimal128(NULL,0),decimal128("0",0),decimal128("-1",0)] as `first_none,'
+                                '[decimal128("0",0),decimal128(NULL,0),decimal128("-1",0)] as `middle_none,'
+                                '[decimal128("0",0),decimal128("-1",0),decimal128(NULL,0)] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -5354,46 +5378,46 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[v['value'],v['value'],v['value']] for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_none',
-                    'data_numpy_nan',
-                    'data_pandas_nat',
-                    'data_nan',
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
-            }
+            dt = {k: [v['value'], v['value'], v['value']] for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_none',
+                      'data_numpy_nan',
+                      'data_pandas_nat',
+                      'data_nan',
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
             dt.update({
-                'first_none':[None,Decimal('0'),Decimal('-1')],
-                'middle_none': [Decimal('0'),None, Decimal('-1')],
+                'first_none': [None, Decimal('0'), Decimal('-1')],
+                'middle_none': [Decimal('0'), None, Decimal('-1')],
                 'last_none': [Decimal('0'), Decimal('-1'), None],
             })
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:[keys.DT_DECIMAL128,30] for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: [keys.DT_DECIMAL128, 30] for k in dt
             }
-            rtn={'tableSetTypeDECIMAL128':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL128 VECTOR'",
-                    'expect_value': "table("
-                                    '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_none,'
-                                    '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_numpy_nan,'
-                                    '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_pandas_nat,'
-                                    '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_nan,'
-                                    '[decimal128("0",30),decimal128("0",30),decimal128("0",30)] as `data_decimal_2,'
-                                    '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_decimal_nan,'
-                                    '[decimal128("3.14159265358979323",30),decimal128("3.14159265358979323",30),decimal128("3.14159265358979323",30)] as `data_decimal_17,'
-                                    '[decimal128("-0.141592653589793238",30),decimal128("-0.141592653589793238",30),decimal128("-0.141592653589793238",30)] as `data_decimal_18,'
-                                    '[decimal128("0.14159265358979323846264338327950288419",30),decimal128("0.14159265358979323846264338327950288419",30),decimal128("0.14159265358979323846264338327950288419",30)] as `data_decimal_38,'
-                                    '[decimal128(NULL,30),decimal128("0",30),decimal128("-1",30)] as `first_none,'
-                                    '[decimal128("0",30),decimal128(NULL,30),decimal128("-1",30)] as `middle_none,'
-                                    '[decimal128("0",30),decimal128("-1",30),decimal128(NULL,30)] as `last_none'
-                                    ")"
-                }
+            rtn = {'tableSetTypeDECIMAL128': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL128 VECTOR'",
+                'expect_value': "table("
+                                '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_none,'
+                                '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_numpy_nan,'
+                                '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_pandas_nat,'
+                                '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_nan,'
+                                '[decimal128("0",30),decimal128("0",30),decimal128("0",30)] as `data_decimal_2,'
+                                '[decimal128(NULL,30),decimal128(NULL,30),decimal128(NULL,30)] as `data_decimal_nan,'
+                                '[decimal128("3.14159265358979323",30),decimal128("3.14159265358979323",30),decimal128("3.14159265358979323",30)] as `data_decimal_17,'
+                                '[decimal128("-0.141592653589793238",30),decimal128("-0.141592653589793238",30),decimal128("-0.141592653589793238",30)] as `data_decimal_18,'
+                                '[decimal128("0.14159265358979323846264338327950288419",30),decimal128("0.14159265358979323846264338327950288419",30),decimal128("0.14159265358979323846264338327950288419",30)] as `data_decimal_38,'
+                                '[decimal128(NULL,30),decimal128("0",30),decimal128("-1",30)] as `first_none,'
+                                '[decimal128("0",30),decimal128(NULL,30),decimal128("-1",30)] as `middle_none,'
+                                '[decimal128("0",30),decimal128("-1",30),decimal128(NULL,30)] as `last_none'
+                                ")"
+            }
             }
             return rtn
         else:
@@ -5405,20 +5429,20 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None],[None,True],[None]],
-                'b': [[None],[np.nan],[None]],
-                'c': [[None],[pd.NaT],[None]],
-                'd':[[None],[True],[None]],
+            dt = {
+                'a': [[None], [None, True], [None]],
+                'b': [[None], [np.nan], [None]],
+                'c': [[None], [pd.NaT], [None]],
+                'd': [[None], [True], [None]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_BOOL_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_BOOL_ARRAY for k in dt
             }
-            rtn={'tableSetTypeBOOLARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST BOOL[] VECTOR'",
-                }
+            rtn = {'tableSetTypeBOOLARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST BOOL[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5430,21 +5454,21 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None,None],[None],[None,None]],
-                'b': [[None,None],[np.nan],[None]],
-                'c': [[None,None],[pd.NaT],[None]],
-                'd':[[None,None],[None,1],[None]],
-                'e':[[None,None],[np.int8(1)],[None]]
+            dt = {
+                'a': [[None, None], [None], [None, None]],
+                'b': [[None, None], [np.nan], [None]],
+                'c': [[None, None], [pd.NaT], [None]],
+                'd': [[None, None], [None, 1], [None]],
+                'e': [[None, None], [np.int8(1)], [None]]
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_CHAR_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_CHAR_ARRAY for k in dt
             }
-            rtn={'tableSetTypeCHARARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST CHAR[] VECTOR'",
-                }
+            rtn = {'tableSetTypeCHARARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST CHAR[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5456,21 +5480,21 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
-                'd':[[1]],
-                'e':[[np.int8(1)]]
+                'd': [[1]],
+                'e': [[np.int8(1)]]
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_SHORT_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_SHORT_ARRAY for k in dt
             }
-            rtn={'tableSetTypeSHORTARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST SHORT[] VECTOR'",
-                }
+            rtn = {'tableSetTypeSHORTARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST SHORT[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5482,21 +5506,21 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
-                'd':[[1]],
-                'e':[[np.int8(1)]]
+                'd': [[1]],
+                'e': [[np.int8(1)]]
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_INT_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_INT_ARRAY for k in dt
             }
-            rtn={'tableSetTypeINTARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST INT[] VECTOR'",
-                }
+            rtn = {'tableSetTypeINTARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST INT[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5508,26 +5532,25 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
-                'd':[[1]],
-                'e':[[np.int8(1)]]
+                'd': [[1]],
+                'e': [[np.int8(1)]]
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_LONG_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_LONG_ARRAY for k in dt
             }
-            rtn={'tableSetTypeLONGARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST LONG[] VECTOR'",
-                }
+            rtn = {'tableSetTypeLONGARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST LONG[] VECTOR'",
+            }
             }
             return rtn
         else:
             return {}
-
 
     @classmethod
     def getTableSetTypeDATEARRAY(cls, _type):
@@ -5535,19 +5558,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DATE_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DATE_ARRAY for k in dt
             }
-            rtn={'tableSetTypeDATEARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DATE[] VECTOR'",
-                }
+            rtn = {'tableSetTypeDATEARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DATE[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5559,19 +5582,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_MONTH_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_MONTH_ARRAY for k in dt
             }
-            rtn={'tableSetTypeMONTHARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST MONTH[] VECTOR'",
-                }
+            rtn = {'tableSetTypeMONTHARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST MONTH[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5631,19 +5654,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_SECOND_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_SECOND_ARRAY for k in dt
             }
-            rtn={'tableSetTypeSECONDARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST SECOND[] VECTOR'",
-                }
+            rtn = {'tableSetTypeSECONDARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST SECOND[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5655,19 +5678,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DATETIME_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DATETIME_ARRAY for k in dt
             }
-            rtn={'tableSetTypeDATETIMEARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DATETIME[] VECTOR'",
-                }
+            rtn = {'tableSetTypeDATETIMEARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DATETIME[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5679,19 +5702,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_TIMESTAMP_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_TIMESTAMP_ARRAY for k in dt
             }
-            rtn={'tableSetTypeTIMESTAMPARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST TIMESTAMP[] VECTOR'",
-                }
+            rtn = {'tableSetTypeTIMESTAMPARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST TIMESTAMP[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5703,19 +5726,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_NANOTIME_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_NANOTIME_ARRAY for k in dt
             }
-            rtn={'tableSetTypeNANOTIMEARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST NANOTIME[] VECTOR'",
-                }
+            rtn = {'tableSetTypeNANOTIMEARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST NANOTIME[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5727,19 +5750,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_NANOTIMESTAMP_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_NANOTIMESTAMP_ARRAY for k in dt
             }
-            rtn={'tableSetTypeNANOTIMESTAMPARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST NANOTIMESTAMP[] VECTOR'",
-                }
+            rtn = {'tableSetTypeNANOTIMESTAMPARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST NANOTIMESTAMP[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5751,19 +5774,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_FLOAT_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_FLOAT_ARRAY for k in dt
             }
-            rtn={'tableSetTypeFLOATARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST FLOAT[] VECTOR'",
-                }
+            rtn = {'tableSetTypeFLOATARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST FLOAT[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5775,19 +5798,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DOUBLE_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DOUBLE_ARRAY for k in dt
             }
-            rtn={'tableSetTypeDOUBLEARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DOUBLE[] VECTOR'",
-                }
+            rtn = {'tableSetTypeDOUBLEARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DOUBLE[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5799,17 +5822,17 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[['5d212a78-cc48-e3b1-4235-b4d91473ee87']],
+            dt = {
+                'a': [['5d212a78-cc48-e3b1-4235-b4d91473ee87']],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_UUID_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_UUID_ARRAY for k in dt
             }
-            rtn={'tableSetTypeUUIDARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST UUID[] VECTOR'",
-                }
+            rtn = {'tableSetTypeUUIDARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST UUID[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5821,19 +5844,19 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[[None]],
+            dt = {
+                'a': [[None]],
                 'b': [[np.nan]],
                 'c': [[pd.NaT]],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DATEHOUR_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DATEHOUR_ARRAY for k in dt
             }
-            rtn={'tableSetTypeDATEHOURARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DATEHOUR[] VECTOR'",
-                }
+            rtn = {'tableSetTypeDATEHOURARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DATEHOUR[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5845,17 +5868,17 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[['127.0.0.1']],
+            dt = {
+                'a': [['127.0.0.1']],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_IPADDR_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_IPADDR_ARRAY for k in dt
             }
-            rtn={'tableSetTypeIPADDRARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST IPADDR[] VECTOR'",
-                }
+            rtn = {'tableSetTypeIPADDRARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST IPADDR[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5867,17 +5890,17 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={
-                'a':[['e1671797c52e15f763380b45e841ec32']],
+            dt = {
+                'a': [['e1671797c52e15f763380b45e841ec32']],
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_INT128_ARRAY for k in dt
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_INT128_ARRAY for k in dt
             }
-            rtn={'tableSetTypeINT128ARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST INT128[] VECTOR'",
-                }
+            rtn = {'tableSetTypeINT128ARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST INT128[] VECTOR'",
+            }
             }
             return rtn
         else:
@@ -5889,21 +5912,21 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[[None,None],[None,v['value'],None,v['value'],None],[None,None]]
-                for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                )
+            dt = {k: [[None, None], [None, v['value'], None, v['value'], None], [None, None]]
+                  for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                  )
+                  }
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DECIMAL32_ARRAY for k in dt
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DECIMAL32_ARRAY for k in dt
+            rtn = {'tableSetTypeDECIMAL32ARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL32[] VECTOR'",
             }
-            rtn={'tableSetTypeDECIMAL32ARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL32[] VECTOR'",
-                }
             }
             return rtn
         else:
@@ -5915,21 +5938,21 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[[v['value'],v['value'],v['value']]]
-                for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                )
+            dt = {k: [[v['value'], v['value'], v['value']]]
+                  for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                  )
+                  }
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: [keys.DT_DECIMAL32_ARRAY, 3] for k in dt
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:[keys.DT_DECIMAL32_ARRAY,3] for k in dt
+            rtn = {'tableSetTypeDECIMAL32ARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL32[] VECTOR'",
             }
-            rtn={'tableSetTypeDECIMAL32ARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL32[] VECTOR'",
-                }
             }
             return rtn
         else:
@@ -5941,23 +5964,23 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[[v['value'],v['value'],v['value']]]
-                for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                )
+            dt = {k: [[v['value'], v['value'], v['value']]]
+                  for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                  )
+                  }
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DECIMAL64_ARRAY for k in dt
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DECIMAL64_ARRAY for k in dt
+            rtn = {'tableSetTypeDECIMAL64ARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL64[] VECTOR'",
             }
-            rtn={'tableSetTypeDECIMAL64ARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL64[] VECTOR'",
-                }
             }
             return rtn
         else:
@@ -5969,23 +5992,23 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[[v['value'],v['value'],v['value']]]
-                for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                )
+            dt = {k: [[v['value'], v['value'], v['value']]]
+                  for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                  )
+                  }
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: [keys.DT_DECIMAL64_ARRAY, 15] for k in dt
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:[keys.DT_DECIMAL64_ARRAY,15] for k in dt
+            rtn = {'tableSetTypeDECIMAL64ARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL64[] VECTOR'",
             }
-            rtn={'tableSetTypeDECIMAL64ARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL64[] VECTOR'",
-                }
             }
             return rtn
         else:
@@ -5997,24 +6020,24 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[[v['value'],v['value'],v['value']]]
-                for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
+            dt = {k: [[v['value'], v['value'], v['value']]]
+                  for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: keys.DT_DECIMAL128_ARRAY for k in dt
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:keys.DT_DECIMAL128_ARRAY for k in dt
+            rtn = {'tableSetTypeDECIMAL128ARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL128[] VECTOR'",
             }
-            rtn={'tableSetTypeDECIMAL128ARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL128[] VECTOR'",
-                }
             }
             return rtn
         else:
@@ -6026,30 +6049,30 @@ class DataUtils(object):
         _type:upload or download
         """
         if _type.lower() == 'upload':
-            dt={k:[[v['value'],v['value'],v['value']]]
-                for k,v in cls.DATA_UPLOAD.items()
-                if k in (
-                    'data_decimal_2',
-                    'data_decimal_nan',
-                    'data_decimal_17',
-                    'data_decimal_18',
-                    'data_decimal_38',
-                )
+            dt = {k: [[v['value'], v['value'], v['value']]]
+                  for k, v in cls.DATA_UPLOAD.items()
+                  if k in (
+                      'data_decimal_2',
+                      'data_decimal_nan',
+                      'data_decimal_17',
+                      'data_decimal_18',
+                      'data_decimal_38',
+                  )
+                  }
+            df = pd.DataFrame(dt, dtype='object')
+            df.__DolphinDB_Type__ = {
+                k: [keys.DT_DECIMAL128_ARRAY, 30] for k in dt
             }
-            df=pd.DataFrame(dt,dtype='object')
-            df.__DolphinDB_Type__={
-                k:[keys.DT_DECIMAL128_ARRAY,30] for k in dt
+            rtn = {'tableSetTypeDECIMAL128ARRAY': {
+                'value': df,
+                'expect_typestr': "'FAST DECIMAL128[] VECTOR'",
             }
-            rtn={'tableSetTypeDECIMAL128ARRAY':{
-                    'value':df,
-                    'expect_typestr':"'FAST DECIMAL128[] VECTOR'",
-                }
             }
             return rtn
         else:
             return {}
 
-    if PANDAS_VERSION>=(2,0,0):
+    if PANDAS_VERSION >= (2, 0, 0):
         @classmethod
         def getTableArrow(cls, _type):
             """
@@ -6057,16 +6080,17 @@ class DataUtils(object):
             """
             if _type.lower() == 'upload':
                 rtn = {k.replace('data', 'table'): {
-                        'value': pd.DataFrame({'a': [v['value'], v['value'], v['value']]}, dtype=pd.ArrowDtype(v['dtype_arrow'])),
-                        'expect_typestr':v['expect_typestr'],
-                        'expect_value': f"table([{v['expect_value']},{v['expect_value']},{v['expect_value']}] as `a)"
-                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                    'value': pd.DataFrame({'a': [v['value'], v['value'], v['value']]},
+                                          dtype=pd.ArrowDtype(v['dtype_arrow'])),
+                    'expect_typestr': v['expect_typestr'],
+                    'expect_value': f"table([{v['expect_value']},{v['expect_value']},{v['expect_value']}] as `a)"
+                } for k, v in cls.DATA_UPLOAD_ARROW.items()
                 }
-                rtn['table_arrow_uuid']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_UUID,
+                rtn['table_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_UUID,
                 }
-                rtn['table_arrow_int128']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_INT128,
+                rtn['table_arrow_int128']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_INT128,
                 }
                 return rtn
             else:
@@ -6079,42 +6103,42 @@ class DataUtils(object):
             """
             if _type.lower() == 'upload':
                 rtn_first = {k.replace('data', 'table_first'): {
-                        'value': pd.DataFrame({'a': [None, v['value'], v['value']]}, dtype=pd.ArrowDtype(v['dtype_arrow'])),
-                        'expect_typestr':v['expect_typestr'],
-                        'expect_value': f"table([NULL,{v['expect_value']},{v['expect_value']}] as `a)"
+                    'value': pd.DataFrame({'a': [None, v['value'], v['value']]}, dtype=pd.ArrowDtype(v['dtype_arrow'])),
+                    'expect_typestr': v['expect_typestr'],
+                    'expect_value': f"table([NULL,{v['expect_value']},{v['expect_value']}] as `a)"
                 } for k, v in cls.DATA_UPLOAD_ARROW.items()
                 }
-                rtn_first['table_first_arrow_uuid']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_UUID,
+                rtn_first['table_first_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_UUID,
                 }
-                rtn_first['table_first_arrow_int128']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_INT128,
+                rtn_first['table_first_arrow_int128']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_INT128,
                 }
                 rtn_middle = {k.replace('data', 'table_middle'): {
-                        'value': pd.DataFrame({'a': [v['value'], None, v['value']]}, dtype=pd.ArrowDtype(v['dtype_arrow'])),
-                        'expect_typestr':v['expect_typestr'],
-                        'expect_value': f"table([{v['expect_value']},NULL,{v['expect_value']}] as `a)"
+                    'value': pd.DataFrame({'a': [v['value'], None, v['value']]}, dtype=pd.ArrowDtype(v['dtype_arrow'])),
+                    'expect_typestr': v['expect_typestr'],
+                    'expect_value': f"table([{v['expect_value']},NULL,{v['expect_value']}] as `a)"
                 } for k, v in cls.DATA_UPLOAD_ARROW.items()
                 }
-                rtn_middle['table_middle_arrow_uuid']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_UUID,
+                rtn_middle['table_middle_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_UUID,
                 }
-                rtn_middle['table_middle_arrow_int128']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_INT128,
+                rtn_middle['table_middle_arrow_int128']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_INT128,
                 }
                 rtn_last = {k.replace('data', 'table_last'): {
-                        'value': pd.DataFrame({'a': [v['value'], v['value'], None]}, dtype=pd.ArrowDtype(v['dtype_arrow'])),
-                        'expect_typestr':v['expect_typestr'],
-                        'expect_value': f"table([{v['expect_value']},{v['expect_value']},NULL] as `a)"
+                    'value': pd.DataFrame({'a': [v['value'], v['value'], None]}, dtype=pd.ArrowDtype(v['dtype_arrow'])),
+                    'expect_typestr': v['expect_typestr'],
+                    'expect_value': f"table([{v['expect_value']},{v['expect_value']},NULL] as `a)"
                 } for k, v in cls.DATA_UPLOAD_ARROW.items()
                 }
-                rtn_last['table_last_arrow_uuid']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_UUID,
+                rtn_last['table_last_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_UUID,
                 }
-                rtn_last['table_last_arrow_int128']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_INT128,
+                rtn_last['table_last_arrow_int128']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_INT128,
                 }
-                return {**rtn_first,**rtn_middle,**rtn_last}
+                return {**rtn_first, **rtn_middle, **rtn_last}
             else:
                 return {}
 
@@ -6125,19 +6149,20 @@ class DataUtils(object):
             """
             if _type.lower() == 'upload':
                 rtn = {k.replace('data', 'table'): {
-                        'value': pd.DataFrame({'a': []}, dtype=pd.ArrowDtype(v['dtype_arrow'])),
-                        'expect_typestr':v['expect_typestr'],
-                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                    'value': pd.DataFrame({'a': []}, dtype=pd.ArrowDtype(v['dtype_arrow'])),
+                    'expect_typestr': v['expect_typestr'],
+                } for k, v in cls.DATA_UPLOAD_ARROW.items()
                 }
-                rtn['table_arrow_uuid']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_UUID,
+                rtn['table_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_UUID,
                 }
-                rtn['table_arrow_int128']['value'].__DolphinDB_Type__={
-                    'a':keys.DT_INT128,
+                rtn['table_arrow_int128']['value'].__DolphinDB_Type__ = {
+                    'a': keys.DT_INT128,
                 }
-                rtn['table_arrow_composite']={
+                rtn['table_arrow_composite'] = {
                     'value': pd.DataFrame({
-                        k:pd.Series([v['value'],v['value'],v['value']],dtype=pd.ArrowDtype(v['dtype_arrow'])) for k,v in cls.DATA_UPLOAD_ARROW.items()
+                        k: pd.Series([v['value'], v['value'], v['value']], dtype=pd.ArrowDtype(v['dtype_arrow'])) for
+                        k, v in cls.DATA_UPLOAD_ARROW.items()
                     })
                 }
                 return rtn
@@ -6152,12 +6177,14 @@ class DataUtils(object):
                 """
                 if _type.lower() == 'upload':
                     rtn = {k.replace('data', 'tableArrayVector'): {
-                            'value': pd.DataFrame({'a': [[v['value'],v['value'],v['value']],[v['value'],v['value'],v['value']]]}, dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
-                            'expect_typestr':v['expect_typestr'][:-8]+'[]'+v['expect_typestr'][-8:],
-                            'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)" if
-                            v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
-                            f"table(array(DECIMAL128(2)[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)"
-                        } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                        'value': pd.DataFrame(
+                            {'a': [[v['value'], v['value'], v['value']], [v['value'], v['value'], v['value']]]},
+                            dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
+                        'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
+                        'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)" if
+                        v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
+                        f"table(array(DECIMAL128(2)[],0,2).append!([[{v['expect_value']},{v['expect_value']},{v['expect_value']}],[{v['expect_value']},{v['expect_value']},{v['expect_value']}]]) as `a)"
+                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
                         if k not in (
                             'data_arrow_string',
                             'data_arrow_bytes_utf8',
@@ -6165,11 +6192,11 @@ class DataUtils(object):
                             'data_arrow_symbol',
                         )
                     }
-                    rtn['tableArrayVector_arrow_uuid']['value'].__DolphinDB_Type__={
-                        'a':keys.DT_UUID_ARRAY,
+                    rtn['tableArrayVector_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_UUID_ARRAY,
                     }
-                    rtn['tableArrayVector_arrow_int128']['value'].__DolphinDB_Type__={
-                        'a':keys.DT_INT128_ARRAY,
+                    rtn['tableArrayVector_arrow_int128']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_INT128_ARRAY,
                     }
                     return rtn
                 else:
@@ -6183,12 +6210,13 @@ class DataUtils(object):
                 """
                 if _type.lower() == 'upload':
                     rtn = {k.replace('data', 'tableArrayVectorContainNone'): {
-                            'value': pd.DataFrame({'a': [[None,None,None],[v['value'],None,v['value']],[v['value']]]}, dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
-                            'expect_typestr':v['expect_typestr'][:-8]+'[]'+v['expect_typestr'][-8:],
-                            'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL)],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
-                            v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
-                            f"table(array(DECIMAL128(2)[],0,3).append!([[decimal128(NULL,2),decimal128(NULL,2),decimal128(NULL,2)],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
-                        } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                        'value': pd.DataFrame({'a': [[None, None, None], [v['value'], None, v['value']], [v['value']]]},
+                                              dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
+                        'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
+                        'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL),{v['expect_typestr'].lower().split(' ')[1]}(NULL)],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
+                        v['expect_typestr'] != "'FAST DECIMAL128 VECTOR'" else
+                        f"table(array(DECIMAL128(2)[],0,3).append!([[decimal128(NULL,2),decimal128(NULL,2),decimal128(NULL,2)],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
+                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
                         if k not in (
                             'data_arrow_string',
                             'data_arrow_bytes_utf8',
@@ -6196,13 +6224,17 @@ class DataUtils(object):
                             'data_arrow_symbol',
                         )
                     }
-                    rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value']=rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value'].replace('uuid(NULL)',"uuid('00000000-0000-0000-0000-000000000000')")
-                    rtn['tableArrayVectorContainNone_arrow_int128']['expect_value']=rtn['tableArrayVectorContainNone_arrow_int128']['expect_value'].replace('int128(NULL)',"int128('00000000000000000000000000000000')")
-                    rtn['tableArrayVectorContainNone_arrow_uuid']['value'].__DolphinDB_Type__={
-                        'a':keys.DT_UUID_ARRAY,
+                    rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value'] = \
+                        rtn['tableArrayVectorContainNone_arrow_uuid']['expect_value'].replace('uuid(NULL)',
+                                                                                              "uuid('00000000-0000-0000-0000-000000000000')")
+                    rtn['tableArrayVectorContainNone_arrow_int128']['expect_value'] = \
+                        rtn['tableArrayVectorContainNone_arrow_int128']['expect_value'].replace('int128(NULL)',
+                                                                                                "int128('00000000000000000000000000000000')")
+                    rtn['tableArrayVectorContainNone_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_UUID_ARRAY,
                     }
-                    rtn['tableArrayVectorContainNone_arrow_int128']['value'].__DolphinDB_Type__={
-                        'a':keys.DT_INT128_ARRAY,
+                    rtn['tableArrayVectorContainNone_arrow_int128']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_INT128_ARRAY,
                     }
                     return rtn
                 else:
@@ -6215,13 +6247,14 @@ class DataUtils(object):
                 """
                 if _type.lower() == 'upload':
                     rtn = {k.replace('data', 'tableArrayVectorContainEmpty'): {
-                            'value': pd.DataFrame({'a': [[],[v['value'],None,v['value']],[v['value']]]}, dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
-                            'expect_typestr':v['expect_typestr'][:-8]+'[]'+v['expect_typestr'][-8:],
-                            # todo: why
-                            # 'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
-                            # v['expect_typestr'] != "'FAST DECIMAL64 VECTOR'" else
-                            # f"table(array(DECIMAL64(2)[],0,3).append!([[],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
-                        } for k, v in cls.DATA_UPLOAD_ARROW.items()
+                        'value': pd.DataFrame({'a': [[], [v['value'], None, v['value']], [v['value']]]},
+                                              dtype=pd.ArrowDtype(pa.list_(v['dtype_arrow']))),
+                        'expect_typestr': v['expect_typestr'][:-8] + '[]' + v['expect_typestr'][-8:],
+                        # todo: why
+                        # 'expect_value': f"table(array({v['expect_typestr'].split(' ')[1]}[],0,3).append!([[],[{v['expect_value']},NULL,{v['expect_value']}],[{v['expect_value']}]]) as `a)" if
+                        # v['expect_typestr'] != "'FAST DECIMAL64 VECTOR'" else
+                        # f"table(array(DECIMAL64(2)[],0,3).append!([[],[{v['expect_value']},decimal64(NULL,2),{v['expect_value']}],[{v['expect_value']}]]) as `a)"
+                    } for k, v in cls.DATA_UPLOAD_ARROW.items()
                         if k not in (
                             'data_arrow_string',
                             'data_arrow_bytes_utf8',
@@ -6229,11 +6262,11 @@ class DataUtils(object):
                             'data_arrow_symbol',
                         )
                     }
-                    rtn['tableArrayVectorContainEmpty_arrow_uuid']['value'].__DolphinDB_Type__={
-                        'a':keys.DT_UUID_ARRAY,
+                    rtn['tableArrayVectorContainEmpty_arrow_uuid']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_UUID_ARRAY,
                     }
-                    rtn['tableArrayVectorContainEmpty_arrow_int128']['value'].__DolphinDB_Type__={
-                        'a':keys.DT_INT128_ARRAY,
+                    rtn['tableArrayVectorContainEmpty_arrow_int128']['value'].__DolphinDB_Type__ = {
+                        'a': keys.DT_INT128_ARRAY,
                     }
                     return rtn
                 else:

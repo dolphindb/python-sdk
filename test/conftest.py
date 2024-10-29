@@ -1,12 +1,14 @@
-import pytest
-import time
-import dolphindb as ddb
 import json
+import os
+import sys
+import time
+
+import dolphindb as ddb
+import pytest
 from filelock import FileLock
+
 from setup.settings import *
 from setup.utils import SSHConnection
-import sys
-import os
 
 if sys.platform.startswith('win'):
     cur_os = 'win'
@@ -182,3 +184,5 @@ def check_server_status(request):
             RESTRAT_SINGLE_INIT.format(SERVER_MAP[setup_name]))
     if not manager.check_if_restart():
         pytest.exit("Server cannot be started, may it was core dumped.")
+    else:
+        time.sleep(5)

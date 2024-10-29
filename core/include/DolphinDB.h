@@ -31,13 +31,12 @@
 #include "Table.h"
 #include "pybind11/pybind11.h"
 
+#include "TypeHelper.h"
+
 
 namespace py = pybind11;
 
-#if defined(_MSC_VER)
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#endif
+
 
 #ifdef _MSC_VER
 	#if defined(_Py_static_string_init) && defined(PY_MINOR_VERSION) && (PY_MINOR_VERSION >= 10)
@@ -68,7 +67,10 @@ typedef SmartPointer<DBConnection> DBConnectionSP;
 typedef SmartPointer<DBConnectionPool> DBConnectionPoolSP;
 typedef SmartPointer<PartitionedTableAppender> PartitionedTableAppenderSP;
 
-typedef std::pair<DATA_TYPE, int> Type;
+using converter::PyObjs;
+using converter::Type;
+using converter::TableChecker;
+using converter::CHILD_VECTOR_OPTION;
 
 class HIDEVISIBILITY ProtectGil{
 public:

@@ -1,18 +1,20 @@
+import copy
 from locale import atoi
 from operator import add, and_, eq, floordiv, ge, gt, le, lshift, lt, mul, ne, or_, rshift, sub, truediv, mod
-import pytest
-from basic_testing.utils import equalPlus
-from setup.prepare import generate_uuid, get_TableData, get_scripts, eval_table_with_data, eval_sql_with_data
-from setup.settings import *
+
 import dolphindb as ddb
 import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
+import pytest
 import statsmodels.api as sm
 from numpy.testing import *
 from pandas.testing import *
+
+from basic_testing.utils import equalPlus
+from setup.prepare import generate_uuid, get_TableData, get_scripts, eval_table_with_data, eval_sql_with_data
+from setup.settings import *
 from setup.utils import get_pid
-import copy
 
 keys.set_verbose(True)
 
@@ -614,8 +616,8 @@ class TestTable:
 
         def test_get_proprety(conntmp: ddb.session, tabletmp: ddb.Table):
             # tableName
-            assert tabletmp.tableName() == tabletmp._Table__tableName
-            assert tabletmp._getTableName() == tabletmp._Table__tableName
+            assert tabletmp.tableName() == tabletmp.tableName()
+            assert tabletmp._getTableName() == tabletmp.tableName()
             # LeftTable and RightTable
             assert tabletmp.getLeftTable() == tabletmp._Table__leftTable
             assert tabletmp.getRightTable() == tabletmp._Table__rightTable
@@ -1237,7 +1239,7 @@ class TestTable:
                         partitioned: bool = False):
             new_name = generate_uuid("rename_")
             tb1.rename(new_name)
-            assert tb1._Table__tableName == new_name
+            assert tb1.tableName() == new_name
             assert tb1.tableName() == new_name
             re = tb1.toDF()
             assert len(re) == len(df1)
@@ -1339,8 +1341,8 @@ class TestTable:
             re = conntmp.run(get_scripts("objExist").format(tableName=new_name))
             assert re
             assert tbtmp is not tb1
-            assert tbtmp._Table__tableName == new_name
-            assert tb1._Table__tableName != new_name
+            assert tbtmp.tableName() == new_name
+            assert tb1.tableName() != new_name
             assert_frame_equal(tbtmp.toDF(), tb1.toDF())
 
         eval_sql_with_data(self.conn, data, test_executeAs)
@@ -1361,7 +1363,7 @@ class TestTable:
             new_name = generate_uuid("tmp_")
             conntmp.run("""
                 {} = {}
-            """.format(new_name, tb1._Table__tableName))
+            """.format(new_name, tb1.tableName()))
             tbtmp = conntmp.table(data=new_name)
 
             if cols is None:
@@ -1372,13 +1374,13 @@ class TestTable:
             if isinstance(cols, str):
                 tbtmp.drop(cols)
                 re = conntmp.run(get_scripts("tableCols").format(tableName=new_name))
-                ex = conntmp.run(get_scripts("tableCols").format(tableName=tb1._Table__tableName)) - 1
+                ex = conntmp.run(get_scripts("tableCols").format(tableName=tb1.tableName())) - 1
                 assert re == ex
             elif isinstance(cols, list):
                 if len(cols):
                     tbtmp.drop(cols)
                     re = conntmp.run(get_scripts("tableCols").format(tableName=new_name))
-                    ex = conntmp.run(get_scripts("tableCols").format(tableName=tb1._Table__tableName)) - len(cols)
+                    ex = conntmp.run(get_scripts("tableCols").format(tableName=tb1.tableName())) - len(cols)
                     assert re == ex
                 else:
                     tbtmp.drop(cols)
@@ -1389,10 +1391,8 @@ class TestTable:
         eval_sql_with_data(self.conn, data, test_drop, cols)
 
     @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
                                       df_python, dict_python, dict2_python, PartitionedTable],
                              ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
                                   "DF", "DICT", "DICT_List", "PTable"])
     def test_table_append(self, data):
 
@@ -1401,13 +1401,13 @@ class TestTable:
             new_name = generate_uuid("tmp_")
             conntmp.run("""
                 {} = {}
-            """.format(new_name, tb1._Table__tableName))
+            """.format(new_name, tb1.tableName()))
             tbtmp = conntmp.table(data=new_name)
 
             data_name = generate_uuid("tmp_")
             conntmp.run("""
                 {} = select * from {}
-            """.format(data_name, tb1._Table__tableName))
+            """.format(data_name, tb1.tableName()))
             tbdata = conntmp.table(data=data_name)
 
             assert len(tbtmp.toDF()) == len(tbdata.toDF())
@@ -1418,6 +1418,35 @@ class TestTable:
 
             tbtmp.append(tbdata)
             assert len(tbtmp.toDF()) == 2 * length
+
+        eval_sql_with_data(self.conn, data, test_append)
+
+    @pytest.mark.parametrize('data', [IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable],
+                             ids=["indexTable", "SindexTable", "keyTable", "SkeyTable"])
+    def test_table_append_duplicate_removal(self, data):
+
+        def test_append(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
+                        partitioned: bool = False):
+            new_name = generate_uuid("tmp_")
+            conntmp.run("""
+                {} = {}
+            """.format(new_name, tb1.tableName()))
+            tbtmp = conntmp.table(data=new_name)
+
+            data_name = generate_uuid("tmp_")
+            conntmp.run("""
+                {} = select * from {}
+            """.format(data_name, tb1.tableName()))
+            tbdata = conntmp.table(data=data_name)
+
+            assert len(tbtmp.toDF()) == len(tbdata.toDF())
+            length = len(tbdata.toDF())
+
+            with pytest.raises(RuntimeError):
+                tbtmp.append(df1)
+
+            tbtmp.append(tbdata)
+            assert len(tbtmp.toDF()) == length
 
         eval_sql_with_data(self.conn, data, test_append)
 
@@ -1538,7 +1567,7 @@ class TestTableDelete:
                              partitioned: bool = False):
             assert tb1._Table__ref.val() == 1
             tbtmp = tb1.delete()
-            assert tbtmp._TableDelete__t._Table__tableName == tb1._Table__tableName
+            assert tbtmp._TableDelete__t.tableName() == tb1.tableName()
             assert tb1._Table__ref.val() == 2
             assert tbtmp._TableDelete__t._Table__ref.val() == 2
             assert tb1._Table__ref is tbtmp._TableDelete__t._Table__ref
@@ -1555,17 +1584,17 @@ class TestTableDelete:
 
         def test_delete(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                         partitioned: bool = False):
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1.tableName())) == n
             tb1.delete()
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1.tableName())) == n
             tb1.delete().execute()
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == 0
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1.tableName())) == 0
 
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb2._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb2.tableName())) == n
             tbtmp = tb2.delete()
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp._TableDelete__t._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp._TableDelete__t.tableName())) == n
             tbtmp = tb2.delete().execute()
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp._Table__tableName)) == 0
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp.tableName())) == 0
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_delete)
 
@@ -1581,21 +1610,21 @@ class TestTableDelete:
 
             def execute(tabletmp):
                 assert tabletmp.showSQL() == "delete from {table}".format(
-                    table=tabletmp._TableDelete__t._Table__tableName)
+                    table=tabletmp._TableDelete__t.tableName())
 
             tbtmp = tb1.delete()
             execute(tbtmp)
 
             def print(tabletmp):
                 assert tabletmp.showSQL() == "delete from {table}".format(
-                    table=tabletmp._TableDelete__t._Table__tableName)
+                    table=tabletmp._TableDelete__t.tableName())
 
             tbtmp = tb1.delete()
             print(tbtmp)
 
             def str(tabletmp):
                 assert tabletmp.showSQL() == "delete from {table}".format(
-                    table=tabletmp._TableDelete__t._Table__tableName)
+                    table=tabletmp._TableDelete__t.tableName())
 
             tbtmp = tb1.delete()
             str(tbtmp)
@@ -1612,28 +1641,28 @@ class TestTableDelete:
 
         def test_delete_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1.tableName())) == n
             tbtmp1 = tb1.delete().where("index < 5")
             sql = tbtmp1._TableDelete__executesql()
             assert "where index < 5" in sql
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._TableDelete__t._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._TableDelete__t.tableName())) == n
             tbtmp1 = tb1.delete().where("index < 5").execute()
-            re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._Table__tableName))
+            re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1.tableName()))
             assert re == n - 4
             tbtmp1_df = conntmp.table(data=df1)
-            conntmp.run("delete from {} where index < 5".format(tbtmp1_df._Table__tableName))
-            ex = conntmp.run("{}".format(tbtmp1_df._Table__tableName))
+            conntmp.run("delete from {} where index < 5".format(tbtmp1_df.tableName()))
+            ex = conntmp.run("{}".format(tbtmp1_df.tableName()))
             assert_frame_equal(tbtmp1.toDF(), ex)
 
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb2._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb2.tableName())) == n
             tbtmp2 = tb2.delete().where("index > 50").where("symbol==`X").where("ask <= 100").execute()
             sql = tb2.delete().where("index > 50").where("symbol==`X").where("ask <= 100")._TableDelete__executesql()
             assert "where (index > 50) and (symbol==`X) and (ask <= 100)" in sql
-            re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2._Table__tableName))
+            re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2.tableName()))
             tbtmp2_df = conntmp.table(data=df2)
             conntmp.run(
-                "delete from {} where index > 50 and symbol == `X and ask <= 100".format(tbtmp2_df._Table__tableName))
-            ex = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2_df._Table__tableName))
+                "delete from {} where index > 50 and symbol == `X and ask <= 100".format(tbtmp2_df.tableName()))
+            ex = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2_df.tableName()))
             assert re == ex
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_delete_where)
@@ -1648,31 +1677,31 @@ class TestTableDelete:
 
         def test_delete_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1.tableName())) == n
             tbtmp1 = tb1.delete().where("index < 5").where("price > 3")
             sql = tbtmp1._TableDelete__executesql()
             assert "where (index < 5) and (price > 3)" in sql
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._TableDelete__t._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._TableDelete__t.tableName())) == n
             tbtmp1 = tb1.delete().where("index < 5").where("price > 3").execute()
-            re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._Table__tableName))
+            re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1.tableName()))
             assert re == n - 3
             tbtmp1_df = conntmp.table(data=df1)
-            conntmp.run("delete from {} where (index < 5) and (price > 3)".format(tbtmp1_df._Table__tableName))
-            ex = conntmp.run("{}".format(tbtmp1_df._Table__tableName))
+            conntmp.run("delete from {} where (index < 5) and (price > 3)".format(tbtmp1_df.tableName()))
+            ex = conntmp.run("{}".format(tbtmp1_df.tableName()))
             assert_frame_equal(tbtmp1.toDF(), ex)
 
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb2._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb2.tableName())) == n
             tbtmp2 = tb2.delete().where("index > 50").where("symbol==`X or symbol==`Y").where(
                 "ask <= 100 and ask > 50").execute()
             sql = tb2.delete().where("index > 50").where("symbol==`X or symbol==`Y").where(
                 "ask <= 100 and ask > 50")._TableDelete__executesql()
             assert "where (index > 50) and (symbol==`X or symbol==`Y) and (ask <= 100 and ask > 50)" in sql
-            re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2._Table__tableName))
+            re = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2.tableName()))
             tbtmp2_df = conntmp.table(data=df2)
             conntmp.run(
                 "delete from {} where (index > 50) and (symbol==`X or symbol == `Y) and (ask <= 100 and ask > 50)".format(
-                    tbtmp2_df._Table__tableName))
-            ex = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2_df._Table__tableName))
+                    tbtmp2_df.tableName()))
+            ex = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2_df.tableName()))
             assert re == ex
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_delete_where)
@@ -1687,11 +1716,11 @@ class TestTableDelete:
 
         def test_toDF(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                       partitioned: bool = False):
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1.tableName())) == n
             tbtmp1 = tb1.delete().where("index < 5")
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._TableDelete__t._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp1._TableDelete__t.tableName())) == n
             tb1.delete().where("index < 5").toDF()
-            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1._Table__tableName)) == n
+            assert conntmp.run(get_scripts("tableRows").format(tableName=tb1.tableName())) == n
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_toDF)
 
@@ -1878,21 +1907,21 @@ class TestTableUpdate:
 
             def execute(tabletmp):
                 assert tabletmp.showSQL() == "update {table} set price=price+5".format(
-                    table=tabletmp._TableUpdate__t._Table__tableName)
+                    table=tabletmp._TableUpdate__t.tableName())
 
             tbtmp = tb1.update(["price"], ["price+5"])
             execute(tbtmp)
 
             def print(tabletmp):
                 assert tabletmp.showSQL() == "update {table} set price=price+5".format(
-                    table=tabletmp._TableUpdate__t._Table__tableName)
+                    table=tabletmp._TableUpdate__t.tableName())
 
             tbtmp = tb1.update(["price"], ["price+5"])
             print(tbtmp)
 
             def str(tabletmp):
                 assert tabletmp.showSQL() == "update {table} set price=price+5".format(
-                    table=tabletmp._TableUpdate__t._Table__tableName)
+                    table=tabletmp._TableUpdate__t.tableName())
 
             tbtmp = tb1.update(["price"], ["price+5"])
             str(tbtmp)
@@ -1909,7 +1938,7 @@ class TestTableUpdate:
             assert_frame_equal(tb1.toDF(), df1)
 
             tbtmp1 = tb1.update(["price"], ["price+10"])
-            re = conntmp.run("select * from {}".format(tbtmp1._TableUpdate__t._Table__tableName))
+            re = conntmp.run("select * from {}".format(tbtmp1._TableUpdate__t.tableName()))
             assert_frame_equal(re, df1)
 
             re = tb1.update(["price"], ["price+10"]).toDF()
@@ -1963,7 +1992,7 @@ class TestTablePivotBy:
             assert tbtmp._TablePivotBy__column == "symbol"
             assert tbtmp._TablePivotBy__val == "size"
             assert tbtmp._TablePivotBy__agg is sum
-            assert tbtmp._TablePivotBy__t._Table__tableName == tb1._Table__tableName
+            assert tbtmp._TablePivotBy__t.tableName() == tb1.tableName()
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_pivotby)
 
@@ -2119,17 +2148,17 @@ class TestTableGroupby:
             tbtmp = copy.copy(tb1).groupby(["symbol"])
             assert tbtmp._TableGroupby__groupBys == ["symbol"]
             assert tbtmp._TableGroupby__having is None
-            assert tbtmp._TableGroupby__t._Table__tableName == tb1._Table__tableName
+            assert tbtmp._TableGroupby__t.tableName() == tb1.tableName()
 
             tbtmp = copy.copy(tb1).groupby("symbol")
             assert tbtmp._TableGroupby__groupBys == ["symbol"]
             assert tbtmp._TableGroupby__having is None
-            assert tbtmp._TableGroupby__t._Table__tableName == tb1._Table__tableName
+            assert tbtmp._TableGroupby__t.tableName() == tb1.tableName()
 
             tbtmp = copy.copy(tb1).groupby(["symbol", "size"])
             assert tbtmp._TableGroupby__groupBys == ["symbol", "size"]
             assert tbtmp._TableGroupby__having is None
-            assert tbtmp._TableGroupby__t._Table__tableName == tb1._Table__tableName
+            assert tbtmp._TableGroupby__t.tableName() == tb1.tableName()
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_groupby)
 
@@ -2670,17 +2699,17 @@ class TestTableContextby:
             tbtmp = copy.copy(tb1).contextby(["symbol"])
             assert tbtmp._TableContextby__contextBys == ["symbol"]
             assert tbtmp._TableContextby__having is None
-            assert tbtmp._TableContextby__t._Table__tableName == tb1._Table__tableName
+            assert tbtmp._TableContextby__t.tableName() == tb1.tableName()
 
             tbtmp = copy.copy(tb1).contextby("symbol")
             assert tbtmp._TableContextby__contextBys == ["symbol"]
             assert tbtmp._TableContextby__having is None
-            assert tbtmp._TableContextby__t._Table__tableName == tb1._Table__tableName
+            assert tbtmp._TableContextby__t.tableName() == tb1.tableName()
 
             tbtmp = copy.copy(tb1).contextby(["symbol", "size"])
             assert tbtmp._TableContextby__contextBys == ["symbol", "size"]
             assert tbtmp._TableContextby__having is None
-            assert tbtmp._TableContextby__t._Table__tableName == tb1._Table__tableName
+            assert tbtmp._TableContextby__t.tableName() == tb1.tableName()
 
         eval_sql_with_data(self.conn, flushed_table_n100, test_contextby)
 

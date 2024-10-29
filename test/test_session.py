@@ -1,26 +1,25 @@
-from importlib.util import find_spec
-import subprocess
-import warnings
-import pytest
-from setup.settings import *
-from setup.utils import get_pid, random_string
-import dolphindb as ddb
-import numpy as np
-import pandas as pd
-from numpy.testing import *
-from pandas.testing import *
-import dolphindb.settings as keys
-import time
-import sys
-import threading
-import platform
 import datetime
 import decimal
+import platform
+import subprocess
+import threading
+import time
+import warnings
+from importlib.util import find_spec
+
+import dolphindb as ddb
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
+import pytest
+from numpy.testing import *
+from pandas.testing import *
+
+from setup.settings import *
+from setup.utils import get_pid, random_string
 
 if find_spec("pyarrow") is not None:
     import pyarrow
-
-py_version = int(platform.python_version().split('.')[1])
 
 
 def loadPlugin():
@@ -1049,27 +1048,27 @@ class TestSession:
             i.close()
 
     def test_session_sqlStd(self):
-        conn_ddb=ddb.Session(HOST,PORT,USER,PASSWD,sqlStd=keys.SqlStd.DolphinDB)
-        conn_oracle=ddb.Session(HOST,PORT,USER,PASSWD,sqlStd=keys.SqlStd.Oracle)
-        conn_myqsql=ddb.Session(HOST,PORT,USER,PASSWD,sqlStd=keys.SqlStd.MySQL)
+        conn_ddb = ddb.Session(HOST, PORT, USER, PASSWD, sqlStd=keys.SqlStd.DolphinDB)
+        conn_oracle = ddb.Session(HOST, PORT, USER, PASSWD, sqlStd=keys.SqlStd.Oracle)
+        conn_mysql = ddb.Session(HOST, PORT, USER, PASSWD, sqlStd=keys.SqlStd.MySQL)
         with pytest.raises(RuntimeError):
             conn_ddb.run("sysdate()")
         conn_oracle.run("sysdate()")
-        conn_myqsql.run("sysdate()")
+        conn_mysql.run("sysdate()")
 
     def test_session_tryReconnectNums_conn(self):
-        n=3
+        n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
                                  "conn=ddb.Session();"
                                  f"res=conn.connect('{HOST}', 56789, '{USER}', '{PASSWD}', reconnect=True, tryReconnectNums={n});"
                                  f"assert not res;"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        assert result.stdout.count("Failed")==n
-        assert result.stderr==f"Connect to {HOST}:56789 failed after {n} reconnect attempts.\n"
+        assert result.stdout.count("Failed") == n
+        assert result.stderr == f"Connect to {HOST}:56789 failed after {n} reconnect attempts.\n"
 
     def test_session_tryReconnectNums_run(self):
-        n=3
+        n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
                                  "conn=ddb.Session();"
@@ -1077,7 +1076,7 @@ class TestSession:
                                  "assert not res;"
                                  "conn.run('1+1');"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        assert result.stdout.count("Failed")==n*2
+        assert result.stdout.count("Failed") == n * 2
         assert f"Connect to {HOST}:56789 failed after {n} reconnect attempts." in result.stderr
         print(result.stderr)
 
@@ -1092,14 +1091,14 @@ class TestSession:
         passwd = "123456"
         conn = ddb.Session(host, port0, user, passwd)
         conn.run(f"stopDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])")
-        n=3
+        n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
                                  "conn_=ddb.Session();"
                                  f"conn_.connect('{host}',{port1},'{user}','{passwd}', highAvailability=True, highAvailabilitySites=['{host}:{port1}','{host}:{port2}','{host}:{port3}'], tryReconnectNums={n});"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         conn.run(f"startDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])")
-        assert result.stdout.count("Failed")==n*3
+        assert result.stdout.count("Failed") == n * 3
         assert f"Connect failed after {n} reconnect attempts for every node in high availability sites." in result.stderr
 
     @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
@@ -1112,7 +1111,7 @@ class TestSession:
         user = "admin"
         passwd = "123456"
         conn = ddb.Session(host, port0, user, passwd)
-        n=3
+        n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
                                  f"conn=ddb.Session('{host}',{port0},'{user}','{passwd}');"
@@ -1122,19 +1121,19 @@ class TestSession:
                                  "conn_.run('true');"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         conn.run(f"startDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])")
-        assert result.stdout.count("Failed")==n*3
+        assert result.stdout.count("Failed") == n * 3
         assert f"Connect to nodes failed after {n} reconnect attempts." in result.stderr
 
     def test_session_readTimeout(self):
         conn = ddb.Session()
-        conn.connect(HOST,PORT,USER,PASSWD,readTimeout=3)
+        conn.connect(HOST, PORT, USER, PASSWD, readTimeout=3)
         assert conn.run('true')
         with pytest.raises(RuntimeError):
             conn.run('sleep(4000);true')
 
     def test_session_writeTimeout(self):
         conn = ddb.Session()
-        conn.connect(HOST,PORT,USER,PASSWD,writeTimeout=3)
-        conn.upload({'a':True})
+        conn.connect(HOST, PORT, USER, PASSWD, writeTimeout=3)
+        conn.upload({'a': True})
         assert conn.run('a')
         # set packet loss to test

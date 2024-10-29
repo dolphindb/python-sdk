@@ -1,15 +1,17 @@
-import time
 import asyncio
-import pytest
+import decimal
+import random
 import subprocess
+import sys
+import time
+
+import pytest
+from numpy.testing import *
+from pandas.testing import *
+
 from setup.prepare import *
 from setup.settings import *
 from setup.utils import get_pid
-from numpy.testing import *
-from pandas.testing import *
-import decimal
-import random
-import sys
 
 
 def create_value_db():
@@ -253,7 +255,7 @@ class TestDBConnectionPool:
             'csymbol': np.array(['sym1', 'sym2', ''], dtype='object'),
             'cstring': np.array(['str1', 'str2', ''], dtype='object'),
             'cipaddr': np.array(["192.168.1.1", "192.168.1.254", "0.0.0.0"], dtype='object'),
-            'cblob': np.array(['blob1', 'blob2', ''], dtype='object')
+            'cblob': np.array([b'blob1', b'blob2', b''], dtype='object')
         })
         df.__DolphinDB_Type__ = {
             'cipaddr': keys.DT_IPPADDR,
@@ -389,7 +391,7 @@ class TestDBConnectionPool:
             'csymbol': np.array(['sym1', 'sym2', ''], dtype='object'),
             'cstring': np.array(['str1', 'str2', ''], dtype='object'),
             'cipaddr': np.array(["192.168.1.1", "192.168.1.254", "0.0.0.0"], dtype='object'),
-            'cblob': np.array(['blob1', 'blob2', ''], dtype='object')
+            'cblob': np.array([b'blob1', b'blob2', b''], dtype='object')
         })
         df.__DolphinDB_Type__ = {
             'cipaddr': keys.DT_IPPADDR,
@@ -491,7 +493,7 @@ class TestDBConnectionPool:
             'csymbol': np.array(['sym1', 'sym2', ''], dtype='object'),
             'cstring': np.array(['str1', 'str2', ''], dtype='object'),
             'cipaddr': np.array(["192.168.1.1", "192.168.1.254", "0.0.0.0"], dtype='object'),
-            'cblob': np.array(['blob1', 'blob2', ''], dtype='object')
+            'cblob': np.array([b'blob1', b'blob2', b''], dtype='object')
         })
         df.__DolphinDB_Type__ = {
             'cbool': keys.DT_BOOL,
@@ -509,7 +511,7 @@ class TestDBConnectionPool:
         self.conn.undef("tab", "SHARED")
 
     def test_DBConnectionPool_func_runTaskAsyn_warning(self):
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD,)
+        pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD, )
         with pytest.warns(DeprecationWarning):
             task = pool.runTaskAsyn("sleep(2000);1+1")
             while not task.done():
@@ -1091,12 +1093,12 @@ class TestDBConnectionPool:
         pool_mysql.runTaskAsync("sysdate()").result()
 
     def test_DBConnectionPool_tryReconnectNums_conn(self):
-        n=3
+        n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
                                  f"pool=ddb.DBConnectionPool('{HOST}', 56789, 3, reConnect=True, tryReconnectNums={n});"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        assert result.stdout.count("Failed")==n
+        assert result.stdout.count("Failed") == n
         assert f"Connect to {HOST}:56789 failed after {n} reconnect attempts." in result.stderr
 
     @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
@@ -1107,7 +1109,7 @@ class TestDBConnectionPool:
         user = "admin"
         passwd = "123456"
         conn = ddb.Session(host, port0, user, passwd)
-        n=3
+        n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
                                  f"conn=ddb.Session('{host}',{port0},'{user}','{passwd}');"
@@ -1116,7 +1118,7 @@ class TestDBConnectionPool:
                                  "pool.runTaskAsync('1+1').result();"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         conn.run(f"startDataNode(['{host}:{port1}'])")
-        assert result.stdout.count("Failed")==n
+        assert result.stdout.count("Failed") == n
         assert f"Connect to {HOST}:{port1} failed after {n} reconnect attempts." in result.stderr
 
     @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
@@ -1129,7 +1131,7 @@ class TestDBConnectionPool:
         user = "admin"
         passwd = "123456"
         conn = ddb.Session(host, port0, user, passwd)
-        n=3
+        n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
                                  f"conn=ddb.Session('{host}',{port0},'{user}','{passwd}');"
@@ -1138,5 +1140,5 @@ class TestDBConnectionPool:
                                  "pool.runTaskAsync('1+1').result();"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         conn.run(f"startDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])")
-        assert result.stdout.count("Failed")==n*4
+        assert result.stdout.count("Failed") == n * 4
         assert f"Connect to nodes failed after {n} reconnect attempts." in result.stderr

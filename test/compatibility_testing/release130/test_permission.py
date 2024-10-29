@@ -1,9 +1,6 @@
-import dolphindb as ddb
-import numpy as np
-import pandas as pd
 import pytest
-from numpy.testing import *
 from pandas.testing import *
+
 from setup.prepare import *
 from setup.settings import *
 from setup.utils import get_pid
@@ -31,7 +28,7 @@ class TestPermission:
                                     dbPath=self.TEST_DB, engine="OLAP")
             df = self.conn.run("table(1 2 3 as c1, `a`b`c as c2, 2023.07.01..2023.07.03 as c3)")
             t = self.conn.table(data=df)
-            db.createPartitionedTable(t,self.TEST_TABLE,'c1')
+            db.createPartitionedTable(t, self.TEST_TABLE, 'c1')
         self.conn.run(f"delete from loadTable('{self.TEST_DB}','{self.TEST_TABLE}')")
 
         activeUsers = self.conn.run("getUserList()")
@@ -446,4 +443,3 @@ class TestPermission:
 
 if __name__ == '__main__':
     pytest.main(['-s', '-v', 'test_permission.py'])
-

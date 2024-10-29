@@ -1,14 +1,16 @@
+import decimal
 import re
+import threading
 import time
+
 import pytest
-from setup.utils import get_pid
-from setup.prepare import *
-from setup.settings import *
 from numpy.testing import *
 from pandas.testing import *
-import threading
+
+from setup.prepare import *
+from setup.settings import *
+from setup.utils import get_pid
 from setup.utils import random_string
-import decimal
 
 
 class TestMultithreadTableWriter:
@@ -612,7 +614,7 @@ class TestMultithreadTableWriter:
             t.join()
         time.sleep(2)
         assert writer.getStatus().errorCode == 'A1'
-        assert writer.getStatus().errorInfo == 'Data conversion error: Cannot convert pointer to DATE'
+        assert writer.getStatus().errorInfo == 'Data conversion error: Cannot convert <class \'str\'> to DATE.'
         last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pdatetest')")
         assert last["count"][0] == 0
         self.conn.dropDatabase(self.dbname)
@@ -2978,7 +2980,7 @@ class TestMultithreadTableWriter:
         assert status.hasError()
         assert not status.succeed()
         assert status.errorCode == 'A1'
-        assert 'Data conversion error: unsupported type' in status.errorInfo
+        assert 'Data conversion error' in status.errorInfo
         self.conn.run('undef(`terror_type_test,SHARED)')
         del writer
 

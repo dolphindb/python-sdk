@@ -1,15 +1,17 @@
 import subprocess
-import pytest
-from setup.utils import CountBatchDownLatch
+import sys
 import time
+from itertools import chain
+
+import dolphindb as ddb
 import numpy as np
 import pandas as pd
-import dolphindb as ddb
+import pytest
 from pandas.testing import *
+
 from setup.settings import *
+from setup.utils import CountBatchDownLatch
 from setup.utils import get_pid
-from itertools import chain
-import sys
 
 
 def gethandler(df, counter):
@@ -1351,7 +1353,8 @@ class TestSubscribe:
         for tab in tables:
             conn1.unsubscribe(HOST, PORT, tab, "action")
         conn1.close()
-        self.conn.run("undef(`trades,SHARED);undef(`trades2,SHARED);undef(`trades3,SHARED);undef(`trades4,SHARED);undef(`trades5,SHARED);")
+        self.conn.run(
+            "undef(`trades,SHARED);undef(`trades2,SHARED);undef(`trades3,SHARED);undef(`trades4,SHARED);undef(`trades5,SHARED);")
 
     def test_enalbeStreaming_exception_in_handler(self):
         script = """

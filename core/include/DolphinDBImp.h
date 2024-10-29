@@ -39,7 +39,7 @@ public:
     void setProtocol(PROTOCOL protocol) {
         protocol_ = protocol;
         if (protocol_ == PROTOCOL_ARROW) {
-            if (!DdbPythonUtil::preserved_->has_arrow_) {
+            if (!converter::PyObjs::cache_->has_arrow_) {
                 throw RuntimeException("No module named 'pyarrow'");
             }
         }

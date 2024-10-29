@@ -1,9 +1,9 @@
-import pandas as pd
 import pytest
+
+from basic_testing.prepare import DataUtils
 from basic_testing.utils import equalPlus
 from setup.prepare import *
 from setup.settings import *
-from basic_testing.prepare import DataUtils
 from setup.utils import get_pid
 
 

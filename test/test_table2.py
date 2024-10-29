@@ -1,15 +1,17 @@
-import pytest
-from setup.settings import *
+import re
+
 import dolphindb as ddb
 import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
+import pytest
 import statsmodels.api as sm
 from numpy.testing import *
 from pandas.testing import *
+
+from setup.settings import *
 from setup.utils import get_pid
 from setup.utils import random_string
-import re
 
 
 class TestTable2:

@@ -1,22 +1,27 @@
-import pytest
-import dolphindb as ddb
 import decimal
+import time
+
+import dolphindb as ddb
+import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import *
 from pandas.testing import *
+
 from setup.settings import *
-import time
-import dolphindb.settings as keys
 from setup.utils import get_pid
 
 
 def get_ex_row0(quantileVal):
-    return [decimal.Decimal("1").quantize(quantileVal),decimal.Decimal("0").quantize(quantileVal), None,decimal.Decimal("2.123").quantize(quantileVal), decimal.Decimal("1").quantize(quantileVal)]
+    return [decimal.Decimal("1").quantize(quantileVal), decimal.Decimal("0").quantize(quantileVal), None,
+            decimal.Decimal("2.123").quantize(quantileVal), decimal.Decimal("1").quantize(quantileVal)]
 
 
 def get_ex_row1(quantileVal):
-    return [decimal.Decimal("-1.111111").quantize(quantileVal), decimal.Decimal("0").quantize(quantileVal),decimal.Decimal("3.2222222222").quantize(quantileVal), decimal.Decimal("-1.111111").quantize(quantileVal),decimal.Decimal("0").quantize(quantileVal)]
+    return [decimal.Decimal("-1.111111").quantize(quantileVal), decimal.Decimal("0").quantize(quantileVal),
+            decimal.Decimal("3.2222222222").quantize(quantileVal), decimal.Decimal("-1.111111").quantize(quantileVal),
+            decimal.Decimal("0").quantize(quantileVal)]
 
 
 class TestDecimal:
@@ -36,7 +41,7 @@ class TestDecimal:
     def setup_class(cls):
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() +'\n')
+                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
@@ -165,19 +170,25 @@ class TestDecimal:
     def test_decimal32_list_download(self):
         self.conn.run("a = decimal32(-10.1 -1 NULL 0.1 4.1 5.1, 3)")
         a = self.conn.run("a")
-        b = np.array([decimal.Decimal("-10.100"),decimal.Decimal("-1.000"),None,decimal.Decimal("0.100"),decimal.Decimal("4.100"),decimal.Decimal("5.100")])
+        b = np.array([decimal.Decimal("-10.100"), decimal.Decimal("-1.000"), None, decimal.Decimal("0.100"),
+                      decimal.Decimal("4.100"), decimal.Decimal("5.100")])
         assert_array_equal(a, b)
 
     def test_decimal64_list_download(self):
         self.conn.run("a = decimal64(-10.1 -1 NULL 0.1 4.1 5.1, 3)")
         a = self.conn.run("a")
-        b = np.array([decimal.Decimal("-10.100"),decimal.Decimal("-1.000"),None,decimal.Decimal("0.100"),decimal.Decimal("4.100"),decimal.Decimal("5.100")])
+        b = np.array([decimal.Decimal("-10.100"), decimal.Decimal("-1.000"), None, decimal.Decimal("0.100"),
+                      decimal.Decimal("4.100"), decimal.Decimal("5.100")])
         assert_array_equal(a, b)
 
     def test_decimal128_list_download(self):
         self.conn.run('a = decimal128("-10.1" "-1" NULL "0.1" "4.1" "5.1", 36)')
         a = self.conn.run("a")
-        b = np.array([decimal.Decimal("-10.100000000000000000000000000000000000"),decimal.Decimal("-1.000000000000000000000000000000000000"),None,decimal.Decimal("0.100000000000000000000000000000000000"),decimal.Decimal("4.100000000000000000000000000000000000"),decimal.Decimal("5.100000000000000000000000000000000000")])
+        b = np.array([decimal.Decimal("-10.100000000000000000000000000000000000"),
+                      decimal.Decimal("-1.000000000000000000000000000000000000"), None,
+                      decimal.Decimal("0.100000000000000000000000000000000000"),
+                      decimal.Decimal("4.100000000000000000000000000000000000"),
+                      decimal.Decimal("5.100000000000000000000000000000000000")])
         assert_array_equal(a, b)
 
     def test_decimal_list_upload(self):
@@ -193,29 +204,35 @@ class TestDecimal:
         assert b
 
     def test_decimal_vector_upload(self):
-        a = np.array([decimal.Decimal("NaN"), decimal.Decimal("0.1234567899999999999"),decimal.Decimal("0.0000000000000000000")])
+        a = np.array([decimal.Decimal("NaN"), decimal.Decimal("0.1234567899999999999"),
+                      decimal.Decimal("0.0000000000000000000")])
         self.conn.upload({"a": a})
         res = self.conn.run("eqFloat(a, decimal128(NULL 0.1234567899999999999 0, 19), 10)")
         assert res.any()
 
     def test_decimal_np_array_upload(self):
-        a = np.array([None, decimal.Decimal("-10.100"),decimal.Decimal("-1.000"),None,decimal.Decimal("0.100"),decimal.Decimal("4.100"),decimal.Decimal("5.100"),None])
+        a = np.array([None, decimal.Decimal("-10.100"), decimal.Decimal("-1.000"), None, decimal.Decimal("0.100"),
+                      decimal.Decimal("4.100"), decimal.Decimal("5.100"), None])
         self.conn.upload({"a": a})
         b = self.conn.run("eqObj(a, decimal64(NULL -10.1 -1 NULL 0.1 4.1 5.1 NULL, 3))")
         assert b
-        a = np.array([None, decimal.Decimal("-10.1234567899999999999"),decimal.Decimal("-1.1234567899999999999"),None,decimal.Decimal("0.1234567899999999999"),decimal.Decimal("4.1234567899999999999"),decimal.Decimal("5.1234567899999999999"),None])
+        a = np.array([None, decimal.Decimal("-10.1234567899999999999"), decimal.Decimal("-1.1234567899999999999"), None,
+                      decimal.Decimal("0.1234567899999999999"), decimal.Decimal("4.1234567899999999999"),
+                      decimal.Decimal("5.1234567899999999999"), None])
         self.conn.upload({"a": a})
-        b = self.conn.run("eqFloat(a, decimal128(NULL -10.1234567899999999999 -1.1234567899999999999 NULL 0.1234567899999999999 4.1234567899999999999 5.1234567899999999999 NULL, 19), 10)")
+        b = self.conn.run(
+            "eqFloat(a, decimal128(NULL -10.1234567899999999999 -1.1234567899999999999 NULL 0.1234567899999999999 4.1234567899999999999 5.1234567899999999999 NULL, 19), 10)")
         assert b.all()
 
     def test_decimal_with_other_type_np_array_upload(self):
-        a = np.array([None, decimal.Decimal("-10.100"),"456123",np.nan,1.1,123,pd.NaT])
+        a = np.array([None, decimal.Decimal("-10.100"), "456123", np.nan, 1.1, 123, pd.NaT])
         self.conn.upload({"a": a})
         b = self.conn.run("eqObj(a, (NULL, decimal64(-10.100, 3), `456123, NULL, 1.1, 123, NULL))")
         assert b
-        a = np.array([None, decimal.Decimal("-10.1234567899999999999"),"456123",np.nan,1.1,123,pd.NaT])
+        a = np.array([None, decimal.Decimal("-10.1234567899999999999"), "456123", np.nan, 1.1, 123, pd.NaT])
         self.conn.upload({"a": a})
-        b = self.conn.run("eqObj(a, (NULL, decimal128(-10.1234567899999999999, 19), `456123, NULL, 1.1, 123, NULL), 10)")
+        b = self.conn.run(
+            "eqObj(a, (NULL, decimal128(-10.1234567899999999999, 19), `456123, NULL, 1.1, 123, NULL), 10)")
         assert b
 
     def test_decimal32_dict_download(self):
@@ -307,31 +324,58 @@ class TestDecimal:
             share t as decimal_t
         """
         self.conn.run(script_decimal)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "decimal_t", False, False, [], 100, 0.1, 1, "")
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "decimal_t", False, False, [], 100, 0.1, 1,
+                                              "")
         cont = decimal.Context(prec=39)
         col_float = np.array([1.0, np.nan, 0, -1.00], dtype=np.float32)
-        col_decimal32_3 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000")), None, decimal.Decimal("0").quantize(decimal.Decimal("0.000")), decimal.Decimal("1").quantize(decimal.Decimal("0.000"))],dtype=object)
-        col_decimal32_6 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000")), None, decimal.Decimal("0").quantize(decimal.Decimal("0.000000")), decimal.Decimal("1").quantize(decimal.Decimal("0.000000"))],dtype=object)
-        col_decimal64_9 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000000")), None, decimal.Decimal("0").quantize(decimal.Decimal("0.000000000")),decimal.Decimal("1").quantize(decimal.Decimal("0.000000000"))], dtype=object)
-        col_decimal64_12 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000000000")), None, decimal.Decimal("0").quantize(decimal.Decimal("0.000000000000")),decimal.Decimal("1").quantize(decimal.Decimal("0.000000000000"))], dtype=object)
-        col_decimal128_0 = np.array([decimal.Decimal("-1"), None, decimal.Decimal("0"), decimal.Decimal("1234567890")],dtype=object)
-        col_decimal128_38 = np.array([decimal.Decimal("-1.00000000000000000000000000000000000000", context=cont), None, decimal.Decimal("0", context=cont).quantize(decimal.Decimal("0.00000000000000000000000000000000000000")),decimal.Decimal("1.00000000000000000000000000000000000000", context=cont)], dtype=object)
+        col_decimal32_3 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000")), None,
+                                    decimal.Decimal("0").quantize(decimal.Decimal("0.000")),
+                                    decimal.Decimal("1").quantize(decimal.Decimal("0.000"))], dtype=object)
+        col_decimal32_6 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000")), None,
+                                    decimal.Decimal("0").quantize(decimal.Decimal("0.000000")),
+                                    decimal.Decimal("1").quantize(decimal.Decimal("0.000000"))], dtype=object)
+        col_decimal64_9 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000000")), None,
+                                    decimal.Decimal("0").quantize(decimal.Decimal("0.000000000")),
+                                    decimal.Decimal("1").quantize(decimal.Decimal("0.000000000"))], dtype=object)
+        col_decimal64_12 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000000000")), None,
+                                     decimal.Decimal("0").quantize(decimal.Decimal("0.000000000000")),
+                                     decimal.Decimal("1").quantize(decimal.Decimal("0.000000000000"))], dtype=object)
+        col_decimal128_0 = np.array([decimal.Decimal("-1"), None, decimal.Decimal("0"), decimal.Decimal("1234567890")],
+                                    dtype=object)
+        col_decimal128_38 = np.array([decimal.Decimal("-1.00000000000000000000000000000000000000", context=cont), None,
+                                      decimal.Decimal("0", context=cont).quantize(
+                                          decimal.Decimal("0.00000000000000000000000000000000000000")),
+                                      decimal.Decimal("1.00000000000000000000000000000000000000", context=cont)],
+                                     dtype=object)
         self.conn.run("delete from decimal_t")
         first = self.conn.run("select count(*) from decimal_t")
         for i in range(4):
-            writer.insert(col_float[i], col_decimal32_3[i], col_decimal32_6[i], col_decimal64_9[i], col_decimal64_12[i],col_decimal128_0[i], col_decimal128_38[i])
+            writer.insert(col_float[i], col_decimal32_3[i], col_decimal32_6[i], col_decimal64_9[i], col_decimal64_12[i],
+                          col_decimal128_0[i], col_decimal128_38[i])
         writer.waitForThreadCompletion()
         time.sleep(3)
         last = self.conn.run("select count(*) from decimal_t")
         assert last["count"][0] - first["count"][0] == 4
         re = self.conn.run("select * from decimal_t")
         col_float = np.array([1.0, np.nan, 0, -1.00], dtype=np.float32)
-        col_decimal32_3 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000")), None, decimal.Decimal("0").quantize(decimal.Decimal("0.000")), decimal.Decimal("1").quantize(decimal.Decimal("0.000"))],dtype=object)
-        col_decimal32_6 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000")), None, decimal.Decimal("0").quantize(decimal.Decimal("0.000000")), decimal.Decimal("1").quantize(decimal.Decimal("0.000000"))],dtype=object)
-        col_decimal64_9 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000000")), None, decimal.Decimal("0").quantize(decimal.Decimal("0.000000000")),decimal.Decimal("1").quantize(decimal.Decimal("0.000000000"))], dtype=object)
-        col_decimal64_12 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000000000")), None, decimal.Decimal("0").quantize(decimal.Decimal("0.000000000000")),decimal.Decimal("1").quantize(decimal.Decimal("0.000000000000"))], dtype=object)
-        col_decimal128_0 = np.array([decimal.Decimal("-1"), None, decimal.Decimal("0"), decimal.Decimal("1234567890")],dtype=object)
-        col_decimal128_38 = np.array([decimal.Decimal("-1.00000000000000000000000000000000000000"), None, decimal.Decimal("0").quantize(decimal.Decimal("0.00000000000000000000000000000000000000")),decimal.Decimal("1.00000000000000000000000000000000000000")], dtype=object)
+        col_decimal32_3 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000")), None,
+                                    decimal.Decimal("0").quantize(decimal.Decimal("0.000")),
+                                    decimal.Decimal("1").quantize(decimal.Decimal("0.000"))], dtype=object)
+        col_decimal32_6 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000")), None,
+                                    decimal.Decimal("0").quantize(decimal.Decimal("0.000000")),
+                                    decimal.Decimal("1").quantize(decimal.Decimal("0.000000"))], dtype=object)
+        col_decimal64_9 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000000")), None,
+                                    decimal.Decimal("0").quantize(decimal.Decimal("0.000000000")),
+                                    decimal.Decimal("1").quantize(decimal.Decimal("0.000000000"))], dtype=object)
+        col_decimal64_12 = np.array([decimal.Decimal("-1").quantize(decimal.Decimal("0.000000000000")), None,
+                                     decimal.Decimal("0").quantize(decimal.Decimal("0.000000000000")),
+                                     decimal.Decimal("1").quantize(decimal.Decimal("0.000000000000"))], dtype=object)
+        col_decimal128_0 = np.array([decimal.Decimal("-1"), None, decimal.Decimal("0"), decimal.Decimal("1234567890")],
+                                    dtype=object)
+        col_decimal128_38 = np.array([decimal.Decimal("-1.00000000000000000000000000000000000000"), None,
+                                      decimal.Decimal("0").quantize(
+                                          decimal.Decimal("0.00000000000000000000000000000000000000")),
+                                      decimal.Decimal("1.00000000000000000000000000000000000000")], dtype=object)
         data = {
             "float": col_float,
             "decimal32_3": col_decimal32_3,
@@ -385,20 +429,26 @@ class TestDecimal:
 
     def test_download_decimal64_table(self):
         res = self.conn.run("table(decimal64(``0`1.123123123123123`2.00000'-100', 12) as c1)")
-        ex_df = pd.DataFrame({'c1': [None, decimal.Decimal("0.000000000000"), decimal.Decimal("1.123123123123"),decimal.Decimal("2.000000000000"), decimal.Decimal("-100.000000000000")]})
+        ex_df = pd.DataFrame({'c1': [None, decimal.Decimal("0.000000000000"), decimal.Decimal("1.123123123123"),
+                                     decimal.Decimal("2.000000000000"), decimal.Decimal("-100.000000000000")]})
         assert_frame_equal(res, ex_df)
 
     def test_download_decimal128_table(self):
         res = self.conn.run("table(decimal128(``0`1.123123123123123123123123`2.00000'-100', 22) as c1)")
-        ex_df = pd.DataFrame({'c1': [None, decimal.Decimal("0.0000000000000000000000"),decimal.Decimal("1.1231231231231231231231"),decimal.Decimal("2.000000000000000000000"),decimal.Decimal("-100.000000000000000000000")]})
+        ex_df = pd.DataFrame({'c1': [None, decimal.Decimal("0.0000000000000000000000"),
+                                     decimal.Decimal("1.1231231231231231231231"),
+                                     decimal.Decimal("2.000000000000000000000"),
+                                     decimal.Decimal("-100.000000000000000000000")]})
         assert_frame_equal(res, ex_df)
 
     def test_download_decimal32_arrayVector(self):
         res = self.conn.run("x = array(DECIMAL32(5)[])\
                             .append!([decimal32(take(`1`0``2.123,5), 5)])\
                             .append!([decimal32(string(take('-1.123456''0''3.4958293825',5)), 5)]);x")
-        ex_val0 = [decimal.Decimal("1.00000"), decimal.Decimal("0.00000"), None, decimal.Decimal("2.12300"),decimal.Decimal("1.00000")]
-        ex_val1 = [decimal.Decimal("-1.12346"), decimal.Decimal("0.00000"), decimal.Decimal("3.495830"),decimal.Decimal("-1.12346"), decimal.Decimal("0.00000")]
+        ex_val0 = [decimal.Decimal("1.00000"), decimal.Decimal("0.00000"), None, decimal.Decimal("2.12300"),
+                   decimal.Decimal("1.00000")]
+        ex_val1 = [decimal.Decimal("-1.12346"), decimal.Decimal("0.00000"), decimal.Decimal("3.495830"),
+                   decimal.Decimal("-1.12346"), decimal.Decimal("0.00000")]
         ex = np.array([ex_val0, ex_val1], dtype=object)
         for x, y in zip(res, ex):
             assert_array_equal(x, y)
@@ -407,8 +457,11 @@ class TestDecimal:
         res = self.conn.run("x = array(DECIMAL64(10)[])\
                             .append!([decimal64(take(`1`0``2.123,5), 10)])\
                             .append!([decimal64(string(take('-1.1234567899999999999999''0.9999999999999999999999''34958293.111111111111111',5)), 10)]);x")
-        ex_val0 = [decimal.Decimal("1.0000000000"), decimal.Decimal("0.0000000000"), None,decimal.Decimal("2.1230000000"), decimal.Decimal("1.0000000000")]
-        ex_val1 = [decimal.Decimal("-1.1234567900"), decimal.Decimal("1.0000000000"),decimal.Decimal("34958293.1111111111"), decimal.Decimal("-1.1234567900"),decimal.Decimal("1.0000000000")]
+        ex_val0 = [decimal.Decimal("1.0000000000"), decimal.Decimal("0.0000000000"), None,
+                   decimal.Decimal("2.1230000000"), decimal.Decimal("1.0000000000")]
+        ex_val1 = [decimal.Decimal("-1.1234567900"), decimal.Decimal("1.0000000000"),
+                   decimal.Decimal("34958293.1111111111"), decimal.Decimal("-1.1234567900"),
+                   decimal.Decimal("1.0000000000")]
         ex = np.array([ex_val0, ex_val1], dtype=object)
         for x, y in zip(res, ex):
             assert_array_equal(x, y)
@@ -441,8 +494,11 @@ class TestDecimal:
             }
             x
         """)
-        ex_val0 = [decimal.Decimal("1.0000000000"), decimal.Decimal("0.0000000000"), None,decimal.Decimal("2.1230000000"), decimal.Decimal("1.0000000000")]
-        ex_val1 = [decimal.Decimal("-1.1234567900"), decimal.Decimal("1.0000000000"),decimal.Decimal("34958293.1111111111"), decimal.Decimal("-1.1234567900"),decimal.Decimal("1.0000000000")]
+        ex_val0 = [decimal.Decimal("1.0000000000"), decimal.Decimal("0.0000000000"), None,
+                   decimal.Decimal("2.1230000000"), decimal.Decimal("1.0000000000")]
+        ex_val1 = [decimal.Decimal("-1.1234567900"), decimal.Decimal("1.0000000000"),
+                   decimal.Decimal("34958293.1111111111"), decimal.Decimal("-1.1234567900"),
+                   decimal.Decimal("1.0000000000")]
         for ind, val in enumerate(res):
             if ind % 2 == 0:
                 assert_array_equal(val, ex_val0)
@@ -491,7 +547,8 @@ class TestDecimal:
         assert_array_equal(res['c2'].to_list(), [[decimal.Decimal("2.00"), decimal.Decimal("2.00")]] * 70000)
         assert_array_equal(res['c3'].to_list(), [[decimal.Decimal("3.0000"), decimal.Decimal("3.0000")]] * 70000)
         assert_array_equal(res['c4'].to_list(), [[decimal.Decimal("4.000000"), decimal.Decimal("4.000000")]] * 70000)
-        assert_array_equal(res['c5'].to_list(),[[decimal.Decimal("5.00000000"), decimal.Decimal("5.00000000")]] * 70000)
+        assert_array_equal(res['c5'].to_list(),
+                           [[decimal.Decimal("5.00000000"), decimal.Decimal("5.00000000")]] * 70000)
 
     def test_download_table_with_decimal64_array_vector_gt65535(self):
         res = self.conn.run("""
@@ -503,9 +560,12 @@ class TestDecimal:
         """)
         assert_array_equal(res['c1'].to_list(), [[decimal.Decimal("1"), decimal.Decimal("1")]] * 70000)
         assert_array_equal(res['c2'].to_list(), [[decimal.Decimal("2.0000"), decimal.Decimal("2.0000")]] * 70000)
-        assert_array_equal(res['c3'].to_list(),[[decimal.Decimal("3.00000000"), decimal.Decimal("3.00000000")]] * 70000)
-        assert_array_equal(res['c4'].to_list(),[[decimal.Decimal("4.000000000000"), decimal.Decimal("4.000000000000")]] * 70000)
-        assert_array_equal(res['c5'].to_list(),[[decimal.Decimal("5.0000000000000000"), decimal.Decimal("5.0000000000000000")]] * 70000)
+        assert_array_equal(res['c3'].to_list(),
+                           [[decimal.Decimal("3.00000000"), decimal.Decimal("3.00000000")]] * 70000)
+        assert_array_equal(res['c4'].to_list(),
+                           [[decimal.Decimal("4.000000000000"), decimal.Decimal("4.000000000000")]] * 70000)
+        assert_array_equal(res['c5'].to_list(),
+                           [[decimal.Decimal("5.0000000000000000"), decimal.Decimal("5.0000000000000000")]] * 70000)
 
     def test_upload_table_with_decimal32_array_vector_gt65535(self):
         tmp = self.conn.run("""
@@ -625,7 +685,8 @@ class TestDecimal:
         appender = ddb.PartitionedTableAppender("dfs://test_tu_tab_av", 'pt', 'ind', pool)
         rows = appender.append(tmp)
         assert rows == 70000
-        assert all(self.conn.run("res = select * from loadTable(dbpath, `pt) order by ind;each(eqObj, res.values(), t.values())"))
+        assert all(self.conn.run(
+            "res = select * from loadTable(dbpath, `pt) order by ind;each(eqObj, res.values(), t.values())"))
 
     def test_partitionedTableAppender_with_decimal64_array_vector_gt65535(self):
         tmp = self.conn.run("""
@@ -645,7 +706,8 @@ class TestDecimal:
         appender = ddb.PartitionedTableAppender("dfs://test_tu_tab_av", 'pt', 'ind', pool)
         rows = appender.append(tmp)
         assert rows == 70000
-        assert all(self.conn.run("res = select * from loadTable(dbpath, `pt) order by ind;each(eqObj, res.values(), t.values())"))
+        assert all(self.conn.run(
+            "res = select * from loadTable(dbpath, `pt) order by ind;each(eqObj, res.values(), t.values())"))
 
     def test_MultithreadedTableWriter_with_decimal32_array_vector_gt65535(self):
         tmp = self.conn.run("""
@@ -661,7 +723,8 @@ class TestDecimal:
             go
             select * from t
         """)
-        mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "dfs://test_tu_tab_av", 'pt', threadCount=2,partitionCol='ind')
+        mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "dfs://test_tu_tab_av", 'pt', threadCount=2,
+                                                partitionCol='ind')
         for _, rowData in tmp.iterrows():
             ind = rowData['ind']
             c1 = rowData['c1']
@@ -686,7 +749,8 @@ class TestDecimal:
             go
             select * from t
         """)
-        mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "dfs://test_tu_tab_av", 'pt', threadCount=2,partitionCol='ind')
+        mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "dfs://test_tu_tab_av", 'pt', threadCount=2,
+                                                partitionCol='ind')
         for _, rowData in tmp.iterrows():
             ind = rowData['ind']
             c1 = rowData['c1']
@@ -698,7 +762,7 @@ class TestDecimal:
         assert all(self.conn.run("res = select * from loadTable(dbpath, `pt);each(eqObj, res.values(), t.values())"))
 
     def test_session_disableDecimal(self):
-        result=self.conn.run("""
+        result = self.conn.run("""
             v_decimal32=array(DECIMAL32(2)).append!(decimal32(["nan","3.15","nan"],2));
             v_decimal64=array(DECIMAL64(17)).append!(decimal64(["nan","3.14159265358979324","nan"],17));
             v_decimal128=array(DECIMAL128(38)).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
@@ -714,8 +778,8 @@ class TestDecimal:
                 av_decimal128 as `av_decimal128,
                 [1,2,3] as other
             );
-        """,disableDecimal=True)
-        expect=self.conn.run("""
+        """, disableDecimal=True)
+        expect = self.conn.run("""
             v_decimal32_d=array(DOUBLE).append!(decimal32(["nan","3.15","nan"],2));
             v_decimal64_d=array(DOUBLE).append!(decimal64(["nan","3.14159265358979324","nan"],17));
             v_decimal128_d=array(DOUBLE).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
@@ -731,52 +795,13 @@ class TestDecimal:
                 av_decimal128_d as `av_decimal128,
                 [1,2,3] as other
             );
-        """,disableDecimal=False)
-        assert_frame_equal(result,expect)
-
-    @pytest.mark.parametrize('compress', [True,False])
-    def test_session_disableDecimal(self,compress):
-        conn=ddb.Session(HOST,PORT,USER,PASSWD,compress=compress)
-        result=conn.run("""
-            v_decimal32=array(DECIMAL32(2)).append!(decimal32(["nan","3.15","nan"],2));
-            v_decimal64=array(DECIMAL64(17)).append!(decimal64(["nan","3.14159265358979324","nan"],17));
-            v_decimal128=array(DECIMAL128(38)).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
-            av_decimal32=array(DECIMAL32(2)[]).append!([decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2)]);
-            av_decimal64=array(DECIMAL64(17)[]).append!([decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17)]);
-            av_decimal128=array(DECIMAL128(38)[]).append!([decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38)]);
-            table(
-                v_decimal32 as `v_decimal32,
-                v_decimal64 as `v_decimal64,
-                v_decimal128 as `v_decimal128,
-                av_decimal32 as `av_decimal32,
-                av_decimal64 as `av_decimal64,
-                av_decimal128 as `av_decimal128,
-                [1,2,3] as other
-            );
-        """,disableDecimal=True)
-        expect=conn.run("""
-            v_decimal32_d=array(DOUBLE).append!(decimal32(["nan","3.15","nan"],2));
-            v_decimal64_d=array(DOUBLE).append!(decimal64(["nan","3.14159265358979324","nan"],17));
-            v_decimal128_d=array(DOUBLE).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
-            av_decimal32_d=array(DOUBLE[]).append!([decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2)]);
-            av_decimal64_d=array(DOUBLE[]).append!([decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17)]);
-            av_decimal128_d=array(DOUBLE[]).append!([decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38)]);
-            table(
-                v_decimal32_d as `v_decimal32,
-                v_decimal64_d as `v_decimal64,
-                v_decimal128_d as `v_decimal128,
-                av_decimal32_d as `av_decimal32,
-                av_decimal64_d as `av_decimal64,
-                av_decimal128_d as `av_decimal128,
-                [1,2,3] as other
-            );
-        """,disableDecimal=False)
-        assert_frame_equal(result,expect)
+        """, disableDecimal=False)
+        assert_frame_equal(result, expect)
 
     @pytest.mark.parametrize('compress', [True, False])
-    def test_DBConnectionPool_disableDecimal(self,compress):
-        pool = ddb.DBConnectionPool(HOST, PORT, 2,USER,PASSWD,compress=compress)
-        result=pool.runTaskAsync("""
+    def test_session_disableDecimal(self, compress):
+        conn = ddb.Session(HOST, PORT, USER, PASSWD, compress=compress)
+        result = conn.run("""
             v_decimal32=array(DECIMAL32(2)).append!(decimal32(["nan","3.15","nan"],2));
             v_decimal64=array(DECIMAL64(17)).append!(decimal64(["nan","3.14159265358979324","nan"],17));
             v_decimal128=array(DECIMAL128(38)).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
@@ -792,8 +817,8 @@ class TestDecimal:
                 av_decimal128 as `av_decimal128,
                 [1,2,3] as other
             );
-        """,disableDecimal=True).result()
-        expect=pool.runTaskAsync("""
+        """, disableDecimal=True)
+        expect = conn.run("""
             v_decimal32_d=array(DOUBLE).append!(decimal32(["nan","3.15","nan"],2));
             v_decimal64_d=array(DOUBLE).append!(decimal64(["nan","3.14159265358979324","nan"],17));
             v_decimal128_d=array(DOUBLE).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
@@ -809,5 +834,44 @@ class TestDecimal:
                 av_decimal128_d as `av_decimal128,
                 [1,2,3] as other
             );
-        """,disableDecimal=False).result()
+        """, disableDecimal=False)
+        assert_frame_equal(result, expect)
+
+    @pytest.mark.parametrize('compress', [True, False])
+    def test_DBConnectionPool_disableDecimal(self, compress):
+        pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD, compress=compress)
+        result = pool.runTaskAsync("""
+            v_decimal32=array(DECIMAL32(2)).append!(decimal32(["nan","3.15","nan"],2));
+            v_decimal64=array(DECIMAL64(17)).append!(decimal64(["nan","3.14159265358979324","nan"],17));
+            v_decimal128=array(DECIMAL128(38)).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
+            av_decimal32=array(DECIMAL32(2)[]).append!([decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2)]);
+            av_decimal64=array(DECIMAL64(17)[]).append!([decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17)]);
+            av_decimal128=array(DECIMAL128(38)[]).append!([decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38)]);
+            table(
+                v_decimal32 as `v_decimal32,
+                v_decimal64 as `v_decimal64,
+                v_decimal128 as `v_decimal128,
+                av_decimal32 as `av_decimal32,
+                av_decimal64 as `av_decimal64,
+                av_decimal128 as `av_decimal128,
+                [1,2,3] as other
+            );
+        """, disableDecimal=True).result()
+        expect = pool.runTaskAsync("""
+            v_decimal32_d=array(DOUBLE).append!(decimal32(["nan","3.15","nan"],2));
+            v_decimal64_d=array(DOUBLE).append!(decimal64(["nan","3.14159265358979324","nan"],17));
+            v_decimal128_d=array(DOUBLE).append!(decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38));
+            av_decimal32_d=array(DOUBLE[]).append!([decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2),decimal32(["nan","3.15","nan"],2)]);
+            av_decimal64_d=array(DOUBLE[]).append!([decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17),decimal64(["nan","3.14159265358979324","nan"],17)]);
+            av_decimal128_d=array(DOUBLE[]).append!([decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38),decimal128(["nan","0.14159265358979323846264338327950288418","nan"],38)]);
+            table(
+                v_decimal32_d as `v_decimal32,
+                v_decimal64_d as `v_decimal64,
+                v_decimal128_d as `v_decimal128,
+                av_decimal32_d as `av_decimal32,
+                av_decimal64_d as `av_decimal64,
+                av_decimal128_d as `av_decimal128,
+                [1,2,3] as other
+            );
+        """, disableDecimal=False).result()
         assert_frame_equal(result, expect)
