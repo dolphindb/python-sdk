@@ -10,10 +10,9 @@ void AsynWorker::run() {
             latch_->countDown();
             break;
         }
-
         Task task;
         ConstantSP result = new Void();
-        py::object pyResult = py::none();
+        py::object pyResult;
         bool errorFlag = false;
         if (!queue_->blockingPop(task, 1000))
             continue;
@@ -22,6 +21,7 @@ void AsynWorker::run() {
         while(true) {
             try {
                 if(task.isPyTask){
+                    py::gil_scoped_acquire gil;
                     if(task.isFunc){
                         pyResult = conn_->runPy(task.script, task.arguments, task.priority, task.parallelism, 0, task.clearMemory, task.pickleTableToList, task.disableDecimal);
                     }
@@ -41,28 +41,21 @@ void AsynWorker::run() {
             }
             catch(std::exception & ex){
                 errorFlag = true;
-                std::cerr<<"Async task worker come across exception : "<<ex.what()<<std::endl;
+                LOG_ERR("Async task worker come across exception :", ex.what());
                 taskStatus_.setResult(task.identity, TaskStatusMgmt::Result(TaskStatusMgmt::ERRORED, Constant::void_, py::none(), ex.what()));
                 break;
-                // if(reConnectFlag_ && !conn_->connected()){
-                //     while(true){
-                //         try {
-                //             if(conn_->connect(hostName_, port_, userId_, password_))
-                //                 break;
-                //             std::cerr << "Connect Failed, retry in one second." << std::endl;
-                //             Thread::sleep(1000);
-                //         } catch (IOException &e) {
-                //             std::cerr << "Connect Failed, retry in one second." << std::endl;
-                //             Thread::sleep(1000);
-                //         }
-                //     }
-                // } else {
-                //     
-                // }
             }
         }
-        if(!errorFlag)
-            taskStatus_.setResult(task.identity, TaskStatusMgmt::Result(TaskStatusMgmt::FINISHED, result, pyResult));
+        if(!errorFlag) {
+            if (task.isPyTask) {
+                py::gil_scoped_acquire gil;
+                taskStatus_.setResult(task.identity, TaskStatusMgmt::Result(TaskStatusMgmt::FINISHED, result, pyResult));
+                pyResult = py::none();
+            }
+            else {
+                taskStatus_.setResult(task.identity, TaskStatusMgmt::Result(TaskStatusMgmt::FINISHED, result, pyResult));
+            }
+        }
     }
 }
 }

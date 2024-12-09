@@ -15,6 +15,11 @@
 #include <ws2tcpip.h>
 #endif
 
+#ifdef DLOG
+    #undef DLOG
+#endif
+#define DLOG        // dolphindb::DLogger::Info
+
 #ifdef WINDOWS
 namespace {
 bool WSAStarted = false;
@@ -26,23 +31,20 @@ int startWSA() {
     wVersionRequested = MAKEWORD(2, 2);
     err = WSAStartup(wVersionRequested, &wsaData);
     if (err != 0) {
-        printf("WSAStartup failed with error: %d\n", err);
+        LOG_INFO("WSAStartup failed with error:", err);
         return 1;
     }
     if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2) {
-        printf("Could not find a usable version of Winsock.dll\n");
+        LOG_INFO("Could not find a usable version of Winsock.dll");
         WSACleanup();
         return 1;
     } else
-        printf("The Winsock 2.2 dll was found okay\n");
+        LOG_INFO("The Winsock 2.2 dll was found okay");
     return 0;
 }
 }  // namespace
 #endif
 
-using std::cerr;
-using std::cout;
-using std::endl;
 using std::pair;
 using std::set;
 using std::unordered_map;
@@ -512,7 +514,7 @@ public:
 					return;
 				}
 			}
-			DLogger::Error("can't find message queue in exist topic.");
+			LOG_ERR("can't find message queue in exist topic.");
 		});
 	}
 	void addHandleThread(const MessageTableQueueSP& tqueue, const ThreadSP &thread) {
@@ -523,7 +525,7 @@ public:
 					return;
 				}
 			}
-			DLogger::Error("can't find message queue in exist topic.");
+			LOG_ERR("can't find message queue in exist topic.");
 		});
 	}
 	std::size_t getQueueDepth(const ThreadSP &thread) {
@@ -569,17 +571,17 @@ private:
 		static KeepAliveAttr keepAliveAttr;
 #ifdef WINDOWS
 		if (::setsockopt(socket->getHandle(), SOL_SOCKET, SO_KEEPALIVE, (const char*)&keepAliveAttr.enabled, sizeof(int)) != 0) {
-			cerr << "Subscription socket failed to enable TCP_KEEPALIVE with error: " << errno << endl;
+			LOG_ERR("Subscription socket failed to enable TCP_KEEPALIVE with error:", errno);
 			return false;
 		}
 #elif defined MAC
         if(::setsockopt(socket->getHandle(), SOL_SOCKET, SO_KEEPALIVE, (const char*)&keepAliveAttr.enabled, sizeof(int)) != 0) {
-            cerr << "Subscription socket failed to enable TCP_KEEPALIVE with error: " <<  errno << endl;
+            LOG_ERR("Subscription socket failed to enable TCP_KEEPALIVE with error:", errno);
             return false;
         }
 #else
 		if (::setsockopt(socket->getHandle(), SOL_SOCKET, SO_KEEPALIVE, &keepAliveAttr.enabled, sizeof(int)) != 0) {
-			cerr << "Subscription socket failed to enable TCP_KEEPALIVE with error: " << errno << endl;
+			LOG_ERR("Subscription socket failed to enable TCP_KEEPALIVE with error:", errno);
 		}
 		::setsockopt(socket->getHandle(), SOL_TCP, TCP_KEEPIDLE, &keepAliveAttr.idleTime, sizeof(int));
 		::setsockopt(socket->getHandle(), SOL_TCP, TCP_KEEPINTVL, &keepAliveAttr.interval, sizeof(int));
@@ -609,7 +611,6 @@ private:
 					inputStream = publisher->getDataInputStream();
 				}
                 if (inputStream->getSocket().isNull()) {
-                    //cerr << "Streaming Daemon socket accept failed, aborting." << endl;
                     break;
                 };
 
@@ -617,12 +618,12 @@ private:
                 t->start();
 				parseSocketThread_.push(SocketThread(inputStream->getSocket(),t,publisher));
             } catch (exception &e) {
-                cerr << "Daemon exception: " << e.what() << endl;
-                cerr << "Restart Daemon in 1 second" << endl;
+                LOG_ERR("Daemon exception:", e.what());
+                LOG_ERR("Restart Daemon in 1 second");
                 Util::sleep(1000);
             } catch (...) {
-                cerr << "Daemon unknown exception: " << endl;
-                cerr << "Restart Daemon in 1 second" << endl;
+                LOG_ERR("Daemon unknown exception: ");
+                LOG_ERR("Restart Daemon in 1 second");
                 Util::sleep(1000);
             }
         }
@@ -754,7 +755,7 @@ void StreamingClientImpl::checkServerVersion(std::string host, int port, const s
     if (v0 == 3 || (v0 == 2 && v1 == 0 && v2 >= 9) || (v0 == 2 && v1 == 10)) {
         //server only support reverse connection
         if(listeningPort_ != 0){
-            DLogger::Warn("The server only supports transferring subscribed data using the connection initiated by the subsriber. The specified port will not take effect.");
+            LOG_WARN("The server only supports transferring subscribed data using the connection initiated by the subsriber. The specified port will not take effect.");
         }
         listeningPort_ = 0;
     } else {
@@ -807,22 +808,20 @@ void StreamingClientImpl::reconnect() {
                         } catch (exception &e) {
                             string msg = e.what();
                             if (getNewLeader(e.what(), host, port)) {
-                                cerr << "In reconnect: Got NotLeaderException, switch to leader node [" << host << ":" << port << "] for subscription"  << endl;
+                                LOG_ERR("In reconnect: Got NotLeaderException, switch to leader node [", host, ":", port, "] for subscription");
                                 HAStreamTableInfo haInfo{info.host, info.port, info.tableName, info.actionName, host, port};
                                 haStreamTableInfo_.push_back(haInfo);
                                 info.host = host;
                                 info.port = port;
                             } else {
-                                cerr << "#attempt=" << p.second.second++ << ", failed to resubscribe, exception: "
-                                     << e.what();
+                                std::string errMsg = "#attempt=" + std::to_string(p.second.second++) + ", failed to resubscribe, exception: " + e.what();
                                 if (!info.haSites.empty()) {
                                     int k = rand() % info.haSites.size();
                                     host = info.haSites[k].first;
                                     port = info.haSites[k].second;
-                                    cerr << ", will retry site: " << host << ":" << port << endl;
-                                } else {
-                                    cerr << endl;
+                                    errMsg += ", will retry site: " + host + ":" + std::to_string(port);
                                 }
+                                LOG_ERR(errMsg);
                             }
                         }
                     }
@@ -870,25 +869,23 @@ void StreamingClientImpl::reconnect() {
                             } catch (exception &e) {
                                 string msg = e.what();
                                 if(!info.availableSites.empty()){
-                                    cerr << "Failed to resubscribe after disconnection. #attempt=" << p.second.second++ << ". Exception: " << e.what() << "\n";
+                                    LOG_ERR("Failed to resubscribe after disconnection. #attempt=", p.second.second++, ". Exception:", e.what());
                                 }
                                 else if (getNewLeader(e.what(), host, port)) {
-                                    cerr << "In reconnect: Got NotLeaderException, switch to leader node [" << host << ":" << port << "] for subscription"  << endl;
+                                    LOG_ERR("In reconnect: Got NotLeaderException, switch to leader node [", host, ":", port, "] for subscription");
                                     HAStreamTableInfo haInfo{info.host, info.port, info.tableName, info.actionName, host, port};
                                     haStreamTableInfo_.push_back(haInfo);
                                     info.host = host;
                                     info.port = port;
                                 } else {
-                                    cerr << "#attempt=" << p.second.second++ << ", failed to resubscribe, exception: "
-                                        << e.what();
+                                    std::string errMsg = "#attempt=" + std::to_string(p.second.second++) + ", failed to resubscribe, exception: " + e.what();
                                     if (!info.haSites.empty()) {
                                         int k = rand() % info.haSites.size();
                                         host = info.haSites[k].first;
                                         port = info.haSites[k].second;
-                                        cerr << ", will retry site: " << host << ":" << port << endl;
-                                    } else {
-                                        cerr << endl;
+                                        errMsg += ", will retry site: " + host + ":" + std::to_string(port);
                                     }
+                                    LOG_ERR(errMsg);
                                 }
                             }
                         }
@@ -929,16 +926,16 @@ void StreamingClientImpl::reconnect() {
                     insertMeta(info, topic);
                 } catch (exception &e) {
                     if (!info.availableSites.empty()){
-                        cerr << "Failed to resubscribe with exception: " << e.what() << endl;
+                        LOG_ERR("Failed to resubscribe with exception:", e.what());
                     }
                     else if (getNewLeader(e.what(), _host, _port)) {
-                        cerr << "when handle initResub_, Got NotLeaderException, switch to leader node [" << _host << ":" << _port << "] for subscription"  << endl;
+                        LOG_ERR("when handle initResub_, Got NotLeaderException, switch to leader node [", _host, ":", _port, "] for subscription");
                         HAStreamTableInfo haInfo{info.host, info.port, info.tableName, info.actionName, _host, _port};
                         haStreamTableInfo_.push_back(haInfo);
                         info.host = _host;
                         info.port = _port;
                     }else {
-                        cerr << "Failed to resubscribe with exception: " << e.what() << endl;
+                        LOG_ERR("Failed to resubscribe with exception:", e.what());
                     }
                     v.emplace_back(info);
                 }
@@ -981,7 +978,7 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
                 break;
             };
             if (topicMsg.empty()) {
-                cerr << "WARNING: ERROR occured before receiving first message, can't do recovery." << endl;
+                LOG_WARN("WARNING: ERROR occured before receiving first message, can't do recovery.");
                 break;
             }
             // close this socket, and do resub
@@ -1010,7 +1007,6 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
 		if (ret != OK) continue;
 		ret = in->readLong(offset);
 		if (ret != OK) continue;
-//        cout << offset << endl;
 
         ret = in->readString(topicMsg);
 		if (ret != OK) continue;
@@ -1028,8 +1024,9 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
             auto form = static_cast<DATA_FORM>((unsigned short)flag >> 8u);
             unmarshall = factory.getConstantUnmarshall(form);
             if (UNLIKELY(unmarshall == nullptr)) {
-                cerr << "[ERROR] Invalid data from: 0x" << std::hex << flag
-                     << " , unable to continue. Will stop this parseMessage thread." << endl;
+                std::ostringstream errMsg;
+                errMsg << "[ERROR] Invalid data from: 0x" << std::hex << flag << ", unable to continue. Will stop this parseMessage thread.";
+                LOG_ERR(errMsg.str());
                 ret = OTHERERR;
                 continue;
             }
@@ -1042,7 +1039,7 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
         ConstantSP obj = unmarshall->getConstant();
         if (obj->isTable()) {
             if (obj->rows() != 0) {
-                cerr << "[ERROR] schema table shuold have zero rows, stopping this parse thread." << endl;
+                LOG_ERR("[ERROR] schema table shuold have zero rows, stopping this parse thread.");
                 return;
             }
             for (auto &t : topics) {
@@ -1084,7 +1081,7 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
 					else if (info.streamDeserializer.isNull()==false) {
 						if (rows.empty()) {
 							if (!info.streamDeserializer->parseBlob(obj, rows, symbols, errorInfo)) {
-								cerr << "[ERROR] parse BLOB field failed: " << errorInfo.errorInfo << ", stopping this parse thread." << endl;
+								LOG_ERR("[ERROR] parse BLOB field failed:", errorInfo.errorInfo, ", stopping this parse thread.");
 								return;
 							}
 						}
@@ -1097,7 +1094,7 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
 					}
 					else if (info.msgAsTable) {
 						if (info.attributes.empty()) {
-							std::cerr << "table colName is empty, can not convert to table" << std::endl;
+							LOG_ERR("table colName is empty, can not convert to table");
 							info.queue->push(Message(obj));
 						}
 						else {
@@ -1133,14 +1130,13 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
 					topicSubInfos_.op([&](unordered_map<string, SubscribeInfo>& mp){
 						if(mp.count(t) != 0)
                         	mp[t].offset = offset + 1;
-//                        cout << "set offset to " << offset << " add: " << &mp[t].offset << endl;
                     });
 //                    topicSubInfos_.upsert(
 //                        t, [&](SubscribeInfo &info) { info.offset = offset; }, SubscribeInfo());
                 }
             }
         } else {
-			cerr << "Message body has an invalid format. Vector is expected." << endl;
+			LOG_ERR("Message body has an invalid format. Vector is expected.");
 			break;
         }
     }
@@ -1173,7 +1169,6 @@ void StreamingClientImpl::sendPublishRequest(DBConnection &conn, SubscribeInfo &
 		for (int i = 0; i < vec->size(); ++i) {
 			auto s = vec->get(i)->getString();
 			auto p = Util::split(s, ':');
-			//            cerr << p[0] << ":" << p[1] << endl;
 			info.haSites.emplace_back(p[0], std::stoi(p[1]));
 		}
 	}
@@ -1284,7 +1279,7 @@ SubscribeInfo StreamingClientImpl::subscribeInternal(const string &host, int por
                 return info;
             }
             else if (attempt <= 10 && getNewLeader(e.what(), _host, _port)) {
-                cerr << "Got NotLeaderException, switch to leader node [" << _host << ":" << _port << "] for subscription"  << endl;
+                LOG_ERR("Got NotLeaderException, switch to leader node [", _host, ":", _port, "] for subscription");
                 HAStreamTableInfo info{host, port, tableName, actionName, _host, _port};
                 haStreamTableInfo_.push_back(info);
             } else if (resubscribe) {
@@ -1312,7 +1307,7 @@ void StreamingClientImpl::unsubscribeInternal(const string &host, int port, cons
         topic = iter->second;
         SubscribeInfo info;
         if (!topicSubInfos_.find(topic, info)) {
-            cerr << "[WARN] subscription of topic " << topic << " not existed" << endl;
+            LOG_WARN("[WARN] subscription of topic", topic, "not existed");
             return;
         }
         if(!info.availableSites.empty()){
@@ -1343,7 +1338,7 @@ void StreamingClientImpl::unsubscribeInternal(const string &host, int port, cons
         conn = buildConn(host_, port_);
         topic = run(conn, "getSubscriptionTopic", tableName, actionName)->get(0)->getString();
         if (!topicSubInfos_.count(topic)) {
-            cerr << "[WARN] subscription of topic " << topic << " not existed" << endl;
+            LOG_WARN("[WARN] subscription of topic", topic, "not existed");
             return;
         }
     }
@@ -1409,7 +1404,7 @@ ThreadSP ThreadedClient::subscribe(string host, int port, const MessageBatchHand
 										   userName, password, blobDeserializer, msgAsTable,
 										   backupSites, false, resubTimeout, subOnce);
     if (info.queue.isNull() && info.tqueue.isNull()) {
-        cerr << "Subscription already made, handler loop not created." << endl;
+        LOG_ERR("Subscription already made, handler loop not created.");
         ThreadSP t = new Thread(new Executor([]() {}));
         t->start();
         return t;
@@ -1452,7 +1447,7 @@ ThreadSP ThreadedClient::subscribe(string host, int port, const MessageBatchHand
 			}
 		}
 		catch(exception &e) {
-			std::cerr << e.what() << std::endl;
+            LOG_ERR(e.what());
 		}
 	}));
 	if (msgAsTable) {
@@ -1490,7 +1485,7 @@ ThreadSP newHandleThread(const MessageHandler handler, MessageQueueSP queue, boo
 			DLOG("nht handle exit.");
 		}
 		catch(exception &e) {
-			std::cerr << e.what() << std::endl;
+            LOG_ERR(e.what());
 		}
 	}));
 	impl->addHandleThread(queue,thread);
@@ -1508,7 +1503,7 @@ ThreadSP ThreadedClient::subscribe(string host, int port, const MessageHandler &
 										   userName, password, blobDeserializer, false,
 										   backupSites, false, resubTimeout, subOnce);
     if (info.queue.isNull()) {
-        cerr << "Subscription already made, handler loop not created." << endl;
+        LOG_ERR("Subscription already made, handler loop not created.");
         ThreadSP t = new Thread(new Executor([]() {}));
         t->start();
         return t;
@@ -1597,7 +1592,7 @@ ThreadSP EventClient::subscribe(const string& host, int port, const EventMessage
 
     auto info = subscribeInternal(host, port, tableName, actionName, offset, resub, nullptr, false, false, 1, userName, password, nullptr, false, std::vector<std::string>(), true, 100, false);
     if (info.queue.isNull()) {
-        cerr << "Subscription already made, handler loop not created." << endl;
+        LOG_ERR("Subscription already made, handler loop not created.");
         return nullptr;
     }
 
@@ -1620,7 +1615,7 @@ ThreadSP EventClient::subscribe(const string& host, int port, const EventMessage
             eventTypes.clear();
             attributes.clear();
             if(!eventHandler_.deserializeEvent(msg, eventTypes, attributes, errorInfo)){
-                std::cout << "deserialize fail " << errorInfo.errorInfo << std::endl;
+                LOG_INFO("deserialize fail", errorInfo.errorInfo);
                 continue;
             }
             unsigned rowSize = eventTypes.size();

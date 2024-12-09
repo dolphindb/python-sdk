@@ -69,7 +69,7 @@ public:
      * this function throws an exception. If the type of the parameter and the type of the corresponding column
      * cannot be matched or converted, this function throws an exception. If error is raised on the server,
      * this function throws an exception. If the specified table is being removed, this function throws an exception.
-     * If the background thread fails to write a row, it will print error message to std::cerr and return.
+     * If the background thread fails to write a row, it will print error message to LOG_ERR and return.
      */
     template<typename... Targs>
     void insert(const string& dbName, const string& tableName, Targs... Fargs){

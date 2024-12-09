@@ -18,9 +18,9 @@ from .table import eachPre, cumsum, cumprod, cummax, cummin
 from .vector import Vector, FilterCond
 from .database import Database
 from .utils import month
-from . import cep, io
+from . import cep, io, logger
 
-__version__ = "3.0.2.1"
+__version__ = "3.0.2.2"
 
 name = "dolphindb"
 
@@ -52,6 +52,7 @@ __all__ = [
     "name",
     "cep",
     "io",
+    "logger",
 
     "wavg",
     "wsum",

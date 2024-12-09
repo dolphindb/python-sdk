@@ -23,8 +23,17 @@
 using namespace pybind11::literals;
 
 
+#ifdef LOG_ERR
+    #undef LOG_ERR
+#endif
 #define LOG_ERR pybind_dolphindb::DLogger::Error
+#ifdef LOG_INFO
+    #undef LOG_INFO
+#endif
 #define LOG_INFO pybind_dolphindb::DLogger::Info
+#ifdef LOG_WARN
+    #undef LOG_WARN
+#endif
 #define LOG_WARN pybind_dolphindb::DLogger::Warn
 
 
@@ -1251,37 +1260,15 @@ bool VectorAppendDouble(VectorSP &ddbVec, double *buf, int len) {
     return true;
 }
 void VectorAppendDecimal32(VectorSP &ddbVec, int *buf, int len, int scale) {
-    int *w_buf;
-#ifdef _MSC_VER
-    int *tmp = new int[len];
-#else
-    int tmp[len];
-#endif
     INDEX start_p = ddbVec->size();
     ddbVec->resize(start_p + len);
-    w_buf = ddbVec->getIntBuffer(start_p, len, tmp);
-    memcpy(w_buf, buf, len * sizeof(int));
-    ddbVec->setInt(start_p, len, w_buf);
-#ifdef _MSC_VER
-    delete[] tmp;
-#endif
+    ddbVec->setInt(start_p, len, buf);
     ddbVec->setNullFlag(ddbVec->getNullFlag() || ddbVec->hasNull(start_p, len));
 }
 void VectorAppendDecimal64(VectorSP &ddbVec, long long *buf, int len, int scale) {
-    long long *w_buf;
-#ifdef _MSC_VER
-    long long *tmp = new long long[len];
-#else
-    long long tmp[len];
-#endif
     INDEX start_p = ddbVec->size();
     ddbVec->resize(start_p + len);
-    w_buf = ddbVec->getLongBuffer(start_p, len, tmp);
-    memcpy(w_buf, buf, len * sizeof(long long));
-    ddbVec->setLong(start_p, len, w_buf);
-#ifdef _MSC_VER
-    delete[] tmp;
-#endif
+    ddbVec->setLong(start_p, len, buf);
     ddbVec->setNullFlag(ddbVec->getNullFlag() || ddbVec->hasNull(start_p, len));
 }
 void VectorAppendDecimal128(VectorSP &ddbVec, int128 *buf, int len, int scale) {

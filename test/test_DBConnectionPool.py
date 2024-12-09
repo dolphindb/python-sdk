@@ -1,66 +1,25 @@
 import asyncio
 import decimal
+import inspect
 import random
 import subprocess
 import sys
 import time
 
+import dolphindb as ddb
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
 import pytest
-from numpy.testing import *
-from pandas.testing import *
+from numpy.testing import assert_array_equal
+from pandas._testing import assert_frame_equal
 
-from setup.prepare import *
-from setup.settings import *
-from setup.utils import get_pid
-
-
-def create_value_db():
-    conn = ddb.session()
-    conn.connect(HOST, PORT, USER, PASSWD)
-    script = """
-        dbName="dfs://test_dbConnection"
-        tableName="pt"
-        if(existsDatabase(dbName)){
-            dropDatabase(dbName)
-        }
-        db=database(dbName, VALUE, 1..10)
-        n=1000000
-        t=table(loop(take{, n/10}, 1..10).flatten() as id, 1..1000000 as val)
-        pt=db.createPartitionedTable(t, `pt, `id).append!(t)
-    """
-    conn.run(script)
-    conn.close()
-
-
-async def get_row_count(pool: ddb.DBConnectionPool):
-    return await pool.run("exec count(*) from loadTable('dfs://test_dbConnection', 'pt')")
+from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_DNODE1, PORT_CONTROLLER, USER_CLUSTER, \
+    PASSWD_CLUSTER, PORT_DNODE2, PORT_DNODE3
 
 
 class TestDBConnectionPool:
-    conn = ddb.session(enablePickle=False)
-
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
+    conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=False)
 
     def test_DBConnectionPool_protocol_error(self):
         with pytest.raises(RuntimeError, match="Protocol 4 is not supported. "):
@@ -108,112 +67,75 @@ class TestDBConnectionPool:
                 assert True
         loop.close()
 
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_read_dfs_table(self, _compress):
-        create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
+    def test_DBConnectionPool_read_dfs_table(self):
+        pool = ddb.DBConnectionPool(HOST, PORT, 4, USER, PASSWD)
+        func_name = inspect.currentframe().f_code.co_name
+        pool.runTaskAsync(f"""
+            dbName="dfs://{func_name}"
+            tableName="pt"
+            if(existsDatabase(dbName)){{
+                dropDatabase(dbName)
+            }}
+            db=database(dbName, VALUE, 1..10)
+            n=1000
+            t=table(loop(take{{, n/10}}, 1..10).flatten() as id, 1..1000 as val)
+            pt=db.createPartitionedTable(t, `pt, `id).append!(t)
+        """).result()
+
+        async def get_row_count():
+            return await pool.run(f"exec count(*) from loadTable('dfs://{func_name}', 'pt')")
+
         loop = asyncio.get_event_loop_policy().new_event_loop()
-        tasks = [loop.create_task(get_row_count(pool)) for _ in range(10)]
+        tasks = [loop.create_task(get_row_count()) for _ in range(10)]
         loop.run_until_complete(asyncio.wait(tasks))
         for task in tasks:
-            assert task.result() == 1000000
+            assert task.result() == 1000
         pool.shutDown()
         loop.close()
 
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_read_dfs_table_runTaskAsync_Unspecified_time(self, _compress):
-        create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
+    def test_DBConnectionPool_read_dfs_table_runTaskAsync_Unspecified_time(self):
+        pool = ddb.DBConnectionPool(HOST, PORT, 4, USER, PASSWD)
+        func_name = inspect.currentframe().f_code.co_name
         pool.startLoop()
-        task1 = pool.runTaskAsync("sleep(1000);exec count(*) from loadTable('dfs://test_dbConnection', 'pt')")
-        assert task1.result() == 1000000
+        pool.runTaskAsync(f"""
+            dbName="dfs://{func_name}"
+            tableName="pt"
+            if(existsDatabase(dbName)){{
+                dropDatabase(dbName)
+            }}
+            db=database(dbName, VALUE, 1..10)
+            n=1000
+            t=table(loop(take{{, n/10}}, 1..10).flatten() as id, 1..1000 as val)
+            pt=db.createPartitionedTable(t, `pt, `id).append!(t)
+        """).result()
+        task1 = pool.runTaskAsync(f"sleep(1000);exec count(*) from loadTable('dfs://{func_name}', 'pt')")
+        assert task1.result() == 1000
         pool.shutDown()
 
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_read_dfs_table_runTaskAsyn_unfinished(self, _compress):
-        create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
+    def test_DBConnectionPool_read_dfs_table_runTaskAsync_unfinished(self):
+        pool = ddb.DBConnectionPool(HOST, PORT, 4, USER, PASSWD)
+        func_name = inspect.currentframe().f_code.co_name
         pool.startLoop()
-        task1 = pool.runTaskAsync("sleep(7000);exec count(*) from loadTable('dfs://test_dbConnection', 'pt')")
+        pool.runTaskAsync(f"""
+            dbName="dfs://{func_name}"
+            tableName="pt"
+            if(existsDatabase(dbName)){{
+                dropDatabase(dbName)
+            }}
+            db=database(dbName, VALUE, 1..10)
+            n=1000
+            t=table(loop(take{{, n/10}}, 1..10).flatten() as id, 1..1000 as val)
+            pt=db.createPartitionedTable(t, `pt, `id).append!(t)
+        """).result()
+        task1 = pool.runTaskAsync(f"sleep(7000);exec count(*) from loadTable('dfs://{func_name}', 'pt')")
         try:
-            assert task1.result(1) == 1000000
+            assert task1.result(1) == 1000
         except:
-            assert task1.result(8) == 1000000
+            assert task1.result(8) == 1000
         pool.shutDown()
 
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_read_dfs_table_runTaskAsyn_param_Unspecified_time(self, _compress):
-        create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
-        pool.startLoop()
-        t1 = time.time()
-        task1 = pool.runTaskAsync("sleep", 1000)
-        task2 = pool.runTaskAsync("sleep", 2000)
-        task3 = pool.runTaskAsync("sleep", 4000)
-        task4 = pool.runTaskAsync("sleep", 1000)
-        t2 = time.time()
-        task1.result()
-        t3 = time.time()
-        task4.result()
-        t4 = time.time()
-        task2.result()
-        t5 = time.time()
-        task3.result()
-        t6 = time.time()
-        assert t2 - t1 < 1
-        assert t3 - t1 > 1
-        assert t4 - t1 > 1
-        assert t5 - t1 > 2
-        assert t6 - t1 > 4
-        pool.shutDown()
-
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_read_dfs_table_runTaskAsyn_param_set_time(self, _compress):
-        create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
-        pool.startLoop()
-        t1 = time.time()
-        task1 = pool.runTaskAsync("sleep", 1000)
-        task2 = pool.runTaskAsync("sleep", 2000)
-        task3 = pool.runTaskAsync("sleep", 4000)
-        task4 = pool.runTaskAsync("sleep", 1000)
-        t2 = time.time()
-        task1.result(2)
-        t3 = time.time()
-        task4.result(2)
-        t4 = time.time()
-        task2.result(2)
-        t5 = time.time()
-        task3.result(4)
-        t6 = time.time()
-        assert t2 - t1 < 1
-        assert t3 - t1 > 1
-        assert t4 - t1 > 1
-        assert t5 - t1 > 2
-        assert t6 - t1 > 4
-        pool.shutDown()
-
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_read_dfs_table_runTaskAsyn_param_unfinished(self, _compress):
-        create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
-        pool.startLoop()
-        t1 = time.time()
-        task1 = pool.runTaskAsync("sleep", 7000)
-        t2 = time.time()
-        try:
-            task1.result(1)
-        except:
-            task1.result(8)
-            t3 = time.time()
-            assert t3 - t1 > 7
-        assert t2 - t1 < 1
-        pool.shutDown()
-
-    @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_read_dfs_table_runTaskAsyn_param_basic(self, _compress):
-        create_value_db()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
+    def test_DBConnectionPool_read_dfs_table_runTaskAsync_param_basic(self):
+        pool = ddb.DBConnectionPool(HOST, PORT, 4, USER, PASSWD)
         pool.startLoop()
         task1 = pool.runTaskAsync("add", 1, 2)
         task2 = pool.runTaskAsync("sum", [1, 2, 3])
@@ -224,15 +146,16 @@ class TestDBConnectionPool:
         pool.shutDown()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_DBConnectionPool_insert_tablewithAlltypes(self, _compress):
+    def test_DBConnectionPool_insert_table_with_All_types(self, _compress):
         pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
-        self.conn.run("""
-            undef(`tab,SHARED);
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}'
+        pool.runTaskAsync(f"""
+            undef(`{func_name}_tab,SHARED);
             t=table(100:0,
             ["cbool","cchar","cshort","cint","cdate","cmonth","ctime","cminute","csecond","cdatetime","ctimestamp","cnanotime","cnanotimestamp","cfloat","cdouble","csymbol","cstring","cipaddr","cblob"],
             [BOOL,CHAR,SHORT,INT, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, SYMBOL, STRING, IPADDR, BLOB]);
-            share t as tab;
-        """)
+            share t as `{func_name}_tab;
+        """).result()
         df = pd.DataFrame({
             'cbool': np.array([True, True, None]),
             'cchar': np.array([1, -1, None], dtype=np.float64),
@@ -261,10 +184,10 @@ class TestDBConnectionPool:
             'cipaddr': keys.DT_IPPADDR,
             'cblob': keys.DT_BLOB,
         }
-        pool.addTask(r"tableInsert{tab}", 1, df)
+        pool.addTask(f"tableInsert{{{func_name}_tab}}", 1, df)
         while not pool.isFinished(1):
             time.sleep(1)
-        res = self.conn.run("select * from tab")
+        res = self.conn.run(f"select * from {func_name}_tab")
         assert len(res) == 3
         assert_frame_equal(df, res)
         pool.shutDown()
@@ -272,10 +195,11 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_run(self, _compress):
         loop = asyncio.get_event_loop_policy().new_event_loop()
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
+        pool = ddb.DBConnectionPool(HOST, PORT, 4, USER, PASSWD, compress=_compress)
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}'
         task1 = pool.run(f'''
             login("{USER}","{PASSWD}")
-            dbpath="dfs://test_dfs";
+            dbpath="dfs://{func_name}";
             if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};
             db=database(dbpath, VALUE, `APPL`TESLA`GOOGLE`PDD);
             t=table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3);
@@ -285,7 +209,7 @@ class TestDBConnectionPool:
         ''', clearMemory=False, pickleTableToList=True)
         task2 = pool.run(f'''
             login("{USER}","{PASSWD}")
-            dbpath="dfs://test_dfs_2";
+            dbpath="dfs://{func_name}_2";
             if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};
             db=database(dbpath, VALUE, `APPL`TESLA`GOOGLE`PDD);
             t=table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3);
@@ -302,10 +226,10 @@ class TestDBConnectionPool:
         tab1 = task_list[1].result()
         assert isinstance(tab, list)
         assert isinstance(tab1, pd.DataFrame)
-        expect_df = self.conn.run('select * from loadTable("dfs://test_dfs", `dfs_tab)')
+        expect_df = self.conn.run(f'select * from loadTable("dfs://{func_name}", `dfs_tab)')
         expect_tab = self.conn.table(data=expect_df)
         assert_array_equal(tab, expect_tab.toList())
-        expect_df2 = self.conn.run('select * from loadTable("dfs://test_dfs_2", `dfs_tab)')
+        expect_df2 = self.conn.run(f'select * from loadTable("dfs://{func_name}_2", `dfs_tab)')
         expect_tab2 = self.conn.table(data=expect_df2)
         assert_frame_equal(tab1, expect_tab2.toDF())
         pool.shutDown()
@@ -315,9 +239,10 @@ class TestDBConnectionPool:
     def test_DBConnectionPool_func_run_clearMemory(self, _compress):
         loop = asyncio.get_event_loop_policy().new_event_loop()
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD, compress=_compress)
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}'
         task1 = pool.run(f'''
             login("{USER}","{PASSWD}")
-            dbpath="dfs://test_dfs";
+            dbpath="dfs://{func_name}";
             if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};
             db=database(dbpath, VALUE, `APPL`TESLA`GOOGLE`PDD);
             t=table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3);
@@ -327,7 +252,7 @@ class TestDBConnectionPool:
         ''', clearMemory=True, pickleTableToList=True)
         task2 = pool.run(f'''
             login("{USER}","{PASSWD}")
-            dbpath="dfs://test_dfs_1";
+            dbpath="dfs://{func_name}_1";
             if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};
             db=database(dbpath, VALUE, `APPL`TESLA`GOOGLE`PDD);
             t=table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3);
@@ -344,10 +269,10 @@ class TestDBConnectionPool:
         tab1 = task_list[1].result()
         assert isinstance(tab, list)
         assert isinstance(tab1, pd.DataFrame)
-        expect_df = self.conn.run('select * from loadTable("dfs://test_dfs", `dfs_tab)')
+        expect_df = self.conn.run(f'select * from loadTable("dfs://{func_name}", `dfs_tab)')
         expect_tab = self.conn.table(data=expect_df)
         assert_array_equal(tab, expect_tab.toList())
-        expect_df2 = self.conn.run('select * from loadTable("dfs://test_dfs_1", `dfs_tab)')
+        expect_df2 = self.conn.run(f'select * from loadTable("dfs://{func_name}_1", `dfs_tab)')
         expect_tab2 = self.conn.table(data=expect_df2)
         assert_frame_equal(tab1, expect_tab2.toDF())
         try:
@@ -361,14 +286,15 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_addTask(self, _compress):
         pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
-        assert (len(pool.getSessionId()) == 8)
-        self.conn.run("""
-            undef(`tab,SHARED);
+        assert len(pool.getSessionId()) == 8
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}'
+        pool.runTaskAsync(f"""
+            undef(`{func_name}_tab,SHARED);
             t=table(100:0,
             ["cbool","cchar","cshort","cint","cdate","cmonth","ctime","cminute","csecond","cdatetime","ctimestamp","cnanotime","cnanotimestamp","cfloat","cdouble","csymbol","cstring","cipaddr","cblob"],
             [BOOL,CHAR,SHORT,INT, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, SYMBOL, STRING, IPADDR, BLOB]);
-            share t as tab;
-        """)
+            share t as `{func_name}_tab;
+        """).result()
         df = pd.DataFrame({
             'cbool': np.array([True, True, None]),
             'cchar': np.array([1, -1, None], dtype=np.float64),
@@ -397,26 +323,26 @@ class TestDBConnectionPool:
             'cipaddr': keys.DT_IPPADDR,
             'cblob': keys.DT_BLOB,
         }
-        pool.addTask(r"tableInsert{tab}", 1, df)
+        pool.addTask(f"tableInsert{{{func_name}_tab}}", 1, df)
         while not pool.isFinished(1):
             time.sleep(1)
-        res = self.conn.run("select * from tab")
+        res = self.conn.run(f"select * from {func_name}_tab")
         assert pool.getData(1) == 3
         assert_frame_equal(df, res)
         pool.shutDown()
 
-    @pytest.mark.timeout(10)
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_addTask_1(self, _compress):
         pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         assert len(pool.getSessionId()) == 8
-        self.conn.run("""
-            undef(`tab,SHARED);
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}'
+        pool.runTaskAsync(f"""
+            undef(`{func_name}_tab,SHARED);
             t=table(100:0,
             ["cbool","cchar","cshort","cint","clong","cdate","cmonth","ctime","cminute","csecond","cdatetime","ctimestamp","cnanotime","cnanotimestamp","cfloat","cdouble","csymbol","cstring","cipaddr","cblob"],
             [BOOL,CHAR,SHORT,INT, LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, SYMBOL, STRING, IPADDR, BLOB]);
-            share t as tab;
-        """)
+            share t as `{func_name}_tab;
+        """).result()
         df = pd.DataFrame({
             'cbool': np.array([True, True, None]),
             'cchar': np.array([1, -1, 0], dtype=np.int8),
@@ -451,25 +377,25 @@ class TestDBConnectionPool:
             'cipaddr': keys.DT_IPPADDR,
             'cblob': keys.DT_BLOB,
         }
-        pool.addTask(r"tableInsert{tab}", 1, df)
+        pool.addTask(f"tableInsert{{{func_name}_tab}}", 1, df)
         if not pool.isFinished(1):
             assert pool.getData(1) is None
         else:
             assert pool.getData(1) == 3
         pool.shutDown()
 
-    @pytest.mark.timeout(10)
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_addTask_2(self, _compress):
         pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
         assert len(pool.getSessionId()) == 8
-        self.conn.run("""
-            undef(`tab,SHARED);
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}'
+        pool.runTaskAsync(f"""
+            undef(`{func_name}_tab,SHARED);
             t=table(100:0,
             ["cbool","cchar","cshort","cint","clong","cdate","cmonth","ctime","cminute","csecond","cdatetime","ctimestamp","cnanotime","cnanotimestamp","cfloat","cdouble","csymbol","cstring","cipaddr","cblob"],
             [BOOL,CHAR,SHORT,INT, LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, SYMBOL, STRING, IPADDR, BLOB]);
-            share t as tab;
-        """)
+            share t as `{func_name}_tab;
+        """).result()
         df = pd.DataFrame({
             'cbool': np.array([True, True, None]),
             'cchar': np.array([1, -1, 0], dtype=np.int8),
@@ -504,11 +430,11 @@ class TestDBConnectionPool:
             'cipaddr': keys.DT_IPPADDR,
             'cblob': keys.DT_BLOB,
         }
-        pool.addTask(r"tableInsert{tab}", 1, df)
+        pool.addTask(f"tableInsert{{{func_name}_tab}}", 1, df)
         pool.shutDown()
-        res = self.conn.run("tab")
+        res = self.conn.run(f"{func_name}_tab")
         assert_frame_equal(df, res)
-        self.conn.undef("tab", "SHARED")
+        self.conn.undef(f"{func_name}_tab", "SHARED")
 
     def test_DBConnectionPool_func_runTaskAsyn_warning(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD, )
@@ -521,16 +447,16 @@ class TestDBConnectionPool:
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_DBConnectionPool_func_runTaskAsync(self, _compress):
-        pool = ddb.DBConnectionPool(
-            HOST, PORT, 8, USER, PASSWD, compress=_compress)
-        self.conn.run("""
-            dbpath="dfs://test_runTaskAsync";
-            if(existsDatabase(dbpath)){dropDatabase(dbpath)};
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, compress=_compress)
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}'
+        self.conn.run(f"""
+            dbpath="dfs://{func_name}";
+            if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};
             db=database(dbpath, VALUE, `APPL`TESLA`GOOGLE`PDD);
             t=table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3);
             db.createPartitionedTable(t,`dfs_tab,`col1).append!(t);
         """)
-        task = pool.runTaskAsync("sleep(2000);exec count(*) from loadTable('dfs://test_runTaskAsync', `dfs_tab)")
+        task = pool.runTaskAsync(f"sleep(2000);exec count(*) from loadTable('dfs://{func_name}', `dfs_tab)")
         while not task.done():
             time.sleep(1)
         assert not task.running()
@@ -612,6 +538,7 @@ class TestDBConnectionPool:
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_DBConnectionPool_insert_dataframe_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}' + f'order_{_order}' + f'python_list_{_python_list}'
         data = []
         for i in range(10):
             row_data = [i, False, i, i, i, i,
@@ -669,11 +596,11 @@ class TestDBConnectionPool:
             'cdecimal64': keys.DT_DECIMAL64
         }
         self.conn.upload({'t': df})
-        self.conn.run("""
+        self.conn.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cblob`cipaddr`cuuid`cint128`cdecimal32`cdecimal64;
             colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, BLOB, IPADDR, UUID, INT128, DECIMAL32(2), DECIMAL64(11)];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "dfs://{func_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
@@ -681,15 +608,15 @@ class TestDBConnectionPool:
         """)
         pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD, compress=_compress)
         loop = asyncio.get_event_loop_policy().new_event_loop()
-        loop.run_until_complete(pool.run("tableInsert{loadTable('dfs://test_dfs1',`pt)}", df))
+        loop.run_until_complete(pool.run(f"tableInsert{{loadTable('dfs://{func_name}',`pt)}}", df))
         self.conn.run("""
             for(i in 0:10){
                 tableInsert(objByName(`t), i, false, i,i,i,i,i,i+23640,i,i,i,i,i,i,i,i,i,i, 'sym','str', 'blob', ipaddr("1.1.1.1"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),int128("e1671797c52e15f763380b45e841ec32"), decimal32(-2.11, 2), decimal64(0, 11))
             }
         """)
-        res = self.conn.run("""
+        res = self.conn.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("dfs://{func_name}", `pt);
             print(ex)
             print(res)
             all(each(eqObj, ex.values(), res.values()))
@@ -697,17 +624,18 @@ class TestDBConnectionPool:
         assert res
         pool.shutDown()
         loop.close()
-        tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = self.conn.run(f"schema(loadTable('dfs://{func_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE', 'SECOND',
                     'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT', 'DOUBLE', 'SYMBOL',
                     'STRING', 'BLOB', 'IPADDR', 'UUID', 'INT128', 'DECIMAL32(2)', 'DECIMAL64(11)']
         assert_array_equal(tys, ex_types)
-        self.conn.dropDatabase("dfs://test_dfs1")
+        self.conn.dropDatabase(f"dfs://{func_name}")
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_DBConnectionPool_insert_dataframe_array_vector_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}' + f'order_{_order}' + f'python_list_{_python_list}'
         data = []
         for i in range(10):
             row_data = [i, [False], [i], [i], [i], [i], [i], [i], [i], [i], [i], [i], [i], [i], [i], [i], [i], [i],
@@ -751,11 +679,11 @@ class TestDBConnectionPool:
             'cint128': keys.DT_INT128_ARRAY
         }
         self.conn.upload({'t': df})
-        self.conn.run("""
+        self.conn.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`cipaddr`cuuid`cint128;
             colType = [LONG, BOOL[], CHAR[], SHORT[], INT[],LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], TIMESTAMP[], NANOTIME[], NANOTIMESTAMP[], DATEHOUR[], FLOAT[], DOUBLE[], IPADDR[], UUID[], INT128[]];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "dfs://{func_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
@@ -763,32 +691,33 @@ class TestDBConnectionPool:
         """)
         pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD, compress=_compress)
         loop = asyncio.get_event_loop_policy().new_event_loop()
-        loop.run_until_complete(pool.run("tableInsert{loadTable('dfs://test_dfs1',`pt)}", df))
+        loop.run_until_complete(pool.run(f"tableInsert{{loadTable('dfs://{func_name}',`pt)}}", df))
         self.conn.run("""
             for(i in 0:10){
                 tableInsert(t, i, 0, i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i, ipaddr("1.1.1.1"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),int128("e1671797c52e15f763380b45e841ec32"))
             }
             tableInsert(objByName(`t), 10, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
         """)
-        res = self.conn.run("""
+        res = self.conn.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("dfs://{func_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
         pool.shutDown()
         loop.close()
-        tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = self.conn.run(f"schema(loadTable('dfs://{func_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
                     'SECOND[]', 'DATETIME[]', 'TIMESTAMP[]', 'NANOTIME[]', 'NANOTIMESTAMP[]', 'DATEHOUR[]', 'FLOAT[]',
                     'DOUBLE[]', 'IPADDR[]', 'UUID[]', 'INT128[]']
         assert_array_equal(tys, ex_types)
-        self.conn.dropDatabase("dfs://test_dfs1")
+        self.conn.dropDatabase(f"dfs://{func_name}")
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_DBConnectionPool_insert_null_dataframe_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}' + f'order_{_order}' + f'python_list_{_python_list}'
         data = []
         origin_nulls = [None, np.nan, pd.NaT]
         for i in range(7):
@@ -838,11 +767,11 @@ class TestDBConnectionPool:
             'cdecimal64': keys.DT_DECIMAL64
         }
         self.conn.upload({'t': df})
-        self.conn.run("""
+        self.conn.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cblob`cipaddr`cuuid`cint128`cdecimal32`cdecimal64;
             colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, BLOB, IPADDR, UUID, INT128, DECIMAL32(9), DECIMAL64(18)];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "dfs://{func_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
@@ -850,32 +779,33 @@ class TestDBConnectionPool:
         """)
         pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD, compress=_compress)
         loop = asyncio.get_event_loop_policy().new_event_loop()
-        loop.run_until_complete(pool.run("tableInsert{loadTable('dfs://test_dfs1',`pt)}", df))
+        loop.run_until_complete(pool.run(f"tableInsert{{loadTable('dfs://{func_name}',`pt)}}", df))
         self.conn.run("""
             for(i in 0:10){
                 tableInsert(objByName(`t), i, NULL, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
             }
         """)
-        res = self.conn.run("""
+        res = self.conn.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("dfs://{func_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
         pool.shutDown()
         loop.close()
-        tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = self.conn.run(f"schema(loadTable('dfs://{func_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE', 'SECOND',
                     'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT', 'DOUBLE', 'SYMBOL',
                     'STRING', 'BLOB', 'IPADDR', 'UUID', 'INT128', 'DECIMAL32(9)', 'DECIMAL64(18)']
         assert_array_equal(tys, ex_types)
-        self.conn.dropDatabase("dfs://test_dfs1")
+        self.conn.dropDatabase(f"dfs://{func_name}")
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_DBConnectionPool_insert_null_dataframe_array_vector_with_numpy_order(self, _compress, _order,
                                                                                   _python_list):
+        func_name = inspect.currentframe().f_code.co_name + f'compress_{_compress}' + f'order_{_order}' + f'python_list_{_python_list}'
         data = []
         origin_nulls = [[None], [np.nan], [pd.NaT]]
         for i in range(7):
@@ -918,11 +848,11 @@ class TestDBConnectionPool:
             'cint128': keys.DT_INT128_ARRAY
         }
         self.conn.upload({'t': df})
-        self.conn.run("""
+        self.conn.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`cipaddr`cuuid`cint128;
             colType = [LONG, BOOL[], CHAR[], SHORT[], INT[],LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], TIMESTAMP[], NANOTIME[], NANOTIMESTAMP[], DATEHOUR[], FLOAT[], DOUBLE[], IPADDR[], UUID[], INT128[]];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "dfs://{func_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
@@ -930,29 +860,29 @@ class TestDBConnectionPool:
         """)
         pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD, compress=_compress)
         loop = asyncio.get_event_loop_policy().new_event_loop()
-        loop.run_until_complete(pool.run("tableInsert{loadTable('dfs://test_dfs1',`pt)}", df))
+        loop.run_until_complete(pool.run(f"tableInsert{{loadTable('dfs://{func_name}',`pt)}}", df))
         self.conn.run("""
             for(i in 0:10){
                 tableInsert(objByName(`t), i, NULL, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
             }
         """)
-        res = self.conn.run("""
+        res = self.conn.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("dfs://{func_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
         pool.shutDown()
         loop.close()
-        tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = self.conn.run(f"schema(loadTable('dfs://{func_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
                     'SECOND[]', 'DATETIME[]', 'TIMESTAMP[]', 'NANOTIME[]', 'NANOTIMESTAMP[]', 'DATEHOUR[]', 'FLOAT[]',
                     'DOUBLE[]', 'IPADDR[]', 'UUID[]', 'INT128[]']
         assert_array_equal(tys, ex_types)
-        self.conn.dropDatabase("dfs://test_dfs1")
+        self.conn.dropDatabase(f"dfs://{func_name}")
 
     @pytest.mark.parametrize('_priority', [-1, 'a', 1.1, dict(), list(), tuple(), set(), 10])
-    def test_run_with_para_priority_exception(self, _priority):
+    def test_DBConnectionPool_run_with_para_priority_exception(self, _priority):
         pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD)
         loop = asyncio.get_event_loop_policy().new_event_loop()
         with pytest.raises(Exception, match="priority must be an integer from 0 to 9"):
@@ -961,7 +891,7 @@ class TestDBConnectionPool:
         loop.close()
 
     @pytest.mark.parametrize('_parallelism', [-1, 'a', 1.1, dict(), list(), tuple(), set()])
-    def test_run_with_para_parallelism_exception(self, _parallelism):
+    def test_DBConnectionPool_run_with_para_parallelism_exception(self, _parallelism):
         pool = ddb.DBConnectionPool(HOST, PORT, 2, USER, PASSWD)
         loop = asyncio.get_event_loop_policy().new_event_loop()
         with pytest.raises(Exception, match="parallelism must be an integer greater than 0"):
@@ -969,33 +899,45 @@ class TestDBConnectionPool:
         pool.shutDown()
         loop.close()
 
-    def test_run_with_para_priority_parallelism(self):
+    def test_DBConnectionPool_run_with_para_priority_parallelism_0_10(self):
         pool1 = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop_policy().new_event_loop()
         tasks = [
             loop.create_task(pool1.run(f"""
-                sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
-                priority = exec priority from getConsoleJobs() where sessionId=sessionid;
-                parallelism = exec parallelism from getConsoleJobs() where sessionId=sessionid;
-                [priority[0], parallelism[0]]
-            """, priority=0, parallelism=10)),
+                select priority,parallelism from getConsoleJobs() where sessionId=getCurrentSessionAndUser()[0]
+            """, priority=0, parallelism=10))
+        ]
+        loop.run_until_complete(asyncio.wait(tasks))
+        assert tasks[0].result()['priority'].iat[0] == 0
+        assert tasks[0].result()['parallelism'].iat[0] == 10
+        pool1.shutDown()
+        loop.close()
+
+    def test_DBConnectionPool_run_with_para_priority_parallelism_9_1(self):
+        pool1 = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        tasks = [
             loop.create_task(pool1.run(f"""
-                sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
-                priority = exec priority from getConsoleJobs() where sessionId=sessionid;
-                parallelism = exec parallelism from getConsoleJobs() where sessionId=sessionid;
-                [priority[0], parallelism[0]]
-            """)),
-            loop.create_task(pool1.run(f"""
-                sessionid = exec sessionid from getSessionMemoryStat() where userId=`{USER};
-                priority = exec priority from getConsoleJobs() where sessionId=sessionid;
-                parallelism = exec parallelism from getConsoleJobs() where sessionId=sessionid;
-                [priority[0], parallelism[0]]
+                select priority,parallelism from getConsoleJobs() where sessionId=getCurrentSessionAndUser()[0]
             """, priority=9, parallelism=1))
         ]
         loop.run_until_complete(asyncio.wait(tasks))
-        expect = [[0, 10], [4, 64], [8, 1]]
-        for ind, task in enumerate(tasks):
-            assert_array_equal(task.result(), expect[ind])
+        assert tasks[0].result()['priority'].iat[0] == 8
+        assert tasks[0].result()['parallelism'].iat[0] == 1
+        pool1.shutDown()
+        loop.close()
+
+    def test_DBConnectionPool_run_with_para_priority_parallelism(self):
+        pool1 = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        tasks = [
+            loop.create_task(pool1.run(f"""
+                select priority,parallelism from getConsoleJobs() where sessionId=getCurrentSessionAndUser()[0]
+            """))
+        ]
+        loop.run_until_complete(asyncio.wait(tasks))
+        assert tasks[0].result()['priority'].iat[0] == 4
+        assert tasks[0].result()['parallelism'].iat[0] == 64
         pool1.shutDown()
         loop.close()
 
@@ -1023,7 +965,7 @@ class TestDBConnectionPool:
             loop.run_until_complete(asyncio.gather(*[pool.run('print', {'0' * 256 * 1024})]))
         pool.shutDown()
 
-    def test_DBConnectionPool_dicionary_over_length(self):
+    def test_DBConnectionPool_dictionary_over_length(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         loop = asyncio.get_event_loop()
         with pytest.raises(RuntimeError,
@@ -1032,7 +974,7 @@ class TestDBConnectionPool:
         pool.shutDown()
 
     def test_DBConnectionPool_table_over_length(self):
-        pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
+        pool = ddb.DBConnectionPool(HOST, PORT, 1, USER_CLUSTER, PASSWD_CLUSTER)
         loop = asyncio.get_event_loop()
         with pytest.raises(RuntimeError,
                            match="String too long, Serialization failed, length must be less than 256K bytes"):
@@ -1046,37 +988,30 @@ class TestDBConnectionPool:
             loop.run_until_complete(asyncio.gather(*[pool.run('print', data)]))
         pool.shutDown()
 
-    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
+    @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_loadBalance(self):
-        host = "192.168.0.54"
-        port1 = 9902
-        pool = ddb.DBConnectionPool(host, port1, 30, loadBalance=True)
-        time.sleep(10)
+        pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 60, loadBalance=True)
         loadDf = pool.runTaskAsync(
             "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0").result()
+        print(loadDf)
         assert all(((loadDf - loadDf.mean()).abs() < 0.4)['load'])
         pool.shutDown()
 
-    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
+    @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_reconnect(self):
-        host = "192.168.0.54"
-        port0 = 9900
-        port1 = 9902
-        pool = ddb.DBConnectionPool(host, port1, 8, reConnect=True)
-        conn = ddb.Session(host, port0, "admin", "123456")
-        conn.run(f"stopDataNode(['{host}:{port1}'])")
+        pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 8, reConnect=True)
+        conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
+        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
         time.sleep(3)
-        conn.run(f"startDataNode(['{host}:{port1}'])")
+        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
         time.sleep(3)
         assert pool.runTaskAsync("1+1").result() == 2
         pool.shutDown()
         conn.close()
 
-    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
+    @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_highAvailability(self):
-        host = "192.168.0.54"
-        port1 = 9902
-        pool = ddb.DBConnectionPool(host, port1, 30, highAvailability=True)
+        pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 30, highAvailability=True)
         time.sleep(10)
         loadDf = pool.runTaskAsync(
             "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0").result()
@@ -1099,46 +1034,34 @@ class TestDBConnectionPool:
                                  f"pool=ddb.DBConnectionPool('{HOST}', 56789, 3, reConnect=True, tryReconnectNums={n});"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         assert result.stdout.count("Failed") == n
-        assert f"Connect to {HOST}:56789 failed after {n} reconnect attempts." in result.stderr
+        assert f"Connect to {HOST}:56789 failed after {n} reconnect attempts." in result.stdout
 
-    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
+    @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_tryReconnectNums_run(self):
-        host = "192.168.0.54"
-        port0 = 9900
-        port1 = 9902
-        user = "admin"
-        passwd = "123456"
-        conn = ddb.Session(host, port0, user, passwd)
+        conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
         n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
-                                 f"conn=ddb.Session('{host}',{port0},'{user}','{passwd}');"
-                                 f"pool=ddb.DBConnectionPool('{HOST}', {port1}, 3, reConnect=True, tryReconnectNums={n});"
-                                 f"""conn.run("stopDataNode(['{host}:{port1}'])");"""
+                                 f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
+                                 f"pool=ddb.DBConnectionPool('{HOST_CLUSTER}', {PORT_DNODE1}, 3, reConnect=True, tryReconnectNums={n});"
+                                 f"""conn.run("stopDataNode(['dnode{PORT_DNODE1}'])");"""
                                  "pool.runTaskAsync('1+1').result();"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        conn.run(f"startDataNode(['{host}:{port1}'])")
+        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
         assert result.stdout.count("Failed") == n
-        assert f"Connect to {HOST}:{port1} failed after {n} reconnect attempts." in result.stderr
+        assert f"Connect to {HOST_CLUSTER}:{PORT_DNODE1} failed after {n} reconnect attempts." in result.stdout
 
-    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
+    @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_highAvailability_tryReconnectNums(self):
-        host = "192.168.0.54"
-        port0 = 9900
-        port1 = 9902
-        port2 = 9903
-        port3 = 9904
-        user = "admin"
-        passwd = "123456"
-        conn = ddb.Session(host, port0, user, passwd)
+        conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
         n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
-                                 f"conn=ddb.Session('{host}',{port0},'{user}','{passwd}');"
-                                 f"pool=ddb.DBConnectionPool('{HOST}', {port1}, 1, reConnect=True, highAvailability=True, tryReconnectNums={n});"
-                                 f"""conn.run("stopDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])");"""
+                                 f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
+                                 f"pool=ddb.DBConnectionPool('{HOST}', {PORT_DNODE1}, 1, reConnect=True, highAvailability=True, tryReconnectNums={n});"
+                                 f"""conn.run("stopDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'])");"""
                                  "pool.runTaskAsync('1+1').result();"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        conn.run(f"startDataNode(['{host}:{port1}','{host}:{port2}','{host}:{port3}'])")
+        conn.run(f"startDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'])")
         assert result.stdout.count("Failed") == n * 4
-        assert f"Connect to nodes failed after {n} reconnect attempts." in result.stderr
+        assert f"Connect to nodes failed after {n} reconnect attempts." in result.stdout

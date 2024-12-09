@@ -61,7 +61,7 @@ public:
 
     void shutDown(){
         shutDownFlag_.store(true);
-        ProtectGil pgil(true, "shutDown");
+        py::gil_scoped_release gil;
         latch_->wait();
     }
 

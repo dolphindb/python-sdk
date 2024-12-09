@@ -40,7 +40,6 @@ class TestSession:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
@@ -89,7 +88,7 @@ class TestSession:
                                      "import dolphindb as ddb;"
                                      f"conn=ddb.Session('{HOST}', {PORT}, '{user}', '{passwd}',compress={_compress},enablePickle={_pickle});"
                                      ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-            assert "The user name or password is incorrect" in result.stderr
+            assert "The user name or password is incorrect" in result.stdout
 
     @pytest.mark.SESSION
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
@@ -227,7 +226,7 @@ class TestSession:
                                      "import dolphindb as ddb;"
                                      f"conn=ddb.Session('{HOST}', {PORT}, '{user}', '{passwd}');"
                                      ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-            assert "The user name or password is incorrect" in result.stderr
+            assert "The user name or password is incorrect" in result.stdout
 
     @pytest.mark.SESSION
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])

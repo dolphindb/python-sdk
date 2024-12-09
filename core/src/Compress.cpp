@@ -624,16 +624,16 @@ IO_ERR CompressDeltaofDelta::decode(DataInputStreamSP compressSrc, DataOutputStr
 			containLSN = false;
 		fileCursor += 4;
 		if (blockSize <= 0 || blockSize > maxCompressedSize_) {
-			std::cout << "Failed to decode. streamType=" + std::to_string(compressSrc->getStreamType()) + " blockSize=" + std::to_string(blockSize) + " fileCursor=" +
+			LOG_INFO("Failed to decode. streamType=" + std::to_string(compressSrc->getStreamType()) + " blockSize=" + std::to_string(blockSize) + " fileCursor=" +
 				std::to_string(fileCursor) + " fileLength=" + std::to_string(byteSize) + " decodedRows=" + std::to_string(start) + " totalRows=" +
-				std::to_string(len) + " ret=" + std::to_string(ret) << std::endl;
+				std::to_string(len) + " ret=" + std::to_string(ret));
 			return INVALIDDATA;
 		}
 		ret = compressSrc->readBytes(compressedBuf, blockSize, actualRead);
 		if (ret != OK) {
-			std::cout << "Failed to decode. fileCursor=" + std::to_string(fileCursor) + " fileLength=" + std::to_string(byteSize) + " decodedRows=" +
+			LOG_INFO("Failed to decode. fileCursor=" + std::to_string(fileCursor) + " fileLength=" + std::to_string(byteSize) + " decodedRows=" +
 				std::to_string(start) + " totalRows=" + std::to_string(len) + "blockSize=" + std::to_string(blockSize) + " actualRead=" +
-				std::to_string(actualRead) + " ret=" + std::to_string(ret) << std::endl;
+				std::to_string(actualRead) + " ret=" + std::to_string(ret));
 			return ret;
 		}
 		fileCursor += blockSize;
@@ -659,9 +659,9 @@ IO_ERR CompressDeltaofDelta::decode(DataInputStreamSP compressSrc, DataOutputStr
 		}
 
 		if (actualRead <= 0) {
-			std::cout << "Failed to decode. LZ4 block offset=" + std::to_string(fileCursor - blockSize) +
+			LOG_INFO("Failed to decode. LZ4 block offset=" + std::to_string(fileCursor - blockSize) +
 				" fileLength=" + std::to_string(byteSize) + " decodedRows=" + std::to_string(start) + " totalRows=" + std::to_string(len) +
-				" blockSize=" + std::to_string(blockSize) + " bufSize=" + std::to_string(decompressedBufSize) << std::endl;
+				" blockSize=" + std::to_string(blockSize) + " bufSize=" + std::to_string(decompressedBufSize));
 			return INVALIDDATA;
 		}
 		count = actualRead;
@@ -819,16 +819,16 @@ IO_ERR CompressLZ4::decode(DataInputStreamSP compressSrc, DataOutputStreamSP &un
 		//	containLSN = false;
 		fileCursor += 4;
 		if (ret != OK || blockSize <= 0 || blockSize > MAX_COMPRESSED_SIZE || fileCursor + blockSize > byteSize) {
-			std::cout << "Failed to decode. blockSize=" + std::to_string(blockSize) + " fileCursor=" +
+			LOG_INFO("Failed to decode. blockSize=" + std::to_string(blockSize) + " fileCursor=" +
 				std::to_string(fileCursor) + " fileLength=" + std::to_string(byteSize) + " decodedRows=" + std::to_string(start) + " totalRows=" +
-				std::to_string(len) + " ret=" + std::to_string(ret) << std::endl;;
+				std::to_string(len) + " ret=" + std::to_string(ret));
 			return INVALIDDATA;
 		}
 		ret = compressSrc->readBytes(compressedBuf, blockSize, actualRead);
 		if (ret != OK) {
-			std::cout << "Failed to decode. fileCursor=" + std::to_string(fileCursor) + " fileLength=" + std::to_string(byteSize) + " decodedRows=" +
+			LOG_INFO("Failed to decode. fileCursor=" + std::to_string(fileCursor) + " fileLength=" + std::to_string(byteSize) + " decodedRows=" +
 				std::to_string(start) + " totalRows=" + std::to_string(len) + "blockSize=" + std::to_string(blockSize) + " actualRead=" +
-				std::to_string(actualRead) + " ret=" + std::to_string(ret) << std::endl;
+				std::to_string(actualRead) + " ret=" + std::to_string(ret));
 			return ret;
 		}
 		fileCursor += blockSize;
@@ -842,9 +842,9 @@ IO_ERR CompressLZ4::decode(DataInputStreamSP compressSrc, DataOutputStreamSP &un
 			int bytes = LZ4_decompress_safe(compressedBuf, decompressedBuf, blockSize, MAX_DECOMPRESSED_SIZE);
 			if (bytes <= 0){
 				long long decompressedBufSize = count * unitLength;
-				std::cout << "Failed to decode. LZ4 block offset=" + std::to_string(fileCursor - blockSize) +
+				LOG_INFO("Failed to decode. LZ4 block offset=" + std::to_string(fileCursor - blockSize) +
 					" fileLength=" + std::to_string(byteSize) + " decodedRows=" + std::to_string(start) + " totalRows=" + std::to_string(len) +
-					" blockSize=" + std::to_string(blockSize) + " bufSize=" + std::to_string(decompressedBufSize) << std::endl;
+					" blockSize=" + std::to_string(blockSize) + " bufSize=" + std::to_string(decompressedBufSize));
 				return INVALIDDATA;
 			}
 			count = bytes / unitLength;
@@ -856,9 +856,9 @@ IO_ERR CompressLZ4::decode(DataInputStreamSP compressSrc, DataOutputStreamSP &un
 		else{
 			int bytes = LZ4_decompress_safe(compressedBuf, decompressedBuf, blockSize, MAX_DECOMPRESSED_SIZE);
 			if (bytes < 0) {
-				std::cout << "Failed to decode. LZ4 block offset=" + std::to_string(fileCursor - blockSize) +
+				LOG_INFO("Failed to decode. LZ4 block offset=" + std::to_string(fileCursor - blockSize) +
 					" fileLength=" + std::to_string(byteSize) + " decodedRows=" + std::to_string(start) + " totalRows=" + std::to_string(len) +
-					"blockSize=" + std::to_string(blockSize) << std::endl;
+					"blockSize=" + std::to_string(blockSize));
 				return INVALIDDATA;
 			}
 			if ((DATA_TYPE)header.dataType == DT_SYMBOL) {

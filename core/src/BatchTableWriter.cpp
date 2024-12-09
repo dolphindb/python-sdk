@@ -125,7 +125,7 @@ void BatchTableWriter::addTable(const string& dbName, const string& tableName, b
                     break;
                 }
                 catch(...){
-                    std::cerr << "Failed to reserve memory for std::vector." << std::endl;
+                    LOG_ERR("Failed to reserve memory for std::vector.");
                     Util::sleep(20);
                 }
             }
@@ -141,7 +141,7 @@ void BatchTableWriter::addTable(const string& dbName, const string& tableName, b
             for(int i = 0; i < size; i++){
                 ret = destTableRawPtr->writeTable->append(items[i], insertedRows, errMsg);
                 if(!ret){
-                    std::cerr << Util::createTimestamp(Util::getEpochTime())->getString() << " Backgroud thread of table (" << destTableRawPtr->dbName << " " << destTableRawPtr->tableName << "). Failed to create table, with error: " << errMsg << std::endl;
+                    LOG_ERR(Util::createTimestamp(Util::getEpochTime())->getString(), "Backgroud thread of table (", destTableRawPtr->dbName, destTableRawPtr->tableName, "). Failed to create table, with error:", errMsg);
                     destTableRawPtr->finished = true;
                     return;
                 }
@@ -158,7 +158,7 @@ void BatchTableWriter::addTable(const string& dbName, const string& tableName, b
             }
             catch(std::exception& e){
                 RWLockGuard<RWLock> _(&rwLock, true, acquireLock_);
-                std::cerr << Util::createTimestamp(Util::getEpochTime())->getString() << " Backgroud thread of table (" << destTableRawPtr->dbName << " " << destTableRawPtr->tableName << "). Failed to send data to server, with exception: " << e.what() << std::endl;
+                LOG_ERR(Util::createTimestamp(Util::getEpochTime())->getString(), "Backgroud thread of table (", destTableRawPtr->dbName, destTableRawPtr->tableName, "). Failed to send data to server, with exception:", e.what());
                 destTableRawPtr->finished = true;
                 for(int i = 0; i < size; i++)
                     destTableRawPtr->saveQueue.push(items[i]);

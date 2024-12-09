@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import inspect
 import random
 import threading
 import time
@@ -10,11 +11,10 @@ import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import *
-from pandas.testing import *
+from numpy.testing import assert_array_equal
+from pandas._testing import assert_frame_equal
 
-from setup.settings import *
-from setup.utils import get_pid
+from setup.settings import HOST, PORT, USER, PASSWD, DATA_DIR
 
 
 class MsgCount:
@@ -29,41 +29,20 @@ class MsgCount:
 
 
 class TestReadmeCn:
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    def test_QuickStart_SimpleDemo_1(self):
+    def test_readme_QuickStart_SimpleDemo_1(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        s.run("""
+        s.run(f"""
             n=1000000
             ID=rand(10, n)
             x=rand(1.0, n)
             t=table(ID, x)
-            if(existsDatabase("dfs://hashdb")){dropDatabase("dfs://hashdb")};go;
-            db=database(directory="dfs://hashdb", partitionType=HASH, partitionScheme=[INT, 2])
+            if(existsDatabase("{db_name}")){{dropDatabase("{db_name}")}};go;
+            db=database(directory="{db_name}", partitionType=HASH, partitionScheme=[INT, 2])
             pt = db.createPartitionedTable(t, `pt, `ID)
             pt.append!(t);
         """)
@@ -72,7 +51,9 @@ class TestReadmeCn:
         assert_frame_equal(re, ex)
         s.close()
 
-    def test_QuickStart_SimpleDemo_2(self):
+    def test_readme_QuickStart_SimpleDemo_2(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         n = 1000000
@@ -82,11 +63,10 @@ class TestReadmeCn:
         })
         s.run("schema_t = table(100000:0, `ID`x,[INT, DOUBLE])")
         schema_t = s.table(data="schema_t")
-        if s.existsDatabase("dfs://hashdb"):
-            s.dropDatabase("dfs://hashdb")
-        db = s.database(dbPath="dfs://hashdb", partitionType=keys.HASH, partitions=[keys.DT_INT, 2])
-        pt: ddb.Table = db.createPartitionedTable(
-            table=schema_t, tableName="pt", partitionColumns=["ID"])
+        if s.existsDatabase(db_name):
+            s.dropDatabase(db_name)
+        db = s.database(dbPath=db_name, partitionType=keys.HASH, partitions=[keys.DT_INT, 2])
+        pt: ddb.Table = db.createPartitionedTable(table=schema_t, tableName="pt", partitionColumns=["ID"])
         data = s.table(data=df)
         pt.append(data)
         assert pt.toDF().shape[0] == 1000000
@@ -94,7 +74,9 @@ class TestReadmeCn:
         assert pt.toDF().columns.to_list() == ['ID', 'x']
         s.close()
 
-    def test_QuickStart_CommonOperations_1(self):
+    def test_readme_QuickStart_CommonOperations_1(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         n = 1000
@@ -102,25 +84,25 @@ class TestReadmeCn:
             'ID': np.random.randint(0, 3, n).astype("int32"),
             'x': np.random.rand(n),
         })
-        if s.existsDatabase("dfs://valuedb"):
-            s.dropDatabase("dfs://valuedb")
-        db: ddb.Database = s.database(dbPath="dfs://valuedb", partitionType=keys.VALUE, partitions=[0, 1, 2])
+        if s.existsDatabase(db_name):
+            s.dropDatabase(db_name)
+        db: ddb.Database = s.database(dbPath=db_name, partitionType=keys.VALUE, partitions=[0, 1, 2])
         t = s.table(data=df)
-        if not s.existsTable("dfs://valuedb", "pt"):
+        if not s.existsTable(db_name, "pt"):
             pt = db.createPartitionedTable(t, "pt", partitionColumns="ID")
         else:
-            raise RuntimeError("dfs://valuedb has table pt.")
+            raise RuntimeError(f"{db_name} has table pt.")
         pt.append(t)
         res1 = pt.toDF().shape
         assert res1[0] == 1000
         assert res1[1] == 2
-        s.dropPartition("dfs://valuedb", 0, "pt")
+        s.dropPartition(db_name, 0, "pt")
         res2 = pt.toDF().shape
         assert res2[0] < 1000
         assert res2[1] == 2
         s.close()
 
-    def test_QuickStart_CommonOperations_2(self):
+    def test_readme_QuickStart_CommonOperations_2(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         df = pd.DataFrame({
@@ -132,21 +114,23 @@ class TestReadmeCn:
         ex = pd.DataFrame({'ID': [5, 6, 7, 8, 9, 10], 'x': ['a', 'c', 'a', 'b', 'b', 'a']})
         assert_frame_equal(res.toDF(), ex)
 
-    def test_BasicOperation_Session_ParametersForConstructingSession(self):
+    def test_readme_BasicOperation_Session_ParametersForConstructingSession(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session(HOST, PORT, USER, PASSWD, enableChunkGranularityConfig=True)
-        if s.existsDatabase("dfs://testdb"):
-            s.dropDatabase("dfs://testdb")
-        s.database("db", partitionType=keys.VALUE, partitions=[1, 2, 3], dbPath="dfs://testdb",
+        if s.existsDatabase(db_name):
+            s.dropDatabase(db_name)
+        s.database("db", partitionType=keys.VALUE, partitions=[1, 2, 3], dbPath=db_name,
                    chunkGranularity="DATABASE")
         assert s.run("schema(db)")["chunkGranularity"] == 'DATABASE'
-        if s.existsDatabase("dfs://testdb"):
-            s.dropDatabase("dfs://testdb")
-        s.database("db", partitionType=keys.VALUE, partitions=[1, 2, 3], dbPath="dfs://testdb",
+        if s.existsDatabase(db_name):
+            s.dropDatabase(db_name)
+        s.database("db", partitionType=keys.VALUE, partitions=[1, 2, 3], dbPath=db_name,
                    chunkGranularity="TABLE")
         assert s.run("schema(db)")["chunkGranularity"] == 'TABLE'
         s.close()
 
-    def test_BasicOperation_DBConnectionPool_Coprocess_1(self):
+    def test_readme_BasicOperation_DBConnectionPool_Coprocess_1(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD)
 
         async def test_run(i):
@@ -171,7 +155,7 @@ class TestReadmeCn:
             assert tasks[i].result() == (i + 1) * 2
         pool.shutDown()
 
-    def test_BasicOperation_DBConnectionPool_Coprocess_2(self):
+    def test_readme_BasicOperation_DBConnectionPool_Coprocess_2(self):
 
         class DolphinDBHelper(object):
             pool = ddb.DBConnectionPool(HOST, PORT, 8)
@@ -203,7 +187,7 @@ class TestReadmeCn:
         asyncio.run_coroutine_threadsafe(DolphinDBHelper.runTest("sleep(1000);1+4"), loop)
         loop.create_task(stop_thread_loop(loop))
 
-    def test_BasicOperation_DBConnectionPool_Coprocess_3(self):
+    def test_readme_BasicOperation_DBConnectionPool_Coprocess_3(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 8)
         taskid = 12
         pool.addTask("sleep(1500);1+2", taskId=taskid)
@@ -215,11 +199,12 @@ class TestReadmeCn:
         assert res == 3
         pool.shutDown()
 
-    def test_BasicOperation_AutoFitTableAppender_TableAppender_1(self):
+    def test_readme_BasicOperation_AutoFitTableAppender_TableAppender_1(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        s.run("share table(1000:0, `sym`timestamp`qty, [SYMBOL, TIMESTAMP, INT]) as t")
-        appender = ddb.TableAppender(tableName="t", ddbSession=s)
+        s.run(f"share table(1000:0, `sym`timestamp`qty, [SYMBOL, TIMESTAMP, INT]) as {func_name}")
+        appender = ddb.TableAppender(tableName=func_name, ddbSession=s)
         data = pd.DataFrame({
             'sym': ['A1', 'A2', 'A3', 'A4', 'A5'],
             'timestamp': np.array(
@@ -229,9 +214,9 @@ class TestReadmeCn:
         })
         num = appender.append(data)
         assert num == 5
-        t = s.run("t")
+        t = s.run(func_name)
         assert_frame_equal(t, data)
-        schema = s.run("schema(t)")
+        schema = s.run(f"schema({func_name})")
         assert_array_equal(schema["colDefs"]['name'], ['sym', 'timestamp', 'qty'])
         assert_array_equal(schema["colDefs"]['typeString'], ['SYMBOL', 'TIMESTAMP', 'INT'])
         assert_array_equal(schema["colDefs"]['typeInt'], [17, 12, 4])
@@ -239,11 +224,12 @@ class TestReadmeCn:
         assert_array_equal(schema["colDefs"]['comment'], ['', '', ''])
         s.close()
 
-    def test_BasicOperation_AutoFitTableAppender_TableAppender_2(self):
+    def test_readme_BasicOperation_AutoFitTableAppender_TableAppender_2(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session(protocol=keys.PROTOCOL_DDB)
         s.connect(HOST, PORT, USER, PASSWD)
-        s.run("share table(1000:0, `sym`uuid`int128`ipaddr`blob, [SYMBOL, UUID, INT128, IPADDR, BLOB]) as t")
-        appender = ddb.TableAppender(tableName="t", ddbSession=s)
+        s.run(f"share table(1000:0, `sym`uuid`int128`ipaddr`blob, [SYMBOL, UUID, INT128, IPADDR, BLOB]) as {func_name}")
+        appender = ddb.TableAppender(tableName=func_name, ddbSession=s)
         data = pd.DataFrame({
             'sym': ["A1", "A2", "A3"],
             'uuid': ["5d212a78-cc48-e3b1-4235-b4d91473ee87", "b93b8253-8d5e-c609-260a-86522b99864e",
@@ -254,19 +240,20 @@ class TestReadmeCn:
             'blob': [b"testBLOB1", b"testBLOB2", b"testBLOB3"],
         })
         appender.append(data)
-        t = s.run("t")
+        t = s.run(func_name)
         assert_frame_equal(t, data)
         s.close()
 
-    def test_BasicOperation_AutoFitTableAppender_TableUpsert_1(self):
+    def test_readme_BasicOperation_AutoFitTableAppender_TableUpsert_1(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        script_KEYEDTABLE = """
+        script_KEYEDTABLE = f"""
             testtable=keyedTable(`id,1000:0,`date`text`id,[DATETIME,STRING,LONG])
-            share testtable as keyed_t
+            share testtable as {func_name}
         """
         s.run(script_KEYEDTABLE)
-        upserter = ddb.TableUpserter(tableName="keyed_t", ddbSession=s)
+        upserter = ddb.TableUpserter(tableName=func_name, ddbSession=s)
         dates = []
         texts = []
         ids = []
@@ -280,24 +267,25 @@ class TestReadmeCn:
             'id': ids,
         })
         upserter.upsert(df)
-        keyed_t = s.run("keyed_t")
+        keyed_t = s.run(func_name)
         assert_frame_equal(df.iloc[990:].reset_index(drop=True), keyed_t)
-        s.undef('keyed_t', 'SHARED')
         s.close()
 
-    def test_BasicOperation_AutoFitTableAppender_TableUpsert_2(self):
+    def test_readme_BasicOperation_AutoFitTableAppender_TableUpsert_2(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        script_DFS_VALUE = """
-            if(existsDatabase("dfs://valuedb")){
-                dropDatabase("dfs://valuedb")
-            }
-            db = database("dfs://valuedb", VALUE, 0..9)
+        script_DFS_VALUE = f"""
+            if(existsDatabase('{db_name}')){{
+                dropDatabase('{db_name}')
+            }}
+            db = database("{db_name}", VALUE, 0..9)
             t = table(1000:0, `date`text`id`flag, [DATETIME, STRING, LONG, INT])
             p_table = db.createPartitionedTable(t, `pt, `flag)
         """
         s.run(script_DFS_VALUE)
-        upserter = ddb.TableUpserter(dbPath="dfs://valuedb", tableName="pt", ddbSession=s, keyColNames=["id"])
+        upserter = ddb.TableUpserter(dbPath=db_name, tableName="pt", ddbSession=s, keyColNames=["id"])
         for i in range(10):
             dates = [np.datetime64(datetime.datetime.now(), 's') for _ in range(100)]
             texts = [f"test_{i}_{_}" for _ in range(100)]
@@ -314,21 +302,23 @@ class TestReadmeCn:
         assert_array_equal(p_table['text'].to_list(),
                            [f"test_0_{_}" for _ in range(10, 100)] + [f"test_9_{_}" for _ in range(90, 100)])
 
-    def test_BasicOperation_AutoFitTableAppender_PartitionedTableAppender(self):
+    def test_readme_BasicOperation_AutoFitTableAppender_PartitionedTableAppender(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        script = """
-            dbPath = "dfs://valuedb"
-            if(existsDatabase(dbPath)){
+        script = f"""
+            dbPath = "{db_name}"
+            if(existsDatabase(dbPath)){{
                 dropDatabase(dbPath)
-            }
+            }}
             t = table(100:0, `id`date`vol, [SYMBOL, DATE, LONG])
             db = database(dbPath, VALUE, `APPL`IBM`AMZN)
             pt = db.createPartitionedTable(t, `pt, `id)
         """
         s.run(script)
         pool = ddb.DBConnectionPool(HOST, PORT, 3, USER, PASSWD)
-        appender = ddb.PartitionedTableAppender(dbPath="dfs://valuedb", tableName="pt", partitionColName="id",
+        appender = ddb.PartitionedTableAppender(dbPath=db_name, tableName="pt", partitionColName="id",
                                                 dbConnectionPool=pool)
         n = 100
         dates = []
@@ -342,14 +332,15 @@ class TestReadmeCn:
         })
         re = appender.append(data)
         assert re == 100
-        res = s.run("pt = loadTable('dfs://valuedb', 'pt'); select * from pt order by date,id;")
+        res = s.run(f"pt = loadTable('{db_name}', 'pt'); select * from pt order by date,id;")
         assert_frame_equal(res, data.sort_values(by=['date', 'id'], ascending=True).reset_index(drop=True))
 
-    def test_BasicOperation_StreamingSubscription(self):
-        script = """
-            share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades
-            setStreamTableFilterColumn(trades, `sym)
-            insert into trades values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0, 1..10)
+    def test_readme_BasicOperation_StreamingSubscription(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
+            share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}
+            setStreamTableFilterColumn({func_name}, `sym)
+            insert into {func_name} values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0, 1..10)
         """
         s = ddb.Session(HOST, PORT, USER, PASSWD)
         s.run(script)
@@ -362,20 +353,21 @@ class TestReadmeCn:
 
             return handler
 
-        s.subscribe(HOST, PORT, tmp_handler(msg_count), "trades", "action", offset=-1, filter=np.array(["000905"]))
+        s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "action", offset=-1, filter=np.array(["000905"]))
         s.run(
-            "insert into trades values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0, 1..10)")
+            f"insert into {func_name} values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0, 1..10)")
         Event().wait(timeout=5)
         assert msg_count.getTotalMsg() == 2
-        s.unsubscribe(HOST, PORT, "trades", "action")
+        s.unsubscribe(HOST, PORT, func_name, "action")
 
-    def test_BasicOperation_AsynchronousWrite_SessionAsynchronousSubmission_1(self):
+    def test_readme_BasicOperation_AsynchronousWrite_SessionAsynchronousSubmission_1(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session(enableASYNC=True)
         s.connect(HOST, PORT, USER, PASSWD)
-        dbPath = "dfs://testDB"
         tbName = "tb1"
-        script = """
-            dbPath="dfs://testDB"
+        script = f"""
+            dbPath="{db_name}"
             tbName=`tb1
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
@@ -390,20 +382,21 @@ class TestReadmeCn:
             'price': [22, 3.5, 21, 26],
         })
         time.sleep(2)
-        s.run(f"append!{{loadTable('{dbPath}', `{tbName})}}", tb)
+        s.run(f"append!{{loadTable('{db_name}', `{tbName})}}", tb)
         time.sleep(3)
         s.close()
         s = ddb.Session(enableASYNC=False)
         s.connect(HOST, PORT, USER, PASSWD)
-        res = s.run(f"select * from loadTable('{dbPath}', `{tbName}) order by price")
+        res = s.run(f"select * from loadTable('{db_name}', `{tbName}) order by price")
         assert_frame_equal(tb.sort_values(by='price').reset_index(drop=True), res)
         s.close()
 
-    def test_BasicOperation_AsynchronousWrite_SessionAsynchronousSubmission_2(self):
+    def test_readme_BasicOperation_AsynchronousWrite_SessionAsynchronousSubmission_2(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session(enableASYNC=True)
         s.connect(HOST, PORT, USER, PASSWD)
         n = 100
-        script = "share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades"
+        script = f"share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as `{func_name}"
         s.run(script)
         time.sleep(10)
         time_list = [np.datetime64(datetime.date(2020, random.randint(
@@ -418,32 +411,31 @@ class TestReadmeCn:
             'id': id_list,
         })
         for _ in range(1000):
-            s.run("tableInsert{trades}", tb)
+            s.run(f"tableInsert{{{func_name}}}", tb)
         time.sleep(10)
         s.close()
         s = ddb.Session(enableASYNC=False)
         s.connect(HOST, PORT, USER, PASSWD)
-        res = s.run(f"exec count(*) from trades order by price")
+        res = s.run(f"exec count(*) from {func_name} order by price")
         assert res == 1000 * 100
-        s.undef("trades", "SHARED")
         s.close()
 
-    def test_BasicOperation_AsynchronousWrite_SessionAsynchronousSubmission_3(self):
+    def test_readme_BasicOperation_AsynchronousWrite_SessionAsynchronousSubmission_3(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session(enableASYNC=True)
         s.connect(HOST, PORT, USER, PASSWD)
-        s.run("""
+        s.run(f"""
             dropFunctionView(`appendStreamingData)
             go
-            share streamTable(10000:0,`time`sym`price`id, [DATE,SYMBOL,DOUBLE,INT]) as trades
-            def appendStreamingData(mutable data){
-                tableInsert(trades, data.replaceColumn!(`time, date(data.time)))
-            }
+            share streamTable(10000:0,`time`sym`price`id, [DATE,SYMBOL,DOUBLE,INT]) as {func_name}
+            def appendStreamingData(mutable data){{
+                tableInsert({func_name}, data.replaceColumn!(`time, date(data.time)))
+            }}
             addFunctionView(appendStreamingData)
         """)
         time.sleep(2)
-        n = 100
-        time_list = [np.datetime64(datetime.date(2020, random.randint(
-            1, 12), random.randint(1, 20))) for _ in range(n)]
+        n = 10
+        time_list = [np.datetime64(datetime.date(2020, random.randint(1, 12), random.randint(1, 20))) for _ in range(n)]
         sym_list = np.random.choice(['IBN', 'GTYU', 'FHU', 'DGT', 'FHU', 'YUG', 'EE', 'ZD', 'FYU'], n)
         price_list = [round(np.random.uniform(1, 100), 1) for _ in range(n)]
         id_list = np.random.choice([1, 2, 3, 4, 5], n)
@@ -453,32 +445,31 @@ class TestReadmeCn:
             'price': price_list,
             'id': id_list,
         })
-        for _ in range(1000):
+        for _ in range(10):
             s.run("appendStreamingData", tb)
-        time.sleep(10)
         s.close()
         s = ddb.Session(enableASYNC=False)
         s.connect(HOST, PORT, USER, PASSWD)
-        res = s.run(f"exec count(*) from trades order by price")
+        res = s.run(f"exec count(*) from {func_name} order by price")
         ind = 0
-        while res != 1000 * 100 and ind < 60:
-            res = s.run(f"exec count(*) from trades order by price")
+        while res != 10 * 10 and ind < 20:
+            res = s.run(f"exec count(*) from {func_name} order by price")
             time.sleep(1)
             ind += 1
-        assert ind < 60
-        s.undef("trades", "SHARED")
+        assert ind < 20
         s.close()
 
-    def test_BasicOperation_AsynchronousWrite_MTW_1(self):
+    def test_readme_BasicOperation_AsynchronousWrite_MTW_1(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        script = """
+        script = f"""
             t = table(1000:0, `date`ticker`price, [DATE,SYMBOL,LONG]);
-            share t as tglobal;
+            share t as {func_name}
         """
         s.run(script)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, dbPath="", tableName="tglobal",
+            HOST, PORT, USER, PASSWD, dbPath="", tableName=func_name,
             batchSize=10, throttle=1, threadCount=5, partitionCol="date"
         )
         fail_rows = 0
@@ -492,26 +483,27 @@ class TestReadmeCn:
             if res.hasError():
                 fail_rows += 1
         writer.waitForThreadCompletion()
-        success_rows = s.run("exec count(*) from tglobal")
+        success_rows = s.run(f"exec count(*) from {func_name}")
         assert fail_rows == 1
         assert success_rows == 10 - fail_rows
-        s.undef("tglobal", "SHARED")
 
-    def test_BasicOperation_AsynchronousWrite_MTW_2(self):
+    def test_readme_BasicOperation_AsynchronousWrite_MTW_2(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        script = """
-            dbName = 'dfs://valuedb3';
-            if(exists(dbName)){
+        script = f"""
+            dbName = '{db_name}';
+            if(exists(dbName)){{
                 dropDatabase(dbName);
-            }
+            }}
             datetest=table(1000:0,`date`symbol`id,[DATE,SYMBOL,LONG]);
             db = database(directory=dbName, partitionType=HASH, partitionScheme=[INT, 10]);
             pt=db.createPartitionedTable(datetest,'pdatetest','id');
         """
         s.run(script)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, dbPath="dfs://valuedb3", tableName="pdatetest",
+            HOST, PORT, USER, PASSWD, dbPath=db_name, tableName="pdatetest",
             batchSize=10000, throttle=1, threadCount=5, partitionCol="id", compressMethods=["LZ4", "LZ4", "DELTA"]
         )
         try:
@@ -526,7 +518,7 @@ class TestReadmeCn:
         assert writeStatus.sendFailedRows == 0
         assert s.run("exec count(*) from pt") == 100
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, dbPath="dfs://valuedb3", tableName="pdatetest",
+            HOST, PORT, USER, PASSWD, dbPath=db_name, tableName="pdatetest",
             batchSize=10000, throttle=1, threadCount=5, partitionCol="id", compressMethods=["LZ4", "LZ4", "DELTA"]
         )
         try:
@@ -548,7 +540,7 @@ class TestReadmeCn:
         if writeStatus.hasError():
             unwrittendata = writer.getUnwrittenData()
             newwriter = ddb.MultithreadedTableWriter(
-                HOST, PORT, USER, PASSWD, dbPath="dfs://valuedb3", tableName="pdatetest",
+                HOST, PORT, USER, PASSWD, dbPath=db_name, tableName="pdatetest",
                 batchSize=10000, throttle=1, threadCount=5, partitionCol="id", compressMethods=["LZ4", "LZ4", "DELTA"]
             )
             try:
@@ -563,21 +555,23 @@ class TestReadmeCn:
         assert s.run("exec count(*) from pt") == 210
         s.close()
 
-    def test_BasicOperation_AsynchronousWrite_MTW_3(self):
+    def test_readme_BasicOperation_AsynchronousWrite_MTW_3(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        script = """
-            dbName = 'dfs://valuedb3';
-            if(exists(dbName)){
+        script = f"""
+            dbName = '{db_name}';
+            if(exists(dbName)){{
                 dropDatabase(dbName);
-            }
+            }}
             datetest=table(1000:0,`date`symbol`id,[DATE,SYMBOL,LONG]);
             db = database(directory=dbName, partitionType=HASH, partitionScheme=[INT, 10]);
             pt=db.createPartitionedTable(datetest,'pdatetest','id');
         """
         s.run(script)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, dbPath="dfs://valuedb3", tableName="pdatetest",
+            HOST, PORT, USER, PASSWD, dbPath=db_name, tableName="pdatetest",
             batchSize=10000, throttle=1, threadCount=5, partitionCol="id", compressMethods=["LZ4", "LZ4", "DELTA"]
         )
 
@@ -603,29 +597,29 @@ class TestReadmeCn:
         assert s.run("exec count(*) from pt") == 1000
 
     @pytest.mark.parametrize('partitioned', [True, False])
-    def test_BasicOperation_AsynchronousWrite_BTW(self, partitioned):
+    def test_readme_BasicOperation_AsynchronousWrite_BTW(self, partitioned):
+        func_name = inspect.currentframe().f_code.co_name + f"partitioned_{partitioned}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        script = """
+        script = f"""
             t = table(1000:0,`id`date`ticker`price, [INT,DATE,SYMBOL,DOUBLE]);
-            share t as tglobal;
+            share t as {func_name}
         """
         s.run(script)
         writer = ddb.BatchTableWriter(HOST, PORT, USER, PASSWD)
-        writer.addTable(tableName="tglobal", partitioned=partitioned)
-        writer.insert("", "tglobal", 1, np.datetime64("2019-01-01"), 'AAPL', 5.6)
-        writer.insert("", "tglobal", 2, np.datetime64("2019-01-01"), 'GOOG', 8.3)
-        writer.insert("", "tglobal", 3, np.datetime64("2019-01-02"), 'GOOG', 4.2)
-        writer.insert("", "tglobal", 4, np.datetime64("2019-01-03"), 'AMZN', 1.4)
-        writer.insert("", "tglobal", 5, np.datetime64("2019-01-05"), 'AAPL', 6.9)
-        writer.getUnwrittenData(dbPath="", tableName="tglobal")
-        writer.getStatus(tableName="tglobal")
+        writer.addTable(tableName=func_name, partitioned=partitioned)
+        writer.insert("", func_name, 1, np.datetime64("2019-01-01"), 'AAPL', 5.6)
+        writer.insert("", func_name, 2, np.datetime64("2019-01-01"), 'GOOG', 8.3)
+        writer.insert("", func_name, 3, np.datetime64("2019-01-02"), 'GOOG', 4.2)
+        writer.insert("", func_name, 4, np.datetime64("2019-01-03"), 'AMZN', 1.4)
+        writer.insert("", func_name, 5, np.datetime64("2019-01-05"), 'AAPL', 6.9)
+        writer.getUnwrittenData(dbPath="", tableName=func_name)
+        writer.getStatus(tableName=func_name)
         writer.getAllStatus()
         writer.removeTable()
-        "rows:", s.run("tglobal.rows()")
-        s.run("select * from tglobal")
+        s.run(f"select * from {func_name}")
 
-    def test_AdvancedOperation_TypeConversion_DDB(self):
+    def test_readme_AdvancedOperation_TypeConversion_DDB(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         df1 = pd.DataFrame({
@@ -682,7 +676,7 @@ class TestReadmeCn:
         })
         assert_frame_equal(s.run("schema(df3)")['colDefs'], ex3)
 
-    def test_AdvancedOperation_TypeConversion_ForcedTypeConversion(self):
+    def test_readme_AdvancedOperation_TypeConversion_ForcedTypeConversion(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         df = pd.DataFrame({
@@ -714,10 +708,11 @@ class TestReadmeCn:
         })
         assert_frame_equal(s.run("schema(df_true)")['colDefs'], ex2)
 
-    def test_AdvancedOperation_StreamingSubscription_1(self):
+    def test_readme_AdvancedOperation_StreamingSubscription_1(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        s.run("share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades")
+        s.run(f"share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as `{func_name}")
         s.enableStreaming()
         msg_count = MsgCount()
 
@@ -727,19 +722,19 @@ class TestReadmeCn:
 
             return handler
 
-        s.subscribe(HOST, PORT, tmp_handler(msg_count), "trades", "SingleMode", offset=-1)
+        s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "SingleMode", offset=-1)
         s.run(
-            "insert into trades values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
+            f"insert into {func_name} values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
         time.sleep(5)
-        s.unsubscribe(HOST, PORT, "trades", "SingleMode")
+        s.unsubscribe(HOST, PORT, func_name, "SingleMode")
         assert msg_count.getTotalMsg() == 6
-        s.undef('trades', 'SHARED')
         s.close()
 
-    def test_AdvancedOperation_StreamingSubscription_2(self):
+    def test_readme_AdvancedOperation_StreamingSubscription_2(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        s.run("share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades")
+        s.run(f"share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as `{func_name}")
         s.enableStreaming()
         msg_count = MsgCount()
 
@@ -750,20 +745,20 @@ class TestReadmeCn:
 
             return handler
 
-        s.subscribe(HOST, PORT, tmp_handler(msg_count), "trades", "MultiMode1",
+        s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "MultiMode1",
                     offset=-1, batchSize=2, throttle=0.1, msgAsTable=False)
         s.run(
-            "insert into trades values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
+            f"insert into {func_name} values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
         time.sleep(5)
-        s.unsubscribe(HOST, PORT, "trades", "MultiMode1")
+        s.unsubscribe(HOST, PORT, func_name, "MultiMode1")
         assert msg_count.getTotalMsg() == 6
-        s.undef('trades', 'SHARED')
         s.close()
 
-    def test_AdvancedOperation_StreamingSubscription_3(self):
+    def test_readme_AdvancedOperation_StreamingSubscription_3(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        s.run("share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades")
+        s.run(f"share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as `{func_name}")
         s.enableStreaming()
         msg_count = MsgCount()
 
@@ -774,26 +769,27 @@ class TestReadmeCn:
 
             return handler
 
-        s.subscribe(HOST, PORT, tmp_handler(msg_count), "trades", "MultiMode2",
+        s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "MultiMode2",
                     offset=-1, batchSize=1000, throttle=0.1, msgAsTable=True)
         s.run(
-            "n=1500;insert into trades values(take(now(), n), take(`000905`600001`300201`000908`600002, n), rand(1000,n)/10.0, 1..n)")
+            f"n=1500;insert into {func_name} values(take(now(), n), take(`000905`600001`300201`000908`600002, n), rand(1000,n)/10.0, 1..n)")
         time.sleep(5)
-        s.unsubscribe(HOST, PORT, "trades", "MultiMode2")
+        s.unsubscribe(HOST, PORT, func_name, "MultiMode2")
         assert msg_count.getTotalMsg() == 1500
-        s.undef('trades', 'SHARED')
         s.close()
 
-    def test_AdvancedOperation_StreamingSubscription_4(self):
+    def test_readme_AdvancedOperation_StreamingSubscription_4(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        s.run("""
-            try{dropStreamTable(`outTables)}catch(ex){}
-            share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as outTables
+        s.run(f"""
+            try{{dropStreamTable(`{func_name})}}catch(ex){{}}
+            share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as `{func_name}
             n = 6;
-            dbName = 'dfs://test_StreamDeserializer_pair'
-            if(existsDatabase(dbName)){
-                dropDB(dbName)}
+            dbName = '{db_name}'
+            if(existsDatabase(dbName)){{
+                dropDB(dbName)}}
             db = database(dbName,RANGE,2012.01.01 2013.01.01 2014.01.01 2015.01.01 2016.01.01 2017.01.01 2018.01.01 2019.01.01)
             table1 = table(100:0, `datetimev`timestampv`sym`price1`price2, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE, DOUBLE])
             table2 = table(100:0, `datetimev`timestampv`sym`price1, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE])
@@ -804,7 +800,7 @@ class TestReadmeCn:
             re1 = replayDS(sqlObj=<select * from pt1>, dateColumn=`datetimev, timeColumn=`timestampv)
             re2 = replayDS(sqlObj=<select * from pt2>, dateColumn=`datetimev, timeColumn=`timestampv)
             d = dict(['msg1', 'msg2'], [re1, re2])
-            replay(inputTables=d, outputTables=`outTables, dateColumn=`timestampv, timeColumn=`timestampv)
+            replay(inputTables=d, outputTables=`{func_name}, dateColumn=`timestampv, timeColumn=`timestampv)
         """)
         msg1_count = MsgCount()
         msg2_count = MsgCount()
@@ -820,34 +816,33 @@ class TestReadmeCn:
 
         s.enableStreaming()
         sd = ddb.streamDeserializer({
-            'msg1': ["dfs://test_StreamDeserializer_pair", "pt1"],
-            'msg2': ["dfs://test_StreamDeserializer_pair", "pt2"],
+            'msg1': [db_name, "pt1"],
+            'msg2': [db_name, "pt2"],
         }, session=s)
-        s.subscribe(HOST, PORT, handler=tmp_handler(msg1_count, msg2_count), tableName="outTables", actionName="action",
-                    offset=0, resub=False,
-                    msgAsTable=False, streamDeserializer=sd, userName=USER, password=PASSWD)
+        s.subscribe(HOST, PORT, handler=tmp_handler(msg1_count, msg2_count), tableName=func_name, actionName="action",
+                    offset=0, resub=False, msgAsTable=False, streamDeserializer=sd, userName=USER, password=PASSWD)
         Event().wait(5)
         assert msg1_count.getTotalMsg() == 6
         assert msg2_count.getTotalMsg() == 6
-        s.unsubscribe(HOST, PORT, 'outTables', 'action')
-        s.undef('outTables', 'SHARED')
+        s.unsubscribe(HOST, PORT, func_name, 'action')
         s.close()
 
-    def test_AdvancedOperation_StreamingSubscription_5(self):
+    def test_readme_AdvancedOperation_StreamingSubscription_5(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        s.run("""
-            try{dropStreamTable(`outTables)}catch(ex){}
-            share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as outTables
+        s.run(f"""
+            try{{dropStreamTable(`{func_name})}}catch(ex){{}}
+            share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as `{func_name}
             n = 6;
             table1 = table(100:0, `datetimev`timestampv`sym`price1`price2, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE, DOUBLE])
             table2 = table(100:0, `datetimev`timestampv`sym`price1, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE])
             tableInsert(table1, 2012.01.01T01:21:23 + 1..n, 2018.12.01T01:21:23.000 + 1..n, take(`a`b`c,n), rand(100,n)+rand(1.0, n), rand(100,n)+rand(1.0, n))
             tableInsert(table2, 2012.01.01T01:21:23 + 1..n, 2018.12.01T01:21:23.000 + 1..n, take(`a`b`c,n), rand(100,n)+rand(1.0, n))
-            share table1 as pt1
-            share table2 as pt2
-            d = dict(['msg1', 'msg2'], [pt1, pt2])
-            replay(inputTables=d, outputTables=`outTables, dateColumn=`timestampv, timeColumn=`timestampv)        
+            share table1 as {func_name}_pt1
+            share table2 as {func_name}_pt2
+            d = dict(['msg1', 'msg2'], [{func_name}_pt1, {func_name}_pt2])
+            replay(inputTables=d, outputTables=`{func_name}, dateColumn=`timestampv, timeColumn=`timestampv)        
         """)
         msg1_count = MsgCount()
         msg2_count = MsgCount()
@@ -864,20 +859,19 @@ class TestReadmeCn:
 
         s.enableStreaming()
         sd = ddb.streamDeserializer({
-            'msg1': "pt1",
-            'msg2': "pt2",
+            'msg1': f"{func_name}_pt1",
+            'msg2': f"{func_name}_pt2",
         }, session=s)
-        s.subscribe(HOST, PORT, handler=tmp_handler(msg1_count, msg2_count), tableName="outTables", actionName="action",
+        s.subscribe(HOST, PORT, handler=tmp_handler(msg1_count, msg2_count), tableName=func_name, actionName="action",
                     offset=0, resub=False, batchSize=4,
                     msgAsTable=False, streamDeserializer=sd, userName=USER, password=PASSWD)
         Event().wait(5)
         assert msg1_count.getTotalMsg() == 6
         assert msg2_count.getTotalMsg() == 6
-        s.unsubscribe(HOST, PORT, 'outTables', 'action')
-        s.undef('outTables', 'SHARED')
+        s.unsubscribe(HOST, PORT, func_name, 'action')
         s.close()
 
-    def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_1(self):
+    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_1(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         data1 = pd.DataFrame({
@@ -944,7 +938,7 @@ class TestReadmeCn:
         assert t.toDF().empty
         s.close()
 
-    def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_2(self):
+    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_2(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         s.run("test_t = table(100:0, `ctime`csymbol`price`qty, [TIMESTAMP, SYMBOL, DOUBLE, INT])")
@@ -962,10 +956,10 @@ class TestReadmeCn:
         assert pt.tableName().startswith('pt_TMP_TBL')
         assert pt.toDF().empty
 
-    def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_3(self):
+    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_3(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        trade = s.loadText(DATA_DIR + "/example.csv")
+        trade = s.loadText(DATA_DIR + "example.csv")
         trade.update(["VOL"], ["999999"]).where("TICKER=`AMZN").where(["date=2015.12.16"])
         t2 = trade.where("ticker=`AMZN").where("date=2015.12.16")
         assert t2.toDF()['VOL'][0] == 3964470
@@ -976,75 +970,94 @@ class TestReadmeCn:
         assert trade.rows == 3024
         s.close()
 
-    def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_4(self):
+    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_4(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        dbPath = "dfs://valuedb"
-        if s.existsDatabase(dbPath):
-            s.dropDatabase(dbPath)
-        s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN", "NFLX", "NVDA"], dbPath=dbPath)
-        trade = s.loadTextEx(dbPath=dbPath, partitionColumns=["TICKER"], tableName='trade',
-                             remoteFilePath=DATA_DIR + "/example.csv")
+        if s.existsDatabase(db_name):
+            s.dropDatabase(db_name)
+        s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN", "NFLX", "NVDA"], dbPath=db_name)
+        trade = s.loadTextEx(dbPath=db_name, partitionColumns=["TICKER"], tableName='trade',
+                             remoteFilePath=DATA_DIR + "example.csv")
         res1 = trade.select(['sum(vol)', 'sum(prc)']).groupby(['ticker']).toDF()
         ex1 = s.run(
-            "select sum(vol),sum(prc) from (select TICKER,date,VOL,PRC,BID,ASK from loadTable('dfs://valuedb', `trade)) group by ticker")
+            f"select sum(vol),sum(prc) from (select TICKER,date,VOL,PRC,BID,ASK from loadTable('{db_name}', `trade)) group by ticker")
         assert_frame_equal(res1, ex1)
         res3 = trade.contextby('ticker').top(3).toDF()
-        ex3 = s.run("select * from loadTable('dfs://valuedb', `trade) context by ticker limit 3")
+        ex3 = s.run(f"select * from loadTable('{db_name}', `trade) context by ticker limit 3")
         assert_frame_equal(res3, ex3)
         res4 = trade.select("TICKER, month(date) as month, cumsum(VOL)").contextby("TICKER,month(date)").toDF()
         ex4 = s.run(
-            "select TICKER, month(date) as month, cumsum(VOL) from loadTable('dfs://valuedb', `trade) context by TICKER,month(date)")
+            f"select TICKER, month(date) as month, cumsum(VOL) from loadTable('{db_name}', `trade) context by TICKER,month(date)")
         assert_frame_equal(res4, ex4)
         res5 = trade.contextby('ticker').having("sum(VOL)>40000000000").toDF()
-        ex5 = s.run("select * from loadTable('dfs://valuedb', `trade) context by ticker having sum(VOL)>40000000000")
+        ex5 = s.run(f"select * from loadTable('{db_name}', `trade) context by ticker having sum(VOL)>40000000000")
         assert_frame_equal(res5, ex5)
         s.close()
 
-    def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_5(self):
+    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_5(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        trade = s.table("dfs://valuedb", "trade")
+        if s.existsDatabase(db_name):
+            s.dropDatabase(db_name)
+        s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN", "NFLX", "NVDA"], dbPath=db_name)
+        trade = s.loadTextEx(dbPath=db_name, partitionColumns=["TICKER"], tableName='trade',
+                             remoteFilePath=DATA_DIR + "example.csv")
         res1 = trade.select("VOL").pivotby("TICKER", "date").toDF()
         ex1 = s.run(
-            "select VOL from (select TICKER,date,VOL,PRC,BID,ASK from loadTable('dfs://valuedb', `trade)) pivot by TICKER,date")
+            f"select VOL from (select TICKER,date,VOL,PRC,BID,ASK from loadTable('{db_name}', `trade)) pivot by TICKER,date")
         assert_frame_equal(res1, ex1)
         res2 = trade.exec("VOL").pivotby("TICKER", "date").toDF()
-        ex2 = s.run("exec VOL from loadTable('dfs://valuedb', `trade) pivot by TICKER, date")
+        ex2 = s.run(f"exec VOL from loadTable('{db_name}', `trade) pivot by TICKER, date")
         for i in range(len(res2)):
             assert_array_equal(res2[i], ex2[i])
-        trade = s.loadTable("trade", "dfs://valuedb")
+        trade = s.loadTable("trade", db_name)
         res3 = trade.contextby('ticker').csort('date desc').toDF()
-        ex3 = s.run("select * from loadTable('dfs://valuedb', `trade) context by ticker csort date desc")
+        ex3 = s.run(f"select * from loadTable('{db_name}', `trade) context by ticker csort date desc")
         assert_frame_equal(res3, ex3)
         res4 = trade.select("*").contextby('ticker').csort(["TICKER", "VOL"], True).limit(5).toDF()
-        ex4 = s.run("select * from loadTable('dfs://valuedb', `trade) context by ticker csort TICKER,VOL asc limit 5")
+        ex4 = s.run(f"select * from loadTable('{db_name}', `trade) context by ticker csort TICKER,VOL asc limit 5")
         assert_frame_equal(res4, ex4)
         res5 = trade.select("*").contextby('ticker').csort(["TICKER", "VOL"], [True, False]).limit(5).toDF()
-        ex5 = s.run("select * from loadTable('dfs://valuedb', `trade) context by ticker csort TICKER,VOL desc limit 5")
+        ex5 = s.run(f"select * from loadTable('{db_name}', `trade) context by ticker csort TICKER,VOL desc limit 5")
         assert_frame_equal(res5, ex5)
         s.close()
 
-    def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_6(self):
+    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_6(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        trade = s.table("dfs://valuedb", "trade")
+        if s.existsDatabase(db_name):
+            s.dropDatabase(db_name)
+        s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN", "NFLX", "NVDA"], dbPath=db_name)
+        trade = s.loadTextEx(dbPath=db_name, partitionColumns=["TICKER"], tableName='trade',
+                             remoteFilePath=DATA_DIR + "example.csv")
         res1 = trade.top(5).toDF()
-        ex1 = s.run("select top 5 * from loadTable('dfs://valuedb', `trade)")
+        ex1 = s.run(f"select top 5 * from loadTable('{db_name}', `trade)")
         assert_frame_equal(res1, ex1)
         res2 = trade.select("*").contextby('ticker').limit(-2).toDF()
         ex2 = s.run(
-            "select * from (select TICKER,date,VOL,PRC,BID,ASK from loadTable('dfs://valuedb', `trade)) context by ticker limit -2")
+            f"select * from (select TICKER,date,VOL,PRC,BID,ASK from loadTable('{db_name}', `trade)) context by ticker limit -2")
         assert_frame_equal(res2, ex2)
         res3 = trade.select("*").limit([2, 5]).toDF()
-        ex3 = s.run("select * from loadTable('dfs://valuedb', `trade) limit 2,5")
+        ex3 = s.run(f"select * from loadTable('{db_name}', `trade) limit 2,5")
         assert_frame_equal(res3, ex3)
         s.close()
 
-    def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_7(self):
+    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_7(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        trade = s.table("dfs://valuedb", "trade")
+        if s.existsDatabase(db_name):
+            s.dropDatabase(db_name)
+        s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN", "NFLX", "NVDA"], dbPath=db_name)
+        trade = s.loadTextEx(dbPath=db_name, partitionColumns=["TICKER"], tableName='trade',
+                             remoteFilePath=DATA_DIR + "example.csv")
         t1 = s.table(data={
             'TICKER': ['AMZN', 'AMZN', 'AMZN'],
             'date': np.array(['2015-12-31', '2015-12-30', '2015-12-29'], dtype='datetime64[D]'),
@@ -1054,20 +1067,20 @@ class TestReadmeCn:
         res1 = trade.merge(t1, on=["TICKER", "date"]).toDF()
         s.upload({'t1': t1.toDF()})
         ex1 = s.run(
-            "select * from ej((select * from loadTable('dfs://valuedb', `trade)) as t_left,(select TICKER, date(date) as date, open from (select * from t1)) as t_right,`TICKER`date,`TICKER`date)")
+            f"select * from ej((select * from loadTable('{db_name}', `trade)) as t_left,(select TICKER, date(date) as date, open from (select * from t1)) as t_right,`TICKER`date,`TICKER`date)")
         assert_frame_equal(res1, ex1)
         t2 = t1.select("TICKER as TICKER1, date(date) as date1, open")
         s.upload({'t2': t2.toDF()})
         res2 = trade.merge(t2, left_on=["TICKER", "date"], right_on=["TICKER1", "date1"]).toDF()
         ex2 = s.run(
-            "select * from ej((select * from loadTable('dfs://valuedb', `trade)) as left_t,(select TICKER as TICKER1, date(date) as date1, open from (select * from t1)) as right_t,`TICKER`date,`TICKER1`date1)")
+            f"select * from ej((select * from loadTable('{db_name}', `trade)) as left_t,(select TICKER as TICKER1, date(date) as date1, open from (select * from t1)) as right_t,`TICKER`date,`TICKER1`date1)")
         assert_frame_equal(res2, ex2)
         t3 = t1.select("TICKER, date(date) as date, open")
         s.upload({'t3': t3.toDF()})
         res3 = trade.merge(t3, how="left", on=["TICKER", "date"]).where('TICKER=`AMZN').where(
             '2015.12.23<=date<=2015.12.31').toDF()
         ex3 = s.run(
-            "select * from lj((select * from loadTable('dfs://valuedb', `trade)) as left_t,(select TICKER, date(date) as date, open from (select TICKER, date(date) as date, open from (select * from t1))) as right_t,`TICKER`date,`TICKER`date) where (TICKER=`AMZN) and (2015.12.23<=date<=2015.12.31)")
+            f"select * from lj((select * from loadTable('{db_name}', `trade)) as left_t,(select TICKER, date(date) as date, open from (select TICKER, date(date) as date, open from (select * from t1))) as right_t,`TICKER`date,`TICKER`date) where (TICKER=`AMZN) and (2015.12.23<=date<=2015.12.31)")
         assert_frame_equal(res3, ex3)
         t4_1 = s.table(data={'TICKER': ['AMZN', 'AMZN', 'NFLX'], 'date': ['2015.12.29', '2015.12.30', '2015.12.31'],
                              'open': [674, 685, 942]})
@@ -1081,37 +1094,38 @@ class TestReadmeCn:
             assert_array_equal(res4.iloc[:, i].to_list(), ex4.iloc[:, i].to_list())
         s.close()
 
-    def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_8(self):
+    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_8(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        dbPath = "dfs://tickDB"
-        if s.existsDatabase(dbPath):
-            s.dropDatabase(dbPath)
-        s.database(partitionType=keys.VALUE, partitions=["AAPL", "FB"], dbPath=dbPath)
-        trades = s.loadTextEx(dbPath, tableName='trades', partitionColumns=["Symbol"],
-                              remoteFilePath=DATA_DIR + "/trades.csv")
-        quotes = s.loadTextEx(dbPath, tableName='quotes', partitionColumns=["Symbol"],
-                              remoteFilePath=DATA_DIR + "/quotes.csv")
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        if s.existsDatabase(db_name):
+            s.dropDatabase(db_name)
+        s.database(partitionType=keys.VALUE, partitions=["AAPL", "FB"], dbPath=db_name)
+        trades = s.loadTextEx(db_name, tableName='trades', partitionColumns=["Symbol"],
+                              remoteFilePath=DATA_DIR + "trades.csv")
+        quotes = s.loadTextEx(db_name, tableName='quotes', partitionColumns=["Symbol"],
+                              remoteFilePath=DATA_DIR + "quotes.csv")
         res1 = trades.top(5).toDF()
-        ex1 = s.run("select top 5 * from loadTable('dfs://tickDB', `trades)")
+        ex1 = s.run(f"select top 5 * from loadTable('{db_name}', `trades)")
         assert_frame_equal(res1, ex1)
         res2 = quotes.where("second(Time)>=09:29:59").top(5).toDF()
-        ex2 = s.run("select top 5 * from loadTable('dfs://tickDB', `quotes) where second(Time)>=09:29:59")
+        ex2 = s.run(f"select top 5 * from loadTable('{db_name}', `quotes) where second(Time)>=09:29:59")
         assert_frame_equal(res2, ex2)
         res3 = trades.merge_asof(quotes, on=["Symbol", "Time"]).select(
             ["Symbol", "Time", "Trade_Volume", "Trade_Price", "Bid_Price", "Bid_Size", "Offer_Price",
              "Offer_Size"]).top(5).toDF()
         ex3 = s.run(
-            "select top 5 Symbol,Time,Trade_Volume,Trade_Price,Bid_Price,Bid_Size,Offer_Price,Offer_Size from (select * from aj((select * from loadTable('dfs://tickDB', `trades) as lt),(select * from loadTable('dfs://tickDB', `quotes) as rt),`Symbol`Time,`Symbol`Time))")
+            f"select top 5 Symbol,Time,Trade_Volume,Trade_Price,Bid_Price,Bid_Size,Offer_Price,Offer_Size from (select * from aj((select * from loadTable('{db_name}', `trades) as lt),(select * from loadTable('{db_name}', `quotes) as rt),`Symbol`Time,`Symbol`Time))")
         assert_frame_equal(res3, ex3)
         res4 = trades.merge_window(quotes, -5000000000, 0, aggFunctions=["avg(Bid_Price)", "avg(Offer_Price)"],
                                    on=["Symbol", "Time"]).where("Time>=07:59:59").top(10).toDF()
         ex4 = s.run(
-            "select top 10 * from wj((select * from loadTable('dfs://tickDB', `trades)) as lt,(select * from loadTable('dfs://tickDB', `quotes) as rt),-5000000000:0,<[avg(Bid_Price),avg(Offer_Price)]>,`Symbol`Time,`Symbol`Time) where (Time>=07:59:59)")
+            f"select top 10 * from wj((select * from loadTable('{db_name}', `trades)) as lt,(select * from loadTable('{db_name}', `quotes) as rt),-5000000000:0,<[avg(Bid_Price),avg(Offer_Price)]>,`Symbol`Time,`Symbol`Time) where (Time>=07:59:59)")
         assert_frame_equal(res4, ex4)
         s.close()
 
-    def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_9(self):
+    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_9(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         s.run("""

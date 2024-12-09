@@ -11,7 +11,7 @@ environment = {}
 environment-pass = []
 build-verbosity = "3"
 
-skip = ["*-win32", "*-manylinux_i686", "pp*", "*-musllinux*", "cp312*"]
+skip = ["*-win32", "*-manylinux_i686", "pp*", "*-musllinux*", "*cp313*"]
 
 before-all = ""
 before-build = [
@@ -35,15 +35,18 @@ repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 before-all = "rm -rf build"
 before-build = [
     "python --version",
-    "python -m pip config set global.index-url --site https://pypi.tuna.tsinghua.edu.cn/simple",
-    "python -m pip install --upgrade pip"
+    "python -m pip config set global.index-url --site http://mirrors.aliyun.com/pypi/simple/",
+    "python -m pip config set global.trusted-host mirrors.aliyun.com",
+    "python -m pip install --upgrade pip --trusted-host mirrors.aliyun.com"
 ]
 
 [[tool.cibuildwheel.overrides]]
 select = "*-aarch64*"
 before-build = [
     "python --version",
-    "python -m pip install --upgrade pip"
+    "python -m pip config set global.index-url --site http://mirrors.aliyun.com/pypi/simple/",
+    "python -m pip config set global.trusted-host mirrors.aliyun.com",
+    "python -m pip install --upgrade pip --trusted-host mirrors.aliyun.com"
 ]
 
 [tool.cibuildwheel.macos]

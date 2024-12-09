@@ -11,15 +11,16 @@ import time
 from importlib.util import find_spec
 from threading import Thread
 
+import dolphindb as ddb
+import numpy as np
+import pandas as pd
 import pytest
 from dolphindb.session import ddbcpp
 
 from basic_testing.prepare import DataUtils
 from basic_testing.prepare import PANDAS_VERSION
 from basic_testing.utils import equalPlus
-from setup.prepare import *
-from setup.settings import *
-from setup.utils import get_pid
+from setup.settings import HOST, PORT, USER, PASSWD
 
 if find_spec("pyarrow") is not None:
     import pyarrow as pa
@@ -38,32 +39,9 @@ def http_request(host, port, path="/", method="GET"):
 
 
 class TestOther:
-    conn = ddb.session(enablePickle=False)
+    conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=False)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    def test_DBConnectionPool_cov(self):
+    def test_other_DBConnectionPool_cov(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
         # run+taskid
         pool.pool.run('print 123', pool.taskId)
@@ -103,7 +81,7 @@ class TestOther:
                 break
 
     @pytest.mark.skipif(not sys.platform.lower().startswith('linux'), reason="only support in linux")
-    def test_Session_cov(self):
+    def test_other_Session_cov(self):
 
         conn = ddb.Session(HOST, PORT, USER, PASSWD)
 
@@ -166,8 +144,8 @@ class TestOther:
         for i in _:
             i.join()
 
-    def test_BTW_cov(self):
-        with pytest.raises(RuntimeError, match='<Exception> in addTable: Failed to connect to server.'):
+    def test_other_BTW_cov(self):
+        with pytest.raises(RuntimeError, match='Failed to connect to server'):
             writer = ddb.BatchTableWriter("127.0.0.1", 0, USER, PASSWD)
             writer.addTable(tableName="tglobal")
         writer = ddb.BatchTableWriter(HOST, PORT, USER, PASSWD)
@@ -175,7 +153,7 @@ class TestOther:
                            match='<Exception> in getUnwrittenData: Failed to get unwritten data. Please use addTable to add infomation of database and table first.'):
             writer.getUnwrittenData(tableName="tglobal")
 
-    def test_DdbPythonUtil_cov(self):
+    def test_other_DdbPythonUtil_cov(self):
         conn = ddb.Session(HOST, PORT, USER, PASSWD)
         # tuple,series
         conn.upload({
@@ -224,7 +202,8 @@ class TestOther:
             conn.upload({
                 'g': np.complex64(0)
             })
-        with pytest.raises(RuntimeError, match='Cannot create a Matrix from the given numpy.ndarray with dimension greater than 2.'):
+        with pytest.raises(RuntimeError,
+                           match='Cannot create a Matrix from the given numpy.ndarray with dimension greater than 2.'):
             conn.upload({
                 'g': np.array([[[1, 2, 3]]])
             })
@@ -264,7 +243,7 @@ class TestOther:
             conn.run('dict(FLOAT,INT)')
         assert conn.run('dict(SYMBOL,INT)') == {}
 
-    def test_setType_cov(self):
+    def test_other_setType_cov(self):
         for k, v in DataUtils.DATA_UPLOAD.items():
             for i in range(41):
                 x_dtype = pd.DataFrame({'a': [v['value'], v['value'], v['value']]}, dtype=v['dtype'])
@@ -315,6 +294,13 @@ class TestOther:
                     except Exception:
                         pass
 
-    def test_secure_get_any_file(self):
+    def test_other_secure_get_any_file(self):
         assert "can't access file not in web dir." in http_request(HOST, PORT, "/../dolphindb.lic\x00.html")
         assert "can't access file not in web dir." not in http_request(HOST, PORT, "/version.json")
+
+    def test_other_upload_and_download(self):
+        conn=ddb.Session(HOST, PORT, USER, PASSWD)
+        conn.upload({'x':[None,np.int32(1),np.int64(2)]})
+        x=conn.run("x")
+        expect=np.array([np.nan,1.,2.],dtype='float64')
+        assert equalPlus(x,expect)

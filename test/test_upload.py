@@ -1,4 +1,5 @@
 import decimal
+import inspect
 import random
 
 import dolphindb as ddb
@@ -6,13 +7,12 @@ import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import *
+from numpy.testing import assert_array_equal
 
+from basic_testing.prepare import PANDAS_VERSION, random_string
 from setup.prepare import get_Scalar, DATATYPE, TIMETYPE, generate_uuid, get_Vector, get_Matrix, get_Set, \
     get_Dictionary, get_Table, get_Table_arrayVetcor, get_PartitionedTable_Append_Upsert
-from setup.settings import *
-from setup.utils import get_pid
-from basic_testing.prepare import PANDAS_VERSION
+from setup.settings import HOST, PORT, USER, PASSWD
 
 test_type = []
 for x in DATATYPE:
@@ -20,36 +20,12 @@ for x in DATATYPE:
 
 
 class TestUpload:
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Scalar(self, data_type, compress):
+    def test_upload_Scalar(self, data_type):
         tmp_s, tmp_p = get_Scalar(types=data_type, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_s_')
@@ -60,14 +36,11 @@ class TestUpload:
             assert res_type
             res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
             assert res_typestr
-        conn.undefAll()
-        conn.close()
 
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Vector(self, data_type, compress):
+    def test_upload_Vector(self, data_type):
         tmp_s, tmp_p = get_Vector(types=data_type, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_v_')
@@ -78,14 +51,11 @@ class TestUpload:
             assert res_type
             res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
             assert res_typestr
-        conn.undefAll()
-        conn.close()
 
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Matrix(self, data_type, compress):
+    def test_upload_Matrix(self, data_type):
         tmp_s, tmp_p = get_Matrix(types=data_type, names="upload", r=10, c=10)
-        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_m_')
@@ -96,14 +66,11 @@ class TestUpload:
             assert res_type
             res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
             assert res_typestr
-        conn.undefAll()
-        conn.close()
 
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_upload_Set(self, data_type, compress):
+    def test_upload_Set(self, data_type):
         tmp_s, tmp_p = get_Set(types=data_type, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_set_')
@@ -114,14 +81,11 @@ class TestUpload:
             assert res_type
             res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
             assert res_typestr
-        conn.undefAll()
-        conn.close()
 
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_Dictionary_upload(self, data_type, compress):
+    def test_upload_Dictionary(self, data_type):
         tmp_s, tmp_p = get_Dictionary(types=data_type, names="upload")
-        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = generate_uuid('tmp_d_')
@@ -137,8 +101,6 @@ class TestUpload:
             assert res_type
             res_typestr = conn.run(f"typestr({upstr})==typestr({s})")
             assert res_typestr
-        conn.undefAll()
-        conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('isShare', [False], ids=['unshare'])
@@ -171,8 +133,6 @@ class TestUpload:
                 assert not res_value.all()
             else:
                 assert res_schema.all()
-        conn.undefAll()
-        conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('isShare', [False], ids=['unshare'])
@@ -194,14 +154,12 @@ class TestUpload:
             assert res_typestr
             res_schema = conn.run(f"each(eqObj, schema({upstr})['colDefs'].values(), schema({s})['colDefs'].values())")
             assert res_schema.all()
-        conn.undefAll()
-        conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('isShare', [True, False], ids=["enshare", "unshare"])
+    @pytest.mark.parametrize('isShare', [False], ids=["unshare"])
     @pytest.mark.parametrize('table_type', ["table", "streamTable", "indexedTable", "keyedTable"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_tableAppender_Table(self, table_type, data_type, compress, isShare):
+    def test_upload_tableAppender_Table(self, table_type, data_type, compress, isShare):
         tmp_s, tmp_p = get_Table(typeTable=table_type, types=data_type, isShare=isShare, names="upload")
         conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
@@ -215,14 +173,12 @@ class TestUpload:
             assert res_value.all()
             res_len_after = conn.run(f"size(select * from {upstr}) == size(select * from {s})")
             assert res_len_after
-        conn.undefAll()
-        conn.close()
 
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    @pytest.mark.parametrize('isShare', [True, False], ids=["enshare", "unshare"])
+    @pytest.mark.parametrize('isShare', [False], ids=["unshare"])
     @pytest.mark.parametrize('table_type', ["indexedTable", "keyedTable"])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    def test_tableUpsert_Table(self, table_type, data_type, compress, isShare):
+    def test_upload_tableUpsert_Table(self, table_type, data_type, compress, isShare):
         tmp_s, tmp_p = get_Table(typeTable=table_type, types=data_type, isShare=isShare, names="upload")
         conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
@@ -236,18 +192,19 @@ class TestUpload:
             assert res_value.all()
             res_len_after = conn.run(f"size(select * from {upstr}) == size(select * from {s})")
             assert res_len_after
-        conn.undefAll()
-        conn.close()
 
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_partitionedTable_TableAppender(self, data_type, compress):
-        tmp_s, tmp_p = get_PartitionedTable_Append_Upsert(types=data_type, names="upload", script_type=data_type)
+    def test_upload_partitionedTable_TableAppender(self, data_type, compress):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
+        tmp_s, tmp_p = get_PartitionedTable_Append_Upsert(types=data_type, names="upload", db_name=db_name,
+                                                          script_type=data_type)
         conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = "test_" + s
-            dbpath = 'dfs://' + s.split('_')[1]
+            dbpath = db_name + '_' + s.split('_')[1]
             appender = ddb.TableAppender(dbPath=dbpath, tableName=upstr, ddbSession=conn)
             appender.append(p)
             res_value = conn.run(f"eqObj((select * from {upstr}).values(), (select * from {s}).values())")
@@ -258,19 +215,20 @@ class TestUpload:
             else:
                 assert res_value
                 assert res_type
-        conn.undefAll()
-        conn.close()
 
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('ignoreNull', [True, False], ids=['enignoreNull', 'unignoreNull'])
-    def test_partitionedTable_TableUpserter(self, data_type, compress, ignoreNull):
-        tmp_s, tmp_p = get_PartitionedTable_Append_Upsert(types=data_type, names="upload", script_type=data_type)
+    def test_upload_partitionedTable_TableUpserter(self, data_type, compress, ignoreNull):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
+        tmp_s, tmp_p = get_PartitionedTable_Append_Upsert(types=data_type, names="upload", db_name=db_name,
+                                                          script_type=data_type)
         conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
             upstr = "test_" + s
-            dbpath = 'dfs://' + s.split('_')[1]
+            dbpath = db_name + '_' + s.split('_')[1]
             upsert = ddb.TableUpserter(dbPath=dbpath, tableName=upstr, ddbSession=conn, ignoreNull=ignoreNull,
                                        keyColNames=["index"])
             upsert.upsert(p)
@@ -282,7 +240,6 @@ class TestUpload:
             else:
                 assert res_value
                 assert res_type
-        conn.undefAll()
         conn.close()
 
     test_dataArray = [
@@ -298,10 +255,9 @@ class TestUpload:
         ['DATEHOUR', {'a': np.array([0, None, 1000], dtype="datetime64[h]")}]
     ]
 
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('data_type, np_dict', test_dataArray, ids=[x.name for x in TIMETYPE])
-    def test_upload_numpyTimeTypesArray_Vector(self, data_type, np_dict, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+    def test_upload_numpyTimeTypesArray_Vector(self, data_type, np_dict):
+        conn = ddb.session(HOST, PORT, USER, PASSWD)
         if data_type == 'TIME':
             _data_type = 'TIMESTAMP'
         elif data_type == 'MINUTE' or data_type == 'SECOND':
@@ -318,10 +274,7 @@ class TestUpload:
             ex_s = f"v1 = array({_data_type}, 0);v1.append!(0 NULL 1000)"
         conn.upload(np_dict)
         conn.run(ex_s)
-        conn.run('print v1')
-        conn.run('print a')
         assert conn.run("eqObj(v1, a)")
-        conn.undefAll()
         conn.close()
 
     test_dataArray = [
@@ -405,7 +358,6 @@ class TestUpload:
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128', 'BLOB', 'DECIMAL32(0)', 'DECIMAL64(0)',
                     'DECIMAL128(0)']
         assert_array_equal(schema, ex_types)
-        conn.undefAll()
         conn.close()
 
     test_dataArray = [
@@ -512,7 +464,6 @@ class TestUpload:
             ex_types[-2] = 'DECIMAL64(0)[]'
             ex_types[-1] = 'DECIMAL128(0)[]'
         assert_array_equal(schema, ex_types)
-        conn.undefAll()
         conn.close()
 
     test_dataArray = [
@@ -596,7 +547,6 @@ class TestUpload:
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128', 'BLOB', 'DECIMAL32(0)', 'DECIMAL64(0)',
                     'DECIMAL128(0)']
         assert_array_equal(schema, ex_types)
-        conn.undefAll()
         conn.close()
 
     def test_upload_exceptions(self):

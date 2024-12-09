@@ -1,13 +1,16 @@
+import dolphindb as ddb
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
 import pytest
-from pandas.testing import *
+from pandas._testing import assert_frame_equal
 
-from setup.prepare import *
-from setup.settings import *
-from setup.utils import get_pid
+from setup.settings import HOST, PORT, USER, PASSWD
 
 
+@pytest.mark.xdist_group(name='permission_test')
 class TestPermission:
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
     TEST_USER_NAMES = ['table_write_user', 'table_insert_user', 'table_update_user', 'db_write_user', 'db_insert_user',
                        'db_update_user', 'db_owner_user']
     TEST_USER_PERMISSIONS = ['TABLE_WRITE', 'TABLE_INSERT', 'TABLE_UPDATE', 'DB_WRITE', 'DB_INSERT', 'DB_UPDATE',
@@ -16,10 +19,6 @@ class TestPermission:
     TEST_TABLE = 'test_permission_table'
 
     def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
         if not self.conn.existsDatabase(self.TEST_DB):
             db = self.conn.database(dbName="db_value", partitionType=keys.VALUE, partitions=[1, 2, 3, 4],
                                     dbPath=self.TEST_DB, engine="OLAP")
@@ -49,24 +48,7 @@ class TestPermission:
                 """
             self.conn.run(s)
 
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    def test_tableAppender_permission_table_write(self):
+    def test_permission_tableAppender_permission_table_write(self):
         conn1 = ddb.session(HOST, PORT, "table_write_user", PASSWD)
         appender = ddb.tableAppender(self.TEST_DB, self.TEST_TABLE, conn1)
         df = pd.DataFrame({
@@ -78,7 +60,7 @@ class TestPermission:
         res = conn1.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_tableAppender_permission_table_insert(self):
+    def test_permission_tableAppender_permission_table_insert(self):
         conn1 = ddb.session(HOST, PORT, "table_insert_user", PASSWD)
         appender = ddb.tableAppender(self.TEST_DB, self.TEST_TABLE, conn1)
         df = pd.DataFrame({
@@ -90,7 +72,7 @@ class TestPermission:
         res = conn1.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_tableAppender_permission_table_update(self):
+    def test_permission_tableAppender_permission_table_update(self):
         conn1 = ddb.session(HOST, PORT, "table_update_user", PASSWD)
         appender = ddb.tableAppender(self.TEST_DB, self.TEST_TABLE, conn1)
         df = pd.DataFrame({
@@ -101,7 +83,7 @@ class TestPermission:
         with pytest.raises(RuntimeError, match="<NoPrivilege>Not granted to write data to table"):
             appender.append(df)
 
-    def test_tableAppender_permission_db_write(self):
+    def test_permission_tableAppender_permission_db_write(self):
         conn1 = ddb.session(HOST, PORT, "db_write_user", PASSWD)
         appender = ddb.tableAppender(self.TEST_DB, self.TEST_TABLE, conn1)
         df = pd.DataFrame({
@@ -113,7 +95,7 @@ class TestPermission:
         res = conn1.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_tableAppender_permission_db_insert(self):
+    def test_permission_tableAppender_permission_db_insert(self):
         conn1 = ddb.session(HOST, PORT, "db_insert_user", PASSWD)
         appender = ddb.tableAppender(self.TEST_DB, self.TEST_TABLE, conn1)
         df = pd.DataFrame({
@@ -125,7 +107,7 @@ class TestPermission:
         res = conn1.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_tableAppender_permission_db_update(self):
+    def test_permission_tableAppender_permission_db_update(self):
         conn1 = ddb.session(HOST, PORT, "db_update_user", PASSWD)
         appender = ddb.tableAppender(self.TEST_DB, self.TEST_TABLE, conn1)
         df = pd.DataFrame({
@@ -136,7 +118,7 @@ class TestPermission:
         with pytest.raises(RuntimeError, match="<NoPrivilege>Not granted to write data to table"):
             appender.append(df)
 
-    def test_tableAppender_permission_db_owner(self):
+    def test_permission_tableAppender_permission_db_owner(self):
         conn1 = ddb.session(HOST, PORT, "db_owner_user", PASSWD)
         appender = ddb.tableAppender(self.TEST_DB, self.TEST_TABLE, conn1)
         df = pd.DataFrame({
@@ -147,7 +129,7 @@ class TestPermission:
         with pytest.raises(RuntimeError, match="<NoPrivilege>Not granted to write data to table"):
             appender.append(df)
 
-    def test_tableUpsert_permission_table_write(self):
+    def test_permission_tableUpsert_permission_table_write(self):
         conn1 = ddb.session(HOST, PORT, "table_write_user", PASSWD)
         upserter = ddb.tableUpsert(self.TEST_DB, self.TEST_TABLE, conn1, keyColNames=['c1'])
         df = pd.DataFrame({
@@ -159,7 +141,7 @@ class TestPermission:
         res = conn1.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_tableUpsert_permission_table_insert(self):
+    def test_permission_tableUpsert_permission_table_insert(self):
         conn1 = ddb.session(HOST, PORT, "table_insert_user", PASSWD)
         upserter = ddb.tableUpsert(self.TEST_DB, self.TEST_TABLE, conn1, keyColNames=['c1'])
         df = pd.DataFrame({
@@ -170,7 +152,7 @@ class TestPermission:
         with pytest.raises(RuntimeError, match="<NoPrivilege>Not granted to write data to table"):
             upserter.upsert(df)
 
-    def test_tableUpsert_permission_table_update(self):
+    def test_permission_tableUpsert_permission_table_update(self):
         conn1 = ddb.session(HOST, PORT, "table_update_user", PASSWD)
         upserter = ddb.tableUpsert(self.TEST_DB, self.TEST_TABLE, conn1, keyColNames=['c1'])
         df = pd.DataFrame({
@@ -182,7 +164,7 @@ class TestPermission:
         res = conn1.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_tableUpsert_permission_db_write(self):
+    def test_permission_tableUpsert_permission_db_write(self):
         conn1 = ddb.session(HOST, PORT, "db_write_user", PASSWD)
         upserter = ddb.tableUpsert(self.TEST_DB, self.TEST_TABLE, conn1, keyColNames=['c1'])
         df = pd.DataFrame({
@@ -194,7 +176,7 @@ class TestPermission:
         res = conn1.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_tableUpsert_permission_db_insert(self):
+    def test_permission_tableUpsert_permission_db_insert(self):
         conn1 = ddb.session(HOST, PORT, "db_insert_user", PASSWD)
         upserter = ddb.tableUpsert(self.TEST_DB, self.TEST_TABLE, conn1, keyColNames=['c1'])
         df = pd.DataFrame({
@@ -205,7 +187,7 @@ class TestPermission:
         with pytest.raises(RuntimeError, match="<NoPrivilege>Not granted to write data to table"):
             upserter.upsert(df)
 
-    def test_tableUpsert_permission_db_update(self):
+    def test_permission_tableUpsert_permission_db_update(self):
         conn1 = ddb.session(HOST, PORT, "db_update_user", PASSWD)
         upserter = ddb.tableUpsert(self.TEST_DB, self.TEST_TABLE, conn1, keyColNames=['c1'])
         df = pd.DataFrame({
@@ -217,7 +199,7 @@ class TestPermission:
         res = conn1.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_tableUpsert_permission_db_owner(self):
+    def test_permission_tableUpsert_permission_db_owner(self):
         conn1 = ddb.session(HOST, PORT, "db_owner_user", PASSWD)
         upserter = ddb.tableUpsert(self.TEST_DB, self.TEST_TABLE, conn1, keyColNames=['c1'])
         df = pd.DataFrame({
@@ -228,7 +210,7 @@ class TestPermission:
         with pytest.raises(RuntimeError, match="<NoPrivilege>Not granted to write data to table"):
             upserter.upsert(df)
 
-    def test_PartitionedTableAppender_permission_table_write(self):
+    def test_permission_PartitionedTableAppender_permission_table_write(self):
         connpool = ddb.DBConnectionPool(HOST, PORT, 3, "table_write_user", PASSWD)
         appender = ddb.PartitionedTableAppender(self.TEST_DB, self.TEST_TABLE, 'c1', connpool)
         df = pd.DataFrame({
@@ -241,7 +223,7 @@ class TestPermission:
         assert_frame_equal(df, res)
         connpool.shutDown()
 
-    def test_PartitionedTableAppender_permission_table_insert(self):
+    def test_permission_PartitionedTableAppender_permission_table_insert(self):
         connpool = ddb.DBConnectionPool(HOST, PORT, 3, "table_insert_user", PASSWD)
         appender = ddb.PartitionedTableAppender(self.TEST_DB, self.TEST_TABLE, 'c1', connpool)
         df = pd.DataFrame({
@@ -254,7 +236,7 @@ class TestPermission:
         assert_frame_equal(df, res)
         connpool.shutDown()
 
-    def test_PartitionedTableAppender_permission_table_update(self):
+    def test_permission_PartitionedTableAppender_permission_table_update(self):
         connpool = ddb.DBConnectionPool(HOST, PORT, 3, "table_update_user", PASSWD)
         appender = ddb.PartitionedTableAppender(self.TEST_DB, self.TEST_TABLE, 'c1', connpool)
         df = pd.DataFrame({
@@ -266,7 +248,7 @@ class TestPermission:
             appender.append(df)
         connpool.shutDown()
 
-    def test_PartitionedTableAppender_permission_db_write(self):
+    def test_permission_PartitionedTableAppender_permission_db_write(self):
         connpool = ddb.DBConnectionPool(HOST, PORT, 3, "db_write_user", PASSWD)
         appender = ddb.PartitionedTableAppender(self.TEST_DB, self.TEST_TABLE, 'c1', connpool)
         df = pd.DataFrame({
@@ -279,7 +261,7 @@ class TestPermission:
         assert_frame_equal(df, res)
         connpool.shutDown()
 
-    def test_PartitionedTableAppender_permission_db_insert(self):
+    def test_permission_PartitionedTableAppender_permission_db_insert(self):
         connpool = ddb.DBConnectionPool(HOST, PORT, 3, "db_insert_user", PASSWD)
         appender = ddb.PartitionedTableAppender(self.TEST_DB, self.TEST_TABLE, 'c1', connpool)
         df = pd.DataFrame({
@@ -292,7 +274,7 @@ class TestPermission:
         assert_frame_equal(df, res)
         connpool.shutDown()
 
-    def test_PartitionedTableAppender_permission_db_update(self):
+    def test_permission_PartitionedTableAppender_permission_db_update(self):
         connpool = ddb.DBConnectionPool(HOST, PORT, 3, "db_update_user", PASSWD)
         appender = ddb.PartitionedTableAppender(self.TEST_DB, self.TEST_TABLE, 'c1', connpool)
         df = pd.DataFrame({
@@ -304,7 +286,7 @@ class TestPermission:
             appender.append(df)
         connpool.shutDown()
 
-    def test_PartitionedTableAppender_permission_db_owner(self):
+    def test_permission_PartitionedTableAppender_permission_db_owner(self):
         connpool = ddb.DBConnectionPool(HOST, PORT, 3, "db_owner_user", PASSWD)
         appender = ddb.PartitionedTableAppender(self.TEST_DB, self.TEST_TABLE, 'c1', connpool)
         df = pd.DataFrame({
@@ -316,7 +298,7 @@ class TestPermission:
             appender.append(df)
         connpool.shutDown()
 
-    def test_MultithreadedTableWriter_permission_table_write(self):
+    def test_permission_MultithreadedTableWriter_permission_table_write(self):
         mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, "table_write_user", PASSWD, self.TEST_DB, self.TEST_TABLE,
                                                 False, False, [], 1, 1, 3, 'c1')
         df = pd.DataFrame({
@@ -330,7 +312,7 @@ class TestPermission:
         res = self.conn.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_MultithreadedTableWriter_permission_table_insert(self):
+    def test_permission_MultithreadedTableWriter_permission_table_insert(self):
         mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, "table_insert_user", PASSWD, self.TEST_DB, self.TEST_TABLE,
                                                 False, False, [], 1, 1, 3, 'c1')
         df = pd.DataFrame({
@@ -344,7 +326,7 @@ class TestPermission:
         res = self.conn.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_MultithreadedTableWriter_permission_table_update(self):
+    def test_permission_MultithreadedTableWriter_permission_table_update(self):
         mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, "table_update_user", PASSWD, self.TEST_DB, self.TEST_TABLE,
                                                 False, False, [], 1, 1, 3, 'c1')
         df = pd.DataFrame({
@@ -361,7 +343,7 @@ class TestPermission:
         res = self.conn.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert res.shape[0] == 0
 
-    def test_MultithreadedTableWriter_permission_db_write(self):
+    def test_permission_MultithreadedTableWriter_permission_db_write(self):
         mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, "db_write_user", PASSWD, self.TEST_DB, self.TEST_TABLE,
                                                 False, False, [], 1, 1, 3, 'c1')
         df = pd.DataFrame({
@@ -375,7 +357,7 @@ class TestPermission:
         res = self.conn.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_MultithreadedTableWriter_permission_db_insert(self):
+    def test_permission_MultithreadedTableWriter_permission_db_insert(self):
         mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, "db_insert_user", PASSWD, self.TEST_DB, self.TEST_TABLE,
                                                 False, False, [], 1, 1, 3, 'c1')
         df = pd.DataFrame({
@@ -389,7 +371,7 @@ class TestPermission:
         res = self.conn.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert_frame_equal(df, res)
 
-    def test_MultithreadedTableWriter_permission_db_update(self):
+    def test_permission_MultithreadedTableWriter_permission_db_update(self):
         mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, "db_update_user", PASSWD, self.TEST_DB, self.TEST_TABLE,
                                                 False, False, [], 1, 1, 3, 'c1')
         df = pd.DataFrame({
@@ -407,7 +389,7 @@ class TestPermission:
         res = self.conn.run(f"select * from loadTable('{self.TEST_DB}', '{self.TEST_TABLE}')")
         assert res.shape[0] == 0
 
-    def test_MultithreadedTableWriter_permission_db_owner(self):
+    def test_permission_MultithreadedTableWriter_permission_db_owner(self):
         mtwriter = ddb.MultithreadedTableWriter(HOST, PORT, "db_owner_user", PASSWD, self.TEST_DB, self.TEST_TABLE,
                                                 False, False, [], 1, 1, 3, 'c1')
         df = pd.DataFrame({

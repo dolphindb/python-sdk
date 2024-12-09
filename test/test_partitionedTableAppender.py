@@ -1,24 +1,23 @@
 import decimal
+import inspect
 import random
 import time
+import warnings
 
+import dolphindb as ddb
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
 import pytest
-from numpy.testing import *
-from pandas.testing import *
+from numpy.testing import assert_array_equal
+from pandas._testing import assert_frame_equal
 
-from setup.prepare import *
-from setup.settings import *
-from setup.utils import get_pid
+from basic_testing.prepare import random_string
+from setup.settings import HOST, PORT, USER, PASSWD
 
 
 class TestPartitionedTableAppender:
-    conn = ddb.session(enablePickle=False)
-
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
+    conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=False)
 
     # def teardown_method(self):
     #     self.conn.undefAll()
@@ -26,27 +25,23 @@ class TestPartitionedTableAppender:
 
     @classmethod
     def setup_class(cls):
+        cls.SEP = '/' if 'linux' in cls.conn.run('version()').lower() else '\\'
         cls.pool_list = {
             "COMPRESS_OPEN": ddb.DBConnectionPool(HOST, PORT, 4, USER, PASSWD, compress=True),
             "COMPRESS_CLOSE": ddb.DBConnectionPool(HOST, PORT, 4, USER, PASSWD, compress=False),
         }
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         for i in cls.pool_list.values():
             i.shutDown()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
 
     def test_PartitionedTableAppender_append_type_error(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        script = '''
-            dbPath = "dfs://PartitionedTableAppender"
+        script = f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT])
@@ -54,15 +49,17 @@ class TestPartitionedTableAppender:
             pt = db.createPartitionedTable(t, `pt, `qty)
         '''
         self.conn.run(script)
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender", "pt", "qty", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "qty", pool)
         with pytest.raises(RuntimeError, match="table must be a DataFrame!"):
             appender.append(None)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_append(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        script = '''
-            dbPath = "dfs://PartitionedTableAppender"
+        script = f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT])
@@ -70,7 +67,7 @@ class TestPartitionedTableAppender:
             pt = db.createPartitionedTable(t, `pt, `qty)
         '''
         self.conn.run(script)
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender", "pt", "qty", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "qty", pool)
         sym = list(map(str, np.arange(100, 600)))
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23',
                                  '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'], 50), dtype="datetime64[D]")
@@ -86,20 +83,22 @@ class TestPartitionedTableAppender:
                              'second': second, 'datetime': second, 'timestamp': time, 'nanotimestamp': nanotime,
                              'qty': qty})
         num = appender.append(data)
-        assert num == self.conn.run('exec count(*) from loadTable("dfs://PartitionedTableAppender", "pt")')
+        assert num == self.conn.run(f'exec count(*) from loadTable("{db_name}", "pt")')
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_range_int(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
             db=database(dbPath,RANGE,[1,10001,20001,30001,40001,50001,60001])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.random.randint(1, 2001, 1000)
         qty = np.random.randint(0, 101, 1000)
@@ -107,23 +106,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_range_short(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,SHORT,INT,DOUBLE])
             db=database(dbPath,RANGE,short([1,10001,20001,30001]))
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.random.randint(1, 2001, 1000)
         qty = np.random.randint(0, 101, 1000)
@@ -131,16 +132,18 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_range_symbol(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
@@ -148,7 +151,7 @@ class TestPartitionedTableAppender:
             db=database(dbPath,RANGE,sym_range)
             pt = db.createPartitionedTable(t, `pt, `sym)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.random.randint(0, 2001, 1000)
         qty = np.random.randint(0, 101, 1000)
@@ -156,16 +159,18 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_range_string(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[STRING,INT,INT,DOUBLE])
@@ -173,7 +178,7 @@ class TestPartitionedTableAppender:
             db=database(dbPath,RANGE,sym_range)
             pt = db.createPartitionedTable(t, `pt, `sym)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.random.randint(0, 2001, 1000)
         qty = np.random.randint(0, 101, 1000)
@@ -181,23 +186,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_value_int(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
             db=database(dbPath,VALUE,1..10)
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.repeat(np.arange(1, 11), 100, axis=0)
         qty = np.random.randint(0, 101, 1000)
@@ -205,23 +212,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_value_short(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,SHORT,INT,DOUBLE])
             db=database(dbPath,VALUE,short(1..10))
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.repeat(np.arange(1, 11), 100, axis=0)
         qty = np.random.randint(0, 101, 1000)
@@ -229,23 +238,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_value_symbol(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
             db=database(dbPath,VALUE,symbol(['AAPL', 'MSFT', 'IBM', 'GOOG', 'YHOO']))
             pt = db.createPartitionedTable(t, `pt, `sym)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         sym = np.repeat(['AAPL', 'MSFT', 'IBM', 'GOOG', 'YHOO'], 200, axis=0)
         id = np.random.randint(0, 2001, 1000)
         qty = np.random.randint(0, 2001, 1000)
@@ -253,23 +264,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_value_string(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[STRING,INT,INT,DOUBLE])
             db=database(dbPath,VALUE,['AAPL', 'MSFT', 'IBM', 'GOOG', 'YHOO'])
             pt = db.createPartitionedTable(t, `pt, `sym)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         sym = np.repeat(['AAPL', 'MSFT', 'IBM', 'GOOG', 'YHOO'], 200, axis=0)
         id = np.random.randint(0, 60001, 1000)
         qty = np.random.randint(0, 101, 1000)
@@ -277,23 +290,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_hash_int(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
             db=database(dbPath,HASH,[INT, 10])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.repeat(np.arange(1, 1001), 1, axis=0)
         qty = np.random.randint(0, 101, 1000)
@@ -301,23 +316,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_hash_short(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,SHORT,INT,DOUBLE])
             db=database(dbPath,HASH,[SHORT, 10])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.repeat(np.arange(1, 101), 10, axis=0)
         qty = np.random.randint(0, 101, 1000)
@@ -325,23 +342,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_hash_string(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[STRING,INT,INT,DOUBLE])
             db=database(dbPath,HASH,[STRING, 10])
             pt = db.createPartitionedTable(t, `pt, `sym)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.random.randint(0, 6001, 1000)
         qty = np.random.randint(0, 101, 1000)
@@ -349,23 +368,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_hash_symbol(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
             db=database(dbPath,HASH,[SYMBOL, 10])
             pt = db.createPartitionedTable(t, `pt, `sym)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.random.randint(0, 2001, 1000)
         qty = np.random.randint(0, 101, 1000)
@@ -373,24 +394,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_list_int(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
             db=database(dbPath,LIST,[[1, 3, 5], [2, 4, 6], [7, 8, 9, 10]])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender(
-            "dfs://PTA_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.repeat(np.arange(1, 11), 100, axis=0)
         qty = np.random.randint(0, 101, 1000)
@@ -398,23 +420,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_list_short(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,SHORT,INT,DOUBLE])
             db=database(dbPath,LIST,[[1, 3, 5], [2, 4, 6], [7, 8, 9, 10]])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         id = np.repeat(np.arange(1, 11), 100, axis=0)
         qty = np.random.randint(0, 101, 1000)
@@ -422,23 +446,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 1000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 1000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_list_symbol(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
             db=database(dbPath,LIST,[symbol(string(1001..2000)), symbol(string(2001..4000)), symbol(string(4001..6000))])
             pt = db.createPartitionedTable(t, `pt, `sym)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         sym = list(map(str, np.arange(1001, 6001)))
         id = np.random.randint(0, 6001, 5000)
         qty = np.random.randint(0, 101, 5000)
@@ -446,23 +472,25 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 5000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 5000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_list_string(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PTA_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
             db=database(dbPath,LIST,[string(1001..2000), string(2001..4000), string(4001..6000)])
             pt = db.createPartitionedTable(t, `pt, `sym)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         sym = list(map(str, np.arange(1001, 6001)))
         id = np.random.randint(0, 6001, 5000)
         qty = np.random.randint(0, 101, 5000)
@@ -470,72 +498,78 @@ class TestPartitionedTableAppender:
         data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
         num = appender.append(data)
         assert num == 5000
-        re = self.conn.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        re = self.conn.run(f"select * from loadTable('{db_name}', 'pt') order by id, sym, qty, price")
         expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
         expected.set_index(np.arange(0, 5000), inplace=True)
         assert_frame_equal(re, expected, check_dtype=False, check_index_type=False)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_compo_value_list(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath="dfs://db_compoDB_sym"
+        self.conn.run(f'''
+            dbPath="{db_name}"
             if (existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`ticker,[SYMBOL,STRING])
             dbSym = database(,VALUE,`aaa`bbb`ccc`ddd)
             dbTic = database(, LIST, [`IBM`ORCL`MSFT, `GOOG`FB] )
-            db = database("dfs://db_compoDB_sym", COMPO, [dbSym, dbTic])
+            db = database(dbPath, COMPO, [dbSym, dbTic])
             pt = db.createPartitionedTable(t, `pt, `sym`ticker)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://db_compoDB_sym", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         n = 1000
         x = np.array(['aaa', 'bbb', 'ccc', 'ddd'])
         y = np.array(['IBM', 'ORCL', 'MSFT', 'GOOG', 'FB'])
         data = pd.DataFrame({"sym": np.repeat(x, 250), "ticker": np.repeat(y, 200)})
         re = appender.append(data)
         assert re == n
-        re = self.conn.run('select * from loadTable("dfs://db_compoDB_sym",`pt)')
+        re = self.conn.run(f'select * from loadTable("{db_name}",`pt)')
         assert_frame_equal(data, re)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_compo_range_list(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath="dfs://db_compoDB_int"
+        self.conn.run(f'''
+            dbPath="{db_name}"
             if (existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`ticker,[INT,STRING])
             dbId = database(,RANGE,0 40000 80000 120000)
             dbTic = database(, LIST, [`IBM`ORCL`MSFT, `GOOG`FB] )
-            db = database("dfs://db_compoDB_int", COMPO, [dbId, dbTic])
+            db = database(dbPath, COMPO, [dbId, dbTic])
             pt = db.createPartitionedTable(t, `pt, `id`ticker)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://db_compoDB_int", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 1000
         y = np.array(['IBM', 'ORCL', 'MSFT', 'GOOG', 'FB'])
         data = pd.DataFrame({"id": range(0, n), "ticker": np.repeat(y, 200)})
         data['id'] = data["id"].astype("int32")
         re = appender.append(data)
         assert re == n
-        re = self.conn.run('select * from loadTable("dfs://db_compoDB_int",`pt)')
+        re = self.conn.run(f'select * from loadTable("{db_name}",`pt)')
         assert_frame_equal(data, re)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_compo_hash_range(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath="dfs://db_compoDB_int"
+        self.conn.run(f'''
+            dbPath="{db_name}"
             if (existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`ticker,[INT,STRING])
             dbId = database(,HASH,[INT,2])
             sym_range=cutPoints(string(10001..60000), 10)
             dbTic = database(, RANGE, sym_range )
-            db = database("dfs://db_compoDB_int", COMPO, [dbId, dbTic])
+            db = database(dbPath, COMPO, [dbId, dbTic])
             pt = db.createPartitionedTable(t, `pt, `id`ticker)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://db_compoDB_int", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 1000
         id = np.repeat(np.arange(1, 1001), 1, axis=0)
         ticker = list(map(str, np.arange(1001, 2001)))
@@ -543,69 +577,75 @@ class TestPartitionedTableAppender:
         data['id'] = data["id"].astype("int32")
         re = appender.append(data)
         assert re == n
-        re = self.conn.run('select * from loadTable("dfs://db_compoDB_int",`pt) order by id,ticker')
+        re = self.conn.run(f'select * from loadTable("{db_name}",`pt) order by id,ticker')
         assert_frame_equal(data, re)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_compo_hash_list(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath="dfs://db_compoDB_sym"
+        self.conn.run(f'''
+            dbPath="{db_name}"
             if (existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`sym`ticker,[SYMBOL,STRING])
             dbSym = database(,HASH,[SYMBOL,2])
             dbTic = database(, LIST,  [`IBM`ORCL`MSFT, `GOOG`FB] )
-            db = database("dfs://db_compoDB_sym", COMPO, [dbSym, dbTic])
+            db = database(dbPath, COMPO, [dbSym, dbTic])
             pt = db.createPartitionedTable(t, `pt, `sym`ticker)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://db_compoDB_sym", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         sym = list(map(str, np.arange(1001, 2001)))
         y = np.array(['IBM', 'ORCL', 'MSFT', 'GOOG', 'FB'])
         data = pd.DataFrame({"sym": sym, "ticker": np.repeat(y, 200)})
         re = appender.append(data)
         assert re == 1000
-        re = self.conn.run('select * from loadTable("dfs://db_compoDB_sym",`pt) order by sym,ticker')
+        re = self.conn.run(f'select * from loadTable("{db_name}",`pt) order by sym,ticker')
         assert_frame_equal(data, re)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_compo_hash_value(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath="dfs://db_compoDB_str"
+        self.conn.run(f'''
+            dbPath="{db_name}"
             if (existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`str`ticker,[STRING,SYMBOL])
             dbStr = database(,HASH,[STRING,10])
             dbTic = database(, VALUE,  symbol(['AAPL', 'MSFT', 'IBM', 'GOOG', 'YHOO']) )
-            db = database("dfs://db_compoDB_str", COMPO, [dbStr, dbTic])
+            db = database(dbPath, COMPO, [dbStr, dbTic])
             pt = db.createPartitionedTable(t, `pt, `str`ticker)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://db_compoDB_str", "pt", "str", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "str", pool)
         n = 1000
         y = list(map(str, np.arange(1001, 2001)))
         ticker = np.repeat(['AAPL', 'MSFT', 'IBM', 'GOOG', 'YHOO'], 200)
         data = pd.DataFrame({"str": y, "ticker": ticker})
         re = appender.append(data)
         assert re == n
-        re = self.conn.run('select * from loadTable("dfs://db_compoDB_str",`pt) order by str,ticker')
+        re = self.conn.run(f'select * from loadTable("{db_name}",`pt) order by str,ticker')
         assert_frame_equal(data, re)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_compo_value_list_range(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-           dbPath="dfs://db_compoDB_sym"
+        self.conn.run(f'''
+           dbPath="{db_name}"
            if (existsDatabase(dbPath))
                dropDatabase(dbPath)
            t = table(100:100,`sym`ticker`id,[SYMBOL,STRING,INT])
            dbSym = database(,VALUE,`aaa`bbb`ccc`ddd)
            dbTic = database(, LIST, [`IBM`ORCL`MSFT, `GOOG`FB] )
            dbId = database(,RANGE,0 40000 80000 120000)
-           db = database("dfs://db_compoDB_sym", COMPO, [dbSym, dbTic,dbId])
+           db = database(dbPath, COMPO, [dbSym, dbTic,dbId])
            pt = db.createPartitionedTable(t, `pt, `sym`ticker`id)
        ''')
-        appender = ddb.PartitionedTableAppender("dfs://db_compoDB_sym", "pt", "sym", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "sym", pool)
         n = 1000
         x = np.array(['aaa', 'bbb', 'ccc', 'ddd'])
         y = np.array(['IBM', 'ORCL', 'MSFT', 'GOOG', 'FB'])
@@ -613,21 +653,23 @@ class TestPartitionedTableAppender:
         data['id'] = data["id"].astype("int32")
         re = appender.append(data)
         assert re == n
-        re = self.conn.run('select * from loadTable("dfs://db_compoDB_sym",`pt)')
+        re = self.conn.run(f'select * from loadTable("{db_name}",`pt)')
         assert_frame_equal(data, re)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_all_time_types(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_all_time_types"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP,INT])
             db=database(dbPath,RANGE,1000 2000 3000 4000 6001)
             pt = db.createPartitionedTable(t, `pt, `qty)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_all_time_types", "pt", "qty", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "qty", pool)
         sym = list(map(str, np.arange(1000, 6000)))
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23',
                                  '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'], 500), dtype="datetime64[D]")
@@ -646,13 +688,13 @@ class TestPartitionedTableAppender:
                              'qty': qty})
         num = appender.append(data)
         assert num == 5000
-        script = '''
+        script = f'''
             n = 5000
             tmp=table(string(1000..5999) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
             take([00:00:00.000, 05:12:48.426, NULL, NULL, 23:59:59.999],n) as time, take([00:00m, 05:12m, NULL, NULL, 23:59m],n) as minute, take([00:00:00, 05:12:48, NULL, NULL, 23:59:59],n) as second,take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 2015.06.09T23:59:59],n) as datetime,
             take([2012.01.01T00:00:00.000, 2015.08.26T05:12:48.426, NULL, NULL, 2015.06.09T23:59:59.999],n) as timestamp,take([00:00:00.000000000, 05:12:48.008007006, NULL, NULL, 23:59:59.999008007],n) as nanotime,take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006, NULL, NULL, 2015.06.09T23:59:59.999008007],n) as nanotimestamp,
             1000..5999 as qty)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_all_time_types",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, tmp.values(), re.values())
         '''
         re = self.conn.run(script)
@@ -660,26 +702,28 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_datehour(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_datehour"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(datehour(2020.01.01T01:01:01) as time, 1 as qty)
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001)
             pt = db.createPartitionedTable(t, `pt, `qty)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_datehour", "pt", "qty", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "qty", pool)
         n = 5000
         time = pd.date_range(start='2020-01-01T01', periods=n, freq='h')
         qty = np.arange(1, n + 1)
         data = pd.DataFrame({'time': time, 'qty': qty})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 5000
             ex = table((datehour(2020.01.01T00:01:01)+1..n) as time,1..n as qty)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_datehour",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -687,16 +731,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_date(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_date"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`date1`date2`date3`date4`date5,[INT,DATE,DATE,DATE,DATE,DATE])
             db=database(dbPath,RANGE,[1,101,201,301,401,501,601])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_to_date", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 500
         id = np.arange(100, 600)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100),
@@ -714,7 +760,7 @@ class TestPartitionedTableAppender:
             {'id': id, 'date1': date, 'date2': month, 'date3': time, 'date4': second, 'date5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 500
             ids = 100..599
             time_name = `date
@@ -724,7 +770,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as date1,months as date2,times as date3,seconds as date4,nanotimes as date5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_date",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -732,16 +778,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_month(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_month"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`month1`month2`month3`month4`month5,[INT,MONTH,MONTH,MONTH,MONTH,MONTH])
             db=database(dbPath,RANGE,[1,101,201,301,401,501,601])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_to_month", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 500
         id = np.arange(100, 600)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100),
@@ -759,7 +807,7 @@ class TestPartitionedTableAppender:
             {'id': id, 'month1': date, 'month2': month, 'month3': time, 'month4': second, 'month5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 500
             ids = 100..599
             time_name = `month
@@ -769,7 +817,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as month1,months as month2,times as month3,seconds as month4,nanotimes as month5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_month",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -777,17 +825,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_time(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_time"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`time1`time2`time3`time4`time5,[INT,TIME,TIME,TIME,TIME,TIME])
             db=database(dbPath,RANGE,[1,101,201,301,401,501,601])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender(
-            "dfs://test_PartitionedTableAppender_to_time", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 500
         id = np.arange(100, 600)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100),
@@ -805,7 +854,7 @@ class TestPartitionedTableAppender:
             {'id': id, 'time1': date, 'time2': month, 'time3': time, 'time4': second, 'time5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 500
             ids = 100..599
             time_name = `time
@@ -815,7 +864,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as time1,months as time2,times as time3,seconds as time4,nanotimes as time5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_time",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -823,16 +872,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_minute(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_minute"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`minute1`minute2`minute3`minute4`minute5,[INT,MINUTE,MINUTE,MINUTE,MINUTE,MINUTE])
             db=database(dbPath,RANGE,[1,101,201,301,401,501,601])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_to_minute", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 500
         id = np.arange(100, 600)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100),
@@ -850,7 +901,7 @@ class TestPartitionedTableAppender:
             {'id': id, 'minute1': date, 'minute2': month, 'minute3': time, 'minute4': second, 'minute5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 500
             ids = 100..599
             time_name = `minute
@@ -860,7 +911,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as time1,months as time2,times as time3,seconds as time4,nanotimes as time5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_minute",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -868,16 +919,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_second(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_second"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`second1`second2`second3`second4`second5,[INT,SECOND,SECOND,SECOND,SECOND,SECOND])
             db=database(dbPath,RANGE,[1,101,201,301,401,501,601])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_to_second", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 500
         id = np.arange(100, 600)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100),
@@ -895,7 +948,7 @@ class TestPartitionedTableAppender:
             {'id': id, 'second1': date, 'second2': month, 'second3': time, 'second4': second, 'second5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 500
             ids = 100..599
             time_name = `second
@@ -905,7 +958,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as time1,months as time2,times as time3,seconds as time4,nanotimes as time5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_second",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -913,16 +966,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_datetime(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_datetime"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`datetime1`datetime2`datetime3`datetime4`datetime5,[INT,DATETIME,DATETIME,DATETIME,DATETIME,DATETIME])
             db=database(dbPath,RANGE,[1,101,201,301,401,501,601])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_to_datetime", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 500
         id = np.arange(100, 600)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100),
@@ -940,7 +995,7 @@ class TestPartitionedTableAppender:
                              'datetime5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 500
             ids = 100..599
             time_name = `datetime
@@ -950,7 +1005,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as month1,months as month2,times as month3,seconds as month4,nanotimes as month5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_datetime",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -958,16 +1013,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_timestamp(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_timestamp"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`timestamp1`timestamp2`timestamp3`timestamp4`timestamp5,[INT,TIMESTAMP,TIMESTAMP,TIMESTAMP,TIMESTAMP,TIMESTAMP])
             db=database(dbPath,RANGE,[1,101,201,301,401,501,601])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_to_timestamp", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 500
         id = np.arange(100, 600)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100),
@@ -986,7 +1043,7 @@ class TestPartitionedTableAppender:
              'timestamp5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 500
             ids = 100..599
             time_name = `timestamp
@@ -996,7 +1053,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as month1,months as month2,times as month3,seconds as month4,nanotimes as month5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_timestamp",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -1004,16 +1061,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_nanotime(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_nanotime"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`nanotime1`nanotime2`nanotime3`nanotime4`nanotime5,[INT,NANOTIME,NANOTIME,NANOTIME,NANOTIME,NANOTIME])
             db=database(dbPath,RANGE,[1,101,201,301,401,501,601])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_to_nanotime", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         n = 500
         id = np.arange(100, 600)
         date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100),
@@ -1031,7 +1090,7 @@ class TestPartitionedTableAppender:
                              'nanotime5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 500
             ids = 100..599
             time_name = `nanotime
@@ -1041,7 +1100,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as month1,months as month2,times as month3,seconds as month4,nanotimes as month5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_nanotime",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -1049,16 +1108,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_nanotimestamp(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_nanotimestamp"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`nanotimestamp1`nanotimestamp2`nanotimestamp3`nanotimestamp4`nanotimestamp5,[INT,NANOTIMESTAMP,NANOTIMESTAMP,NANOTIMESTAMP,NANOTIMESTAMP,NANOTIMESTAMP])
             db=database(dbPath,RANGE,[1,101,201,301,401,501,601])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_to_nanotimestamp", "pt", "id",
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id",
                                                 pool)
         n = 500
         id = np.arange(100, 600)
@@ -1077,7 +1138,7 @@ class TestPartitionedTableAppender:
                              'nanotimestamp4': second, 'nanotimestamp5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
+        script = f'''
             n = 500
             ids = 100..599
             time_name = `nanotimestamp
@@ -1087,7 +1148,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as month1,months as month2,times as month3,seconds as month4,nanotimes as month5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_nanotimestamp",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -1095,36 +1156,38 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_datehour(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender_to_datehour"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`datehour1`datehour2`datehour3`datehour4`datehour5,[INT,DATEHOUR,DATEHOUR,DATEHOUR,DATEHOUR,DATEHOUR])
             db=database(dbPath,RANGE,[1,100001,200001,300001,400001,500001,600001])
             pt = db.createPartitionedTable(t, `pt, `id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender_to_datehour", "pt", "id", pool)
-        n = 500000
-        id = np.arange(100000, 600000)
-        date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100000),
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
+        n = 500
+        id = np.arange(100, 600)
+        date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '1970-01-01'], 100),
                         dtype="datetime64[D]")
-        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
+        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100), dtype="datetime64")
         time = np.array(
             np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '1965-06-09T23:59:59.999'],
-                    100000), dtype="datetime64")
+                    100), dtype="datetime64")
         second = np.array(
-            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '1965-06-09T23:59:59'], 100000),
+            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '1965-06-09T23:59:59'], 100),
             dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
-                                     '1965-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
+                                     '1965-06-09T23:59:59.999008007'], 100), dtype="datetime64")
         data = pd.DataFrame({'id': id, 'datehour1': date, 'datehour2': month, 'datehour3': time, 'datehour4': second,
                              'datehour5': nanotime})
         num = appender.append(data)
         assert num == n
-        script = '''
-            n = 500000
-            ids = 100000..599999
+        script = f'''
+            n = 500
+            ids = 100..599
             time_name = `datehour
             dates =funcByName(time_name)(take([2012.01.01T00:00:00, NULL,1965.07.25T00:00:00, NULL, 1970.01.01T00:00:00],n))
             months =  funcByName(time_name)(take([1965.08.01T00:00:00, NULL,2012.02.01T00:00:00, 2012.03.01T00:00:00, NULL],n))
@@ -1132,7 +1195,7 @@ class TestPartitionedTableAppender:
             seconds = funcByName(time_name)(take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 1965.06.09T23:59:59],n))
             nanotimes = funcByName(time_name)(take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006,NULL, NULL, 1965.06.09T23:59:59.999008007],n))
             ex = table(ids as id,dates as month1,months as month2,times as month3,seconds as month4,nanotimes as month5)
-            re = select * from loadTable("dfs://test_PartitionedTableAppender_to_datehour",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = self.conn.run(script)
@@ -1140,16 +1203,18 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_to_date_partition_col_date(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://test_PartitionedTableAppender"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`date,[INT,DATE])
             db=database(dbPath,VALUE,2010.01.01+0..100)
             pt = db.createPartitionedTable(t, `pt, `date)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://test_PartitionedTableAppender", "pt", "date", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "date", pool)
         id = np.arange(100, 600)
         time1 = np.array(
             np.tile(['2010-01-01T00:00:00.000', '2010-02-01T05:12:48.426', 'NaT', 'NaT', '2010-03-03T23:59:59.999'],
@@ -1160,9 +1225,11 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_insert_one_row(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        script = '''
-            dbPath = "dfs://Rangedb"
+        script = f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:100,`id`val1`val2,[INT,DOUBLE,DATE])
@@ -1170,18 +1237,20 @@ class TestPartitionedTableAppender:
             pt = db.createPartitionedTable(t, `pt, `id)
         '''
         self.conn.run(script)
-        appender = ddb.PartitionedTableAppender("dfs://Rangedb", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         v = np.array('2012-01-01T00:00:00.000', dtype="datetime64")
         data = pd.DataFrame({"id": np.random.randint(1, 300, 1), "val1": np.random.rand(1), "val2": v})
         appender.append(data)
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_insert_all_datatype_arrayVector(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        scripts = """
-            if(existsDatabase("dfs://test"))
-                dropDatabase("dfs://test")
-            db=database("dfs://test",VALUE,2021.01.01..2022.01.01,engine="TSDB")
+        scripts = f"""
+            if(existsDatabase("{db_name}"))
+                dropDatabase("{db_name}")
+            db=database("{db_name}",VALUE,2021.01.01..2022.01.01,engine="TSDB")
             tb=table(1:0,`date`sym`ID`bool_av`char_av`short_av`int_av`long_av`float_av`double_av`date_av`month_av`datetime_av`timestamp_av`nanotimestamp_av,
                 [DATE,SYMBOL,INT, BOOL[], CHAR[], SHORT[], INT[], LONG[], FLOAT[], DOUBLE[], DATE[], MONTH[], DATETIME[], TIMESTAMP[], NANOTIMESTAMP[]])
             test=db.createPartitionedTable(tb,`test,`date,sortColumns=`sym`date)
@@ -1319,7 +1388,7 @@ class TestPartitionedTableAppender:
              "long_av": long_av, "float_av": float_av, "double_av": double_av, "date_av": date_av, "month_av": month_av,
              "datetime_av": datetime_av,
              "timestamp_av": timestamp_av, "nanotimestamp_av": nanotimestamp_av})
-        appender = ddb.PartitionedTableAppender("dfs://test", "test", "date", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "test", "date", pool)
         appender.append(df)
         time.sleep(2)
         df_expect = pd.DataFrame(
@@ -1328,15 +1397,17 @@ class TestPartitionedTableAppender:
              "long_av": long_av, "float_av": float_av, "double_av": double_av, "date_av": date_av_expect,
              "month_av": month_av_expect, "datetime_av": datetime_av_expect,
              "timestamp_av": timestamp_av_expect, "nanotimestamp_av": nanotimestamp_av})
-        assert_frame_equal(df_expect, self.conn.run("select * from test"))
+        assert_frame_equal(df_expect, self.conn.run(f"select * from loadTable('{db_name}',`test)"))
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     def test_PartitionedTableAppender_dfs_table_insert_all_datatype_array_vector_contain_None(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        scripts = """
-            if(existsDatabase("dfs://test"))
-                dropDatabase("dfs://test")
-            db=database("dfs://test",VALUE,2021.01.01..2022.01.01,engine="TSDB")
+        scripts = f"""
+            if(existsDatabase("{db_name}"))
+                dropDatabase("{db_name}")
+            db=database("{db_name}",VALUE,2021.01.01..2022.01.01,engine="TSDB")
             tb=table(1:0,`date`sym`ID`bool_av`char_av`short_av`int_av`long_av`float_av`double_av,
                 [DATE,SYMBOL,INT, BOOL[], CHAR[], SHORT[], INT[], LONG[], FLOAT[], DOUBLE[]])
             test=db.createPartitionedTable(tb,`test,`date,sortColumns=`sym`date)
@@ -1364,23 +1435,25 @@ class TestPartitionedTableAppender:
             {'date': date, 'sym': sym, 'ID': ID, "bool_av": bool_av, "char_av": char_av, "short_av": short_av,
              "int_av": int_av,
              "long_av": long_av, "float_av": float_av, "double_av": double_av})
-        appender = ddb.PartitionedTableAppender("dfs://test", "test", "date", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "test", "date", pool)
         appender.append(df)
         time.sleep(1)
-        assert_frame_equal(df, self.conn.run("select * from test"))
+        assert_frame_equal(df, self.conn.run(f"select * from loadTable('{db_name}',`test)"))
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_PartitionedTableAppender_dfs_table_alltype(self, _compress):
+    def test_PartitionedTableAppender_dfs_table_all_type(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1417,7 +1490,7 @@ class TestPartitionedTableAppender:
         })
         num = appender.append(df)
         assert num == 2
-        script = """
+        script = f"""
             symbolV = symbol[`sym1,'sym2']
             ipV = ipaddr["192.168.1.1", "0.0.0.0"]
             uuidV = uuid["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"]
@@ -1445,24 +1518,26 @@ class TestPartitionedTableAppender:
             uuidV as uuid,
             int128V as int128,
             blobV as blob)
-            re = select * from loadTable("dfs://PartitionedTableAppender_test",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj,t.values(),re.values())
         """
         re = self.conn.run(script)
         assert_array_equal(re, [True for _ in range(22)])
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
-    def test_PartitionedTableAppender_dfs_table_alltype_arrayvector(self, _compress):
+    def test_PartitionedTableAppender_dfs_table_all_type_array_vector(self, _compress):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + self.SEP + _compress
         pool = self.pool_list[_compress]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
             'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
@@ -1512,19 +1587,21 @@ class TestPartitionedTableAppender:
         })
         num = appender.append(df)
         assert num == 2
-        assert_frame_equal(df, self.conn.run("select * from pt"))
+        assert_frame_equal(df, self.conn.run(f"select * from loadTable('{db_name}',`pt)"))
 
     def test_PartitionedTableAppender_dfs_table_column_dateType_not_match_1(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1565,16 +1642,18 @@ class TestPartitionedTableAppender:
             pass
 
     def test_PartitionedTableAppender_dfs_table_column_dateType_not_match_2(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1615,16 +1694,18 @@ class TestPartitionedTableAppender:
             pass
 
     def test_PartitionedTableAppender_dfs_table_column_dateType_not_match_3(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1666,16 +1747,18 @@ class TestPartitionedTableAppender:
             pass
 
     def test_PartitionedTableAppender_dfs_table_column_dateType_not_match_4(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1717,16 +1800,18 @@ class TestPartitionedTableAppender:
             pass
 
     def test_PartitionedTableAppender_dfs_table_column_dateType_not_match_5(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "int", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "int", pool)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1768,16 +1853,18 @@ class TestPartitionedTableAppender:
             pass
 
     def test_PartitionedTableAppender_dfs_table_array_vector_not_match_1(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
             'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
@@ -1831,16 +1918,18 @@ class TestPartitionedTableAppender:
             pass
 
     def test_PartitionedTableAppender_dfs_table_array_vector_not_match_2(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
             'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
@@ -1888,20 +1977,22 @@ class TestPartitionedTableAppender:
                 np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object')]
         })
         assert appender.append(df) == 2
-        res = self.conn.run('''select * from loadTable("dfs://PartitionedTableAppender_test",`pt)''')
+        res = self.conn.run(f'''select * from loadTable("{db_name}",`pt)''')
         assert_frame_equal(res, df)
 
     def test_PartitionedTableAppender_dfs_table_array_vector_not_match_3(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
             'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
@@ -1954,16 +2045,18 @@ class TestPartitionedTableAppender:
             assert "The value [ True False] (column \"ipaddr\", row 0) must be of IPADDR[] type" in str(e)
 
     def test_PartitionedTableAppender_dfs_table_array_vector_not_match_4(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
-        self.conn.run('''
-            dbPath = "dfs://PartitionedTableAppender_test"
+        self.conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        appender = ddb.PartitionedTableAppender("dfs://PartitionedTableAppender_test", "pt", "id", pool)
+        appender = ddb.PartitionedTableAppender(db_name, "pt", "id", pool)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
             'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
@@ -2015,20 +2108,21 @@ class TestPartitionedTableAppender:
 
     def test_PartitionedTableAppender_no_pandasWarning(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        pool = ddb.DBConnectionPool(HOST, PORT, 4, 'admin', '123456')
-        conn.run("""
+        pool = ddb.DBConnectionPool(HOST, PORT, 4, USER, PASSWD)
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        conn.run(f"""
             tglobal=table(`a`b`c as names,[date(1), date(2), date(3)] as dates,rand(100.0,3) as prices);
             login(`admin,`123456);
-            dbPath = "dfs://demodb2";
-            if(existsDatabase(dbPath)){dropDatabase(dbPath)};
+            dbPath = "{db_name}";
+            if(existsDatabase(dbPath)){{dropDatabase(dbPath)}};
             db=database(dbPath,VALUE,1970.01.02..1970.01.04);
             db.createPartitionedTable(tglobal,`pt,`dates);
         """)
         df = conn.run("tglobal")
-        import warnings
         warnings.filterwarnings('error')
         try:
-            pta = ddb.PartitionedTableAppender("dfs://demodb2", "pt", "dates", pool)
+            pta = ddb.PartitionedTableAppender(db_name, "pt", "dates", pool)
             pta.append(df)
             del pta
         except Warning:
@@ -2052,6 +2146,8 @@ class TestPartitionedTableAppender:
 
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_PartitionedTableAppender_allNone_tables_with_numpyArray(self, val, valstr, valdecimal):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + random_string(5)
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
         df = pd.DataFrame({
@@ -2111,20 +2207,20 @@ class TestPartitionedTableAppender:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({'tab': df})
-        conn.run('''
-            dbPath = "dfs://test_dfs1"
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[INT,1],,'TSDB')
             pt = db.createPartitionedTable(tab, `pt, `ckeycol,,`ckeycol)
         ''')
-        pta = ddb.PartitionedTableAppender("dfs://test_dfs1", 'pt', 'ckeycol', pool)
+        pta = ddb.PartitionedTableAppender(db_name, 'pt', 'ckeycol', pool)
         assert pta.append(df) == 3
-        assert conn.run(r'rows = exec count(*) from loadTable("dfs://test_dfs1", "pt");rows') == 3
-        assert conn.run(r"""
-            ex_tab = select * from loadTable("dfs://test_dfs1", "pt");
+        assert conn.run(f'rows = exec count(*) from loadTable("{db_name}", "pt");rows') == 3
+        assert conn.run(f"""
+            ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
-            for(i in 1:tab.columns()){res.append!(ex_tab.column(i).isNull())};
+            for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
             all(res)
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
@@ -2133,11 +2229,12 @@ class TestPartitionedTableAppender:
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128', 'BLOB', 'DECIMAL32(0)', 'DECIMAL64(0)',
                     'DECIMAL128(0)']
         assert_array_equal(schema, ex_types)
-        conn.dropDatabase("dfs://test_dfs1")
         conn.close()
 
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_PartitionedTableAppender_allNone_tables_with_pythonList(self, val, valstr, valdecimal):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + random_string(5)
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         pool = self.__class__.pool_list["COMPRESS_CLOSE"]
         df = pd.DataFrame({
@@ -2197,20 +2294,20 @@ class TestPartitionedTableAppender:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({'tab': df})
-        conn.run('''
-            dbPath = "dfs://test_dfs1"
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[INT,1],,'TSDB')
             pt = db.createPartitionedTable(tab, `pt, `ckeycol,,`ckeycol)
         ''')
-        pta = ddb.PartitionedTableAppender("dfs://test_dfs1", 'pt', 'ckeycol', pool)
+        pta = ddb.PartitionedTableAppender(db_name, 'pt', 'ckeycol', pool)
         assert pta.append(df) == 3
-        assert conn.run(r'rows = exec count(*) from loadTable("dfs://test_dfs1", "pt");rows') == 3
-        assert conn.run(r"""
-            ex_tab = select * from loadTable("dfs://test_dfs1", "pt");
+        assert conn.run(fr'rows = exec count(*) from loadTable("{db_name}", "pt");rows') == 3
+        assert conn.run(fr"""
+            ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
-            for(i in 1:tab.columns()){res.append!(ex_tab.column(i).isNull())};
+            for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
             all(res)
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
@@ -2219,14 +2316,15 @@ class TestPartitionedTableAppender:
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128', 'BLOB', 'DECIMAL32(0)', 'DECIMAL64(0)',
                     'DECIMAL128(0)']
         assert_array_equal(schema, ex_types)
-        conn.dropDatabase("dfs://test_dfs1")
         conn.close()
 
     def test_PartitionedTableAppender_append_after_pool_deconstructed(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        pool = ddb.DBConnectionPool(HOST, PORT, 1, 'admin', '123456')
-        conn.run("""
-            dbPath = "dfs://test_dfs1"
+        pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
+        conn.run(f"""
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[INT,1])
@@ -2235,29 +2333,30 @@ class TestPartitionedTableAppender:
         """)
         df = pd.DataFrame({'c1': [3, 4], 'c2': ['c', 'd']})
         try:
-            pta = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName="pt", partitionColName='c1',
+            pta = ddb.PartitionedTableAppender(dbPath=db_name, tableName="pt", partitionColName='c1',
                                                dbConnectionPool=pool)
             pool.shutDown()
             pta.append(df)
         except RuntimeError as e:
             assert "DBConnectionPool has been shut down" in str(e)
         pool = ddb.DBConnectionPool(HOST, PORT, 2, 'admin', '123456')
-        pta = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName="pt", partitionColName='c1',
+        pta = ddb.PartitionedTableAppender(dbPath=db_name, tableName="pt", partitionColName='c1',
                                            dbConnectionPool=pool)
         del pool
         assert pta.append(df) == 2
-        assert conn.run("""
-            res = select * from loadTable('dfs://test_dfs1', 'pt') order by c1;
+        assert conn.run(f"""
+            res = select * from loadTable('{db_name}', 'pt') order by c1;
             ex = table(1 2 3 4 as c1, string(['a', 'b', 'c', 'd']) as c2);
             each(eqObj, res.values(), ex.values())
         """).all()
-        conn.dropDatabase('dfs://test_dfs1')
         conn.close()
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_PartitionedTableAppender_append_dataframe_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + random_string(5)
         pool = self.__class__.pool_list[_compress]
         data = []
         for i in range(10):
@@ -2317,17 +2416,17 @@ class TestPartitionedTableAppender:
             'cdecimal64': keys.DT_DECIMAL64,
             'cdecimal128': keys.DT_DECIMAL128
         }
-        self.conn.run("""
+        self.conn.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cblob`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, BLOB, IPADDR, UUID, INT128, DECIMAL32(2), DECIMAL64(11), DECIMAL128(36)];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        append = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName='pt', partitionColName='index',
+        append = ddb.PartitionedTableAppender(dbPath=db_name, tableName='pt', partitionColName='index',
                                               dbConnectionPool=pool)
         append.append(df)
         self.conn.run("""
@@ -2335,25 +2434,26 @@ class TestPartitionedTableAppender:
                 tableInsert(objByName(`t), i, false, i,i,i,i,i,i+23640,i,i,i,i,i,i,i,i,i,i, 'sym','str', 'blob', ipaddr("1.1.1.1"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),int128("e1671797c52e15f763380b45e841ec32"), decimal32(-2.11, 2), decimal64(0, 11), decimal128(-1.1, 36))
             }
         """)
-        res = self.conn.run("""
+        res = self.conn.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = self.conn.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
                     'DOUBLE', 'SYMBOL', 'STRING', 'BLOB', 'IPADDR', 'UUID', 'INT128', 'DECIMAL32(2)', 'DECIMAL64(11)',
                     'DECIMAL128(36)']
         assert_array_equal(tys, ex_types)
-        self.conn.dropDatabase("dfs://test_dfs1")
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_PartitionedTableAppender_append_dataframe_array_vector_with_numpy_order(self, _compress, _order,
                                                                                      _python_list):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + random_string(5)
         pool = self.pool_list[_compress]
         data = []
         for i in range(10):
@@ -2404,18 +2504,17 @@ class TestPartitionedTableAppender:
             'cdecimal64': keys.DT_DECIMAL64_ARRAY,
             'cdecimal128': keys.DT_DECIMAL128_ARRAY
         }
-        self.conn.run("""
+        self.conn.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL[], CHAR[], SHORT[], INT[],LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], TIMESTAMP[], NANOTIME[], NANOTIMESTAMP[], DATEHOUR[], FLOAT[], DOUBLE[], IPADDR[], UUID[], INT128[], DECIMAL32(2)[], DECIMAL64(11)[], DECIMAL128(36)[]];
             t=table(1:0, colName,colType)
-            share t as pyt;
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        append = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName='pt', partitionColName='index',
+        append = ddb.PartitionedTableAppender(dbPath=db_name, tableName='pt', partitionColName='index',
                                               dbConnectionPool=pool)
         assert append.append(df) == 11
         self.conn.run("""
@@ -2424,24 +2523,25 @@ class TestPartitionedTableAppender:
             }
             tableInsert(objByName(`t), 10, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
         """)
-        res = self.conn.run("""
+        res = self.conn.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = self.conn.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
                     'SECOND[]', 'DATETIME[]', 'TIMESTAMP[]', 'NANOTIME[]', 'NANOTIMESTAMP[]', 'DATEHOUR[]', 'FLOAT[]',
                     'DOUBLE[]', 'IPADDR[]', 'UUID[]', 'INT128[]', 'DECIMAL32(2)[]', 'DECIMAL64(11)[]',
                     'DECIMAL128(36)[]']
         assert_array_equal(tys, ex_types)
-        self.conn.dropDatabase("dfs://test_dfs1")
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_PartitionedTableAppender_append_null_dataframe_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + random_string(5)
         pool = self.pool_list[_compress]
         data = []
         origin_nulls = [None, np.nan, pd.NaT]
@@ -2494,17 +2594,17 @@ class TestPartitionedTableAppender:
             'cdecimal64': keys.DT_DECIMAL64,
             'cdecimal128': keys.DT_DECIMAL128
         }
-        self.conn.run("""
+        self.conn.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cblob`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, BLOB, IPADDR, UUID, INT128, DECIMAL32(0), DECIMAL64(0), DECIMAL128(0)];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        append = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName='pt', partitionColName='index',
+        append = ddb.PartitionedTableAppender(dbPath=db_name, tableName='pt', partitionColName='index',
                                               dbConnectionPool=pool)
         append.append(df)
         self.conn.run("""
@@ -2512,23 +2612,24 @@ class TestPartitionedTableAppender:
                 tableInsert(objByName(`t), i, NULL, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
             }
         """)
-        res = self.conn.run("""ex = select * from objByName(`t);
-                           res = select * from loadTable("dfs://test_dfs1", `pt);
+        res = self.conn.run(f"""ex = select * from objByName(`t);
+                           res = select * from loadTable("{db_name}", `pt);
                            all(each(eqObj, ex.values(), res.values()))""")
         assert res
-        tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = self.conn.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
                     'DOUBLE', 'SYMBOL', 'STRING', 'BLOB', 'IPADDR', 'UUID', 'INT128', 'DECIMAL32(0)', 'DECIMAL64(0)',
                     'DECIMAL128(0)']
         assert_array_equal(tys, ex_types)
-        self.conn.dropDatabase("dfs://test_dfs1")
 
     @pytest.mark.parametrize('_compress', ["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_PartitionedTableAppender_append_null_dataframe_array_vector_with_numpy_order(self, _compress, _order,
                                                                                           _python_list):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}" + random_string(5)
         pool = self.pool_list[_compress]
         data = []
         origin_nulls = [[None], [np.nan], [pd.NaT]]
@@ -2577,17 +2678,17 @@ class TestPartitionedTableAppender:
             'cdecimal64': keys.DT_DECIMAL64_ARRAY,
             'cdecimal128': keys.DT_DECIMAL128_ARRAY
         }
-        self.conn.run("""
+        self.conn.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL[], CHAR[], SHORT[], INT[],LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], TIMESTAMP[], NANOTIME[], NANOTIMESTAMP[], DATEHOUR[], FLOAT[], DOUBLE[], IPADDR[], UUID[], INT128[], DECIMAL32(0)[], DECIMAL64(0)[], DECIMAL128(0)[]];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        append = ddb.PartitionedTableAppender(dbPath="dfs://test_dfs1", tableName='pt', partitionColName='index',
+        append = ddb.PartitionedTableAppender(dbPath=db_name, tableName='pt', partitionColName='index',
                                               dbConnectionPool=pool)
         append.append(df)
         self.conn.run("""
@@ -2595,30 +2696,31 @@ class TestPartitionedTableAppender:
                 tableInsert(objByName(`t), i, NULL, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
             }
         """)
-        res = self.conn.run("""
+        res = self.conn.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = self.conn.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = self.conn.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
                     'SECOND[]', 'DATETIME[]', 'TIMESTAMP[]', 'NANOTIME[]', 'NANOTIMESTAMP[]', 'DATEHOUR[]', 'FLOAT[]',
                     'DOUBLE[]', 'IPADDR[]', 'UUID[]', 'INT128[]', 'DECIMAL32(0)[]', 'DECIMAL64(0)[]', 'DECIMAL128(0)[]']
         assert_array_equal(tys, ex_types)
-        self.conn.dropDatabase("dfs://test_dfs1")
 
     def test_PartitionedTableAppender_over_length(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run(f"""
-            dbPath = "dfs://valuedb"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath)){{dropDatabase(dbPath)}}
             tab=table(100:0,[`id,`test],[SYMBOL,STRING])
             db = database(dbPath, VALUE, `APPL`IBM`AMZN)
             pt = db.createPartitionedTable(tab, `pt, `test)
          """)
         pool = self.pool_list["COMPRESS_CLOSE"]
-        appender = ddb.PartitionedTableAppender(dbPath="dfs://valuedb", tableName="pt", partitionColName="test",
+        appender = ddb.PartitionedTableAppender(dbPath=db_name, tableName="pt", partitionColName="test",
                                                 dbConnectionPool=pool)
         df = pd.DataFrame({
             'id': ['0' * 256 * 1024],
@@ -2630,16 +2732,18 @@ class TestPartitionedTableAppender:
         conn.close()
 
     def test_PartitionedTableAppender_max_length_symbol_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run(f"""
-            dbPath = "dfs://valuedb"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath)){{dropDatabase(dbPath)}}
             tab=table(100:0,[`id,`test],[SYMBOL,STRING])
             db = database(dbPath, VALUE, `APPL`IBM`AMZN)
             pt = db.createPartitionedTable(tab, `pt, `test)
          """)
         pool = self.pool_list["COMPRESS_CLOSE"]
-        appender = ddb.PartitionedTableAppender(dbPath="dfs://valuedb", tableName="pt", partitionColName="test",
+        appender = ddb.PartitionedTableAppender(dbPath=db_name, tableName="pt", partitionColName="test",
                                                 dbConnectionPool=pool)
         df = pd.DataFrame({
             'id': ['0' * 255],
@@ -2650,16 +2754,18 @@ class TestPartitionedTableAppender:
         conn.close()
 
     def test_PartitionedTableAppender_max_length_string_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run(f"""
-            dbPath = "dfs://valuedb"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath)){{dropDatabase(dbPath)}}
             tab=table(100:0,[`id,`test],[STRING,STRING])
             db = database(dbPath, VALUE, `APPL`IBM`AMZN)
             pt = db.createPartitionedTable(tab, `pt, `test)
          """)
         pool = self.pool_list["COMPRESS_CLOSE"]
-        appender = ddb.PartitionedTableAppender(dbPath="dfs://valuedb", tableName="pt", partitionColName="test",
+        appender = ddb.PartitionedTableAppender(dbPath=db_name, tableName="pt", partitionColName="test",
                                                 dbConnectionPool=pool)
         df = pd.DataFrame({
             'id': ['0' * (256 * 1024 - 1)],
@@ -2670,16 +2776,18 @@ class TestPartitionedTableAppender:
         conn.close()
 
     def test_PartitionedTableAppender_max_length_blob_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         conn.run(f"""
-            dbPath = "dfs://valuedb"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath)){{dropDatabase(dbPath)}}
             tab=table(100:0,[`id,`test],[BLOB,STRING])
             db = database(dbPath, VALUE, `APPL`IBM`AMZN,engine=`TSDB)
             pt = db.createPartitionedTable(tab, `pt, `test,sortColumns=`test)
          """)
         pool = self.pool_list["COMPRESS_CLOSE"]
-        appender = ddb.PartitionedTableAppender(dbPath="dfs://valuedb", tableName="pt", partitionColName="test",
+        appender = ddb.PartitionedTableAppender(dbPath=db_name, tableName="pt", partitionColName="test",
                                                 dbConnectionPool=pool)
         df = pd.DataFrame({
             'id': ['0' * 256 * 1024],

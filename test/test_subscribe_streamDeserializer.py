@@ -5,6 +5,7 @@
 @Time: 2024/1/10 10:51
 @Note: 
 """
+import inspect
 from time import sleep
 
 import dolphindb as ddb
@@ -14,8 +15,7 @@ import pytest
 
 from basic_testing.prepare import PANDAS_VERSION
 from basic_testing.utils import equalPlus
-from setup.settings import *
-from setup.utils import get_pid
+from setup.settings import HOST, PORT, USER, PASSWD
 
 
 def handlerDataframe(df1: pd.DataFrame, df2: pd.DataFrame):
@@ -31,38 +31,9 @@ def handlerDataframe(df1: pd.DataFrame, df2: pd.DataFrame):
 class TestSubscribeStreamDeserializer(object):
     conn = ddb.Session(HOST, PORT, USER, PASSWD, enablePickle=False)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-        try:
-            self.conn.enableStreaming()
-        except RuntimeError:
-            pass
-        self.conn.run("""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){
-                stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-            }
-        """)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
     @classmethod
     def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
+        cls.conn.enableStreaming()
 
     def test_streamDeserializer_error(self):
         with pytest.raises(RuntimeError, match='<Exception> in StreamDeserializer: tuple size must be 2'):
@@ -84,6 +55,7 @@ class TestSubscribeStreamDeserializer(object):
     def test_streamDeserializer_single(self, dataType):
         if dataType in ("STRING", "UUID", "IPADDR", "INT128", "BLOB") and PANDAS_VERSION < (1, 4, 0):
             pytest.skip("pandas bug")
+        func_name = inspect.currentframe().f_code.co_name + f'_{dataType}'
         dtype = {
             'BOOL': 'object',
             'CHAR': np.float64,
@@ -112,7 +84,15 @@ class TestSubscribeStreamDeserializer(object):
             'DECIMAL128': 'object',
         }
         script = f"""
-            share streamTable(1000:0,`time`sym`blob`dataType,[TIMESTAMP,SYMBOL,BLOB,{dataType}{"(2)" if "DECIMAL" in dataType else ""}]) as `outTables;
+            all_pubTables = getStreamingStat().pubTables
+            for(pubTables in all_pubTables){{
+                if (pubTables.tableName==`{func_name}){{
+                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
+                    break
+                }}
+            }}
+            try{{dropStreamTable(`{func_name})}}catch(ex){{}}
+            share streamTable(1000:0,`time`sym`blob`dataType,[TIMESTAMP,SYMBOL,BLOB,{dataType}{"(2)" if "DECIMAL" in dataType else ""}]) as `{func_name};
             timestampv=2024.01.10T12:00:00.000+1..100;
             dataType_BOOL=take(true false 00b,100);
             dataType_CHAR=take(1c 0c 00c,100);
@@ -139,24 +119,24 @@ class TestSubscribeStreamDeserializer(object):
             dataType_DECIMAL32=take(decimal32("3.14" "0" "nan",2),100);
             dataType_DECIMAL64=take(decimal64("3.14" "0" "nan",2),100);
             dataType_DECIMAL128=take(decimal128("3.14" "0" "nan",2),100);
-            share table(timestampv as `timestampv,dataType_{dataType} as dataType) as `pub_t1;
-            share table(timestampv as `timestampv,dataType_{dataType} as dataType) as `pub_t2;
-            d=dict(`msg1`msg2,[pub_t1,pub_t2]);
-            replay(inputTables=d, outputTables=`outTables, dateColumn=`timestampv, timeColumn=`timestampv);
+            share table(timestampv as `timestampv,dataType_{dataType} as dataType) as `{func_name}_1;
+            share table(timestampv as `timestampv,dataType_{dataType} as dataType) as `{func_name}_2;
+            d=dict(`msg1`msg2,[{func_name}_1,{func_name}_2]);
+            replay(inputTables=d, outputTables=`{func_name}, dateColumn=`timestampv, timeColumn=`timestampv);
         """
         self.conn.run(script)
         sd = ddb.streamDeserializer({
-            "msg1": ("", "pub_t1"),
-            "msg2": ("", "pub_t2"),
+            "msg1": ("", f"{func_name}_1"),
+            "msg2": ("", f"{func_name}_2"),
         })
         df1 = pd.DataFrame(columns=['timestampv', 'dataType'], dtype='object')
         df2 = pd.DataFrame(columns=['timestampv', 'dataType'], dtype='object')
-        self.conn.subscribe(host=HOST, port=PORT, handler=handlerDataframe(df1, df2), tableName="outTables",
+        self.conn.subscribe(host=HOST, port=PORT, handler=handlerDataframe(df1, df2), tableName=func_name,
                             actionName="action", offset=0, streamDeserializer=sd,
                             userName=USER, password=PASSWD)
         sleep(1)
-        self.conn.unsubscribe(HOST, PORT, "outTables", "action")
-        df_expect = self.conn.run('pub_t1')
+        self.conn.unsubscribe(HOST, PORT, func_name, "action")
+        df_expect = self.conn.run(f'{func_name}_1')
         df1['timestampv'] = df1['timestampv'].astype('datetime64[ns]')
         df2['timestampv'] = df2['timestampv'].astype('datetime64[ns]')
         df1['dataType'] = df1['dataType'].astype(dtype[dataType])
@@ -179,8 +159,17 @@ class TestSubscribeStreamDeserializer(object):
                               "DATETIME", "TIMESTAMP", "NANOTIME", "NANOTIMESTAMP", "FLOAT", "DOUBLE",
                               "UUID", "DATEHOUR", "IPADDR", "INT128", "DECIMAL32", "DECIMAL64", "DECIMAL128"])
     def test_streamDeserializer_array_vector(self, dataType):
+        func_name = inspect.currentframe().f_code.co_name + f'_{dataType}'
         script = f"""
-            share streamTable(1000:0,`time`sym`blob`dataType,[TIMESTAMP,SYMBOL,BLOB,{dataType}{"(2)" if "DECIMAL" in dataType else ""}[]]) as `outTables;
+            all_pubTables = getStreamingStat().pubTables
+            for(pubTables in all_pubTables){{
+                if (pubTables.tableName==`{func_name}){{
+                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
+                    break
+                }}
+            }}
+            try{{dropStreamTable(`{func_name})}}catch(ex){{}}
+            share streamTable(1000:0,`time`sym`blob`dataType,[TIMESTAMP,SYMBOL,BLOB,{dataType}{"(2)" if "DECIMAL" in dataType else ""}[]]) as `{func_name};
             timestampv=2024.01.10T12:00:00.000+1..34;
             dataType_BOOL=array(BOOL[]).append!(cut(take(true false 00b,100),3));
             dataType_CHAR=array(CHAR[]).append!(cut(take(1c 0c 00c,100),3));
@@ -205,24 +194,24 @@ class TestSubscribeStreamDeserializer(object):
             dataType_DECIMAL32=array(DECIMAL32(2)[]).append!(cut(take(decimal32("3.14" "0" "nan",2),100),3));
             dataType_DECIMAL64=array(DECIMAL64(2)[]).append!(cut(take(decimal64("3.14" "0" "nan",2),100),3));
             dataType_DECIMAL128=array(DECIMAL128(2)[]).append!(cut(take(decimal128("3.14" "0" "nan",2),100),3));
-            share table(timestampv as `timestampv,dataType_{dataType} as dataType) as `pub_t1;
-            share table(timestampv as `timestampv,dataType_{dataType} as dataType) as `pub_t2;
-            d=dict(`msg1`msg2,[pub_t1,pub_t2]);
-            replay(inputTables=d, outputTables=`outTables, dateColumn=`timestampv, timeColumn=`timestampv);
+            share table(timestampv as `timestampv,dataType_{dataType} as dataType) as `{func_name}_1;
+            share table(timestampv as `timestampv,dataType_{dataType} as dataType) as `{func_name}_2;
+            d=dict(`msg1`msg2,[{func_name}_1,{func_name}_2]);
+            replay(inputTables=d, outputTables=`{func_name}, dateColumn=`timestampv, timeColumn=`timestampv);
         """
         self.conn.run(script)
         sd = ddb.streamDeserializer({
-            "msg1": ["", "pub_t1"],
-            "msg2": ["", "pub_t2"],
+            "msg1": ["", f"{func_name}_1"],
+            "msg2": ["", f"{func_name}_2"],
         }, session=self.conn)
         df1 = pd.DataFrame(columns=['timestampv', 'dataType'], dtype='object')
         df2 = pd.DataFrame(columns=['timestampv', 'dataType'], dtype='object')
-        self.conn.subscribe(host=HOST, port=PORT, handler=handlerDataframe(df1, df2), tableName="outTables",
+        self.conn.subscribe(host=HOST, port=PORT, handler=handlerDataframe(df1, df2), tableName=func_name,
                             actionName="action", offset=0, streamDeserializer=sd,
                             userName=USER, password=PASSWD)
         sleep(1)
-        self.conn.unsubscribe(HOST, PORT, "outTables", "action")
-        df_expect = self.conn.run('pub_t1')
+        self.conn.unsubscribe(HOST, PORT, func_name, "action")
+        df_expect = self.conn.run(f"{func_name}_1")
         df1['timestampv'] = df1['timestampv'].astype('datetime64[ns]')
         df2['timestampv'] = df2['timestampv'].astype('datetime64[ns]')
         assert equalPlus(df1["timestampv"], df_expect["timestampv"])

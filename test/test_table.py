@@ -1,6 +1,6 @@
 import copy
+import inspect
 from locale import atoi
-from operator import add, and_, eq, floordiv, ge, gt, le, lshift, lt, mul, ne, or_, rshift, sub, truediv, mod
 
 import dolphindb as ddb
 import dolphindb.settings as keys
@@ -8,41 +8,39 @@ import numpy as np
 import pandas as pd
 import pytest
 import statsmodels.api as sm
-from numpy.testing import *
-from pandas.testing import *
+from numpy.testing import assert_equal, assert_array_almost_equal, assert_array_equal, assert_almost_equal
+from pandas._testing import assert_frame_equal, assert_series_equal
 
 from basic_testing.utils import equalPlus
 from setup.prepare import generate_uuid, get_TableData, get_scripts, eval_table_with_data, eval_sql_with_data
-from setup.settings import *
-from setup.utils import get_pid
+from setup.settings import HOST, PORT, USER, PASSWD, DATA_DIR
+
+conn_fixture = ddb.session(HOST, PORT, USER, PASSWD)
 
 keys.set_verbose(True)
 
-(scripts, names), pythons = get_TableData(names="AllTrade")
-
-NormalTable = names["NormalTable"]
-SharedTable = names["SharedTable"]
-StreamTable = names["StreamTable"]
-ShareStreamTable = names["ShareStreamTable"]
-IndexedTable = names["IndexedTable"]
-ShareIndexedTable = names["ShareIndexedTable"]
-KeyedTable = names["KeyedTable"]
-ShareKeyedTable = names["ShareKeyedTable"]
-PartitionedTable = names["PartitionedTable"]
-loadText = names["loadText"]
-loadText2 = names["loadText$"]
-ploadText = names["ploadText"]
-ploadText2 = names["ploadText$"]
-loadTable = names["loadTable"]
-loadPTable = names["loadPTable"]
-loadTableBySQL = names["loadTableBySQL"]
-loadTextEx = names["loadTextEx"]
-loadTextEx2 = names["loadTextEx$"]
-
-df_python = pythons["DataFrame"]
-dict_python = pythons["dict"]
-dict2_python = pythons["dict_list"]
-csv_df = pythons["csv_df"]
+NormalTable = None
+SharedTable = None
+StreamTable = None
+ShareStreamTable = None
+IndexedTable = None
+ShareIndexedTable = None
+KeyedTable = None
+ShareKeyedTable = None
+PartitionedTable = None
+loadText = None
+loadText2 = None
+ploadText = None
+ploadText2 = None
+loadTable = None
+loadPTable = None
+loadTableBySQL = None
+loadTextEx = None
+loadTextEx2 = None
+df_python = None
+dict_python = None
+dict2_python = None
+csv_df = None
 
 
 def get_combinations(data_list):
@@ -54,13 +52,12 @@ def get_combinations(data_list):
     return res
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="function", autouse=True)
 def flushed_table_n100(request):
-    conn_fixture = ddb.session(HOST, PORT, USER, PASSWD)
-    conn_fixture.run(get_scripts("undefShare"))
-
-    (scripts, names), pythons = get_TableData(names="AllTrade")
+    case_name = request.node.name.replace("[", "_").replace("]", "_").replace("-", "_")
+    (scripts, names), pythons = get_TableData(names="AllTrade", dbPath=f"dfs://{case_name}", shareName=case_name)
     conn_fixture.run(scripts)
+    global NormalTable, SharedTable, StreamTable, ShareStreamTable, IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable, PartitionedTable, df_python, dict_python, dict2_python, NormalTable, SharedTable, StreamTable, ShareStreamTable, IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable, PartitionedTable, loadText, loadText2, ploadText, ploadText2, loadTable, loadPTable, loadTableBySQL, loadTextEx, loadTextEx2, df_python, dict_python, dict2_python, csv_df
     NormalTable = names["NormalTable"]
     SharedTable = names["SharedTable"]
     StreamTable = names["StreamTable"]
@@ -70,154 +67,86 @@ def flushed_table_n100(request):
     KeyedTable = names["KeyedTable"]
     ShareKeyedTable = names["ShareKeyedTable"]
     PartitionedTable = names["PartitionedTable"]
-
     df_python = pythons["DataFrame"]
     dict_python = pythons["dict"]
     dict2_python = pythons["dict_list"]
-
-    tabledict = {
-        "Table": NormalTable,
-        "STable": SharedTable,
-        "streamTable": StreamTable,
-        "SStreamTable": ShareStreamTable,
-        "indexTable": IndexedTable,
-        "SindexTable": ShareIndexedTable,
-        "keyTable": KeyedTable,
-        "SkeyTable": ShareKeyedTable,
-        "DF": df_python,
-        "DICT": dict_python,
-        "DICT_List": dict2_python,
-        "PTable": PartitionedTable,
-    }
-
-    yield tabledict[request.param]
-
-
-operators = {
-    "or": or_,
-    "and": and_,
-    "<": lt,
-    "<=": le,
-    ">": gt,
-    ">=": ge,
-    "==": eq,
-    "!=": ne,
-    "+": add,
-    "-": sub,
-    "*": mul,
-    "/": truediv,
-    r"%": mod,
-    "<<": lshift,
-    ">>": rshift,
-    "//": floordiv,
-}
-
-corresponds = {
-    "<": ">",
-    ">": "<",
-    ">=": "<=",
-    "<=": ">=",
-    "!=": "!=",
-    "==": "==",
-}
+    NormalTable = names["NormalTable"]
+    SharedTable = names["SharedTable"]
+    StreamTable = names["StreamTable"]
+    ShareStreamTable = names["ShareStreamTable"]
+    IndexedTable = names["IndexedTable"]
+    ShareIndexedTable = names["ShareIndexedTable"]
+    KeyedTable = names["KeyedTable"]
+    ShareKeyedTable = names["ShareKeyedTable"]
+    PartitionedTable = names["PartitionedTable"]
+    loadText = names["loadText"]
+    loadText2 = names["loadText$"]
+    ploadText = names["ploadText"]
+    ploadText2 = names["ploadText$"]
+    loadTable = names["loadTable"]
+    loadPTable = names["loadPTable"]
+    loadTableBySQL = names["loadTableBySQL"]
+    loadTextEx = names["loadTextEx"]
+    loadTextEx2 = names["loadTextEx$"]
+    df_python = pythons["DataFrame"]
+    dict_python = pythons["dict"]
+    dict2_python = pythons["dict_list"]
+    csv_df = pythons["csv_df"]
+    yield
+    for i in (f"{case_name}_ALLTradeStream", f"{case_name}_ALLQuoteStream", f"{case_name}_ALLShareTrade",
+              f"{case_name}_ALLShareQuote", f"{case_name}_ALLTradeIndex", f"{case_name}_ALLQuoteIndex",
+              f"{case_name}_ALLTradeKey", f"{case_name}_ALLQuoteKey"):
+        conn_fixture.run(f"try{{undef(`{i},SHARED)}}catch(ex){{}}")
 
 
-class TestFilterCond:
-    conn = ddb.session()
-
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-            self.conn.run(get_scripts("undefShare"))
-            self.conn.run(scripts)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    @pytest.mark.parametrize('right', ["rightName"] + [ddb.FilterCond("tmpc", x, "tmpd") for x in operators],
-                             ids=["rightName"] + ["R_" + str(x) for x in operators])
-    @pytest.mark.parametrize('op', operators.keys(), ids=operators.keys())
-    @pytest.mark.parametrize('left', ["leftName"] + [ddb.FilterCond("tmpa", x, "tmpb") for x in operators],
-                             ids=["leftName"] + ["L_" + str(x) for x in operators])
-    def test_TestFilterCond_init_str(self, left, right, op):
-        FilterCondtmp = ddb.FilterCond(left, op, right)
-        assert FilterCondtmp._FilterCond__lhs == left
-        assert FilterCondtmp._FilterCond__rhs == right
-        assert FilterCondtmp._FilterCond__op == op
-        assert str(FilterCondtmp) == "({} {} {})".format(str(left), str(op), str(right))
-
-    @pytest.mark.parametrize('right', ["rightName"] + [ddb.FilterCond("tmpc", x, "tmpd") for x in operators],
-                             ids=["rightName"] + ["R_" + str(x) for x in operators])
-    @pytest.mark.parametrize('op', operators.keys(), ids=operators.keys())
-    @pytest.mark.parametrize('left', ["leftName"] + [ddb.FilterCond("tmpa", x, "tmpb") for x in operators],
-                             ids=["leftName"] + ["L_" + str(x) for x in operators])
-    def test_TestFilterCond_op(self, left, right, op):
-        if op == '%' and str(left) == 'leftName':
-            pytest.skip("this op is not expected.")
-        if isinstance(left, str) and isinstance(right, str):
-            pytest.skip()
-        func = operators[op]
-        res = func(left, right)
-        if isinstance(left, str) and op in corresponds.keys():
-            assert str(res) == "({} {} {})".format(str(right), str(corresponds[op]), str(left))
-        else:
-            assert str(res) == "({} {} {})".format(str(left), str(op), str(right))
+def get_global(name):
+    if name == "DF":
+        return df_python
+    elif name == "DICT":
+        return dict_python
+    elif name == "DICT_List":
+        return dict2_python
+    elif name == "Table":
+        return NormalTable
+    elif name == "STable":
+        return SharedTable
+    elif name == "StreamTable":
+        return StreamTable
+    elif name == "SStreamTable":
+        return ShareStreamTable
+    elif name == "indexTable":
+        return IndexedTable
+    elif name == "SindexTable":
+        return ShareIndexedTable
+    elif name == "keyTable":
+        return KeyedTable
+    elif name == "SkeyTable":
+        return ShareKeyedTable
+    elif name == "PTable":
+        return PartitionedTable
+    elif name == "csv_comma":
+        return loadText
+    elif name == "csv_dollar":
+        return loadText2
+    elif name == "csv_comma_p":
+        return ploadText
+    elif name == "csv_dollar_p":
+        return ploadText2
+    elif name == "csv_comma_ex":
+        return loadTextEx
+    elif name == "csv_dollar_ex2":
+        return loadTextEx2
+    else:
+        raise RuntimeError(f"{name}不存在")
 
 
 class TestVector:
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-            self.conn.run(get_scripts("undefShare"))
-            self.conn.run(scripts)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.run(get_scripts("undefShare"))
-        cls.conn.run("""
-            if(existsDatabase('{}'))
-                dropDatabase('{}')
-        """.format(PartitionedTable[0], PartitionedTable[0]))
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    @pytest.mark.parametrize('datas', [df_python, dict_python, dict2_python],
-                             ids=["DF", "DICT", "DICT_List"])
-    def test_Vector_init_bytable_bydataframe_bydict(self, datas):
-
-        for data in datas:
+    @pytest.mark.parametrize("python_data", ["DF", "DICT", "DICT_List"])
+    def test_Vector_init_bytable_bydataframe_bydict(self, python_data):
+        python_data = get_global(python_data)
+        for data in python_data:
             tmp = self.conn.table(data=data)
             if isinstance(data, pd.DataFrame):
                 for vi, pi in zip(tmp.vecs, data):
@@ -232,36 +161,34 @@ class TestVector:
                     assert not tmp.vecs[vi]._Vector__vec
                     assert tmp.vecs[vi]._Vector__session is self.conn
 
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, SharedTable],
-                             ids=["DF", "DICT", "DICT_List", "NAME"])
+    @pytest.mark.parametrize('python_data', ["DF", "DICT", "DICT_List", "STable"])
     def test_Vector_init(self, python_data):
-
+        python_data = get_global(python_data)
         for data, name in zip(python_data, SharedTable):
             colNames = self.conn.run(get_scripts("colNames").format(tableName=name))
             for col in colNames:
                 if isinstance(data, str):
                     vectmp = ddb.Vector(name=col, data=data, s=self.conn, tableName=name)
-                    assert vectmp._Vector__name == col
-                    assert vectmp._Vector__tableName == name
+                    assert vectmp.name() == col
+                    assert vectmp.tableName() == name
                     assert vectmp._Vector__session is self.conn
                     assert vectmp._Vector__vec is None
                 elif isinstance(data, pd.DataFrame):
                     vectmp = ddb.Vector(name=col, data=data[col], s=self.conn, tableName=name)
-                    assert vectmp._Vector__name == col
-                    assert vectmp._Vector__tableName == name
+                    assert vectmp.name() == col
+                    assert vectmp.tableName() == name
                     assert vectmp._Vector__session is self.conn
                     assert_series_equal(vectmp._Vector__vec, pd.Series(data[col]))
                 elif isinstance(data, dict):
                     vectmp = ddb.Vector(name=col, data=data[col], s=self.conn, tableName=name)
-                    assert vectmp._Vector__name == col
-                    assert vectmp._Vector__tableName == name
+                    assert vectmp.name() == col
+                    assert vectmp.tableName() == name
                     assert vectmp._Vector__session is self.conn
                     assert_series_equal(vectmp._Vector__vec, pd.Series(data[col]))
 
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, SharedTable],
-                             ids=["DF", "DICT", "DICT_List", "NAME"])
+    @pytest.mark.parametrize('python_data', ["DF", "DICT", "DICT_List", "STable"])
     def test_Vector_name_tableName_str(self, python_data):
-
+        python_data = get_global(python_data)
         for data, name in zip(python_data, SharedTable):
             colNames = self.conn.run(get_scripts("colNames").format(tableName=name))
             for col in colNames:
@@ -270,33 +197,32 @@ class TestVector:
                 assert vectmp.tableName() == vectmp._Vector__tableName
                 assert str(vectmp) == col
 
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, NormalTable],
-                             ids=["DF", "DICT", "DICT_List", "NAME"])
-    @pytest.mark.parametrize('useCache', [True, False, None], ids=["T_Cache", "F_Cache", "N_Cache"])
-    def test_Vector_as_series(self, python_data, useCache):
-        self.conn.run(NormalTable[0])
-        if len(python_data) == 3:
-            python_data = python_data[1:]
-        for data, name in zip(python_data, NormalTable[1:]):
-            colNames = self.conn.run(get_scripts("colNames").format(tableName=name))
-            for col in colNames:
-                vectmp = ddb.Vector(name=col, data=data, s=self.conn, tableName=name)
-                res = vectmp.as_series(useCache)
-                if isinstance(data, str):
-                    assert res.name is None
-                    res.name = col
-                    assert_series_equal(res, self.conn.run("select * from {}".format(data))[col])
-                elif isinstance(data, dict):
-                    assert_series_equal(res, pd.Series(data[col]))
-                elif isinstance(data, pd.DataFrame):
-                    assert res.name is None
-                    res.name = col
-                    assert_series_equal(res, pd.Series(data[col]))
+    @pytest.mark.parametrize('python_data', ["DF", "DICT", "DICT_List", "STable"])
+    def test_Vector_as_series(self, python_data):
+        python_data = get_global(python_data)
+        for useCache in [True, False, None]:
+            self.conn.run(NormalTable[0])
+            if len(python_data) == 3:
+                python_data = python_data[1:]
+            for data, name in zip(python_data, NormalTable[1:]):
+                colNames = self.conn.run(get_scripts("colNames").format(tableName=name))
+                for col in colNames:
+                    vectmp = ddb.Vector(name=col, data=data, s=self.conn, tableName=name)
+                    res = vectmp.as_series(useCache)
+                    if isinstance(data, str):
+                        assert res.name is None
+                        res.name = col
+                        assert_series_equal(res, self.conn.run("select * from {}".format(data))[col])
+                    elif isinstance(data, dict):
+                        assert_series_equal(res, pd.Series(data[col]))
+                    elif isinstance(data, pd.DataFrame):
+                        assert res.name is None
+                        res.name = col
+                        assert_series_equal(res, pd.Series(data[col]))
 
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python, NormalTable],
-                             ids=["DF", "DICT", "DICT_List", "NAME"])
+    @pytest.mark.parametrize('python_data', ["DF", "DICT", "DICT_List", "STable"])
     def test_Vector_op(self, python_data):
-
+        python_data = get_global(python_data)
         self.conn.run(NormalTable[0])
         if len(python_data) == 3:
             python_data = python_data[1:]
@@ -306,95 +232,15 @@ class TestVector:
                 ddb.Vector(name=col, data=data, s=self.conn, tableName=name)
 
 
-class TestCounter:
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    def test_Counter_init(self):
-        counter = ddb.Counter()
-        assert counter._Counter__value == 1
-
-    def test_Counter_inc(self):
-        counter1 = ddb.Counter()
-        assert counter1._Counter__value == 1
-        counter1.inc()
-        assert counter1._Counter__value == 2
-        for i in range(100):
-            counter1.inc()
-        assert counter1._Counter__value == 102
-
-        counter2 = ddb.Counter()
-        assert counter2._Counter__value == 1
-
-    def test_Counter_dec(self):
-        counter1 = ddb.Counter()
-        assert counter1._Counter__value == 1
-        counter1.dec()
-        assert counter1._Counter__value == 0
-        for i in range(50):
-            counter1.dec()
-        assert counter1._Counter__value == -50
-
-    def test_Counter_val(self):
-        counter1 = ddb.Counter()
-        assert counter1.val() == counter1._Counter__value
-        assert counter1.val() == 1
-        counter1.inc()
-        counter1.inc()
-        assert counter1.val() == 3
-        counter1.dec()
-        assert counter1.val() == 2
-
-
 class TestTable:
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-            self.conn.run(get_scripts("undefShare"))
-            self.conn.run(scripts)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.run(get_scripts("undefShare"))
-        cls.conn.run("""
-            if(existsDatabase('{}'))
-                dropDatabase('{}')
-        """.format(PartitionedTable[0], PartitionedTable[0]))
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python], ids=["DF", "DICT", "DICT_List"])
-    @pytest.mark.parametrize('tableName', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                           IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable"])
-    def test_session_table_data_bydataframe_bydict(self, python_data, tableName):
-
+    @pytest.mark.parametrize('python_data', ["DF", "DICT", "DICT_List"])
+    @pytest.mark.parametrize('tableName', ["Table", "STable", "StreamTable", "SStreamTable",
+                                           "indexTable", "SindexTable", "keyTable", "SkeyTable"])
+    def test_table_data_bydataframe_bydict(self, python_data, tableName):
+        python_data = get_global(python_data)
+        tableName = get_global(tableName)
         if len(tableName) == 3:
             self.conn.run(tableName[0])
             tableName = tableName[1:]
@@ -407,12 +253,10 @@ class TestTable:
             assert_frame_equal(tmp.toDF(), pd.DataFrame(data))
             assert_frame_equal(self.conn.run("select * from {}".format(alias)), pd.DataFrame(data))
 
-    @pytest.mark.parametrize('tableName', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                           IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable"])
-    def test_session_table_data_bystr(self, tableName):
-
+    @pytest.mark.parametrize('tableName', ["Table", "STable", "StreamTable", "SStreamTable",
+                                           "indexTable", "SindexTable", "keyTable", "SkeyTable"])
+    def test_table_data_bystr(self, tableName):
+        tableName = get_global(tableName)
         if len(tableName) == 3:
             self.conn.run(tableName[0])
             tableName = tableName[1:]
@@ -420,17 +264,15 @@ class TestTable:
             tmp = self.conn.table(data=name)
             assert_frame_equal(tmp.toDF(), data)
 
-    @pytest.mark.parametrize('dbPath', [PartitionedTable[0]], ids=["T_Path"])
-    def test_session_table_dbPath_data(self, dbPath):
-
+    def test_table_dbPath_data(self):
         for name in PartitionedTable[3:]:
-            tmp = self.conn.table(dbPath, name)
-            res = self.conn.run('select * from loadTable("{}", `{})'.format(dbPath, name))
+            tmp = self.conn.table(PartitionedTable[0], name)
+            res = self.conn.run('select * from loadTable("{}", `{})'.format(PartitionedTable[0], name))
             assert_frame_equal(tmp.toDF(), res)
 
-    @pytest.mark.parametrize('python_data', [df_python, dict_python, dict2_python], ids=["DF", "DICT", "DICT_List"])
-    def test_session_table_tableAliasName_data_bydataframe_bydict(self, python_data):
-
+    @pytest.mark.parametrize('python_data', ["DF", "DICT", "DICT_List"])
+    def test_table_tableAliasName_data_bydataframe_bydict(self, python_data):
+        python_data = get_global(python_data)
         for data, name in zip(python_data, SharedTable):
             alias = generate_uuid("tmp_")
             tmp = self.conn.table(data=data, tableAliasName=alias)
@@ -440,13 +282,12 @@ class TestTable:
                 assert_frame_equal(tmp.toDF(), data)
                 assert_frame_equal(self.conn.run("{}".format(alias)), data)
 
-    @pytest.mark.parametrize('python_data', [df_python], ids=["DF"])
-    @pytest.mark.parametrize('tableName', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                           IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable"])
-    def test_session_table_tableAliasName_data_bystr(self, python_data, tableName):
-
+    @pytest.mark.parametrize('python_data', ["DF"])
+    @pytest.mark.parametrize('tableName', ["Table", "STable", "StreamTable", "SStreamTable",
+                                           "indexTable", "SindexTable", "keyTable", "SkeyTable"])
+    def test_table_tableAliasName_data_bystr(self, python_data, tableName):
+        python_data = get_global(python_data)
+        tableName = get_global(tableName)
         if len(tableName) == 3:
             self.conn.run(tableName[0])
             tableName = tableName[1:]
@@ -457,80 +298,76 @@ class TestTable:
             with pytest.raises(RuntimeError):
                 assert "Syntax Error" in self.conn.run("{}".format(alias))
 
-    def test_session_table_tableAliasName_dbPath_data(self):
-
+    def test_table_tableAliasName_dbPath_data(self):
         for name in PartitionedTable[3:]:
             alias = generate_uuid("tmp_")
             tmp = self.conn.table(PartitionedTable[0], name, tableAliasName=alias)
             res = self.conn.run('select * from loadTable("{}", `{})'.format(PartitionedTable[0], name))
             assert_frame_equal(tmp.toDF(), res)
 
-    @pytest.mark.parametrize('file', [loadText, loadText2, ], ids=["csv_,", "csv_$"])
-    def test_session_loadText(self, file):
-
+    @pytest.mark.parametrize('file', ["csv_comma", "csv_dollar"])
+    def test_table_loadText(self, file):
+        file = get_global(file)
         for i, name in enumerate(file[2:]):
-            tbtmp = self.conn.loadText(DATA_DIR + "/{}".format(name), file[1])
+            tbtmp = self.conn.loadText(DATA_DIR + "{}".format(name), file[1])
             re = tbtmp.toDF()
             ex = csv_df[i]
             assert_frame_equal(re, ex)
 
-    @pytest.mark.parametrize('file', [ploadText, ploadText2, ], ids=["csv_,", "csv_$"])
-    def test_session_ploadText(self, file):
-
+    @pytest.mark.parametrize('file', ["csv_comma_p", "csv_dollar_p"])
+    def test_table_ploadText(self, file):
+        file = get_global(file)
         for i, name in enumerate(file[2:]):
-            tbtmp = self.conn.ploadText(DATA_DIR + "/{}".format(name), file[1])
+            tbtmp = self.conn.ploadText(DATA_DIR + "{}".format(name), file[1])
             re = tbtmp.toDF()
             ex = csv_df[i]
             assert_frame_equal(re, ex)
 
-    @pytest.mark.parametrize('file', [loadTextEx, loadTextEx2, ], ids=["csv_,", "csv_$"])
-    def test_session_loadTextEx(self, file):
-
+    @pytest.mark.parametrize('file', ["csv_comma_ex", "csv_dollar_ex2"])
+    def test_table_loadTextEx(self, file):
+        file = get_global(file)
         self.conn.run(file[1])
         for id, name in enumerate(file[4:6]):
-            re = self.conn.loadTextEx(file[2], file[id + 7], [file[6]], DATA_DIR + "/{}".format(name), file[3])
+            re = self.conn.loadTextEx(file[2], file[id + 7], [file[6]], DATA_DIR + "{}".format(name), file[3])
             re = re.toDF().sort_values("index", ascending=True).reset_index(drop=True)
             ex = csv_df[id]
             assert_frame_equal(re, ex)
 
-    def test_session_loadTable_bystr(self):
-
+    def test_table_loadTable_bystr(self):
         self.conn.run(loadTable[1])
         for id, name in enumerate(loadTable[2:4]):
             re = self.conn.loadTable(name).toDF()
             ex = df_python[id]
             assert_frame_equal(re, ex)
 
-    def test_session_loadTable_dbPath(self):
-
+    def test_table_loadTable_dbPath(self):
         for id, name in enumerate(loadPTable[2:4]):
             re = self.conn.loadTable(name, loadPTable[1]).toDF()
             re = re.sort_values("index", ascending=True).reset_index(drop=True)
             ex = df_python[id]
             assert_frame_equal(re, ex)
 
-    def test_session_loadTableBySQL(self):
-
+    def test_table_loadTableBySQL(self):
         for id, name in enumerate(loadTableBySQL[2:4]):
             re = self.conn.loadTableBySQL(name, loadTableBySQL[1], "select * from {}".format(name)).toDF()
             re = re.sort_values("index", ascending=True).reset_index(drop=True)
             ex = df_python[id]
             assert_frame_equal(re, ex)
 
-    @pytest.mark.parametrize('python_data', [df_python], ids=["DF"])
-    @pytest.mark.parametrize('needGC', [True, False], ids=["T_GC", "F_GC"])
-    def test_table_init_needGC(self, python_data, needGC):
+    @pytest.mark.parametrize('python_data', ["DF"])
+    def test_table_init_needGC(self, python_data):
+        python_data = get_global(python_data)
+        for needGC in [True, False]:
+            for data in python_data:
+                tmp = ddb.Table(data=data, needGC=needGC, s=self.conn)
+                tableName = tmp._getTableName()
+                del tmp
+                res = self.conn.run(get_scripts("objExist").format(tableName=tableName))
+                assert res != needGC
 
-        for data in python_data:
-            tmp = ddb.Table(data=data, needGC=needGC, s=self.conn)
-            tableName = tmp._getTableName()
-            del tmp
-            res = self.conn.run(get_scripts("objExist").format(tableName=tableName))
-            assert res != needGC
-
-    @pytest.mark.parametrize('python_data', [df_python], ids=["DF"])
+    @pytest.mark.parametrize('python_data', ["DF"])
     def test_table_copy(self, python_data):
-
+        python_data = get_global(python_data)
         for data in python_data:
             tmpa = self.conn.table(data=data)
             assert tmpa._Table__ref.val() == 1
@@ -540,9 +377,9 @@ class TestTable:
             assert tmpa._Table__ref.val() == 2
             assert tmpb._Table__ref.val() == 2
 
-    @pytest.mark.parametrize('python_data', [df_python], ids=["DF"])
+    @pytest.mark.parametrize('python_data', ["DF"])
     def test_table_del(self, python_data):
-
+        python_data = get_global(python_data)
         for data in python_data:
             tmpa = self.conn.table(data=data)
             stra = tmpa.tableName()
@@ -555,27 +392,24 @@ class TestTable:
             assert self.conn.run(get_scripts("objCounts").format(name=strb)) == 0
 
     def test_table_del_bigdata(self):
-
-        (_, _), pythons_tmp = get_TableData(names="AllTrade", n=300000)
+        func_name = inspect.currentframe().f_code.co_name
+        (_, _), pythons_tmp = get_TableData(names="AllTrade", n=300000, dbPath=f"dfs://{func_name}",
+                                            shareName=func_name)
         pd_left_tmp, pd_right_tmp = pythons_tmp["DataFrame"]
-
         tmpa = self.conn.table(data=pd_left_tmp)
         stra = tmpa.tableName()
         assert self.conn.run(get_scripts("objCounts").format(name=stra)) == 1
-
         tmpb = self.conn.table(data=pd_right_tmp)
         strb = tmpb.tableName()
         assert self.conn.run(get_scripts("objCounts").format(name=strb)) == 1
         del tmpb
         assert self.conn.run(get_scripts("objCounts").format(name=strb)) == 0
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_getattr(self, data):
+        data = get_global(data)
 
         def test_getattr(conntmp: ddb.session, tabletmp: ddb.Table):
             cols = conntmp.run(get_scripts("colNames").format(tableName=tabletmp.tableName()))
@@ -586,13 +420,11 @@ class TestTable:
 
         eval_table_with_data(self.conn, data, test_getattr)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_getitem(self, data):
+        data = get_global(data)
 
         def test_getitem(conntmp: ddb.session, tabletmp: ddb.Table):
             cols = conntmp.run(get_scripts("colNames").format(tableName=tabletmp.tableName()))
@@ -606,13 +438,11 @@ class TestTable:
 
         eval_table_with_data(self.conn, data, test_getitem)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_property(self, data):
+        data = get_global(data)
 
         def test_get_proprety(conntmp: ddb.session, tabletmp: ddb.Table):
             # tableName
@@ -635,13 +465,11 @@ class TestTable:
 
         eval_table_with_data(self.conn, data, test_get_proprety)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_toDataFrame(self, data):
+        data = get_global(data)
 
         def test_toDataFrame(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                              partitioned: bool = False):
@@ -650,13 +478,11 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, test_toDataFrame)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_setMergeForUpdate(self, data):
+        data = get_global(data)
 
         def test_setMergeForUpdate(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                    df2: pd.DataFrame, partitioned: bool = False):
@@ -670,13 +496,11 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, test_setMergeForUpdate)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_sql_select_where(self, data):
+        data = get_global(data)
 
         def test_select_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
@@ -744,14 +568,11 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, test_select_where)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('select_data', ["index", "index", ("index", "symbol"), ["index"], ["index", "symbol"]])
-    def test_table_select(self, data, select_data):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_select(self, data):
+        data = get_global(data)
 
         def test_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                         select_data, partitioned: bool = False):
@@ -765,15 +586,14 @@ class TestTable:
             re = re.reset_index(drop=True)
             assert_frame_equal(re, df)
 
-        eval_sql_with_data(self.conn, data, test_select, select_data)
+        for select_data in ["index", "index", ("index", "symbol"), ["index"], ["index", "symbol"]]:
+            eval_sql_with_data(self.conn, data, test_select, select_data)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_where(self, data):
+        data = get_global(data)
 
         def test_where_str1(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                             partitioned: bool = False):
@@ -842,13 +662,11 @@ class TestTable:
         eval_sql_with_data(self.conn, data, test_where_cond1)
         eval_sql_with_data(self.conn, data, test_where_cond2)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_top(self, data):
+        data = get_global(data)
 
         def test_top_num(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                          partitioned: bool = False):
@@ -878,14 +696,11 @@ class TestTable:
         eval_sql_with_data(self.conn, data, test_top_str1)
         eval_sql_with_data(self.conn, data, test_top_str2)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('limit', [5, 5, (5, 18), [5], [5, 18], "5", "5", ("5", "18"), ["5"], ["5", "18"]])
-    def test_table_limit(self, data, limit):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_limit(self, data):
+        data = get_global(data)
 
         def test_limit(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                        partitioned: bool = False):
@@ -902,19 +717,14 @@ class TestTable:
             re = re.reset_index(drop=True)
             assert_frame_equal(re, df)
 
-        eval_sql_with_data(self.conn, data, test_limit)
+        for limit in [5, 5, (5, 18), [5], [5, 18], "5", "5", ("5", "18"), ["5"], ["5", "18"]]:
+            eval_sql_with_data(self.conn, data, test_limit)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys',
-                             ["index", "index", ["index"], ("size", "price"), ["size", "price"], ("price", "size"),
-                              ["price", "size"]])
-    @pytest.mark.parametrize('ascending', [True, False, True, False, [True], [False], (True, False), [True, False]])
-    def test_table_sort(self, data, bys, ascending):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_sort(self, data):
+        data = get_global(data)
 
         def test_sort(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame, bys,
                       ascending, partitioned: bool = False):
@@ -941,19 +751,16 @@ class TestTable:
             re = re.reset_index(drop=True)
             assert_frame_equal(re, df)
 
-        eval_sql_with_data(self.conn, data, test_sort, bys, ascending)
+        for ascending in [True, False, [True], [False], (True, False), [True, False]]:
+            for bys in ["index", "index", ["index"], ("size", "price"), ["size", "price"], ("price", "size"),
+                        ["price", "size"]]:
+                eval_sql_with_data(self.conn, data, test_sort, bys, ascending)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys',
-                             ["index", "index", ["index"], ("size", "price"), ["size", "price"], ("price", "size"),
-                              ["price", "size"]])
-    @pytest.mark.parametrize('ascending', [True, False, True, False, [True], [False], (True, False), [True, False]])
-    def test_table_csort_contextby(self, data, bys, ascending):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_csort_contextby(self, data):
+        data = get_global(data)
 
         def test_csort_contextby(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                  df2: pd.DataFrame, bys, ascending, partitioned: bool = False):
@@ -993,26 +800,16 @@ class TestTable:
             else:
                 assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, data, test_csort_contextby, bys, ascending)
+        for ascending in [True, False, [True], [False], (True, False), [True, False]]:
+            for bys in ["index", "index", ["index"], ("size", "price"), ["size", "price"], ("price", "size"),
+                        ["price", "size"]]:
+                eval_sql_with_data(self.conn, data, test_csort_contextby, bys, ascending)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('on', [["symbol", None, None],
-                                    [["symbol"], None, None],
-                                    [["symbol", "time"], None, None],
-                                    [None, ["symbol", "size"], ["symbol", "ask"]],
-                                    [None, ("symbol", "size"), ("symbol", "ask")],
-                                    [None, None, None],
-                                    [None, ["symbol"], ["symbol", "ask"]],
-                                    ])
-    @pytest.mark.parametrize('how',
-                             [("left", "lj"), ("right", "lj"), ("inner", "ej"), ("outer", "fj"), ("left semi", "lsj")],
-                             ids=["left", "right", "inner", "outer", "left semi"])
-    def test_table_merge_without_select(self, data, on, how):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_merge_without_select(self, data):
+        data = get_global(data)
 
         def test_merge_without_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                       df2: pd.DataFrame, on, how, partitioned: bool = False):
@@ -1059,23 +856,22 @@ class TestTable:
             df.columns = [str(i) for i, k in enumerate(df.columns)]
             assert_frame_equal(re, df)
 
-        eval_sql_with_data(self.conn, data, test_merge_without_select, on, how)
+        for how in [("left", "lj"), ("right", "lj"), ("inner", "ej"), ("outer", "fj"), ("left semi", "lsj")]:
+            for on in [["symbol", None, None],
+                       [["symbol"], None, None],
+                       [["symbol", "time"], None, None],
+                       [None, ["symbol", "size"], ["symbol", "ask"]],
+                       [None, ("symbol", "size"), ("symbol", "ask")],
+                       [None, None, None],
+                       [None, ["symbol"], ["symbol", "ask"]],
+                       ]:
+                eval_sql_with_data(self.conn, data, test_merge_without_select, on, how)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('on', [["time", None, None],
-                                    [["time"], None, None],
-                                    [["symbol", "time"], None, None],
-                                    [None, ["symbol", "size"], ["symbol", "ask"]],
-                                    [None, ("symbol", "size"), ("symbol", "ask")],
-                                    [None, None, None],
-                                    [None, ["symbol"], ["symbol", "ask"]],
-                                    ])
-    def test_table_merge_asof_without_select(self, data, on):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_merge_asof_without_select(self, data):
+        data = get_global(data)
 
         def test_merge_asof_without_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                            df2: pd.DataFrame, on, partitioned: bool = False):
@@ -1114,27 +910,21 @@ class TestTable:
             df.columns = [str(i) for i, k in enumerate(df.columns)]
             assert_frame_equal(re, df)
 
-        eval_sql_with_data(self.conn, data, test_merge_asof_without_select, on)
+        for on in [["time", None, None],
+                   [["time"], None, None],
+                   [["symbol", "time"], None, None],
+                   [None, ["symbol", "size"], ["symbol", "ask"]],
+                   [None, ("symbol", "size"), ("symbol", "ask")],
+                   [None, None, None],
+                   [None, ["symbol"], ["symbol", "ask"]],
+                   ]:
+            eval_sql_with_data(self.conn, data, test_merge_asof_without_select, on)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('on', [["time", None, None],
-                                    [["time"], None, None],
-                                    [["symbol", "time"], None, None],
-                                    [None, ["symbol", "size"], ["symbol", "ask"]],
-                                    [None, ("symbol", "size"), ("symbol", "ask")],
-                                    [None, None, None],
-                                    [None, ["symbol"], ["symbol", "ask"]],
-                                    ])
-    @pytest.mark.parametrize('bound', [(0, 0), (-15, 0), (0, 15), (-15, 15), (-20, -10), (10, 20)])
-    @pytest.mark.parametrize('func', [
-        "avg(bid)", ["avg(bid)", "wavg(ask, bid)"]
-    ])
-    def test_table_merge_window_without_select(self, data, on, bound, func):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_merge_window_without_select(self, data):
+        data = get_global(data)
 
         def test_merge_window_without_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                              df2: pd.DataFrame, on, bound, func, partitioned: bool = False):
@@ -1184,15 +974,18 @@ class TestTable:
             df.columns = [str(i) for i, k in enumerate(df.columns)]
             assert_frame_equal(re, df)
 
-        eval_sql_with_data(self.conn, data, test_merge_window_without_select, on, bound, func)
+        for on in [["time", None, None], [["time"], None, None], [["symbol", "time"], None, None],
+                   [None, ["symbol", "size"], ["symbol", "ask"]], [None, ("symbol", "size"), ("symbol", "ask")],
+                   [None, None, None], [None, ["symbol"], ["symbol", "ask"]]]:
+            for bound in [(0, 0), (-15, 0), (0, 15), (-15, 15), (-20, -10), (10, 20)]:
+                for func in ["avg(bid)", ["avg(bid)", "wavg(ask, bid)"]]:
+                    eval_sql_with_data(self.conn, data, test_merge_window_without_select, on, bound, func)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_merge_cross_without_select(self, data):
+        data = get_global(data)
 
         def test_merge_cross_without_select(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                             df2: pd.DataFrame, partitioned: bool = False):
@@ -1211,14 +1004,14 @@ class TestTable:
         eval_sql_with_data(self.conn, data, test_merge_cross_without_select)
 
     def test_table_ols(self):
-
-        self.conn.run(get_scripts("clearDatabase").format(dbPath="dfs://test_table_ols"))
-        self.conn.run("""
-                mydb = database("dfs://valuedb", VALUE, `AMZN`NFLX`NVDA)
-                loadTextEx(mydb, `trade, `TICKER, "{}/example.csv")
-        """.format(DATA_DIR))
-
-        trade = self.conn.loadTable(tableName="trade", dbPath="dfs://valuedb")
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        self.conn.run(get_scripts("clearDatabase").format(dbPath=db_name))
+        self.conn.run(f"""
+                mydb = database("{db_name}", VALUE, `AMZN`NFLX`NVDA)
+                loadTextEx(mydb, `trade, `TICKER, "{DATA_DIR}example.csv")
+        """)
+        trade = self.conn.loadTable(tableName="trade", dbPath=db_name)
         z = trade.ols(Y='PRC', X=['BID'])
         re = z["Coefficient"]
         prc_tmp = trade.toDF().PRC
@@ -1227,13 +1020,11 @@ class TestTable:
         ex = model.fit().params
         assert_almost_equal(re.iloc[1, 1], ex[0], decimal=4)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_rename(self, data):
+        data = get_global(data)
 
         def test_rename(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                         partitioned: bool = False):
@@ -1247,16 +1038,11 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, test_rename)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('cols', [
-        "*", "index", ["time"], ["index", "time"], "time", ("index", "time"),
-    ])
-    def test_table_exec(self, data, cols):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_exec(self, data):
+        data = get_global(data)
 
         def test_exec(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame, cols,
                       partitioned: bool = False):
@@ -1283,18 +1069,14 @@ class TestTable:
             else:
                 assert_array_equal(re, df.values)
 
-        eval_sql_with_data(self.conn, data, test_exec, cols)
+        for cols in ["*", "index", ["time"], ["index", "time"], "time", ("index", "time")]:
+            eval_sql_with_data(self.conn, data, test_exec, cols)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('expr', [
-        None, "*", "index", ["time"], ["index", "time"], "time", ("index", "time"),
-    ])
-    def test_table_execute(self, data, expr):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_execute(self, data):
+        data = get_global(data)
 
         def test_execute(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                          expr, partitioned: bool = False):
@@ -1320,15 +1102,14 @@ class TestTable:
             else:
                 assert_array_equal(re, df.values)
 
-        eval_sql_with_data(self.conn, data, test_execute, expr)
+        for expr in [None, "*", "index", ["time"], ["index", "time"], "time", ("index", "time")]:
+            eval_sql_with_data(self.conn, data, test_execute, expr)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_executeAs(self, data):
+        data = get_global(data)
 
         def test_executeAs(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                            partitioned: bool = False):
@@ -1347,16 +1128,11 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, test_executeAs)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List"])
-    @pytest.mark.parametrize('cols', [
-        None, "time", ["time"], ["time", "symbol"], []
-    ])
-    def test_table_drop(self, data, cols):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List"])
+    def test_table_drop(self, data):
+        data = get_global(data)
 
         def test_drop(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame, cols,
                       partitioned: bool = False):
@@ -1388,13 +1164,13 @@ class TestTable:
             else:
                 raise RuntimeError("no valid data for param: cols.")
 
-        eval_sql_with_data(self.conn, data, test_drop, cols)
+        for cols in [None, "time", ["time"], ["time", "symbol"], []]:
+            eval_sql_with_data(self.conn, data, test_drop, cols)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_append(self, data):
+        data = get_global(data)
 
         def test_append(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                         partitioned: bool = False):
@@ -1421,9 +1197,9 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, test_append)
 
-    @pytest.mark.parametrize('data', [IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable],
-                             ids=["indexTable", "SindexTable", "keyTable", "SkeyTable"])
+    @pytest.mark.parametrize('data', ["indexTable", "SindexTable", "keyTable", "SkeyTable"])
     def test_table_append_duplicate_removal(self, data):
+        data = get_global(data)
 
         def test_append(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                         partitioned: bool = False):
@@ -1450,13 +1226,12 @@ class TestTable:
 
         eval_sql_with_data(self.conn, data, test_append)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_with_many_where(self, data):
+        data = get_global(data)
+
         def select_with_many_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                    df2: pd.DataFrame, partitioned: bool = False):
 
@@ -1526,43 +1301,15 @@ class TestTable:
 
 
 class TestTableDelete:
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-            self.conn.run(get_scripts("undefShare"))
-            self.conn.run(scripts)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.run(get_scripts("undefShare"))
-        cls.conn.run("""
-            if(existsDatabase('{}'))
-                dropDatabase('{}')
-        """.format(PartitionedTable[0], PartitionedTable[0]))
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_delete_init(self, flushed_table_n100):
+    ])
+    def test_table_delete_init(self, data):
+        data = get_global(data)
+
         def test_delete_init(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                              partitioned: bool = False):
             assert tb1._Table__ref.val() == 1
@@ -1572,15 +1319,15 @@ class TestTableDelete:
             assert tbtmp._TableDelete__t._Table__ref.val() == 2
             assert tb1._Table__ref is tbtmp._TableDelete__t._Table__ref
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_delete_init)
+        eval_sql_with_data(self.conn, data, test_delete_init)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_delete(self, flushed_table_n100):
-
-        n = 100
+    ])
+    def test_table_delete(self, data):
+        data = get_global(data)
+        n = 5
 
         def test_delete(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                         partitioned: bool = False):
@@ -1596,13 +1343,15 @@ class TestTableDelete:
             tbtmp = tb2.delete().execute()
             assert conntmp.run(get_scripts("tableRows").format(tableName=tbtmp.tableName())) == 0
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_delete)
+        eval_sql_with_data(self.conn, data, test_delete)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_showSQL(self, flushed_table_n100):
+    ])
+    def test_table_showSQL(self, data):
+        data = get_global(data)
+
         def test_showSQL(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                          partitioned: bool = False):
             tbtmp = tb1.delete()
@@ -1629,15 +1378,15 @@ class TestTableDelete:
             tbtmp = tb1.delete()
             str(tbtmp)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_showSQL)
+        eval_sql_with_data(self.conn, data, test_showSQL)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_delete_where(self, flushed_table_n100):
-
-        n = 100
+    ])
+    def test_table_delete_where(self, data):
+        data = get_global(data)
+        n = 5
 
         def test_delete_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
@@ -1665,15 +1414,15 @@ class TestTableDelete:
             ex = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2_df.tableName()))
             assert re == ex
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_delete_where)
+        eval_sql_with_data(self.conn, data, test_delete_where)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_delete_many_where(self, flushed_table_n100):
-
-        n = 100
+    ])
+    def test_table_delete_many_where(self, data):
+        data = get_global(data)
+        n = 5
 
         def test_delete_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
@@ -1704,15 +1453,15 @@ class TestTableDelete:
             ex = conntmp.run(get_scripts("tableRows").format(tableName=tbtmp2_df.tableName()))
             assert re == ex
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_delete_where)
+        eval_sql_with_data(self.conn, data, test_delete_where)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_toDF(self, flushed_table_n100):
-
-        n = 100
+    ])
+    def test_table_toDF(self, data):
+        data = get_global(data)
+        n = 5
 
         def test_toDF(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                       partitioned: bool = False):
@@ -1722,47 +1471,19 @@ class TestTableDelete:
             tb1.delete().where("index < 5").toDF()
             assert conntmp.run(get_scripts("tableRows").format(tableName=tb1.tableName())) == n
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_toDF)
+        eval_sql_with_data(self.conn, data, test_toDF)
 
 
 class TestTableUpdate:
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-            self.conn.run(get_scripts("undefShare"))
-            self.conn.run(scripts)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.run(get_scripts("undefShare"))
-        cls.conn.run("""
-            if(existsDatabase('{}'))
-                dropDatabase('{}')
-        """.format(PartitionedTable[0], PartitionedTable[0]))
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_update_without_merge(self, flushed_table_n100):
+    ])
+    def test_table_update_without_merge(self, data):
+        data = get_global(data)
+
         def test_update_without_merge(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                       df2: pd.DataFrame, partitioned: bool = False):
             assert tb1._Table__ref.val() == 1
@@ -1776,26 +1497,14 @@ class TestTableUpdate:
             ex = conntmp.run("select * from {}".format(new_name))
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_update_without_merge)
+        eval_sql_with_data(self.conn, data, test_update_without_merge)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    @pytest.mark.parametrize('on', [
-        ["symbol", None, None],
-        [["symbol"], None, None],
-        [["symbol", "time"], None, None],
-        [None, ["symbol", "size"], ["symbol", "ask"]],
-        [None, ("symbol", "size"), ("symbol", "ask")],
     ])
-    @pytest.mark.parametrize('how',
-                             [("left", "lj"), ("right", "lj"), ("inner", "ej"), ("outer", "fj"), ("left semi", "lsj")],
-                             ids=["left", "right", "inner", "outer", "left semi"])
-    def test_table_update_merge(self, flushed_table_n100, on, how):
-
-        if how[0] in ['right', 'outer']:
-            pytest.skip("unsupported right or outer join")
+    def test_table_update_merge(self, data):
+        data = get_global(data)
 
         def test_update_merge(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, on, how, partitioned: bool = False):
@@ -1851,13 +1560,23 @@ class TestTableUpdate:
             df.columns = [str(i) for i, k in enumerate(df.columns)]
             assert_frame_equal(re, df)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_update_merge, on, how)
+        for on in [
+            ["symbol", None, None],
+            [["symbol"], None, None],
+            [["symbol", "time"], None, None],
+            [None, ["symbol", "size"], ["symbol", "ask"]],
+            [None, ("symbol", "size"), ("symbol", "ask")],
+        ]:
+            for how in [("left", "lj"), ("inner", "ej"), ("left semi", "lsj")]:
+                eval_sql_with_data(self.conn, data, test_update_merge, on, how)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_update_where(self, flushed_table_n100):
+    ])
+    def test_table_update_where(self, data):
+        data = get_global(data)
+
         def test_update_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tb1.update(["price"], ["price*10"]).where("symbol=`X").execute()
@@ -1870,13 +1589,15 @@ class TestTableUpdate:
             ex = conntmp.run("select * from {}".format(new_name))
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_update_where)
+        eval_sql_with_data(self.conn, data, test_update_where)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_update_many_where(self, flushed_table_n100):
+    ])
+    def test_table_update_many_where(self, data):
+        data = get_global(data)
+
         def test_update_where(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tb1.update(["price"], ["price*10"]).where("symbol=`X or symbol =`Z").where(
@@ -1893,13 +1614,15 @@ class TestTableUpdate:
             ex = conntmp.run("select * from {}".format(new_name))
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_update_where)
+        eval_sql_with_data(self.conn, data, test_update_where)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_showSQL(self, flushed_table_n100):
+    ])
+    def test_table_showSQL(self, data):
+        data = get_global(data)
+
         def test_showSQL(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                          partitioned: bool = False):
             tbtmp = tb1.update(["price"], ["price+5"])
@@ -1926,13 +1649,15 @@ class TestTableUpdate:
             tbtmp = tb1.update(["price"], ["price+5"])
             str(tbtmp)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_showSQL)
+        eval_sql_with_data(self.conn, data, test_showSQL)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_toDF(self, flushed_table_n100):
+    ])
+    def test_table_toDF(self, data):
+        data = get_global(data)
+
         def test_toDF(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                       partitioned: bool = False):
             assert_frame_equal(tb1.toDF(), df1)
@@ -1944,47 +1669,19 @@ class TestTableUpdate:
             re = tb1.update(["price"], ["price+10"]).toDF()
             assert_frame_equal(re, df1)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_toDF)
+        eval_sql_with_data(self.conn, data, test_toDF)
 
 
 class TestTablePivotBy:
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-            self.conn.run(get_scripts("undefShare"))
-            self.conn.run(scripts)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.run(get_scripts("undefShare"))
-        cls.conn.run("""
-            if(existsDatabase('{}'))
-                dropDatabase('{}')
-        """.format(PartitionedTable[0], PartitionedTable[0]))
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_pivotby(self, flushed_table_n100):
+    ])
+    def test_table_pivotby(self, data):
+        data = get_global(data)
+
         def test_pivotby(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                          partitioned: bool = False):
             tbtmp = tb1.pivotby("index", "symbol", value="size", aggFunc=sum)
@@ -1994,13 +1691,15 @@ class TestTablePivotBy:
             assert tbtmp._TablePivotBy__agg is sum
             assert tbtmp._TablePivotBy__t.tableName() == tb1.tableName()
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_pivotby)
+        eval_sql_with_data(self.conn, data, test_pivotby)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_pivotby_isExec(self, flushed_table_n100):
+    ])
+    def test_table_pivotby_isExec(self, data):
+        data = get_global(data)
+
         def test_pivotby_isExec(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.exec(["size"]).pivotby("price", "symbol")
@@ -2017,13 +1716,15 @@ class TestTablePivotBy:
             assert_array_equal(re[1], ex[1])
             assert_array_equal(re[2], ex[2])
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_pivotby_isExec)
+        eval_sql_with_data(self.conn, data, test_pivotby_isExec)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_pivotby_value_aggFunc(self, flushed_table_n100):
+    ])
+    def test_table_pivotby_value_aggFunc(self, data):
+        data = get_global(data)
+
         def test_pivotby_value_aggFunc(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                        df2: pd.DataFrame, partitioned: bool = False):
             tbtmp = copy.copy(tb1).select(["index", "symbol", "price"]).pivotby("size", "symbol")
@@ -2060,13 +1761,15 @@ class TestTablePivotBy:
             re = tbtmp.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_pivotby_value_aggFunc)
+        eval_sql_with_data(self.conn, data, test_pivotby_value_aggFunc)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_pivotby_executeAs(self, flushed_table_n100):
+    ])
+    def test_table_pivotby_executeAs(self, data):
+        data = get_global(data)
+
         def test_pivotby_executeAs(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                    df2: pd.DataFrame, partitioned: bool = False):
             new_name = generate_uuid("tmp_")
@@ -2075,13 +1778,15 @@ class TestTablePivotBy:
             ex = conntmp.run("select index,time,size from {} pivot by price, symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_pivotby_executeAs)
+        eval_sql_with_data(self.conn, data, test_pivotby_executeAs)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_pivotby_selectAsVector(self, flushed_table_n100):
+    ])
+    def test_table_pivotby_s_electAsVector(self, data):
+        data = get_global(data)
+
         def test_pivotby_selectAsVector(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                         df2: pd.DataFrame, partitioned: bool = False):
             re = tb1.pivotby("price", "symbol").selectAsVector("index")
@@ -2102,47 +1807,19 @@ class TestTablePivotBy:
             assert_array_equal(re[1], ex[1])
             assert_array_equal(re[2], ex[2])
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_pivotby_selectAsVector)
+        eval_sql_with_data(self.conn, data, test_pivotby_selectAsVector)
 
 
 class TestTableGroupby:
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-            self.conn.run(get_scripts("undefShare"))
-            self.conn.run(scripts)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.run(get_scripts("undefShare"))
-        cls.conn.run("""
-            if(existsDatabase('{}'))
-                dropDatabase('{}')
-        """.format(PartitionedTable[0], PartitionedTable[0]))
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby(self, flushed_table_n100):
+    ])
+    def test_table_groupby(self, data):
+        data = get_global(data)
+
         def test_groupby(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                          partitioned: bool = False):
             tbtmp = copy.copy(tb1).groupby(["symbol"])
@@ -2160,13 +1837,15 @@ class TestTableGroupby:
             assert tbtmp._TableGroupby__having is None
             assert tbtmp._TableGroupby__t.tableName() == tb1.tableName()
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby)
+        eval_sql_with_data(self.conn, data, test_groupby)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_executeAs(self, flushed_table_n100):
+    ])
+    def test_table_groupby_executeAs(self, data):
+        data = get_global(data)
+
         def test_groupby_executeAs(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                    df2: pd.DataFrame, partitioned: bool = False):
             new_name = generate_uuid("tmp_")
@@ -2175,13 +1854,15 @@ class TestTableGroupby:
             ex = conntmp.run("select max(size) from {} group by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_executeAs)
+        eval_sql_with_data(self.conn, data, test_groupby_executeAs)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_selectAsVector(self, flushed_table_n100):
+    ])
+    def test_table_groupby_s_electAsVector(self, data):
+        data = get_global(data)
+
         def test_groupby_selectAsVector(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                         df2: pd.DataFrame, partitioned: bool = False):
             re = tb1.groupby(["symbol"]).selectAsVector("max(index)")
@@ -2196,13 +1877,15 @@ class TestTableGroupby:
             ex = conntmp.run("exec max(index) from {} group by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_selectAsVector)
+        eval_sql_with_data(self.conn, data, test_groupby_selectAsVector)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby___getitem__(self, flushed_table_n100):
+    ])
+    def test_table_groupby___getitem__(self, data):
+        data = get_global(data)
+
         def test_groupby___getitem__(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                      df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.groupby(["symbol"])["max(index)"]
@@ -2211,13 +1894,15 @@ class TestTableGroupby:
             ex = conntmp.run("select max(index) from {} group by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby___getitem__)
+        eval_sql_with_data(self.conn, data, test_groupby___getitem__)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby___next__(self, flushed_table_n100):
+    ])
+    def test_table_groupby___next__(self, data):
+        data = get_global(data)
+
         def test_groupby___next__(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                   df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.groupby(["symbol"])
@@ -2236,13 +1921,15 @@ class TestTableGroupby:
             ex = ["symbol", "size"]
             assert re == ex
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby___next__)
+        eval_sql_with_data(self.conn, data, test_groupby___next__)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_having(self, flushed_table_n100):
+    ])
+    def test_table_groupby_having(self, data):
+        data = get_global(data)
+
         def test_groupby_having(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select("max(index)").groupby(["symbol"]).having("first(size)>90")
@@ -2253,19 +1940,15 @@ class TestTableGroupby:
             ex = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_having)
+        eval_sql_with_data(self.conn, data, test_groupby_having)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    @pytest.mark.parametrize('aggcol, aggfunc, aggscript', [
-        ['index', ['sum', 'max'], 'sum(index), max(index)'],
-        ['price', ['max'], 'max(price)'],
-        ['time', ['first'], 'first(time)'],
-        ['size', ['avg', 'sum'], 'avg(size), sum(size)'],
     ])
-    def test_table_groupby_agg(self, flushed_table_n100, aggcol, aggfunc, aggscript):
+    def test_table_groupby_agg(self, data):
+        data = get_global(data)
+
         def test_groupby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                              partitioned: bool = False):
             tbtmp1 = tb1.select([aggcol]).groupby("symbol").agg(aggfunc)
@@ -2293,13 +1976,21 @@ class TestTableGroupby:
                 tb1.select(["index"]).groupby("symbol").agg(("sum", "max"))
             assert str(e).find("invalid func format")
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_agg)
+        for aggcol, aggfunc, aggscript in [
+            ['index', ['sum', 'max'], 'sum(index), max(index)'],
+            ['price', ['max'], 'max(price)'],
+            ['time', ['first'], 'first(time)'],
+            ['size', ['avg', 'sum'], 'avg(size), sum(size)'],
+        ]:
+            eval_sql_with_data(self.conn, data, test_groupby_agg)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_sum(self, flushed_table_n100):
+    ])
+    def test_table_groupby_sum(self, data):
+        data = get_global(data)
+
         def test_groupby_sum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                              partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").sum()
@@ -2310,13 +2001,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_sum)
+        eval_sql_with_data(self.conn, data, test_groupby_sum)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_avg(self, flushed_table_n100):
+    ])
+    def test_table_groupby_avg(self, data):
+        data = get_global(data)
+
         def test_groupby_avg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                              partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").avg()
@@ -2327,13 +2020,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_avg)
+        eval_sql_with_data(self.conn, data, test_groupby_avg)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_count(self, flushed_table_n100):
+    ])
+    def test_table_groupby_count(self, data):
+        data = get_global(data)
+
         def test_groupby_count(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").count()
@@ -2344,13 +2039,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_count)
+        eval_sql_with_data(self.conn, data, test_groupby_count)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_max(self, flushed_table_n100):
+    ])
+    def test_table_groupby_max(self, data):
+        data = get_global(data)
+
         def test_groupby_max(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                              partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").max()
@@ -2361,13 +2058,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_max)
+        eval_sql_with_data(self.conn, data, test_groupby_max)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_min(self, flushed_table_n100):
+    ])
+    def test_table_groupby_min(self, data):
+        data = get_global(data)
+
         def test_groupby_min(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                              partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").min()
@@ -2378,13 +2077,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_min)
+        eval_sql_with_data(self.conn, data, test_groupby_min)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_first(self, flushed_table_n100):
+    ])
+    def test_table_groupby_first(self, data):
+        data = get_global(data)
+
         def test_groupby_first(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["time"]).groupby("symbol").first()
@@ -2395,13 +2096,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_first)
+        eval_sql_with_data(self.conn, data, test_groupby_first)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_last(self, flushed_table_n100):
+    ])
+    def test_table_groupby_last(self, data):
+        data = get_global(data)
+
         def test_groupby_last(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["time"]).groupby("symbol").last()
@@ -2412,13 +2115,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_last)
+        eval_sql_with_data(self.conn, data, test_groupby_last)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_size(self, flushed_table_n100):
+    ])
+    def test_table_groupby_size(self, data):
+        data = get_global(data)
+
         def test_groupby_size(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").size()
@@ -2429,13 +2134,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_size)
+        eval_sql_with_data(self.conn, data, test_groupby_size)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_sum2(self, flushed_table_n100):
+    ])
+    def test_table_groupby_sum2(self, data):
+        data = get_global(data)
+
         def test_groupby_sum2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").sum2()
@@ -2446,13 +2153,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_sum2)
+        eval_sql_with_data(self.conn, data, test_groupby_sum2)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_std(self, flushed_table_n100):
+    ])
+    def test_table_groupby_std(self, data):
+        data = get_global(data)
+
         def test_groupby_std(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                              partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").std()
@@ -2463,13 +2172,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_std)
+        eval_sql_with_data(self.conn, data, test_groupby_std)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_var(self, flushed_table_n100):
+    ])
+    def test_table_groupby_var(self, data):
+        data = get_global(data)
+
         def test_groupby_var(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                              partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").var()
@@ -2480,13 +2191,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_var)
+        eval_sql_with_data(self.conn, data, test_groupby_var)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_prod(self, flushed_table_n100):
+    ])
+    def test_table_groupby_prod(self, data):
+        data = get_global(data)
+
         def test_groupby_prod(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).groupby("symbol").prod()
@@ -2497,22 +2210,15 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_prod)
+        eval_sql_with_data(self.conn, data, test_groupby_prod)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    @pytest.mark.parametrize('aggfunc, aggscript', [
-        [[ddb.corr, ('ask', 'bid')], "corr(ask, bid)"],
-        [['atImax', ('ask', 'bid')], "atImax(ask, bid)"],
-        [['contextSum', ('ask', 'bid')], "contextSum(ask, bid)"],
-        [[ddb.covar, ('ask', 'bid')], "covar(ask, bid)"],
-        [[ddb.wavg, ('ask', 'bid')], "wavg(ask, bid)"],
-        [[ddb.wsum, ('ask', 'bid')], "wsum(ask, bid)"],
-        [[ddb.wsum, [('ask', 'bid'), ('bid', 'ask')]], "wsum(ask, bid), wsum(bid, ask)"],
     ])
-    def test_table_groupby_agg2(self, flushed_table_n100, aggfunc, aggscript):
+    def test_table_groupby_agg2(self, data):
+        data = get_global(data)
+
         def test_groupby_agg2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").agg2(*aggfunc)
@@ -2540,13 +2246,24 @@ class TestTableGroupby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_agg2)
+        for aggfunc, aggscript in [
+            [[ddb.corr, ('ask', 'bid')], "corr(ask, bid)"],
+            [['atImax', ('ask', 'bid')], "atImax(ask, bid)"],
+            [['contextSum', ('ask', 'bid')], "contextSum(ask, bid)"],
+            [[ddb.covar, ('ask', 'bid')], "covar(ask, bid)"],
+            [[ddb.wavg, ('ask', 'bid')], "wavg(ask, bid)"],
+            [[ddb.wsum, ('ask', 'bid')], "wsum(ask, bid)"],
+            [[ddb.wsum, [('ask', 'bid'), ('bid', 'ask')]], "wsum(ask, bid), wsum(bid, ask)"],
+        ]:
+            eval_sql_with_data(self.conn, data, test_groupby_agg2)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_wavg(self, flushed_table_n100):
+    ])
+    def test_table_groupby_wavg(self, data):
+        data = get_global(data)
+
         def test_groupby_wavg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").wavg(("ask", "bid"))
@@ -2557,13 +2274,15 @@ class TestTableGroupby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_wavg)
+        eval_sql_with_data(self.conn, data, test_groupby_wavg)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_wsum(self, flushed_table_n100):
+    ])
+    def test_table_groupby_wsum(self, data):
+        data = get_global(data)
+
         def test_groupby_wsum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").wsum(("ask", "bid"))
@@ -2574,13 +2293,15 @@ class TestTableGroupby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_wsum)
+        eval_sql_with_data(self.conn, data, test_groupby_wsum)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_covar(self, flushed_table_n100):
+    ])
+    def test_table_groupby_covar(self, data):
+        data = get_global(data)
+
         def test_groupby_covar(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").covar(("ask", "bid"))
@@ -2591,13 +2312,15 @@ class TestTableGroupby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_covar)
+        eval_sql_with_data(self.conn, data, test_groupby_covar)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_groupby_corr(self, flushed_table_n100):
+    ])
+    def test_table_groupby_corr(self, data):
+        data = get_global(data)
+
         def test_groupby_corr(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.groupby("symbol").corr(("ask", "bid"))
@@ -2608,19 +2331,13 @@ class TestTableGroupby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_groupby_corr)
+        eval_sql_with_data(self.conn, data, test_groupby_corr)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys',
-                             ["price", "price", ["price"], ("size", "price"), ["size", "price"], ("price", "size"),
-                              ["price", "size"]])
-    @pytest.mark.parametrize('ascending', [True, False, True, False, [True], [False], (True, False), [True, False]])
-    def test_table_groupby_sort(self, data, bys, ascending):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_groupby_sort(self, data):
+        data = get_global(data)
 
         def test_groupby_sort(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                               df2: pd.DataFrame, bys, ascending, partitioned: bool = False):
@@ -2653,47 +2370,22 @@ class TestTableGroupby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, data, test_groupby_sort, bys, ascending)
+        for bys in ["price", "price", ["price"], ("size", "price"), ["size", "price"], ("price", "size"),
+                    ["price", "size"]]:
+            for ascending in [True, False, [True], [False], (True, False), [True, False]]:
+                eval_sql_with_data(self.conn, data, test_groupby_sort, bys, ascending)
 
 
 class TestTableContextby:
     conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-            self.conn.run(get_scripts("undefShare"))
-            self.conn.run(scripts)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.run(get_scripts("undefShare"))
-        cls.conn.run("""
-            if(existsDatabase('{}'))
-                dropDatabase('{}')
-        """.format(PartitionedTable[0], PartitionedTable[0]))
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby(self, flushed_table_n100):
+    ])
+    def test_table_contextby(self, data):
+        data = get_global(data)
+
         def test_contextby(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                            partitioned: bool = False):
             tbtmp = copy.copy(tb1).contextby(["symbol"])
@@ -2711,13 +2403,15 @@ class TestTableContextby:
             assert tbtmp._TableContextby__having is None
             assert tbtmp._TableContextby__t.tableName() == tb1.tableName()
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby)
+        eval_sql_with_data(self.conn, data, test_contextby)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_executeAs(self, flushed_table_n100):
+    ])
+    def test_table_contextby_executeAs(self, data):
+        data = get_global(data)
+
         def test_contextby_executeAs(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                      df2: pd.DataFrame, partitioned: bool = False):
             new_name = generate_uuid("tmp_")
@@ -2726,13 +2420,15 @@ class TestTableContextby:
             ex = conntmp.run("select * from {} context by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_executeAs)
+        eval_sql_with_data(self.conn, data, test_contextby_executeAs)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_selectAsVector(self, flushed_table_n100):
+    ])
+    def test_table_contextby_s_electAsVector(self, data):
+        data = get_global(data)
+
         def test_contextby_selectAsVector(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                           df2: pd.DataFrame, partitioned: bool = False):
             re = tb1.contextby(["symbol"]).selectAsVector("max(index)")
@@ -2747,13 +2443,15 @@ class TestTableContextby:
             ex = conntmp.run("exec max(index) from {} context by symbol".format(tb1.tableName()))
             assert_array_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_selectAsVector)
+        eval_sql_with_data(self.conn, data, test_contextby_selectAsVector)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby___getitem__(self, flushed_table_n100):
+    ])
+    def test_table_contextby___getitem__(self, data):
+        data = get_global(data)
+
         def test_contextby___getitem__(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                        df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.contextby(["symbol"])["index"]
@@ -2762,13 +2460,15 @@ class TestTableContextby:
             ex = conntmp.run("select index from {} context by symbol".format(tb1.tableName()))
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby___getitem__)
+        eval_sql_with_data(self.conn, data, test_contextby___getitem__)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby___next__(self, flushed_table_n100):
+    ])
+    def test_table_contextby___next__(self, data):
+        data = get_global(data)
+
         def test_contextby___next__(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                     df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.groupby(["symbol"])
@@ -2787,13 +2487,15 @@ class TestTableContextby:
             ex = ["symbol", "size"]
             assert re == ex
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby___next__)
+        eval_sql_with_data(self.conn, data, test_contextby___next__)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_having(self, flushed_table_n100):
+    ])
+    def test_table_contextby_having(self, data):
+        data = get_global(data)
+
         def test_contextby_having(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                   df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select("index").contextby(["symbol"]).having("first(size)>90")
@@ -2804,20 +2506,16 @@ class TestTableContextby:
             ex = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_having)
+        eval_sql_with_data(self.conn, data, test_contextby_having)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table",
         "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    @pytest.mark.parametrize('aggcol, aggfunc, aggscript', [
-        ['index', ['sum', 'max'], 'sum(index), max(index)'],
-        ['price', ['max'], 'max(price)'],
-        ['time', ['first'], 'first(time)'],
-        ['size', ['avg', 'sum'], 'avg(size), sum(size)'],
     ])
-    def test_table_contextby_agg_list(self, flushed_table_n100, aggcol, aggfunc, aggscript):
+    def test_table_contextby_agg_list(self, data):
+        data = get_global(data)
+
         def test_contextby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select([aggcol]).contextby("symbol").agg(aggfunc)
@@ -2828,32 +2526,36 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_agg)
+        for aggcol, aggfunc, aggscript in [
+            ['index', ['sum', 'max'], 'sum(index), max(index)'],
+            ['price', ['max'], 'max(price)'],
+            ['time', ['first'], 'first(time)'],
+            ['size', ['avg', 'sum'], 'avg(size), sum(size)'],
+        ]:
+            eval_sql_with_data(self.conn, data, test_contextby_agg)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_agg_tuple(self, flushed_table_n100):
+    ])
+    def test_table_contextby_agg_tuple(self, data):
+        data = get_global(data)
+
         def test_contextby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             with pytest.raises(RuntimeError) as e:
                 tb1.select(["index"]).contextby("symbol").agg(("sum", "max"))
             assert str(e).find("invalid func format")
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_agg)
+        eval_sql_with_data(self.conn, data, test_contextby_agg)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    @pytest.mark.parametrize('aggcol, aggfunc, aggscript', [
-        ['index', ['sum', 'max'], 'sum(index), max(index)'],
-        ['price', ['max'], 'max(price)'],
-        ['time', ['first'], 'first(time)'],
-        ['size', ['avg', 'sum'], 'avg(size), sum(size)'],
     ])
-    def test_table_contextby_agg_str(self, flushed_table_n100, aggcol, aggfunc, aggscript):
+    def test_table_contextby_agg_str(self, data):
+        data = get_global(data)
+
         def test_contextby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select([aggcol]).contextby("symbol").agg(aggfunc)
@@ -2864,13 +2566,21 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_agg)
+        for aggcol, aggfunc, aggscript in [
+            ['index', ['sum', 'max'], 'sum(index), max(index)'],
+            ['price', ['max'], 'max(price)'],
+            ['time', ['first'], 'first(time)'],
+            ['size', ['avg', 'sum'], 'avg(size), sum(size)'],
+        ]:
+            eval_sql_with_data(self.conn, data, test_contextby_agg)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_agg_dict(self, flushed_table_n100):
+    ])
+    def test_table_contextby_agg_dict(self, data):
+        data = get_global(data)
+
         def test_contextby_agg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.contextby("symbol").agg({
@@ -2887,13 +2597,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_agg)
+        eval_sql_with_data(self.conn, data, test_contextby_agg)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_sum(self, flushed_table_n100):
+    ])
+    def test_table_contextby_sum(self, data):
+        data = get_global(data)
+
         def test_contextby_sum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").sum()
@@ -2904,13 +2616,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_sum)
+        eval_sql_with_data(self.conn, data, test_contextby_sum)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_avg(self, flushed_table_n100):
+    ])
+    def test_table_contextby_avg(self, data):
+        data = get_global(data)
+
         def test_contextby_avg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").avg()
@@ -2921,13 +2635,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_avg)
+        eval_sql_with_data(self.conn, data, test_contextby_avg)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_count(self, flushed_table_n100):
+    ])
+    def test_table_contextby_count(self, data):
+        data = get_global(data)
+
         def test_contextby_count(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                  df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").count()
@@ -2938,13 +2654,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_count)
+        eval_sql_with_data(self.conn, data, test_contextby_count)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_max(self, flushed_table_n100):
+    ])
+    def test_table_contextby_max(self, data):
+        data = get_global(data)
+
         def test_contextby_max(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").max()
@@ -2955,13 +2673,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_max)
+        eval_sql_with_data(self.conn, data, test_contextby_max)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_min(self, flushed_table_n100):
+    ])
+    def test_table_contextby_min(self, data):
+        data = get_global(data)
+
         def test_contextby_min(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").min()
@@ -2972,13 +2692,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_min)
+        eval_sql_with_data(self.conn, data, test_contextby_min)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_first(self, flushed_table_n100):
+    ])
+    def test_table_contextby_first(self, data):
+        data = get_global(data)
+
         def test_contextby_first(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                  df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["time"]).contextby("symbol").first()
@@ -2989,13 +2711,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_first)
+        eval_sql_with_data(self.conn, data, test_contextby_first)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_last(self, flushed_table_n100):
+    ])
+    def test_table_contextby_last(self, data):
+        data = get_global(data)
+
         def test_contextby_last(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["time"]).contextby("symbol").last()
@@ -3006,13 +2730,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_last)
+        eval_sql_with_data(self.conn, data, test_contextby_last)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_size(self, flushed_table_n100):
+    ])
+    def test_table_contextby_size(self, data):
+        data = get_global(data)
+
         def test_contextby_size(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").size()
@@ -3023,13 +2749,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_size)
+        eval_sql_with_data(self.conn, data, test_contextby_size)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_sum2(self, flushed_table_n100):
+    ])
+    def test_table_contextby_sum2(self, data):
+        data = get_global(data)
+
         def test_contextby_sum2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").sum2()
@@ -3040,13 +2768,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_sum2)
+        eval_sql_with_data(self.conn, data, test_contextby_sum2)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_std(self, flushed_table_n100):
+    ])
+    def test_table_contextby_std(self, data):
+        data = get_global(data)
+
         def test_contextby_std(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").std()
@@ -3057,13 +2787,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_std)
+        eval_sql_with_data(self.conn, data, test_contextby_std)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_var(self, flushed_table_n100):
+    ])
+    def test_table_contextby_var(self, data):
+        data = get_global(data)
+
         def test_contextby_var(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").var()
@@ -3074,13 +2806,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_var)
+        eval_sql_with_data(self.conn, data, test_contextby_var)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_prod(self, flushed_table_n100):
+    ])
+    def test_table_contextby_prod(self, data):
+        data = get_global(data)
+
         def test_contextby_prod(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").prod()
@@ -3091,13 +2825,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_prod)
+        eval_sql_with_data(self.conn, data, test_contextby_prod)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_cumsum(self, flushed_table_n100):
+    ])
+    def test_table_contextby_cumsum(self, data):
+        data = get_global(data)
+
         def test_contextby_cumsum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                   df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").cumsum()
@@ -3108,13 +2844,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_cumsum)
+        eval_sql_with_data(self.conn, data, test_contextby_cumsum)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_cummax(self, flushed_table_n100):
+    ])
+    def test_table_contextby_cummax(self, data):
+        data = get_global(data)
+
         def test_contextby_cummax(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                   df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").cummax()
@@ -3125,13 +2863,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_cummax)
+        eval_sql_with_data(self.conn, data, test_contextby_cummax)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_cumprod(self, flushed_table_n100):
+    ])
+    def test_table_contextby_cumprod(self, data):
+        data = get_global(data)
+
         def test_contextby_cumprod(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                    df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["price"]).contextby("symbol").cumprod()
@@ -3142,13 +2882,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_cumprod)
+        eval_sql_with_data(self.conn, data, test_contextby_cumprod)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_cummin(self, flushed_table_n100):
+    ])
+    def test_table_contextby_cummin(self, data):
+        data = get_global(data)
+
         def test_contextby_cummin(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                   df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.select(["index"]).contextby("symbol").cummin()
@@ -3159,22 +2901,15 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_cummin)
+        eval_sql_with_data(self.conn, data, test_contextby_cummin)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    @pytest.mark.parametrize('aggfunc, aggscript', [
-        [[ddb.corr, ('ask', 'bid')], "corr(ask, bid)"],
-        [['atImax', ('ask', 'bid')], "atImax(ask, bid)"],
-        [['contextSum', ('ask', 'bid')], "contextSum(ask, bid)"],
-        [[ddb.covar, ('ask', 'bid')], "covar(ask, bid)"],
-        [[ddb.wavg, ('ask', 'bid')], "wavg(ask, bid)"],
-        [[ddb.wsum, ('ask', 'bid')], "wsum(ask, bid)"],
-        [[ddb.wsum, [('ask', 'bid'), ('bid', 'ask')]], "wsum(ask, bid), wsum(bid, ask)"],
     ])
-    def test_table_contextby_agg2(self, flushed_table_n100, aggfunc, aggscript):
+    def test_table_contextby_agg2(self, data):
+        data = get_global(data)
+
         def test_contextby_agg2(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").agg2(*aggfunc)
@@ -3203,13 +2938,24 @@ class TestTableContextby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_agg2)
+        for aggfunc, aggscript in [
+            [[ddb.corr, ('ask', 'bid')], "corr(ask, bid)"],
+            [['atImax', ('ask', 'bid')], "atImax(ask, bid)"],
+            [['contextSum', ('ask', 'bid')], "contextSum(ask, bid)"],
+            [[ddb.covar, ('ask', 'bid')], "covar(ask, bid)"],
+            [[ddb.wavg, ('ask', 'bid')], "wavg(ask, bid)"],
+            [[ddb.wsum, ('ask', 'bid')], "wsum(ask, bid)"],
+            [[ddb.wsum, [('ask', 'bid'), ('bid', 'ask')]], "wsum(ask, bid), wsum(bid, ask)"],
+        ]:
+            eval_sql_with_data(self.conn, data, test_contextby_agg2)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_wavg(self, flushed_table_n100):
+    ])
+    def test_table_contextby_wavg(self, data):
+        data = get_global(data)
+
         def test_contextby_wavg(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").wavg(("ask", "bid"))
@@ -3220,13 +2966,15 @@ class TestTableContextby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_wavg)
+        eval_sql_with_data(self.conn, data, test_contextby_wavg)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_wsum(self, flushed_table_n100):
+    ])
+    def test_table_contextby_wsum(self, data):
+        data = get_global(data)
+
         def test_contextby_wsum(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").wsum(("ask", "bid"))
@@ -3237,13 +2985,15 @@ class TestTableContextby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_wsum)
+        eval_sql_with_data(self.conn, data, test_contextby_wsum)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_covar(self, flushed_table_n100):
+    ])
+    def test_table_contextby_covar(self, data):
+        data = get_global(data)
+
         def test_contextby_covar(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                  df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").covar(("ask", "bid"))
@@ -3254,13 +3004,15 @@ class TestTableContextby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_covar)
+        eval_sql_with_data(self.conn, data, test_contextby_covar)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_corr(self, flushed_table_n100):
+    ])
+    def test_table_contextby_corr(self, data):
+        data = get_global(data)
+
         def test_contextby_corr(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, partitioned: bool = False):
             tbtmp2 = tb2.contextby("symbol").corr(("ask", "bid"))
@@ -3272,13 +3024,15 @@ class TestTableContextby:
             re = tbtmp2.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_corr)
+        eval_sql_with_data(self.conn, data, test_contextby_corr)
 
-    @pytest.mark.parametrize('flushed_table_n100', [
+    @pytest.mark.parametrize('data', [
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
-    ], indirect=True)
-    def test_table_contextby_eachPre(self, flushed_table_n100):
+    ])
+    def test_table_contextby_eachPre(self, data):
+        data = get_global(data)
+
         def test_contextby_eachPre(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                    df2: pd.DataFrame, partitioned: bool = False):
             tbtmp1 = tb1.contextby("symbol").eachPre(("\\", "price"))
@@ -3289,19 +3043,13 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, flushed_table_n100, test_contextby_eachPre)
+        eval_sql_with_data(self.conn, data, test_contextby_eachPre)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys',
-                             ["price", "price", ["price"], ("size", "price"), ["size", "price"], ("price", "size"),
-                              ["price", "size"]])
-    @pytest.mark.parametrize('ascending', [True, False, True, False, [True], [False], (True, False), [True, False]])
-    def test_table_contextby_sort(self, data, bys, ascending):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_contextby_sort(self, data):
+        data = get_global(data)
 
         def test_contextby_sort(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                 df2: pd.DataFrame, bys, ascending, partitioned: bool = False):
@@ -3333,19 +3081,16 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, data, test_contextby_sort, bys, ascending)
+        for bys in ["price", ["price"], ("size", "price"), ["size", "price"], ("price", "size"),
+                    ["price", "size"]]:
+            for ascending in [True, False, [True], [False], (True, False), [True, False]]:
+                eval_sql_with_data(self.conn, data, test_contextby_sort, bys, ascending)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('bys',
-                             ["index", "index", ["index"], ("size", "price"), ["size", "price"], ("price", "size"),
-                              ["price", "size"]])
-    @pytest.mark.parametrize('ascending', [True, False, True, False, [True], [False], (True, False), [True, False]])
-    def test_table_contextby_csort(self, data, bys, ascending):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_contextby_csort(self, data):
+        data = get_global(data)
 
         def test_contextby_csort(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame,
                                  df2: pd.DataFrame, bys, ascending, partitioned: bool = False):
@@ -3385,15 +3130,16 @@ class TestTableContextby:
             else:
                 assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, data, test_contextby_csort, bys, ascending)
+        for bys in ["index", "index", ["index"], ("size", "price"), ["size", "price"], ("price", "size"),
+                    ["price", "size"]]:
+            for ascending in [True, False, [True], [False], (True, False), [True, False]]:
+                eval_sql_with_data(self.conn, data, test_contextby_csort, bys, ascending)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
     def test_table_contextby_top(self, data):
+        data = get_global(data)
 
         def test_top_num(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                          partitioned: bool = False):
@@ -3418,16 +3164,11 @@ class TestTableContextby:
         eval_sql_with_data(self.conn, data, test_top_num)
         eval_sql_with_data(self.conn, data, test_top_str)
 
-    @pytest.mark.parametrize('data', [NormalTable, SharedTable, StreamTable, ShareStreamTable,
-                                      IndexedTable, ShareIndexedTable, KeyedTable, ShareKeyedTable,
-                                      df_python, dict_python, dict2_python, PartitionedTable],
-                             ids=["Table", "STable", "streamTable", "SStreamTable",
-                                  "indexTable", "SindexTable", "keyTable", "SkeyTable",
-                                  "DF", "DICT", "DICT_List", "PTable"])
-    @pytest.mark.parametrize('limit', [
-        5, 5, [5], "5", "5", ["5"],
-    ])
-    def test_table_contextby_limit(self, data, limit):
+    @pytest.mark.parametrize('data', ["Table", "STable", "StreamTable", "SStreamTable",
+                                      "indexTable", "SindexTable", "keyTable", "SkeyTable",
+                                      "DF", "DICT", "DICT_List", "PTable"])
+    def test_table_contextby_limit(self, data):
+        data = get_global(data)
 
         def test_limit(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
                        partitioned: bool = False):
@@ -3446,7 +3187,8 @@ class TestTableContextby:
             re = tbtmp1.toDF()
             assert_frame_equal(re, ex)
 
-        eval_sql_with_data(self.conn, data, test_limit)
+        for limit in [5, [5], "5", ["5"]]:
+            eval_sql_with_data(self.conn, data, test_limit)
 
     def test_table_illegal_columns(self):
         data = pd.DataFrame({

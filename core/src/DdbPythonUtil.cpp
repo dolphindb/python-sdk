@@ -22,7 +22,7 @@ namespace dolphindb {
 #ifdef DLOG
     #undef DLOG
 #endif
-#define DLOG    //DLogger::Info
+#define DLOG    //dolphindb::DLogger::Info
 
 #define RECORDTIME(name) //RecordTime _##name(name)
 
@@ -108,7 +108,7 @@ PytoDdbRowPool::PytoDdbRowPool(MultithreadedTableWriter &writer)
 PytoDdbRowPool::~PytoDdbRowPool(){
     DLOG("~PytoDdbRowPool",rows_.size(),failedRows_.size());
     if(!rows_.empty()||!failedRows_.empty()){
-        ProtectGil protectGil(false,"~PytoDdbRowPool");
+        py::gil_scoped_acquire gil;
         while(!rows_.empty()){
             delete rows_.front();
             rows_.pop();
@@ -122,7 +122,6 @@ PytoDdbRowPool::~PytoDdbRowPool(){
 
 void PytoDdbRowPool::startExit(){
     DLOG("startExit with",rows_.size(),failedRows_.size());
-    pGil_=new ProtectGil(true, "startExit");
     
     exitWhenEmpty_ = true;
     nonempty_.set();
@@ -131,7 +130,6 @@ void PytoDdbRowPool::startExit(){
 
 void PytoDdbRowPool::endExit(){
     DLOG("endExit with",rows_.size(),failedRows_.size());
-    pGil_.clear();
 }
 
 void PytoDdbRowPool::convertLoop(){
@@ -169,7 +167,7 @@ void PytoDdbRowPool::convertLoop(){
             vector<ConstantSP> *pDdbRow = NULL;
             try
             {
-                ProtectGil protectGil(false,"convertLoop");
+                py::gil_scoped_acquire gil;
                 const DATA_TYPE *pcolType = writer_.getColType();
                 const int *pcolExtra = writer_.getColExtra();
                 int i, size;
@@ -228,7 +226,7 @@ void PytoDdbRowPool::convertLoop(){
                 }
             }
             for (size_t ni = 0; ni < insertRows.size(); ++ni) {
-                ProtectGil protectGil(false, "clearconvertRows");
+                py::gil_scoped_acquire gil;
                 delete convertRows[ni];                                     // must delete it in GIL lock
             }
             DLOG("convert end ",insertRows.size(),failedRows_.size(),"/",rows_.size());
@@ -239,7 +237,7 @@ void PytoDdbRowPool::convertLoop(){
 }
 
 void PytoDdbRowPool::getStatus(MultithreadedTableWriter::Status &status){
-    ProtectGil release(true, "getStatus");
+    py::gil_scoped_release gil;
     writer_.getStatus(status);
     MultithreadedTableWriter::ThreadStatus threadStatus;
     LockGuard<Mutex> guard(&mutex_);
@@ -253,7 +251,7 @@ void PytoDdbRowPool::getStatus(MultithreadedTableWriter::Status &status){
 }
 
 void PytoDdbRowPool::getUnwrittenData(vector<vector<py::object>*> &pyData,vector<vector<ConstantSP>*> &ddbData){
-    ProtectGil release(true, "getUnwrittenData");
+    py::gil_scoped_release gil;
     writer_.getUnwrittenData(ddbData);
     {
         SemLock idleLock(idle_);

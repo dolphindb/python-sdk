@@ -15,12 +15,14 @@ DBConnectionImpl::DBConnectionImpl(bool sslEnable, bool asynTask, int keepAliveT
 		: port_(0), encrypted_(false), isConnected_(false), littleEndian_(Util::isLittleEndian()), 
 		sslEnable_(sslEnable),asynTask_(asynTask), keepAliveTime_(keepAliveTime), compress_(compress),
 		python_(python), protocol_(PROTOCOL_DDB), msg_(true), isReverseStreaming_(isReverseStreaming),
-        sqlStd_(sqlStd), readTimeout_(-1), writeTimeout_(-1) {
+        sqlStd_(sqlStd), readTimeout_(-1), writeTimeout_(-1), logger_(std::make_shared<Logger>()) {
+    logger_->init(false);
 }
 
 DBConnectionImpl::~DBConnectionImpl() {
     close();
     conn_.clear();
+    logger_->clear();
 }
 
 void DBConnectionImpl::close() {
@@ -159,7 +161,7 @@ bool DBConnectionImpl::connect() {
             throw IOException("Required C++ API version at least "  + std::to_string(apiVersion) + ". Current C++ API version is "+ std::to_string(APIMinVersionRequirement) +". Please update DolphinDB C++ API. ");
         }
         if(requiredVersion->size() >= 2 && requiredVersion->get(1)->getString() != ""){
-            std::cout<<requiredVersion->get(1)->getString() <<std::endl;
+            LOG_INFO(requiredVersion->get(1)->getString());
         }
     }
     return true;
@@ -289,11 +291,7 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
 
     if(fetchSize > 0 && fetchSize < 8192)
         throw IOException("fetchSize must be greater than 8192");
-    //force Python release GIL
-    // SmartPointer<py::gil_scoped_release> pgilRelease;
-    // if(PyGILState_Check() == 1)
-    //     pgilRelease = new py::gil_scoped_release;
-    ProtectGil nogil(true, "run");
+
     string body;
     size_t argCount = args.size();
     if (scriptType == "script")
@@ -408,7 +406,7 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
     ConstantUnmarshallFactory factory(inputStream_);
     ConstantUnmarshall* unmarshall = factory.getConstantUnmarshall(form);
     if(unmarshall == NULL){
-        DLogger::Error("Unknow incoming object form",form,"of type",type);
+        LOG_ERR("Unknow incoming object form",form,"of type",type);
         inputStream_->reset(0);
         conn_->skipAll();
         return Constant::void_;
@@ -435,7 +433,7 @@ py::object DBConnectionImpl::runPy(
     //force Python release GIL
     if (!isConnected_)
         throw IOException("Couldn't send script/function to the remote host because the connection has been closed");
-    ProtectGil pgil(true, "runPy");
+    py::gil_scoped_release gil;
 
     //RecordTime record("Db.server");
     string body;
@@ -516,7 +514,7 @@ py::object DBConnectionImpl::runPy(
             close();
             throw IOException("Failed to read response msg from the socket with IO error type " + std::to_string(ret));
         }
-        if (msg_) std::cout << line << std::endl;
+        if (msg_) { logger_->Info(line); }
         if ((ret = in->readLine(line)) != OK) {
             close();
             throw IOException("Failed to read response header from the socket with IO error type " + std::to_string(ret));
@@ -561,14 +559,14 @@ py::object DBConnectionImpl::runPy(
         if (protocol_ == PROTOCOL_ARROW) {
             InputStreamWrapper wrapper = InputStreamWrapper();
             wrapper.setInputStream(in);
-            pgil.acquire();
+            py::gil_scoped_acquire pgil;
             py::object pywrapper = py::cast(wrapper);
             py::object reader = converter::PyObjs::cache_->pyarrow_.attr("ipc").attr("RecordBatchStreamReader")(pywrapper);
             py::object pa = reader.attr("read_all")();
             return pa;
         }
         if (protocol_ == PROTOCOL_PICKLE) {
-            pgil.acquire();
+            py::gil_scoped_acquire pgil;
             DLOG("runPy pickle",retFlag);
             std::unique_ptr<PickleUnmarshall> unmarshall(new PickleUnmarshall(in));
             if (!unmarshall->start(retFlag, true, ret)) {
@@ -605,8 +603,7 @@ py::object DBConnectionImpl::runPy(
         ConstantUnmarshall* unmarshall = factory.getConstantUnmarshall(form);
         if(unmarshall == NULL){
             DLOG("runPy ",script," invalid form",form);
-            //FIXME ignore it now until server fix this bug.
-            //DLogger::Error("Unknow incoming object form",form,"in flag",retFlag);
+            //FIXME: ignore it now until server fix this bug.
             in->reset(0);
             conn_->skipAll();
             return py::none();
@@ -620,7 +617,7 @@ py::object DBConnectionImpl::runPy(
             throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret));
         }
     }
-    pgil.acquire();
+    py::gil_scoped_acquire pgil;
 
     converter::ToPythonOption option(pickleTableToList);
     return converter::Converter::toPython_Old(result, option);

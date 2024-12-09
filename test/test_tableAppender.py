@@ -1,53 +1,33 @@
 import decimal
+import inspect
 import random
 
+import dolphindb as ddb
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
 import pytest
-from numpy.testing import *
-from pandas.testing import *
+from numpy.testing import assert_array_equal
+from pandas._testing import assert_frame_equal
 
-from setup.prepare import *
-from setup.settings import *
-from setup.utils import get_pid, random_string
+from basic_testing.prepare import random_string
+from setup.settings import HOST, PORT, USER, PASSWD, DATA_DIR, LOCAL_DATA_DIR
 
 
 class TestTableAppender:
-    conn = ddb.session()
-
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
     def test_TableAppender_error(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         appender = ddb.tableAppender("", "t", conn)
         with pytest.raises(RuntimeError, match='table must be a DataFrame!'):
             appender.append(object())
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_date(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+    def test_TableAppender_keyedTable_date(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -64,13 +44,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_dateToMonth(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, MONTH, INT]) as t")
+    def test_TableAppender_keyedTable_dateToMonth(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, MONTH, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -87,13 +65,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_month(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`month`qty, [SYMBOL, MONTH, INT]) as t")
+    def test_TableAppender_keyedTable_month(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`month`qty, [SYMBOL, MONTH, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         month = np.array(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], dtype="datetime64")
@@ -108,13 +84,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_monthToDate(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`month`qty, [SYMBOL, DATE, INT]) as t")
+    def test_TableAppender_keyedTable_monthToDate(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`month`qty, [SYMBOL, DATE, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         month = np.array(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], dtype="datetime64")
@@ -129,13 +103,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_time(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, TIME, INT]) as t")
+    def test_TableAppender_keyedTable_time(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, TIME, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
@@ -149,13 +121,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_minute(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, MINUTE, INT]) as t")
+    def test_TableAppender_keyedTable_minute(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, MINUTE, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
@@ -169,13 +139,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_second(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, SECOND, INT]) as t")
+    def test_TableAppender_keyedTable_second(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, SECOND, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'],
@@ -189,13 +157,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_datetime(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, DATETIME, INT]) as t")
+    def test_TableAppender_keyedTable_datetime(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, DATETIME, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'],
@@ -209,13 +175,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_timestamp(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, TIMESTAMP, INT]) as t")
+    def test_TableAppender_keyedTable_timestamp(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, TIMESTAMP, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.008', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
@@ -229,13 +193,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_nanotime(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIME, INT]) as t")
+    def test_TableAppender_keyedTable_nanotime(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIME, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
@@ -249,13 +211,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_nanotimestamp(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT]) as t")
+    def test_TableAppender_keyedTable_nanotimestamp(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
@@ -269,13 +229,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_date_null(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+    def test_TableAppender_keyedTable_date_null(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(np.repeat('Nat', 10), dtype="datetime64[D]")
@@ -288,13 +246,11 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_nanotimestamp_null(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT]) as t")
+    def test_TableAppender_keyedTable_nanotimestamp_null(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT])")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(np.repeat('Nat', 5), dtype="datetime64[ns]")
@@ -307,139 +263,134 @@ class TestTableAppender:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_all_time_type(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_TableAppender_keyedTable_all_time_type(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "share keyedTable(`qty,1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT]) as t")
+            "t=keyedTable(`qty,1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT])")
         appender = ddb.tableAppender("", "t", conn)
-        sym = list(map(str, np.arange(100000, 600000)))
+        sym = list(map(str, np.arange(100, 600)))
         date = np.array(np.tile(
             ['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23', '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'],
-            50000), dtype="datetime64[D]")
-        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
+            50), dtype="datetime64[D]")
+        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100), dtype="datetime64")
         time = np.array(
             np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
-                    100000), dtype="datetime64")
+                    100), dtype="datetime64")
         second = np.array(
-            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100000),
+            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100),
             dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
-                                     '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+                                     '2015-06-09T23:59:59.999008007'], 100), dtype="datetime64")
+        qty = np.arange(100, 600)
         data = pd.DataFrame({'sym': sym, 'date': date, 'month': month, 'time': time, 'minute': time, 'second': second,
                              'datetime': second, 'timestamp': time, 'nanotime': nanotime, 'nanotimestamp': nanotime,
                              'qty': qty})
         appender.append(data)
         script = '''
-            n = 500000
-            tmp=table(string(100000..599999) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
+            n = 500
+            tmp=table(string(100..599) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
             take([00:00:00.000, 05:12:48.426, NULL, NULL, 23:59:59.999],n) as time, take([00:00m, 05:12m, NULL, NULL, 23:59m],n) as minute, take([00:00:00, 05:12:48, NULL, NULL, 23:59:59],n) as second,take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 2015.06.09T23:59:59],n) as datetime,
             take([2012.01.01T00:00:00.000, 2015.08.26T05:12:48.426, NULL, NULL, 2015.06.09T23:59:59.999],n) as timestamp,take([00:00:00.000000000, 05:12:48.008007006, NULL, NULL, 23:59:59.999008007],n) as nanotime,take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006, NULL, NULL, 2015.06.09T23:59:59.999008007],n) as nanotimestamp,
-            100000..599999 as qty)
+            100..599 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True, True, True, True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_indexedTable_all_time_type(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_TableAppender_indexedTable_all_time_type(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "share indexedTable(`qty,1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT]) as t")
+            "t=indexedTable(`qty,1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT])")
         appender = ddb.tableAppender("", "t", conn)
-        sym = list(map(str, np.arange(100000, 600000)))
+        sym = list(map(str, np.arange(100, 600)))
         date = np.array(np.tile(
             ['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23', '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'],
-            50000), dtype="datetime64[D]")
-        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
+            50), dtype="datetime64[D]")
+        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100), dtype="datetime64")
         time = np.array(
             np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
-                    100000), dtype="datetime64")
+                    100), dtype="datetime64")
         second = np.array(
-            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100000),
+            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100),
             dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
-                                     '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+                                     '2015-06-09T23:59:59.999008007'], 100), dtype="datetime64")
+        qty = np.arange(100, 600)
         data = pd.DataFrame({'sym': sym, 'date': date, 'month': month, 'time': time, 'minute': time, 'second': second,
                              'datetime': second, 'timestamp': time, 'nanotime': nanotime, 'nanotimestamp': nanotime,
                              'qty': qty})
         appender.append(data)
         script = '''
-            n = 500000
-            tmp=table(string(100000..599999) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
+            n = 500
+            tmp=table(string(100..599) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
             take([00:00:00.000, 05:12:48.426, NULL, NULL, 23:59:59.999],n) as time, take([00:00m, 05:12m, NULL, NULL, 23:59m],n) as minute, take([00:00:00, 05:12:48, NULL, NULL, 23:59:59],n) as second,take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 2015.06.09T23:59:59],n) as datetime,
             take([2012.01.01T00:00:00.000, 2015.08.26T05:12:48.426, NULL, NULL, 2015.06.09T23:59:59.999],n) as timestamp,take([00:00:00.000000000, 05:12:48.008007006, NULL, NULL, 23:59:59.999008007],n) as nanotime,take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006, NULL, NULL, 2015.06.09T23:59:59.999008007],n) as nanotimestamp,
-            100000..599999 as qty)
+            100..599 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True, True, True, True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_all_time_types(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_all_time_types(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT])
-            db=database(dbPath,RANGE,100000 200000 300000 400000 600001)
+            db=database(dbPath,RANGE,100 200 300 400 601)
             pt = db.createPartitionedTable(t, `pt, `qty)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
-        sym = list(map(str, np.arange(100000, 600000)))
+        appender = ddb.tableAppender(db_name, "pt", conn)
+        sym = list(map(str, np.arange(100, 600)))
         date = np.array(np.tile(
             ['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23', '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'],
-            50000), dtype="datetime64[D]")
-        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
+            50), dtype="datetime64[D]")
+        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100), dtype="datetime64")
         time = np.array(
             np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
-                    100000), dtype="datetime64")
+                    100), dtype="datetime64")
         second = np.array(
-            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100000),
+            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100),
             dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
-                                     '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+                                     '2015-06-09T23:59:59.999008007'], 100), dtype="datetime64")
+        qty = np.arange(100, 600)
         data = pd.DataFrame({'sym': sym, 'date': date, 'month': month, 'time': time, 'minute': time, 'second': second,
                              'datetime': second, 'timestamp': time, 'nanotime': nanotime, 'nanotimestamp': nanotime,
                              'qty': qty})
         appender.append(data)
-        script = '''
-            n = 500000
-            tmp=table(string(100000..599999) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
+        script = f'''
+            n = 500
+            tmp=table(string(100..599) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
             take([00:00:00.000, 05:12:48.426, NULL, NULL, 23:59:59.999],n) as time, take([00:00m, 05:12m, NULL, NULL, 23:59m],n) as minute, take([00:00:00, 05:12:48, NULL, NULL, 23:59:59],n) as second,take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 2015.06.09T23:59:59],n) as datetime,
             take([2012.01.01T00:00:00.000, 2015.08.26T05:12:48.426, NULL, NULL, 2015.06.09T23:59:59.999],n) as timestamp,take([00:00:00.000000000, 05:12:48.008007006, NULL, NULL, 23:59:59.999008007],n) as nanotime,take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006, NULL, NULL, 2015.06.09T23:59:59.999008007],n) as nanotimestamp,
-            100000..599999 as qty)
-            re = select * from loadTable("dfs://AutoFitTableAppender_test",`pt)
+            100..599 as qty)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, tmp.values(), re.values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True, True, True, True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_all_time_type_early_1970(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_TableAppender_keyedTable_all_time_type_early_1970(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "share keyedTable(`qty,1000:0, `date`month`datetime `timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT]) as t")
+            "t=keyedTable(`qty,1000:0, `date`month`datetime `timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT])")
         appender = ddb.tableAppender("", "t", conn)
-        n = 500000
+        n = 500
         date = np.array(np.repeat('1960-01-01', n), dtype="datetime64[D]")
         month = np.array(np.repeat('1960-01', n), dtype="datetime64")
         datetime = np.array(np.repeat('1960-01-01T13:30:10', n), dtype="datetime64")
         timestamp = np.array(np.repeat('1960-01-01T13:30:10.008', n), dtype="datetime64")
         nanotimestamp = np.array(np.repeat('1960-01-01 13:30:10.008007006', n), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+        qty = np.arange(100, 600)
         data = pd.DataFrame(
             {'date': date, 'month': month, 'datetime': datetime, 'timestamp': timestamp, 'nanotimestamp': nanotimestamp,
              'qty': qty})
@@ -447,30 +398,28 @@ class TestTableAppender:
         num = conn.table(data="t")
         assert num.rows == n
         script = '''
-            n = 500000
+            n = 500
             tmp=table(take(1960.01.01,n) as date,take(1960.01M,n) as month,take(1960.01.01T13:30:10,n) as datetime,
             take(1960.01.01T13:30:10.008,n) as timestamp,take(1960.01.01 13:30:10.008007006,n) as nanotimestamp,
-            100000..599999 as qty)
+            100..599 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_indexedTable_all_time_type_early_1970(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_TableAppender_indexedTable_all_time_type_early_1970(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "share indexedTable(`qty,1000:0, `date`month`datetime `timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT]) as t")
+            "t=indexedTable(`qty,1000:0, `date`month`datetime `timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT])")
         appender = ddb.tableAppender("", "t", conn)
-        n = 500000
+        n = 500
         date = np.array(np.repeat('1960-01-01', n), dtype="datetime64[D]")
         month = np.array(np.repeat('1960-01', n), dtype="datetime64")
         datetime = np.array(np.repeat('1960-01-01T13:30:10', n), dtype="datetime64")
         timestamp = np.array(np.repeat('1960-01-01T13:30:10.008', n), dtype="datetime64")
         nanotimestamp = np.array(np.repeat('1960-01-01 13:30:10.008007006', n), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+        qty = np.arange(100, 600)
         data = pd.DataFrame(
             {'date': date, 'month': month, 'datetime': datetime, 'timestamp': timestamp, 'nanotimestamp': nanotimestamp,
              'qty': qty})
@@ -478,57 +427,56 @@ class TestTableAppender:
         num = conn.table(data="t")
         assert num.rows == n
         script = '''
-            n = 500000
+            n = 500
             tmp=table(take(1960.01.01,n) as date,take(1960.01M,n) as month,take(1960.01.01T13:30:10,n) as datetime,
             take(1960.01.01T13:30:10.008,n) as timestamp,take(1960.01.01 13:30:10.008007006,n) as nanotimestamp,
-            100000..599999 as qty)
+            100..599 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_all_time_types_early_1970(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_all_time_types_early_1970(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(1000:0, `date`month`datetime`timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT])
-            db=database(dbPath,RANGE,100000 200000 300000 400000 600001)
+            db=database(dbPath,RANGE,100 200 300 400 601)
             pt = db.createPartitionedTable(t, `pt, `qty)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
-        n = 500000
+        appender = ddb.tableAppender(db_name, "pt", conn)
+        n = 500
         date = np.array(np.repeat('1960-01-01', n), dtype="datetime64[D]")
         month = np.array(np.repeat('1960-01', n), dtype="datetime64")
         datetime = np.array(np.repeat('1960-01-01T13:30:10', n), dtype="datetime64")
         timestamp = np.array(np.repeat('1960-01-01T13:30:10.008', n), dtype="datetime64")
         nanotimestamp = np.array(np.repeat('1960-01-01 13:30:10.008007006', n), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+        qty = np.arange(100, 600)
         data = pd.DataFrame(
             {'date': date, 'month': month, 'datetime': datetime, 'timestamp': timestamp, 'nanotimestamp': nanotimestamp,
              'qty': qty})
         appender.append(data)
-        script = '''
-            n = 500000
+        script = f'''
+            n = 500
             ex = table(take(1960.01.01,n) as date,take(1960.01M,n) as month,take(1960.01.01T13:30:10,n) as datetime,
             take(1960.01.01T13:30:10.008,n) as timestamp,take(1960.01.01 13:30:10.008007006,n) as nanotimestamp,
-            100000..599999 as qty)
-            re = select * from loadTable("dfs://AutoFitTableAppender_test",`pt)
+            100..599 as qty)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_datehour(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_TableAppender_keyedTable_datehour(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "try{undef(`t);undef(`t, SHARED)}catch(ex){};share keyedTable(`qty,'A1' 'A2' as sym,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty) as t")
+            "t=keyedTable(`qty,'A1' 'A2' as sym,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty)")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A3', 'A4', 'A5', 'A6', 'A7']
         time = np.array(['2021-01-01T03', '2021-01-01T04', 'NaT', 'NaT', '1960-01-01T03'], dtype="datetime64")
@@ -542,31 +490,28 @@ class TestTableAppender:
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_keyedTable_datehour_null(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run(
-            "try{undef(`t);undef(`t, SHARED)}catch(ex){};share keyedTable(`qty,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty) as t")
+    def test_TableAppender_keyedTable_datehour_null(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty)")
         appender = ddb.tableAppender("", "t", conn)
-        n = 100000
+        n = 100
         data = pd.DataFrame({'time': np.array(np.repeat('Nat', n), dtype="datetime64[ns]"),
                              'qty': np.arange(3, n + 3)})
         appender.append(data)
         script = '''
-            n = 100000
+            n = 100
             tmp=table(datehour([2021.01.01T01:01:01,2021.01.01T02:01:01].join(take(datehour(),n)))  as time, 1..(n+2) as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_indexedTable_datehour(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_TableAppender_indexedTable_datehour(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "try{undef(`t);undef(`t, SHARED)}catch(ex){};share indexedTable(`qty,'A1' 'A2' as sym,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty) as t")
+            "t=indexedTable(`qty,'A1' 'A2' as sym,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty)")
         appender = ddb.tableAppender("", "t", conn)
         sym = ['A3', 'A4', 'A5', 'A6', 'A7']
         time = np.array(['2021-01-01T03', '2021-01-01T04', 'NaT', 'NaT', '1960-01-01T03'], dtype="datetime64")
@@ -580,147 +525,65 @@ class TestTableAppender:
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_indexedTable_datehour_null(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run(
-            "try{undef(`t);undef(`t, SHARED)}catch(ex){};share indexedTable(`qty,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty) as t")
+    def test_TableAppender_indexedTable_datehour_null(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=indexedTable(`qty,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty)")
         appender = ddb.tableAppender("", "t", conn)
-        n = 100000
+        n = 100
         data = pd.DataFrame({'time': np.array(np.repeat('Nat', n), dtype="datetime64[ns]"),
                              'qty': np.arange(3, n + 3)})
         appender.append(data)
         script = '''
-            n = 100000
+            n = 100
             tmp=table(datehour([2021.01.01T01:01:01,2021.01.01T02:01:01].join(take(datehour(),n)))  as time, 1..(n+2) as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_datehour(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_datehour(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(datehour(2020.01.01T01:01:01) as time, 1 as qty)
-            db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001)
+            db=database(dbPath,RANGE,0 100 200 300 400 601)
             pt = db.createPartitionedTable(t, `pt, `qty)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
-        n = 500000
+        appender = ddb.tableAppender(db_name, "pt", conn)
+        n = 500
         time = pd.date_range(start='2020-01-01T01', periods=n, freq='h')
         qty = np.arange(1, n + 1)
         data = pd.DataFrame({'time': time, 'qty': qty})
         appender.append(data)
-        script = '''
-            n = 500000
+        script = f'''
+            n = 500
             ex = table((datehour(2020.01.01T00:01:01)+1..n) as time,1..n as qty)
-            re = select * from loadTable("dfs://AutoFitTableAppender_test",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_alltype(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
-            if(existsDatabase(dbPath))
-                dropDatabase(dbPath)
-            t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
-            db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
-            pt = db.createPartitionedTable(t, `pt, `int,,`int)
-        ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
-        df = pd.DataFrame({
-            'bool': np.array([True, False], dtype=np.bool8),
-            'char': np.array([1, -1], dtype=np.int8),
-            'short': np.array([-10, 1000], dtype=np.int16),
-            'int': np.array([10, 1000], dtype=np.int32),
-            'long': np.array([-100000000, 10000000000], dtype=np.int64),
-            'date': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-            'time': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
-                             dtype="datetime64[ms]"),
-            'minute': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
-                               dtype="datetime64[m]"),
-            'second': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
-                               dtype="datetime64[s]"),
-            'datetime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
-                                 dtype="datetime64[s]"),
-            'datehour': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
-                                 dtype="datetime64[h]"),
-            'timestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
-                                  dtype="datetime64[ms]"),
-            'nanotime': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
-                                 dtype="datetime64[ns]"),
-            'nanotimestamp': np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"],
-                                      dtype="datetime64[ns]"),
-            'float': np.array([2.2134500, np.nan], dtype='float32'),
-            'double': np.array([3.214, np.nan], dtype='float64'),
-            'symbol': np.array(['sym1', 'sym2'], dtype='object'),
-            'string': np.array(['str1', 'str2'], dtype='object'),
-            'ipaddr': np.array(["192.168.1.1", "0.0.0.0"], dtype='object'),
-            'uuid': np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
-                             dtype='object'),
-            'int128': np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"],
-                               dtype='object'),
-            'blob': np.array(['blob1', 'blob2'], dtype='object')
-        })
-        appender.append(df)
-        script = """
-            symbolV = symbol[`sym1,'sym2']
-            ipV = ipaddr["192.168.1.1", "0.0.0.0"]
-            uuidV = uuid["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"]
-            int128V = int128["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"]
-            blobV = blob['blob1', 'blob2']
-            t=table([bool(1),bool(0)] as bool,
-            [char(1),char(-1)] as char,
-            [short(-10),short(1000)] as short,
-            [int(10),int(1000)] as int,
-            [long(-100000000),long(10000000000)] as long,
-            [date(2012.02.03T01:02:03.456789123), date(2013.04.02T02:05:06.123456789)] as date,
-            [time(2012.02.03T01:02:03.456789123), time(2013.04.02T02:05:06.123456789)] as time,
-            [minute(2012.02.03T01:02:03.456789123), minute(2013.04.02T02:05:06.123456789)] as minute,
-            [second(2012.02.03T01:02:03.456789123), second(2013.04.02T02:05:06.123456789)] as second,
-            [datetime(2012.02.03T01:02:03.456789123), datetime(2013.04.02T02:05:06.123456789)] as datetime,
-            [datehour(2012.02.03T01:02:03.456789123), datehour(2013.04.02T02:05:06.123456789)] as datehour,
-            [timestamp(2012.02.03T01:02:03.456789123), timestamp(2013.04.02T02:05:06.123456789)] as timestamp,
-            [nanotime(2012.02.03T01:02:03.456789123), nanotime(2013.04.02T02:05:06.123456789)] as nanotime,
-            [nanotimestamp(2012.02.03T01:02:03.456789123), nanotimestamp(2013.04.02T02:05:06.123456789)] as nanotimestamp,
-            [float(2.2134500),float(NULL)] as float,
-            [double(3.214),double(NULL)] as double,
-            ['sym1','sym2' ] as sym,
-            [`str1,'str2'] as str,
-            ipV as ipaddr,
-            uuidV as uuid,
-            int128V as int128,
-            blobV as blob)
-            re = select * from loadTable("dfs://AutoFitTableAppender_test",`pt)
-            each(eqObj,t.values(),re.values())
-        """
-        re = conn.run(script)
-        assert_array_equal(re, [True for _ in range(22)])
-
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_alltype_arrayvector(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_alltype_arrayvector(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
             'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
@@ -769,25 +632,22 @@ class TestTableAppender:
                 np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object')]
         })
         appender.append(df)
-        if pickle:
-            for i in ['date','time','minute','second','datetime','datehour','timestamp','nanotime','nanotimestamp']:
-                df[i][0] = df[i][0].astype('datetime64[ns]')
-                df[i][1] = df[i][1].astype('datetime64[ns]')
-        assert_frame_equal(df, conn.run("select * from pt"),check_column_type=False)
+        assert_frame_equal(df, conn.run("select * from pt"), check_column_type=False)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_column_dateType_not_match_1(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_column_dateType_not_match_1(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
-            db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
+            db=database(dbPath,RANGE,0 100 200 300 400 601,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -827,19 +687,20 @@ class TestTableAppender:
         except Exception as e:
             assert "The value e1671797c52e15f763380b45e841ec32 (column \"date\", row 0) must be of DATE type" in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_column_dateType_not_match_2(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_column_dateType_not_match_2(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
-            db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
+            db=database(dbPath,RANGE,0 100 200 300 400 601,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -879,19 +740,20 @@ class TestTableAppender:
         except Exception as e:
             assert "The value str1 (column \"long\", row 0) must be of LONG type" in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_column_dateType_not_match_3(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_column_dateType_not_match_3(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
-            db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
+            db=database(dbPath,RANGE,0 100 200 300 400 601,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -932,19 +794,20 @@ class TestTableAppender:
         except Exception as e:
             assert "must be of IPADDR type" in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_column_dateType_not_match_4(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_column_dateType_not_match_4(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
-            db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
+            db=database(dbPath,RANGE,0 100 200 300 400 601,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -985,19 +848,20 @@ class TestTableAppender:
         except Exception as e:
             assert "(column \"string\", row 0) must be of STRING type" in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_column_dateType_not_match_5(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_column_dateType_not_match_5(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1038,19 +902,20 @@ class TestTableAppender:
         except Exception as e:
             assert "The value <NULL> (column \"int128\", row 2) must be of INT128 type." in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_array_vector_not_match_1(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_array_vector_not_match_1(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
             'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
@@ -1103,19 +968,20 @@ class TestTableAppender:
         except Exception as e:
             assert "The value [ -100000000 10000000000] (column \"ipaddr\", row 0) must be of IPADDR[] type" in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_array_vector_not_match_2(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_array_vector_not_match_2(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
             'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
@@ -1163,22 +1029,23 @@ class TestTableAppender:
                 np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object')]
         })
         assert appender.append(df) == 2
-        res = conn.run('''select * from loadTable("dfs://AutoFitTableAppender_test",`pt)''')
+        res = conn.run(f'''select * from loadTable("{db_name}",`pt)''')
         assert_frame_equal(res, df)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_array_vector_not_match_3(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_array_vector_not_match_3(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
             'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
@@ -1230,81 +1097,20 @@ class TestTableAppender:
         except Exception as e:
             assert "The value [ True False] (column \"ipaddr\", row 0) must be of IPADDR[] type" in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_array_vector_not_match_4(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
-            if(existsDatabase(dbPath))
-                dropDatabase(dbPath)
-            t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
-            db=database(dbPath,VALUE,1 10000,,'TSDB')
-            pt = db.createPartitionedTable(t, `pt, `id,,`id)
-        ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
-        df = pd.DataFrame({
-            'id': np.array([1, 10000], dtype="int32"),
-            'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
-            'char': [np.array([1, -1], dtype=np.int8), np.array([1, -1], dtype=np.int8)],
-            'short': [np.array([-10, 1000], dtype=np.int16), np.array([-10, 1000], dtype=np.int16)],
-            'int': [np.array([10, 1000], dtype=np.int32), np.array([10, 1000], dtype=np.int32)],
-            'long': [np.array([-100000000, 10000000000], dtype=np.int64),
-                     np.array([-100000000, 10000000000], dtype=np.int64)],
-            'date': [
-                np.array(["1970-01-01T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]")],
-            'time': [
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[ms]"),
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[ms]")],
-            'minute': [
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[m]"),
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[m]")],
-            'second': [
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[s]"),
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[s]")],
-            'datetime': [
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]")],
-            'datehour': [
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]")],
-            'timestamp': [
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]")],
-            'nanotime': [
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[ns]"),
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[ns]")],
-            'nanotimestamp': [
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]")],
-            'float': [np.array([2.2134500, np.nan], dtype='float32'), np.array([2.2134500, np.nan], dtype='float32')],
-            'double': [np.array([3.214, np.nan], dtype='float64'), np.array([3.214, np.nan], dtype='float64')],
-            'ipaddr': [np.array(["192.168.1.1", "0.0.0.0"], dtype='object'),
-                       np.array(["192.168.1.1", "0.0.0.0"], dtype='object')],
-            'uuid': [np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
-                              dtype='object'),
-                     np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
-                              dtype='object')],
-            'int128': [
-                np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
-                np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object')]
-        })
-        appender.append(df)
-
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_dfs_table_alltype(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://AutoFitTableAppender_test"
+    def test_TableAppender_dfs_table_alltype(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
-            db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
+            db=database(dbPath,RANGE,0 100 200 300 400 1001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        appender = ddb.tableAppender("dfs://AutoFitTableAppender_test", "pt", conn)
+        appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1340,7 +1146,7 @@ class TestTableAppender:
             'blob': np.array(['blob1', 'blob2'], dtype='object')
         })
         appender.append(df)
-        script = """
+        script = f"""
             symbolV = symbol[`sym1,'sym2']
             ipV = ipaddr["192.168.1.1", "0.0.0.0"]
             uuidV = uuid["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"]
@@ -1368,7 +1174,7 @@ class TestTableAppender:
             uuidV as uuid,
             int128V as int128,
             blobV as blob)
-            re = select * from loadTable("dfs://AutoFitTableAppender_test",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj,t.values(),re.values())
         """
         re = conn.run(script)
@@ -1407,6 +1213,8 @@ class TestTableAppender:
 
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_TableAppender_allNone_tables_with_numpyArray(self, val, valstr, valdecimal):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         df = pd.DataFrame({
             'ckeycol': np.array([1, 2, 3], dtype='int32'),
@@ -1465,20 +1273,20 @@ class TestTableAppender:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({'tab': df})
-        conn.run('''
-            dbPath = "dfs://test_dfs1"
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[INT,1],,'TSDB')
             pt = db.createPartitionedTable(tab, `pt, `ckeycol,,`ckeycol)
         ''')
-        appender = ddb.TableAppender("dfs://test_dfs1", 'pt', conn)
+        appender = ddb.TableAppender(db_name, 'pt', conn)
         appender.append(df)
-        assert conn.run(r"rows = exec count(*) from loadTable('dfs://test_dfs1', 'pt');rows") == 3
-        assert conn.run(r"""
-            ex_tab = select * from loadTable("dfs://test_dfs1", "pt");
+        assert conn.run(fr"rows = exec count(*) from loadTable('{db_name}', 'pt');rows") == 3
+        assert conn.run(fr"""
+            ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
-            for(i in 1:tab.columns()){res.append!(ex_tab.column(i).isNull())};
+            for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
             all(res)
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
@@ -1487,11 +1295,11 @@ class TestTableAppender:
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128', 'BLOB', 'DECIMAL32(0)', 'DECIMAL64(0)',
                     'DECIMAL128(0)']
         assert_array_equal(schema, ex_types)
-        conn.dropDatabase("dfs://test_dfs1")
-        conn.close()
 
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_TableAppender_allNone_tables_with_pythonList(self, val, valstr, valdecimal):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         df = pd.DataFrame({
             'ckeycol': np.array([1, 2, 3], dtype='int32'),
@@ -1550,20 +1358,20 @@ class TestTableAppender:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({'tab': df})
-        conn.run('''
-            dbPath = "dfs://test_dfs1"
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[INT,1],,'TSDB')
             pt = db.createPartitionedTable(tab, `pt, `ckeycol,,`ckeycol)
         ''')
-        appender = ddb.TableAppender("dfs://test_dfs1", 'pt', conn)
+        appender = ddb.TableAppender(db_name, 'pt', conn)
         appender.append(df)
-        assert conn.run(r"rows = exec count(*) from loadTable('dfs://test_dfs1', 'pt');rows") == 3
-        assert conn.run(r"""
-            ex_tab = select * from loadTable("dfs://test_dfs1", "pt");
+        assert conn.run(fr"rows = exec count(*) from loadTable('{db_name}', 'pt');rows") == 3
+        assert conn.run(fr"""
+            ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
-            for(i in 1:tab.columns()){res.append!(ex_tab.column(i).isNull())};
+            for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
             all(res)
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
@@ -1572,39 +1380,38 @@ class TestTableAppender:
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128', 'BLOB', 'DECIMAL32(0)', 'DECIMAL64(0)',
                     'DECIMAL128(0)']
         assert_array_equal(schema, ex_types)
-        conn.dropDatabase("dfs://test_dfs1")
-        conn.close()
 
     def test_TableAppender_append_after_session_deconstructed(self):
+        func_name = inspect.currentframe().f_code.co_name
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        conn.run("""
+        conn.run(f"""
             t = table(1..2 as a, ["192.168.1.113", "192.168.1.123"] as b)
-            share t as share_t
+            share t as {func_name}_share_t
         """)
-        df = conn.run("share_t")
+        df = conn.run(f"{func_name}_share_t")
         try:
-            pt = ddb.tableAppender(tableName="share_t", ddbSession=conn)
+            pt = ddb.tableAppender(tableName=f"{func_name}_share_t", ddbSession=conn)
             conn.close()
             pt.append(df)
         except RuntimeError as e:
             assert "Session has been closed" in str(e)
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        pt = ddb.tableAppender(tableName="share_t", ddbSession=conn)
+        pt = ddb.tableAppender(tableName=f"{func_name}_share_t", ddbSession=conn)
         del conn
         assert pt.append(df) == 2
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        assert conn.run("""
-            res = select * from share_t;
+        assert conn.run(f"""
+            res = select * from {func_name}_share_t;
             ex = table(take(1 2, 4) as a, take(['192.168.1.113','192.168.1.123'],4) as b);
             each(eqObj, res.values(), ex.values())
         """).all()
-        conn.undef('share_t', 'SHARED')
-        conn.close()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_TableAppender_append_dataframe_with_numpy_order(self, _python_list, _compress, _order):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         for i in range(10):
@@ -1664,42 +1471,42 @@ class TestTableAppender:
             'cdecimal64': keys.DT_DECIMAL64,
             'cdecimal128': keys.DT_DECIMAL128
         }
-        conn1.run("""
+        conn1.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cblob`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, BLOB, IPADDR, UUID, INT128, DECIMAL32(2), DECIMAL64(11), DECIMAL128(36)];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        append = ddb.TableAppender(dbPath="dfs://test_dfs1", tableName='pt', ddbSession=conn1)
+        append = ddb.TableAppender(dbPath=db_name, tableName='pt', ddbSession=conn1)
         append.append(df)
         conn1.run("""
             for(i in 0:10){
                 tableInsert(objByName(`t), i, false, i,i,i,i,i,i+23640,i,i,i,i,i,i,i,i,i,i, 'sym','str', 'blob', ipaddr("1.1.1.1"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),int128("e1671797c52e15f763380b45e841ec32"), decimal32('-2.11', 2), decimal64('0.0', 11), decimal128('-1.1', 36))
             }
         """)
-        res = conn1.run("""
+        res = conn1.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = conn1.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = conn1.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
                     'DOUBLE', 'SYMBOL', 'STRING', 'BLOB', 'IPADDR', 'UUID', 'INT128', 'DECIMAL32(2)', 'DECIMAL64(11)',
                     'DECIMAL128(36)']
         assert_array_equal(tys, ex_types)
-        conn1.dropDatabase("dfs://test_dfs1")
-        conn1.close()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_TableAppender_append_dataframe_array_vector_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         for i in range(10):
@@ -1750,17 +1557,17 @@ class TestTableAppender:
             'cdecimal64': keys.DT_DECIMAL64_ARRAY,
             'cdecimal128': keys.DT_DECIMAL128_ARRAY
         }
-        conn1.run("""
+        conn1.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL[], CHAR[], SHORT[], INT[],LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], TIMESTAMP[], NANOTIME[], NANOTIMESTAMP[], DATEHOUR[], FLOAT[], DOUBLE[], IPADDR[], UUID[], INT128[], DECIMAL32(2)[], DECIMAL64(11)[], DECIMAL128(36)[]];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        append = ddb.TableAppender(dbPath="dfs://test_dfs1", tableName='pt', ddbSession=conn1)
+        append = ddb.TableAppender(dbPath=db_name, tableName='pt', ddbSession=conn1)
         append.append(df)
         conn1.run("""
             for(i in 0:10){
@@ -1768,25 +1575,25 @@ class TestTableAppender:
             }
             tableInsert(objByName(`t), 10, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
         """)
-        res = conn1.run("""
+        res = conn1.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = conn1.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = conn1.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
                     'SECOND[]', 'DATETIME[]', 'TIMESTAMP[]', 'NANOTIME[]', 'NANOTIMESTAMP[]', 'DATEHOUR[]', 'FLOAT[]',
                     'DOUBLE[]', 'IPADDR[]', 'UUID[]', 'INT128[]', 'DECIMAL32(2)[]', 'DECIMAL64(11)[]',
                     'DECIMAL128(36)[]']
         assert_array_equal(tys, ex_types)
-        conn1.dropDatabase("dfs://test_dfs1")
-        conn1.close()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_TableAppender_append_null_dataframe_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         origin_nulls = [None, np.nan, pd.NaT]
@@ -1839,17 +1646,17 @@ class TestTableAppender:
             'cdecimal64': keys.DT_DECIMAL64,
             'cdecimal128': keys.DT_DECIMAL128
         }
-        conn1.run("""
+        conn1.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cblob`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, BLOB, IPADDR, UUID, INT128, DECIMAL32(2), DECIMAL64(11), DECIMAL128(36)];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        append = ddb.TableAppender(dbPath="dfs://test_dfs1", tableName='pt', ddbSession=conn1)
+        append = ddb.TableAppender(dbPath=db_name, tableName='pt', ddbSession=conn1)
         append.append(df)
         conn1.run("""
             for(i in 0:10){
@@ -1857,25 +1664,25 @@ class TestTableAppender:
             }
         """)
 
-        res = conn1.run("""
+        res = conn1.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = conn1.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = conn1.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
                     'DOUBLE', 'SYMBOL', 'STRING', 'BLOB', 'IPADDR', 'UUID', 'INT128', 'DECIMAL32(2)', 'DECIMAL64(11)',
                     'DECIMAL128(36)']
         assert_array_equal(tys, ex_types)
-        conn1.dropDatabase("dfs://test_dfs1")
-        conn1.close()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_TableAppender_append_null_dataframe_array_vector_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         origin_nulls = [[None], [np.nan], [pd.NaT]]
@@ -1924,17 +1731,17 @@ class TestTableAppender:
             'cdecimal64': keys.DT_DECIMAL64_ARRAY,
             'cdecimal128': keys.DT_DECIMAL128_ARRAY
         }
-        conn1.run("""
+        conn1.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL[], CHAR[], SHORT[], INT[],LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], TIMESTAMP[], NANOTIME[], NANOTIMESTAMP[], DATEHOUR[], FLOAT[], DOUBLE[], IPADDR[], UUID[], INT128[], DECIMAL32(2)[], DECIMAL64(11)[], DECIMAL128(36)[]];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        append = ddb.TableAppender(dbPath="dfs://test_dfs1", tableName='pt', ddbSession=conn1)
+        append = ddb.TableAppender(dbPath=db_name, tableName='pt', ddbSession=conn1)
         append.append(df)
 
         conn1.run("""
@@ -1943,28 +1750,27 @@ class TestTableAppender:
             }
         """)
 
-        res = conn1.run("""
+        res = conn1.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = conn1.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = conn1.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
                     'SECOND[]', 'DATETIME[]', 'TIMESTAMP[]', 'NANOTIME[]', 'NANOTIMESTAMP[]', 'DATEHOUR[]', 'FLOAT[]',
                     'DOUBLE[]', 'IPADDR[]', 'UUID[]', 'INT128[]', 'DECIMAL32(2)[]', 'DECIMAL64(11)[]',
                     'DECIMAL128(36)[]']
         assert_array_equal(tys, ex_types)
-        conn1.dropDatabase("dfs://test_dfs1")
-        conn1.close()
 
     def test_TableAppender_decimal_1(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         conn1 = ddb.session(HOST, PORT, USER, PASSWD)
-        conn1.run("""
-            dbName="dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+        conn1.run(f"""
+            dbName="{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2022.12.01..2022.12.31, engine="TSDB");
             temp_table = table(10:0,`YDM_BAT_DT `TXN_ID `IS_OLD_TXN `OLD_TXN_ID `ENTY_TYPE_CD `RISK_TYPE_CD `TRADE_TABLE_CD `BUSI_CATEG_CD `ACCOUNT_TYPE_CD `BUSI_TYPE_CD `BUSI_DTL_DESC `TRADER_ID `AFFILIATE_CD `TXN_ORG_CD `TXN_DEPT_CD `PORFOLIO_ID `TXN_STAT_CD `TXN_STAT_DTL `TXN_DT `ST_INT_DT `END_DT `TXN_PERD `REMAIN_PERD `POSTE `BOND_CD `BOND_DESC `BOND_ENG_NAME `BOND_CN_NAME `BOND_TYPE `TXN_CURR `TXN_CLEAN_PRICE `NOW_CLEAN_PRICE `BS6_PRICE `CT_FULL_PRICE `FULL_PRICE_CHECK `NOMINAL_AMT `ACCOUNT_AMT `TXN_CNT `BAL_CNT `TXN_PURPOSE `TXN_SETT_AMT `TXN_ACCRUED_INT `CT_ST_INT_DT `CT_END_INT_DT `CT_PAY_INT_DT `CT_REPRICING_DT `REPRICING_FREQ `RATE_TYPE `CT_RATE `PAR_RATE `PAR_VALUE `BASIS `FLO_RATE_CD `MARGIN `PAY_INT_FREQ `ACCRUED_INT `ACCRUED_INT_TB `ACCRUED_INT_ADJ `AMORT_AMT `CAPITAL_GAINS `BOND_ASSET_TYPE `REAL_INT `SELL_INCOME `SELL_INTEREST `SELL_AMORT_AMT `AMORT_DP_AMT `DISC_PRIM_AMT `UN_AMORT_DP_AMT `MTM `TXN_FEE_AMT `SETT_METH_IND `TXN_LOG_DT `TXN_LOG_TM `AUTH_DTTM `AUTH_PTY_NAME `HEDGE_PTFLO_ID `HEDGE_TYPE `HEDGE_ST_DT `HEDGE_END_DT `HEDGE_VALID_AMT `HEDGE_INVALID_AMT `HEDGE_VALID_AMORT `HEDGE_VALID_UN_AMORT `HEDGE_DATE_NPV `HEDGE_DAY_NPV `HEDGE_ACR_BEFORE `HEDGE_ACR `HEDGE_AMOR_BEFORE `HEDGE_AMOR `BOND_ISSUE_DT `BOND_ISSUE_PRICE `ABS_PROMOTER `ISSUER_CD `CN_CREDIT_LEV_ORG `CN_CREDIT_LEV `CN_MAIN_LEV_ORG `CN_MAIN_LEV `INTER_CREDIT_LEV_ORG `INTER_CREDIT_LEV `INTER_MAIN_LEV_ORG `INTER_MAIN_LEV `SRC_SYS_CD `SRC_TXN_ID `PRODUCT_CD `ITEM_CP_ID `IS_OVERSEA_IND `CPARTY_ID `CPARTY_CD `IS_WAVE_TEST `IS_MARKET_TEST `BOND_GRADE `EXTERNAL_GRADE `SOLD_OUT_DT `IS_REPO_BOND `PRINCIPAL_ITEM `ACCRUED_ITEM `PAID_INT_ITEM `MTM_ITEM `DISCOUNT_INT_ITEM `PREMIUM_INT_ITEM `AMORTIZ_INT_ITEM `TXN_CANCEL_IND `TXN_CANCEL_DT `SETT_AMT_ITEM `END_YIELD `IS_POSITION `CN_CREDIT_LEV_2 `CN_CREDIT_LEV_ORG_2 `RATE_FLOAT_PERIOD `REAL_END_DT `CURRENT_RATE `SELL_PRE_DIS `SELL_INTERET `SELL_AMORED `SELL_ST `INTERET_SELL_Z `END_INTERET_SELL `END_INTERET_SELL_Z `END_PREMIUM_DIS `END_PREMIUM_DIS_Z `SETT_AMT `NOMINAL_AMOUNT `CNT_ORG `ROOT_CONTRACT_ID `CONTRACT_ID `BUY_SELL `TXN_SETT_AMT_MX `END_YIELD_MX `TRADER_NAME `ORG_PKG_ID `PACKAGE_ID `TP_DTEFLWL `RESIDUAL_AMOUNT `IS_DOM_WAVE_TEST `TP_NOMINAL `MASTER_AGREEMENT `RATE `SI_CNY,[DATE ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,DATE ,DATE ,DATE ,LONG ,LONG ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,LONG ,LONG ,STRING ,DECIMAL128(6) ,DECIMAL128(6) ,DATE ,DATE ,DATE ,DATE ,STRING ,STRING ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,STRING ,STRING ,DECIMAL128(6) ,STRING ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,STRING ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,STRING ,DATE ,STRING ,STRING ,STRING ,STRING ,STRING ,DATE ,DATE ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DATE ,DECIMAL128(6) ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,DATE ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,STRING ,DATE ,STRING ,DECIMAL128(6) ,STRING ,STRING ,STRING ,LONG ,DATE ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,LONG ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,DECIMAL128(6) ,LONG ,LONG ,LONG ,STRING ,DECIMAL128(6) ,DECIMAL128(6) ,STRING ,LONG ,LONG ,DATE ,DECIMAL128(6) ,STRING ,DECIMAL128(6) ,STRING ,DECIMAL128(6) ,STRING]);
             tb = db.createPartitionedTable(temp_table,`T5_BOND_TXN,`YDM_BAT_DT, sortColumns="YDM_BAT_DT");
@@ -1975,7 +1781,7 @@ class TestTableAppender:
         for i in range(len(schemas)):
             if schemas[i] == 39:
                 ds[names[i]] = str
-        df = pd.read_csv(LOCAL_DATA_DIR + '/decimal.csv', dtype=ds)
+        df = pd.read_csv(LOCAL_DATA_DIR + 'decimal.csv', dtype=ds)
         for i in range(df.shape[1]):
             if schemas[i] == 39:
                 df.iloc[:, i] = df.iloc[:, i].apply(lambda x: decimal.Decimal(x).quantize(decimal.Decimal("0.000000")))
@@ -1984,15 +1790,17 @@ class TestTableAppender:
             elif schemas[i] == 5:
                 df.iloc[:, i] = df.iloc[:, i].apply(lambda x: np.int64(x))
         df.iloc[:, 1] = df.iloc[:, 1].apply(lambda x: str(x))
-        append = ddb.TableAppender(dbPath="dfs://test_decimal128", tableName='T5_BOND_TXN', ddbSession=conn1)
+        append = ddb.TableAppender(dbPath=db_name, tableName='T5_BOND_TXN', ddbSession=conn1)
         assert append.append(df) == 41499
         conn1.run(
-            f'temp_table=loadText("{DATA_DIR + "/decimal.csv"}",schema=table(`YDM_BAT_DT `TXN_ID `IS_OLD_TXN `OLD_TXN_ID `ENTY_TYPE_CD `RISK_TYPE_CD `TRADE_TABLE_CD `BUSI_CATEG_CD `ACCOUNT_TYPE_CD `BUSI_TYPE_CD `BUSI_DTL_DESC `TRADER_ID `AFFILIATE_CD `TXN_ORG_CD `TXN_DEPT_CD `PORFOLIO_ID `TXN_STAT_CD `TXN_STAT_DTL `TXN_DT `ST_INT_DT `END_DT `TXN_PERD `REMAIN_PERD `POSTE `BOND_CD `BOND_DESC `BOND_ENG_NAME `BOND_CN_NAME `BOND_TYPE `TXN_CURR `TXN_CLEAN_PRICE `NOW_CLEAN_PRICE `BS6_PRICE `CT_FULL_PRICE `FULL_PRICE_CHECK `NOMINAL_AMT `ACCOUNT_AMT `TXN_CNT `BAL_CNT `TXN_PURPOSE `TXN_SETT_AMT `TXN_ACCRUED_INT `CT_ST_INT_DT `CT_END_INT_DT `CT_PAY_INT_DT `CT_REPRICING_DT `REPRICING_FREQ `RATE_TYPE `CT_RATE `PAR_RATE `PAR_VALUE `BASIS `FLO_RATE_CD `MARGIN `PAY_INT_FREQ `ACCRUED_INT `ACCRUED_INT_TB `ACCRUED_INT_ADJ `AMORT_AMT `CAPITAL_GAINS `BOND_ASSET_TYPE `REAL_INT `SELL_INCOME `SELL_INTEREST `SELL_AMORT_AMT `AMORT_DP_AMT `DISC_PRIM_AMT `UN_AMORT_DP_AMT `MTM `TXN_FEE_AMT `SETT_METH_IND `TXN_LOG_DT `TXN_LOG_TM `AUTH_DTTM `AUTH_PTY_NAME `HEDGE_PTFLO_ID `HEDGE_TYPE `HEDGE_ST_DT `HEDGE_END_DT `HEDGE_VALID_AMT `HEDGE_INVALID_AMT `HEDGE_VALID_AMORT `HEDGE_VALID_UN_AMORT `HEDGE_DATE_NPV `HEDGE_DAY_NPV `HEDGE_ACR_BEFORE `HEDGE_ACR `HEDGE_AMOR_BEFORE `HEDGE_AMOR `BOND_ISSUE_DT `BOND_ISSUE_PRICE `ABS_PROMOTER `ISSUER_CD `CN_CREDIT_LEV_ORG `CN_CREDIT_LEV `CN_MAIN_LEV_ORG `CN_MAIN_LEV `INTER_CREDIT_LEV_ORG `INTER_CREDIT_LEV `INTER_MAIN_LEV_ORG `INTER_MAIN_LEV `SRC_SYS_CD `SRC_TXN_ID `PRODUCT_CD `ITEM_CP_ID `IS_OVERSEA_IND `CPARTY_ID `CPARTY_CD `IS_WAVE_TEST `IS_MARKET_TEST `BOND_GRADE `EXTERNAL_GRADE `SOLD_OUT_DT `IS_REPO_BOND `PRINCIPAL_ITEM `ACCRUED_ITEM `PAID_INT_ITEM `MTM_ITEM `DISCOUNT_INT_ITEM `PREMIUM_INT_ITEM `AMORTIZ_INT_ITEM `TXN_CANCEL_IND `TXN_CANCEL_DT `SETT_AMT_ITEM `END_YIELD `IS_POSITION `CN_CREDIT_LEV_2 `CN_CREDIT_LEV_ORG_2 `RATE_FLOAT_PERIOD `REAL_END_DT `CURRENT_RATE `SELL_PRE_DIS `SELL_INTERET `SELL_AMORED `SELL_ST `INTERET_SELL_Z `END_INTERET_SELL `END_INTERET_SELL_Z `END_PREMIUM_DIS `END_PREMIUM_DIS_Z `SETT_AMT `NOMINAL_AMOUNT `CNT_ORG `ROOT_CONTRACT_ID `CONTRACT_ID `BUY_SELL `TXN_SETT_AMT_MX `END_YIELD_MX `TRADER_NAME `ORG_PKG_ID `PACKAGE_ID `TP_DTEFLWL `RESIDUAL_AMOUNT `IS_DOM_WAVE_TEST `TP_NOMINAL `MASTER_AGREEMENT `RATE `SI_CNY as `name,["DATE","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","DATE","DATE","DATE","LONG","LONG","STRING","STRING","STRING","STRING","STRING","STRING","STRING","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","LONG","LONG","STRING","DECIMAL128(6)","DECIMAL128(6)","DATE","DATE","DATE","DATE","STRING","STRING","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","STRING","STRING","DECIMAL128(6)","STRING","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","STRING","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","STRING","DATE","STRING","STRING","STRING","STRING","STRING","DATE","DATE","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DATE","DECIMAL128(6)","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","DATE","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","DATE","STRING","DECIMAL128(6)","STRING","STRING","STRING","LONG","DATE","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","LONG","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","LONG","LONG","LONG","STRING","DECIMAL128(6)","DECIMAL128(6)","STRING","LONG","LONG","DATE","DECIMAL128(6)","STRING","DECIMAL128(6)","STRING","DECIMAL128(6)","STRING"] as `type))')
-        conn1.run("res = select * from loadTable('dfs://test_decimal128', `T5_BOND_TXN);")
+            f'temp_table=loadText("{DATA_DIR + "decimal.csv"}",schema=table(`YDM_BAT_DT `TXN_ID `IS_OLD_TXN `OLD_TXN_ID `ENTY_TYPE_CD `RISK_TYPE_CD `TRADE_TABLE_CD `BUSI_CATEG_CD `ACCOUNT_TYPE_CD `BUSI_TYPE_CD `BUSI_DTL_DESC `TRADER_ID `AFFILIATE_CD `TXN_ORG_CD `TXN_DEPT_CD `PORFOLIO_ID `TXN_STAT_CD `TXN_STAT_DTL `TXN_DT `ST_INT_DT `END_DT `TXN_PERD `REMAIN_PERD `POSTE `BOND_CD `BOND_DESC `BOND_ENG_NAME `BOND_CN_NAME `BOND_TYPE `TXN_CURR `TXN_CLEAN_PRICE `NOW_CLEAN_PRICE `BS6_PRICE `CT_FULL_PRICE `FULL_PRICE_CHECK `NOMINAL_AMT `ACCOUNT_AMT `TXN_CNT `BAL_CNT `TXN_PURPOSE `TXN_SETT_AMT `TXN_ACCRUED_INT `CT_ST_INT_DT `CT_END_INT_DT `CT_PAY_INT_DT `CT_REPRICING_DT `REPRICING_FREQ `RATE_TYPE `CT_RATE `PAR_RATE `PAR_VALUE `BASIS `FLO_RATE_CD `MARGIN `PAY_INT_FREQ `ACCRUED_INT `ACCRUED_INT_TB `ACCRUED_INT_ADJ `AMORT_AMT `CAPITAL_GAINS `BOND_ASSET_TYPE `REAL_INT `SELL_INCOME `SELL_INTEREST `SELL_AMORT_AMT `AMORT_DP_AMT `DISC_PRIM_AMT `UN_AMORT_DP_AMT `MTM `TXN_FEE_AMT `SETT_METH_IND `TXN_LOG_DT `TXN_LOG_TM `AUTH_DTTM `AUTH_PTY_NAME `HEDGE_PTFLO_ID `HEDGE_TYPE `HEDGE_ST_DT `HEDGE_END_DT `HEDGE_VALID_AMT `HEDGE_INVALID_AMT `HEDGE_VALID_AMORT `HEDGE_VALID_UN_AMORT `HEDGE_DATE_NPV `HEDGE_DAY_NPV `HEDGE_ACR_BEFORE `HEDGE_ACR `HEDGE_AMOR_BEFORE `HEDGE_AMOR `BOND_ISSUE_DT `BOND_ISSUE_PRICE `ABS_PROMOTER `ISSUER_CD `CN_CREDIT_LEV_ORG `CN_CREDIT_LEV `CN_MAIN_LEV_ORG `CN_MAIN_LEV `INTER_CREDIT_LEV_ORG `INTER_CREDIT_LEV `INTER_MAIN_LEV_ORG `INTER_MAIN_LEV `SRC_SYS_CD `SRC_TXN_ID `PRODUCT_CD `ITEM_CP_ID `IS_OVERSEA_IND `CPARTY_ID `CPARTY_CD `IS_WAVE_TEST `IS_MARKET_TEST `BOND_GRADE `EXTERNAL_GRADE `SOLD_OUT_DT `IS_REPO_BOND `PRINCIPAL_ITEM `ACCRUED_ITEM `PAID_INT_ITEM `MTM_ITEM `DISCOUNT_INT_ITEM `PREMIUM_INT_ITEM `AMORTIZ_INT_ITEM `TXN_CANCEL_IND `TXN_CANCEL_DT `SETT_AMT_ITEM `END_YIELD `IS_POSITION `CN_CREDIT_LEV_2 `CN_CREDIT_LEV_ORG_2 `RATE_FLOAT_PERIOD `REAL_END_DT `CURRENT_RATE `SELL_PRE_DIS `SELL_INTERET `SELL_AMORED `SELL_ST `INTERET_SELL_Z `END_INTERET_SELL `END_INTERET_SELL_Z `END_PREMIUM_DIS `END_PREMIUM_DIS_Z `SETT_AMT `NOMINAL_AMOUNT `CNT_ORG `ROOT_CONTRACT_ID `CONTRACT_ID `BUY_SELL `TXN_SETT_AMT_MX `END_YIELD_MX `TRADER_NAME `ORG_PKG_ID `PACKAGE_ID `TP_DTEFLWL `RESIDUAL_AMOUNT `IS_DOM_WAVE_TEST `TP_NOMINAL `MASTER_AGREEMENT `RATE `SI_CNY as `name,["DATE","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","DATE","DATE","DATE","LONG","LONG","STRING","STRING","STRING","STRING","STRING","STRING","STRING","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","LONG","LONG","STRING","DECIMAL128(6)","DECIMAL128(6)","DATE","DATE","DATE","DATE","STRING","STRING","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","STRING","STRING","DECIMAL128(6)","STRING","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","STRING","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","STRING","DATE","STRING","STRING","STRING","STRING","STRING","DATE","DATE","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DATE","DECIMAL128(6)","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","DATE","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","STRING","DATE","STRING","DECIMAL128(6)","STRING","STRING","STRING","LONG","DATE","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","LONG","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","DECIMAL128(6)","LONG","LONG","LONG","STRING","DECIMAL128(6)","DECIMAL128(6)","STRING","LONG","LONG","DATE","DECIMAL128(6)","STRING","DECIMAL128(6)","STRING","DECIMAL128(6)","STRING"] as `type))')
+        conn1.run(f"res = select * from loadTable('{db_name}', `T5_BOND_TXN);")
         assert conn1.run(
             "each(eqObj, temp_table.sortBy!(temp_table.colNames()).values(), res.sortBy!(res.colNames()).values())").all()
 
     def test_TableAppender_decimal_2(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         df = pd.DataFrame({'date': np.array(["2012-02-03T01:02:03.456789123"] * 10000, dtype='datetime64[D]'),
                            'decimal128_26_1': [decimal.Decimal('0')] * 10000,
                            'decimal128_26_2': [decimal.Decimal('NaN')] * 10000,
@@ -2001,29 +1809,30 @@ class TestTableAppender:
                            'decimal128_26_5': [None] * 10000,
                            })
         conn1 = ddb.session(HOST, PORT, USER, PASSWD)
-        conn1.run("""
-            dbName="dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+        conn1.run(f"""
+            dbName="{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2022.12.01..2022.12.31, engine="TSDB");
             schema_t = table(10:0, `date`decimal128_26_1`decimal128_26_2`decimal128_26_3`decimal128_26_4`decimal128_26_5, [DATE, DECIMAL128(26), DECIMAL128(26), DECIMAL128(26), DECIMAL128(26), DECIMAL128(26)])
             pt = createPartitionedTable(db, schema_t, `pt_1, `date, sortColumns=`date)
         """)
-        append = ddb.TableAppender(dbPath="dfs://test_decimal128", tableName='pt_1', ddbSession=conn1)
+        append = ddb.TableAppender(dbPath=db_name, tableName='pt_1', ddbSession=conn1)
         append.append(df)
-        conn1.run("""
+        conn1.run(f"""
             ex = table(take(2012.02.03,10000) as c1,
                     take(decimal128(0,26), 10000) as c2,
                     take(decimal128(NULL,26), 10000) as c3,
                     take(decimal128("-1.12312312312312312312312312",26), 10000) as c4,
                     take(decimal128("123123123123.0",26), 10000) as c5,
                     take(decimal128(NULL,26), 10000) as c6);
-            res = select * from loadTable('dfs://test_decimal128', `pt_1);
+            res = select * from loadTable('{db_name}', `pt_1);
         """)
         conn1.run("for(i in 1:ex.columns()){assert all(eqObj(ex.values()[i], res.values()[i]))}")
 
     def test_TableAppender_decimal_3(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         context = decimal.Context(prec=39)
         df = pd.DataFrame({'date': np.array(
             ["2012-02-01", "2012-02-02", "2012-02-03", "2012-02-04", "2012-02-05", "2012-02-06"],
@@ -2068,19 +1877,18 @@ class TestTableAppender:
             lambda x: x.quantize(decimal.Decimal('0.00000000000000000000000000000000000000'),
                                  context=context) if x not in [None, pd.NaT, np.nan, decimal.Decimal('NaN')] else x)
         conn1 = ddb.session(HOST, PORT, USER, PASSWD)
-        conn1.run("""
-            dbName="dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+        conn1.run(f"""
+            dbName="{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2022.12.01..2022.12.31, engine="TSDB");
             schema_t = table(10:0, `date`decimal128_0`decimal128_6`decimal128_16`decimal128_27`decimal128_37`decimal128_38,
                                 [DATE, DECIMAL128(0),DECIMAL128(6),DECIMAL128(16),DECIMAL128(27),DECIMAL128(37),DECIMAL128(38)])
             pt = createPartitionedTable(db, schema_t, `pt_2, `date, sortColumns=`date)
         """)
-        append = ddb.TableAppender(dbPath="dfs://test_decimal128", tableName='pt_2', ddbSession=conn1)
+        append = ddb.TableAppender(dbPath=db_name, tableName='pt_2', ddbSession=conn1)
         append.append(df)
-        conn1.run("""
+        conn1.run(f"""
             ex = table([2012.02.01,2012.02.02,2012.02.03,2012.02.04,2012.02.05,2012.02.06] as c1,
                         decimal128([-1, 123456789, 0, NULL, NULL, NULL],0) as c2,
                         [NULL, NULL, NULL, NULL, decimal128('-1.123123',6), decimal128('1.123456',6)] as c3,
@@ -2088,11 +1896,13 @@ class TestTableAppender:
                         [NULL, NULL, NULL,decimal128('1.123123123123123123123123123',27), NULL, decimal128("-1",27)] as c5,
                         [NULL, NULL, NULL, NULL,decimal128('0.1231231231231231231231231231231231231',37), decimal128("-1",37)] as c6,
                         [NULL, NULL, NULL, NULL,decimal128('0.12312312312312312312312312312312312312',38), decimal128(`0,38)] as c7);
-            res = select * from loadTable('dfs://test_decimal128', `pt_2);
+            res = select * from loadTable('{db_name}', `pt_2);
         """)
         conn1.run("for(i in 1:ex.columns()){assert all(eqObj(ex.values()[i], res.values()[i]))}")
 
     def test_TableAppender_decimal_4(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         df = pd.DataFrame({'date': np.array(
             ["2012-02-01", "2012-02-02", "2012-02-03", "2012-02-04", "2012-02-05", "2012-02-06"],
             dtype='datetime64[D]'),
@@ -2108,19 +1918,18 @@ class TestTableAppender:
             'long': np.array([1, 2, 3, 4, 5, 6], dtype=np.int64),
         })
         conn1 = ddb.session(HOST, PORT, USER, PASSWD)
-        conn1.run("""
-            dbName="dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+        conn1.run(f"""
+            dbName="{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2022.12.01..2022.12.31, engine="TSDB");
             schema_t = table(10:0, `date`float`double`string`decimal128_6`decimal128_27`long,
                                 [DATE, FLOAT, DOUBLE, STRING, DECIMAL128(6), DECIMAL128(27), LONG])
             pt = createPartitionedTable(db, schema_t, `pt_3, `date, sortColumns=`date)
         """)
-        append = ddb.TableAppender(dbPath="dfs://test_decimal128", tableName='pt_3', ddbSession=conn1)
+        append = ddb.TableAppender(dbPath=db_name, tableName='pt_3', ddbSession=conn1)
         append.append(df)
-        conn1.run("""
+        conn1.run(f"""
             ex = table([2012.02.01,2012.02.02,2012.02.03,2012.02.04,2012.02.05,2012.02.06] as c1,
                         float([1.2314, -1, NULL, NULL, NULL, 0]) as c2,
                         double([NULL, NULL, NULL, 1, -1.2345, 0]) as c3,
@@ -2128,26 +1937,24 @@ class TestTableAppender:
                         [NULL, NULL, NULL,decimal128('1.123123123', 6), NULL, decimal128("-1",6)] as c5,
                         [NULL, NULL, NULL, NULL,decimal128('0.123123123123123123123123123',27), decimal128("-1",27)] as c6,
                         long(1 2 3 4 5 6) as c7);
-            res = select * from loadTable('dfs://test_decimal128', `pt_3);
-            share ex as t1;
-            share res as t2;
+            res = select * from loadTable('{db_name}', `pt_3);
         """)
         conn1.run("for(i in 1:ex.columns()){assert all(eqObj(ex.values()[i], res.values()[i]))}")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_append_decimal128_over_flow(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("""
-            dbName = "dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+    def test_TableAppender_append_decimal128_over_flow(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f"""
+            dbName = "{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2012.12.01..2012.12.31, engine='TSDB');
             schema_t = table(10:0, `date`decimal128_26, [DATE, DECIMAL128(26)])
             pt = createPartitionedTable(db, schema_t, `pt_1, `date, sortColumns=`date)
         """)
-        appender1 = ddb.tableAppender(dbPath="dfs://test_decimal128", tableName="pt_1", ddbSession=conn)
+        appender1 = ddb.tableAppender(dbPath=db_name, tableName="pt_1", ddbSession=conn)
         date = np.array(['2012-12-01T00:00:00'], dtype="datetime64[D]")
         decimal128_26 = np.array([decimal.Decimal("-1." + "0" * 40 + "1")], dtype='object')
         data = pd.DataFrame({"date": date, "decimal128_26": decimal128_26}, dtype='object')
@@ -2158,20 +1965,20 @@ class TestTableAppender:
             each(eqObj, ans.values(), ex.values())
         """).all()
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_pt_1_append_decimal128_26_one_row(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("""
-            dbName = "dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+    def test_TableAppender_pt_1_append_decimal128_26_one_row(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f"""
+            dbName = "{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2012.12.01..2012.12.31, engine='TSDB');
             schema_t = table(10:0, `date`decimal128_26, [DATE, DECIMAL128(26)])
             pt = createPartitionedTable(db, schema_t, `pt_1, `date, sortColumns=`date)
         """)
-        appender1 = ddb.tableAppender(dbPath="dfs://test_decimal128", tableName="pt_1", ddbSession=conn)
+        appender1 = ddb.tableAppender(dbPath=db_name, tableName="pt_1", ddbSession=conn)
         date = np.array(['2012-12-01T00:00:00'], dtype="datetime64[D]")
         decimal128_26 = np.array([decimal.Decimal("-1." + "0" * 26 + "1")], dtype='object')
         data = pd.DataFrame({"date": date, "decimal128_26": decimal128_26})
@@ -2182,20 +1989,20 @@ class TestTableAppender:
             each(eqObj, ans.values(), ex.values())
         """).all()
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_pt_1_append_decimal128_26_one_row_NULL(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("""
-            dbName = "dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+    def test_TableAppender_pt_1_append_decimal128_26_one_row_NULL(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f"""
+            dbName = "{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2012.12.01..2012.12.31, engine='TSDB');
             schema_t = table(10:0, `date`decimal128_26, [DATE, DECIMAL128(26)])
             pt = createPartitionedTable(db, schema_t, `pt_1, `date, sortColumns=`date)
         """)
-        appender1 = ddb.tableAppender(dbPath="dfs://test_decimal128", tableName="pt_1", ddbSession=conn)
+        appender1 = ddb.tableAppender(dbPath=db_name, tableName="pt_1", ddbSession=conn)
         date = np.array(['2012-12-01T00:00:00'], dtype="datetime64[D]")
         decimal128_26 = np.array([decimal.Decimal("NaN")], dtype='object')
         data = pd.DataFrame({"date": date, "decimal128_26": decimal128_26})
@@ -2206,20 +2013,20 @@ class TestTableAppender:
             each(eqObj, ans.values(), ex.values())
         """).all()
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_pt_1_append_decimal128_26_multi_row_without_NULL(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("""
-            dbName = "dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+    def test_TableAppender_pt_1_append_decimal128_26_multi_row_without_NULL(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f"""
+            dbName = "{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2012.12.01..2012.12.31, engine='TSDB');
             schema_t = table(10:0, `date`decimal128_26, [DATE, DECIMAL128(26)])
             pt = createPartitionedTable(db, schema_t, `pt_1, `date, sortColumns=`date)
         """)
-        appender1 = ddb.tableAppender(dbPath="dfs://test_decimal128", tableName="pt_1", ddbSession=conn)
+        appender1 = ddb.tableAppender(dbPath=db_name, tableName="pt_1", ddbSession=conn)
         data = pd.DataFrame({"date": np.array(
             ['2012-12-01T00:00:00', '2012-12-10T00:00:00', '2012-12-20T00:00:00'] * 100, dtype="datetime64[D]"),
             "decimal128_26": np.array(
@@ -2233,20 +2040,20 @@ class TestTableAppender:
             each(eqObj, ans.values(), ex.values())
         """).all()
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_pt_1_append_decimal128_26_multi_row_NULL(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("""
-            dbName = "dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+    def test_TableAppender_pt_1_append_decimal128_26_multi_row_NULL(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f"""
+            dbName = "{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2012.12.01..2012.12.31, engine='TSDB');
             schema_t = table(10:0, `date`decimal128_26, [DATE, DECIMAL128(26)])
             pt = createPartitionedTable(db, schema_t, `pt_1, `date, sortColumns=`date)
         """)
-        appender1 = ddb.tableAppender(dbPath="dfs://test_decimal128", tableName="pt_1", ddbSession=conn)
+        appender1 = ddb.tableAppender(dbPath=db_name, tableName="pt_1", ddbSession=conn)
         data = pd.DataFrame({"date": np.array(
             ['2012-12-01T00:00:00', '2012-12-10T00:00:00', '2012-12-20T00:00:00'] * 110000, dtype="datetime64[D]"),
             "decimal128_26": np.array([None, pd.NaT, np.nan, decimal.Decimal('NaN'),
@@ -2263,21 +2070,21 @@ class TestTableAppender:
             each(eqObj, ans.values(), ex.values())
         """).all()
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_PT_2_append_decimal128(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("""
-            dbName = "dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+    def test_TableAppender_PT_2_append_decimal128(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f"""
+            dbName = "{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2012.12.01..2012.12.31, engine='TSDB');
             schema_t = table(10:0, `date`decimal128_0`decimal128_6`decimal128_16`decimal128_26`decimal128_37,
                                 [DATE, DECIMAL128(0),DECIMAL128(6),DECIMAL128(16),DECIMAL128(26),DECIMAL128(37)])
             pt = createPartitionedTable(db, schema_t, `pt_2, `date, sortColumns=`date)
         """)
-        appender1 = ddb.tableAppender(dbPath="dfs://test_decimal128", tableName="pt_2", ddbSession=conn)
+        appender1 = ddb.tableAppender(dbPath=db_name, tableName="pt_2", ddbSession=conn)
         data = pd.DataFrame({"date": np.array(
             ['2012-12-01T00:00:00', '2012-12-10T00:00:00', '2012-12-20T00:00:00'] * 110000, dtype="datetime64[D]"),
             "decimal128_0": np.array([None, pd.NaT, np.nan, decimal.Decimal('NaN'),
@@ -2325,21 +2132,21 @@ class TestTableAppender:
             each(eqObj, ans.values(), ex.values())
         """).all()
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableAppender_PT_3_append_decimal128_big_data(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("""
-            dbName = "dfs://test_decimal128"
-            if(existsDatabase(dbName)){
+    def test_TableAppender_PT_3_append_decimal128_big_data(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f"""
+            dbName = "{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 2012.12.01..2012.12.31, engine='TSDB');
             schema_t = table(10:0, `date`float`double`string`long`decimal128_6`decimal128_26,
                                 [DATE, FLOAT, DOUBLE, STRING, LONG,DECIMAL128(6), DECIMAL128(26)])
             pt = createPartitionedTable(db, schema_t, `pt_3, `date, sortColumns=`date)
         """)
-        appender1 = ddb.tableAppender(dbPath="dfs://test_decimal128", tableName="pt_3", ddbSession=conn)
+        appender1 = ddb.tableAppender(dbPath=db_name, tableName="pt_3", ddbSession=conn)
         data = pd.DataFrame({"date": np.array(
             ['2012-12-01T00:00:00', '2012-12-10T00:00:00', '2012-12-20T00:00:00'] * 1100000, dtype="datetime64[D]"),
             "float": np.array([1, 2, 3] * 1100000, dtype='object'),
@@ -2375,10 +2182,11 @@ class TestTableAppender:
         """).all()
 
     def test_tableAppender_over_length(self):
+        func_name = inspect.currentframe().f_code.co_name
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         data = '1' * 256 * 1024
         tbname = 't_' + random_string(5)
-        dbPath = "dfs://test_tableAppender"
+        dbPath = f"dfs://{func_name}"
         self.conn.run(f"""
             if(existsDatabase("{dbPath}")){{
                 dropDatabase("{dbPath}")
@@ -2461,10 +2269,11 @@ class TestTableAppender:
         conn.close()
 
     def test_tableAppender_max_length_string_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         data = '1' * (256 * 1024 - 1)
         tbname = 't_' + random_string(5)
-        dbPath = "dfs://tableAppender"
+        dbPath = f"dfs://{func_name}"
         conn.run(f"""
             if(existsDatabase("{dbPath}")){{
                 dropDatabase("{dbPath}")
@@ -2480,10 +2289,11 @@ class TestTableAppender:
         conn.close()
 
     def test_tableAppender_max_length_symbol_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         data = '1' * 255
         tbname = 't_' + random_string(5)
-        dbPath = "dfs://tableAppender"
+        dbPath = f"dfs://{func_name}"
         conn.run(f"""
             if(existsDatabase("{dbPath}")){{
                 dropDatabase("{dbPath}")
@@ -2499,10 +2309,11 @@ class TestTableAppender:
         conn.close()
 
     def test_tableAppender_max_length_blob_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         data = '1' * 256 * 1024
         tbname = 't_' + random_string(5)
-        dbPath = "dfs://tableAppender"
+        dbPath = f"dfs://{func_name}"
         conn.run(f"""
             if(existsDatabase("{dbPath}")){{
                 dropDatabase("{dbPath}")

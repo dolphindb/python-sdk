@@ -421,6 +421,7 @@ class Session(object):
         self.protocol = protocol
         if self.host is not None and self.port is not None:
             self.connect(host, port, userid, password, keepAliveTime=keepAliveTime)
+        self.msg_logger = self.cpp.msg_logger
 
     def __del__(self):
         if hasattr(self, "cpp"):
@@ -652,9 +653,8 @@ class Session(object):
         offset: int = -1, resub: bool = False, filter=None,
         msgAsTable: bool = False, batchSize: int = 0, throttle: float = 1.0,
         userName: str = None, password: str = None, streamDeserializer: Optional["streamDeserializer"] = None,
-        backupSites: List[str] = None,
-        resubTimeout: int = 100,
-        subOnce: bool = False,
+        backupSites: List[str] = None, resubscribeInterval: int = 100, subOnce: bool = False,
+        *, resubTimeout: Optional[int] = None,
     ) -> None:
         """Subscribe to stream tables in DolphinDB.
 
@@ -679,8 +679,11 @@ class Session(object):
             password : password. Defaults to None, indicating no login.
             streamDeserializer : a deserializer of heterogeneous stream table. Defaults to None.
             backupSites : a list of strings indicating the host:port for each backup node, e.g. ["192.168.0.1:8848", "192.168.0.2:8849"]. If specified, the failover mechanism is automatically activated. Defaults to None.
-            resubTimeout : an integer representing the timeout for resubscribing (in milliseconds). Defaults to 100.
+            resubscribeInterval : a non-negative integer indicating the wait time (in milliseconds) between resubscription attempts when a disconnection is detected. Defaults to 100.
             subOnce : a boolean, indicating whether to attempt reconnecting to disconnected nodes after each node switch occurs. Defaults to False.
+
+        Note:
+            `resubTimeout` has been renamed to `resubscribeInterval`. Please update your code to use `resubscribeInterval` instead.
         """
         if not isinstance(msgAsTable, bool):
             raise TypeError("msgAsTable must be a bool.")
@@ -710,22 +713,24 @@ class Session(object):
         for site in backupSites:
             if not isinstance(site, str):
                 raise TypeError("backupSites must be a list of str.")
-        if not isinstance(resubTimeout, int):
-            raise TypeError("resubTimeout must be an int.")
+        if resubTimeout is not None:
+            raise ValueError("Please use resubscibeInterval instead of resubTimeout.")
+        if not isinstance(resubscribeInterval, int):
+            raise TypeError("resubscribeInterval must be an int.")
         if not isinstance(subOnce, bool):
             raise TypeError("subOnce must be a bool.")
         if batchSize > 0:
             self.cpp.subscribeBatch(
                 host, port, handler, tableName, actionName,
                 offset, resub, filter, msgAsTable, batchSize, throttle,
-                userName, password, sd, backupSites, resubTimeout, subOnce
+                userName, password, sd, backupSites, resubscribeInterval, subOnce
             )
         else:
             if msgAsTable:
                 raise ValueError("msgAsTable must be False when batchSize is 0")
             self.cpp.subscribe(
                 host, port, handler, tableName, actionName,
-                offset, resub, filter, userName, password, sd, backupSites, resubTimeout, subOnce
+                offset, resub, filter, userName, password, sd, backupSites, resubscribeInterval, subOnce
             )
 
     def unsubscribe(self, host: str, port: int, tableName: str, actionName: str = None) -> None:
@@ -1672,6 +1677,7 @@ class MultithreadedTableWriter(object):
                             The compression methods include: "LZ4": LZ4 algorithm; "DELTA": Delta-of-delta encoding.
         mode : The write mode. It can be Append (default) or Upsert. Defaults to "".
         modeOption : The parameters of function upsert!. It only takes effect when mode is Upsert. Defaults to [].
+        reconnect : whether to enable reconnection. True means enabled, otherwise False. Defaults to True.
     """
     def __init__(
         self, host: str, port: int, userId: str, password: str,
@@ -1679,13 +1685,13 @@ class MultithreadedTableWriter(object):
         enableHighAvailability: bool = False, highAvailabilitySites: List[str] = [],
         batchSize: int = 1, throttle: float = 1.0, threadCount: int = 1,
         partitionCol: str = "", compressMethods: List[str] = [],
-        mode: str = "", modeOption: List[str] = []
+        mode: str = "", modeOption: List[str] = [], *, reconnect: bool = True
     ):
         """Constructor of MultithreadedTableWriter"""
         self.writer = ddbcpp.multithreadedTableWriter(
             host, port, userId, password, dbPath, tableName, useSSL,
             enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount,
-            partitionCol, compressMethods, mode, modeOption
+            partitionCol, compressMethods, mode, modeOption, reconnect
         )
 
     def getStatus(self) -> MultithreadedTableWriterStatus:

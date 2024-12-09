@@ -79,7 +79,6 @@ class TestSubscribe:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
@@ -1368,7 +1367,7 @@ class TestSubscribe:
                                  "conn.run('undef(`st,SHARED)');"
                                  "conn.close();"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        assert "this should be catched" in result.stderr
+        assert "this should be catched" in result.stdout
 
     def test_enalbeStreaming_subscribe_keyededStreamTable(self):
         conn1 = ddb.session()

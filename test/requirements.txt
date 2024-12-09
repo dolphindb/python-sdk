@@ -2,8 +2,6 @@ dolphindb
 numpy
 pandas
 pyarrow
-paramiko
-filelock
 pytest
 pytest-xdist
 statsmodels

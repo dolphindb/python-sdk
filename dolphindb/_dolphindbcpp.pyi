@@ -1,4 +1,42 @@
-from typing import Any
+from typing import Any, List
+from enum import Enum
+
+
+class Level(Enum):
+    DEBUG: "Level"
+    INFO: "Level"
+    WARNING: "Level"
+    ERROR: "Level"
+
+
+class LogMessage:
+    level: Level
+    log: str
+
+
+class Sink:
+    name: str
+    def __init__(self, name: str): ...
+    def handle(self, msg: LogMessage): ...
+    def flush(self): ...
+
+
+class Logger:
+    min_level: Level
+    def enable_stdout_sink(self) -> None: ...
+    def disable_stdout_sink(self) -> None: ...
+    def enable_file_sink(self, path: str) -> None: ...
+    def disable_file_sink(self) -> None: ...
+    def add_sink(self, sink: Sink) -> None: ...
+    def remove_sink(self, name: str) -> None: ...
+    def list_sinks(self) -> List[Sink]: ...
+
+
+default_logger: Logger
+
+
+class sessionimpl:
+    msg_logger: Logger
 
 
 def dump(obj: Any, file, *, types=None) -> None: ...

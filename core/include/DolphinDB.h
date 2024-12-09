@@ -72,17 +72,6 @@ using converter::Type;
 using converter::TableChecker;
 using converter::CHILD_VECTOR_OPTION;
 
-class HIDEVISIBILITY ProtectGil{
-public:
-	ProtectGil(bool release = false, const string &name = "");
-	void acquire();
-	~ProtectGil();
-private:
-	string name_;
-	SmartPointer<py::gil_scoped_release> pgilRelease_;
-	bool acquired_;
-	PyGILState_STATE gstate_;
-};
 
 class EXPORT_DECL DBConnection {
 public:
@@ -161,6 +150,7 @@ public:
 	const string getSessionId() const;
 	void setProtocol(PROTOCOL protocol);
 	void setShowOutput(bool flag);
+	std::shared_ptr<Logger> getMsgLogger();
 
 private:
     DBConnection(DBConnection& oth); // = delete

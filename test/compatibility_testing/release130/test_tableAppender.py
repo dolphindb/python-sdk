@@ -30,7 +30,6 @@ class TestAutoFitTableAppender:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')

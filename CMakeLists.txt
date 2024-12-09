@@ -96,6 +96,7 @@ target_compile_definitions(${MODULE_NAME}
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/core/include
     ${CMAKE_CURRENT_SOURCE_DIR}/core/thirdparty/abseil/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/thirdparty/spdlog/include
     ${OPENSSL_INCLUDE_DIR}
     ${Python_INCLUDE_DIRS}
 )
@@ -136,6 +137,7 @@ if(WIN32)
             PUBLIC NOMINMAX
             PUBLIC _WINDOWS
             PUBLIC _USRDLL
+            PUBLIC FMT_UNICODE=0
         )
 
         get_filename_component(OPENSSL_ROOT_DIR ${OPENSSL_INCLUDE_DIR} DIRECTORY)

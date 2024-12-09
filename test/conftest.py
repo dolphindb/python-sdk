@@ -1,188 +1,88 @@
-import json
-import os
-import sys
-import time
-
 import dolphindb as ddb
 import pytest
-from filelock import FileLock
+import platform
+from _pytest.outcomes import Skipped
 
-from setup.settings import *
-from setup.utils import SSHConnection
+from setup.settings import HOST_REPORT, PORT_REPORT, USER_REPORT, PASSWD_REPORT, REPORT
+from basic_testing.prepare import PYTHON_VERSION
 
-if sys.platform.startswith('win'):
-    cur_os = 'win'
-elif sys.platform.startswith('linux'):
-    cur_os = 'linux'
-else:
-    cur_os = 'mac'
+if REPORT:
+    conn = ddb.Session(HOST_REPORT, PORT_REPORT, USER_REPORT, PASSWD_REPORT)
 
+    DATABASE_NAME="dfs://py_api_auto_test_report"
+    TABLE_NAME=f"py_api_auto_test_report_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}"
+    SHARE_TABLE=f"py_api_auto_test_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}"
 
-class ServerManager:
-    def __init__(self, host, port, user, password, is_cluster, ctl_port=None):
-        self.is_cluster = is_cluster
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password
-        self.ctl_p = ctl_port
-        self.restart_cmd = None
+    total_test_count = 0
 
-    def exec_cmd(self, cmd):
-        if cur_os in ['win', 'linux']:
-            os.system(cmd)
-        elif cur_os == 'mac':
-            conn = SSHConnection(self.host, 22, 'yzou', 'dol123')
-            conn.cmd(cmd)
-            conn.disconnect()
+    def pytest_collection_modifyitems(items):
+        global total_test_count
+        total_test_count = len(items)
 
-    def set_restart_cmd(self, sh):
-        self.restart_cmd = sh
-
-    def connect_to_server(self, h, po, u, pawd):
-        conn = ddb.session()
-        conn.connect(h, po, u, pawd)
-        return conn
-
-    def check_server_status(self, conn: ddb.session):
-        try:
-            conn.run("1+1")
-            return True
-        except RuntimeError:
-            return False
-
-    def check_if_restart(self):
-        conn = ddb.session()
-
-        if self.is_cluster:
-            conn_ctl = ddb.session()
-            if not conn_ctl.connect(self.host, self.ctl_p, self.user, self.password):
-                print("The cluster has crashed, try to restart this cluster.")
-                command = self.restart_cmd
-                self.exec_cmd(command)
-                wait_num = 1
-                while wait_num <= 10:
-                    time.sleep(6)
-                    conn_ctl.connect(self.host, self.ctl_p, self.user, self.password)
-                    conn.connect(self.host, self.port, self.user, self.password)
-                    if self.check_server_status(conn) and self.check_server_status(conn_ctl):
-                        break
-                    wait_num += 1
-
-                if wait_num == 10:
-                    print("Time out, cluster is not ready yet.")
-                    return False
-
-            elif not conn.connect(self.host, self.port, self.user, self.password):
-                print("Some datanodes in cluster are crashed, try to restart them.")
-                restart_s = f"""
-                                login("{self.user}", "{self.password}");
-                                nodes = exec name from getClusterPerf() where state!=1 and mode !=1;
-                                startDataNode(nodes);
-                            """
-                wait_num = 1
-                conn_ctl.run(restart_s)
-
-                while wait_num <= 10:
-                    time.sleep(6)
-                    conn.connect(self.host, self.port,
-                                 self.user, self.password)
-                    if self.check_server_status(conn):
-                        break
-                    wait_num += 1
-
-                if wait_num == 10:
-                    print("Time out, some datanodes are not ready yet.")
-                    return False
-
-            conn_ctl.close()
-
+    @pytest.fixture(scope="session", autouse=True)
+    def create_share_table(request):
+        worker_id = request.config.workerinput['workerid']
+        if worker_id=='gw0':
+            conn.run(
+                f"share table([]$STRING as case_name,[]$STRING as case_result,[]$BLOB as case_info,[]$BLOB as case_trace,[]$DOUBLE as case_time) as {SHARE_TABLE}")
         else:
-            if not conn.connect(self.host, self.port, self.user, self.password):
-                print("Current single-mode server is crashed, try to restart it.")
-                command = self.restart_cmd
-                self.exec_cmd(command)
-                wait_num = 1
-                while wait_num <= 10:
-                    time.sleep(6)
-                    conn.connect(self.host, self.port,
-                                 self.user, self.password)
-                    if self.check_server_status(conn):
+            conn.run(f"""
+                do {{
+                    if ("{SHARE_TABLE}" in objs(true)['name']){{
                         break
-                    wait_num += 1
-
-                if wait_num == 10:
-                    print("Time out, current single-node is not ready yet.")
-                    return False
-                print("Restart successfully.")
-
-        conn.close()
-        return True
-
-
-def check_version():
-    cur_version = ddb.__version__
-    setup_version = os.environ.get("API_VERSION")
-    if not cur_version == setup_version:
-        pytest.exit("current api version is different to env [API_VERSION]")
-    return 'OK'
-
-
-def get_restart_scripts():
-    if cur_os == 'linux':
-        _RESTRAT_SINGLE_INIT = 'cd {} && sh startSingle.sh'
-        _RESTRAT_CLUSTER_INIT = 'cd {} && sh startAgent.sh && sh startController.sh'
-    elif cur_os == 'win':
-        _RESTRAT_SINGLE_INIT = 'cd /d {} && backgroundSingle.vbs'
-        _RESTRAT_CLUSTER_INIT = 'cd /d {} && backgroundStartAgent.vbs && ping -n 2 127.0.0.1 && backgroundStartController.vbs'
-    else:
-        _RESTRAT_SINGLE_INIT = 'cd {} && sh startSingle.sh'
-        _RESTRAT_CLUSTER_INIT = 'cd {} && sh startAgent.sh && sh startController.sh'
-    return _RESTRAT_SINGLE_INIT, _RESTRAT_CLUSTER_INIT
-
-
-if AUTO_TESTING:
-    import pickle
-
-    with open('setup/SERVER_MAP.pickle', 'rb') as handle:
-        SERVER_MAP = pickle.load(handle)
-
-    with open('setup/CONFIG_MAP.pickle', 'rb') as handle:
-        CONFIG_MAP = pickle.load(handle)
-    RESTRAT_SINGLE_INIT, RESTRAT_CLUSTER_INIT = get_restart_scripts()
-
-
-@pytest.fixture(scope="session", autouse=AUTO_TESTING)
-def check_package_version(tmp_path_factory, worker_id):
-    if worker_id == "master":
-        # not executing in with multiple workers, just produce the data and let
-        # pytest's fixture caching do its job
-        check_version()
-
-    # get the temp directory shared by all workers
-    root_tmp_dir = tmp_path_factory.getbasetemp().parent
-
-    fn = root_tmp_dir / "data.json"
-    with FileLock(str(fn) + ".lock"):
-        if fn.is_file():
-            json.loads(fn.read_text())
+                    }} else {{
+                        sleep(500)
+                    }}
+                }}while(true);
+            """)
+        yield
+        if worker_id == 'gw0':
+            global total_test_count
+            conn.run(f"""
+                do {{
+                    size_=select count(*) from {SHARE_TABLE} where case_result!='running'
+                    if (size_['count'][0]<{total_test_count}){{
+                        sleep(500)
+                    }} else {{
+                        break
+                    }}
+                }}while(true);
+                if (not existsDatabase('{DATABASE_NAME}')){{
+                    database('{DATABASE_NAME}',VALUE,1 5 10,engine='TSDB')
+                }}
+                db=database('{DATABASE_NAME}')
+                if (not existsTable('{DATABASE_NAME}','{TABLE_NAME}')){{
+                    db.createTable({SHARE_TABLE},'{TABLE_NAME}',sortColumns='case_name')
+                }}
+                truncate('{DATABASE_NAME}','{TABLE_NAME}')
+                t=loadTable('{DATABASE_NAME}','{TABLE_NAME}')
+                t.append!({SHARE_TABLE})
+                undef(`{SHARE_TABLE},SHARED)
+            """)
         else:
-            data = 'NG' if check_version() != 'OK' else 'OK'
-            fn.write_text(json.dumps(data))
+            conn.run(f"""
+                do {{
+                    if ("{SHARE_TABLE}" in objs(true)['name']){{
+                        sleep(500)
+                    }} else {{
+                        break
+                    }}
+                }}while(true);
+            """)
 
-
-@pytest.fixture(scope="module", autouse=AUTO_TESTING)
-def check_server_status(request):
-    setup_name = request.node.nodeid.split('.')[0].replace('/', '.')
-    manager = ServerManager(*CONFIG_MAP[setup_name])
-
-    if CONFIG_MAP[setup_name][4]:
-        manager.set_restart_cmd(
-            RESTRAT_CLUSTER_INIT.format(SERVER_MAP[setup_name]))
-    else:
-        manager.set_restart_cmd(
-            RESTRAT_SINGLE_INIT.format(SERVER_MAP[setup_name]))
-    if not manager.check_if_restart():
-        pytest.exit("Server cannot be started, may it was core dumped.")
-    else:
-        time.sleep(5)
+    def pytest_runtest_makereport(item, call):
+        if call.when == "setup":
+            if hasattr(call.excinfo,'type') and call.excinfo.type is Skipped:
+                conn.run(f"insert into {SHARE_TABLE} values('{item.name}','skipped','','',0)")
+            else:
+                conn.run(f"insert into {SHARE_TABLE} values('{item.name}','running','','',0)")
+        elif call.when == "call":
+            if call.excinfo is None:
+                conn.run(f"update {SHARE_TABLE} set case_result='success',case_time={call.duration} where case_name='{item.name}'")
+            elif call.excinfo.type is Skipped:
+                conn.run(f"update {SHARE_TABLE} set case_result='skipped' where case_name='{item.name}'")
+            else:
+                case_info = f'{call.excinfo.value}'.replace("'", '"')
+                case_trace = f'{call.excinfo.traceback}'.replace("'", '"').replace('\\','\\\\')
+                conn.run(
+                    f"update {SHARE_TABLE} set case_result='fail',case_time={call.duration},case_info='{case_info}',case_trace='{case_trace}' where case_name='{item.name}'")

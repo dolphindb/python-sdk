@@ -26,7 +26,7 @@ namespace dolphindb{
                     PyErr_Clear();
                     tmp = PyUnicode_DecodeUTF8Stateful(pchar,charsize,"ignore",NULL);
                     std::string error_str(pchar, charsize);
-                    DLogger::Error("Cannot decode data: " + error_str + ", Please encode the string using the UTF-8 format.");
+                    LOG_ERR("Cannot decode data: " + error_str + ", Please encode the string using the UTF-8 format.");
                 }
                 return tmp;
             /*#else

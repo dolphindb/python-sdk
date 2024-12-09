@@ -1,3 +1,4 @@
+import threading
 import uuid
 from enum import Enum, unique
 from math import ceil
@@ -8,11 +9,40 @@ import numpy as np
 import pandas as pd
 from numpy import matrix
 
+from setup.settings import USER, PASSWD
+
 
 def generate_uuid(prefix=None):
     if prefix is not None:
         return prefix + uuid.uuid4().hex[:8]
     return uuid.uuid4().hex[:8]
+
+
+class CountBatchDownLatch:
+    def __init__(self, count):
+        self.count = count
+        self.lock = threading.Lock()
+        self.semp = threading.Semaphore(0)
+
+    def wait(self):
+        self.semp.acquire()
+
+    def wait_s(self, timeout: float):
+        return self.semp.acquire(timeout=timeout)
+
+    def countDown(self, count):
+        with self.lock:
+            self.count -= count
+            if self.count == 0:
+                self.semp.release()
+
+    def getCount(self):
+        with self.lock:
+            return self.count
+
+    def reset(self, count):
+        with self.lock:
+            self.count = count
 
 
 @unique
@@ -185,7 +215,6 @@ def get_Scalar(*args, only_script=False, **kwargs):
     if not only_script:
         pythons[DATATYPE.DT_VOID] = {
             "upload": [
-                ('s_void_1', None),
             ],
             "download": [
                 ('s_void_1', None),
@@ -6151,16 +6180,19 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
         ],
         "download": [
             ("{}_blob_0".format(testTypeTable), pd.DataFrame({"index": np.arange(1, n + 1).astype("int32"),
-                                                              "blob_0": np.tile(np.array([b"hello", b""], dtype="object"),
-                                                                                ceil(n / 2))[:n],
-                                                              "blob_1": np.tile(np.array([b"", b"hello"], dtype="object"),
-                                                                                ceil(n / 2))[:n],
+                                                              "blob_0": np.tile(
+                                                                  np.array([b"hello", b""], dtype="object"),
+                                                                  ceil(n / 2))[:n],
+                                                              "blob_1": np.tile(
+                                                                  np.array([b"", b"hello"], dtype="object"),
+                                                                  ceil(n / 2))[:n],
                                                               "blob_2": np.tile(np.array([b"", b""], dtype="object"),
                                                                                 ceil(n / 2))[:n]
                                                               })),
             ("{}_blob_1".format(testTypeTable), pd.DataFrame({"index": np.arange(1, n + 1).astype("int32"),
-                                                              "blob_0": np.tile(np.array([b"hello", b""], dtype="object"),
-                                                                                ceil(n / 2))[:n],
+                                                              "blob_0": np.tile(
+                                                                  np.array([b"hello", b""], dtype="object"),
+                                                                  ceil(n / 2))[:n],
                                                               })),
             ("{}_blob_2".format(testTypeTable), pd.DataFrame({"index": np.arange(1, 2).astype("int32"),
                                                               "blob_0": np.array([b"hello"], dtype="object"),
@@ -7472,7 +7504,7 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
 
 
 @data_wrapper
-def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
+def get_PartitionedTable_Append_Upsert(*args, n=100, db_name="", **kwargs):
     # tabletype: [table, streamTable, indexedTable, keyedTable]
 
     pythons = {DATATYPE.DT_VOID: {
@@ -7482,9 +7514,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
         "upload": [],
         "download": [],
     }, DATATYPE.DT_BOOL: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://bool'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_bool'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -7544,9 +7576,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       })),
         ],
     }, DATATYPE.DT_CHAR: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://char'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_char'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -7606,9 +7638,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       })),
         ],
     }, DATATYPE.DT_SHORT: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://short'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_short'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5])
@@ -7668,9 +7700,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                        })),
         ],
     }, DATATYPE.DT_INT: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://int'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_int'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5])
@@ -7730,9 +7762,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
 
         ],
     }, DATATYPE.DT_LONG: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://long'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_long'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5])
@@ -7792,9 +7824,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       })),
         ],
     }, DATATYPE.DT_DATE: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://date'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_date'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5])
@@ -7867,9 +7899,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       })),
         ],
     }, DATATYPE.DT_MONTH: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://month'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_month'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5])
@@ -7948,9 +7980,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                        })),
         ],
     }, DATATYPE.DT_TIME: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://time'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_time'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -7997,9 +8029,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       })),
         ],
     }, DATATYPE.DT_MINUTE: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://minute'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_minute'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8046,9 +8078,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         })),
         ],
     }, DATATYPE.DT_SECOND: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://second'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_second'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8095,9 +8127,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         })),
         ],
     }, DATATYPE.DT_DATETIME: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://datetime'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_datetime'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8170,9 +8202,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                           })),
         ],
     }, DATATYPE.DT_TIMESTAMP: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://timestamp'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_timestamp'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8245,9 +8277,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                            })),
         ],
     }, DATATYPE.DT_NANOTIME: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://nanotime'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_nanotime'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8294,9 +8326,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                           })),
         ],
     }, DATATYPE.DT_NANOTIMESTAMP: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://nanotimestamp'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_nanotimestamp'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8373,9 +8405,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                                })),
         ],
     }, DATATYPE.DT_FLOAT: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://float'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_float'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8438,9 +8470,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                        })),
         ],
     }, DATATYPE.DT_DOUBLE: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://double'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_double'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8507,9 +8539,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         })),
         ],
     }, DATATYPE.DT_SYMBOL: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://symbol'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_symbol'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8548,9 +8580,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         })),
         ],
     }, DATATYPE.DT_STRING: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://string'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_string'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8611,9 +8643,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                         })),
         ],
     }, DATATYPE.DT_UUID: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://uuid'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_uuid'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8667,9 +8699,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                       })),
         ],
     }, DATATYPE.DT_DATEHOUR: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://datehour'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_datehour'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8742,9 +8774,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                           })),
         ],
     }, DATATYPE.DT_IPADDR: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://ip'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_ip'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8785,9 +8817,9 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
                                                     })),
         ],
     }, DATATYPE.DT_INT128: {
-        "scripts": """
-            login("admin", "123456")
-            dbPath='dfs://int128'
+        "scripts": f"""
+            login("{USER}", "{PASSWD}")
+            dbPath='{db_name}_int128'
             if(existsDatabase(dbPath)) 
                dropDatabase(dbPath)
             db=database(dbPath,HASH, [INT, 5]) 
@@ -8889,10 +8921,10 @@ def get_PartitionedTable_Append_Upsert(*args, n=100, **kwargs):
 
 
 @data_wrapper
-def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
+def get_TableData(*args, n=5, m=5, dbPath="dfs://testmergepart", shareName="share", **kwargs):
     n_scripts = "n = {}\n".format(n)
     m_scripts = "m = {}\n".format(m)
-    AllTrade_scripts = """
+    AllTrade_scripts = f"""
         index1=long(1..n)
         time1=take(1970.01.01 10:01:01 1970.01.01 10:01:03 1970.01.01 10:01:05 1970.01.01 10:01:05, n)
         symbol1=symbol(take(`X`Z`Y`Z,n))
@@ -8910,13 +8942,13 @@ def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
         TradeStream = streamTable(index1 as index, nanotimestamp(time1) as time,symbol1 as symbol,price1 as price,size1 as size)
         QuoteStream = streamTable(index2 as index, nanotimestamp(time2) as time,symbol2 as symbol,ask as ask,bid as bid)
 
-        share TradeStream as ALLTradeStream
-        share QuoteStream as ALLQuoteStream
+        share TradeStream as {shareName}_ALLTradeStream
+        share QuoteStream as {shareName}_ALLQuoteStream
 
-        share Trade as ALLShareTrade
-        share Quote as ALLShareQuote
+        share Trade as {shareName}_ALLShareTrade
+        share Quote as {shareName}_ALLShareQuote
 
-        login("admin", "123456")
+        login("{USER}", "{PASSWD}")
         if(existsDatabase("{dbPath}"))
             dropDatabase("{dbPath}")
         db = database("{dbPath}", VALUE, "X" "Z")
@@ -8926,15 +8958,15 @@ def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
         TradeIndex = indexedTable(`index, index1 as index, nanotimestamp(time1) as time,symbol1 as symbol,price1 as price,size1 as size)
         QuoteIndex = indexedTable(`index, index2 as index, nanotimestamp(time2) as time,symbol2 as symbol,ask as ask,bid as bid)
 
-        share TradeIndex as ALLTradeIndex
-        share QuoteIndex as ALLQuoteIndex
+        share TradeIndex as {shareName}_ALLTradeIndex
+        share QuoteIndex as {shareName}_ALLQuoteIndex
 
         TradeKey = keyedTable(`index, index1 as index, nanotimestamp(time1) as time,symbol1 as symbol,price1 as price,size1 as size)
         QuoteKey = keyedTable(`index, index2 as index, nanotimestamp(time2) as time,symbol2 as symbol,ask as ask,bid as bid)
 
-        share TradeKey as ALLTradeKey
-        share QuoteKey as ALLQuoteKey
-    """.format(dbPath=dbPath)
+        share TradeKey as {shareName}_ALLTradeKey
+        share QuoteKey as {shareName}_ALLQuoteKey
+    """
     AllTrade_names = {
         "NormalTable": (
             n_scripts + """
@@ -8954,9 +8986,9 @@ def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
             """,
             "Trade", "Quote",
         ),
-        "SharedTable": (
-            "ALLShareTrade", "ALLShareQuote",
-        ),
+        "SharedTable": [
+            f"{shareName}_ALLShareTrade", f"{shareName}_ALLShareQuote",
+        ],
         "StreamTable": (
             n_scripts + """
                 index1=long(1..n)
@@ -8977,7 +9009,7 @@ def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
             "TradeStream", "QuoteStream",
         ),
         "ShareStreamTable": (
-            "ALLTradeStream", "ALLQuoteStream",
+            f"{shareName}_ALLTradeStream", f"{shareName}_ALLQuoteStream",
         ),
         "IndexedTable": (
             n_scripts + """
@@ -8999,7 +9031,7 @@ def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
             "TradeIndex", "QuoteIndex",
         ),
         "ShareIndexedTable": (
-            "ALLTradeIndex", "ALLQuoteIndex",
+            f"{shareName}_ALLTradeIndex", f"{shareName}_ALLQuoteIndex",
         ),
         "KeyedTable": (
             n_scripts + """
@@ -9021,7 +9053,7 @@ def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
             "TradeKey", "QuoteKey",
         ),
         "ShareKeyedTable": (
-            "ALLTradeKey", "ALLQuoteKey",
+            f"{shareName}_ALLTradeKey", f"{shareName}_ALLQuoteKey",
         ),
         "PartitionedTable": (dbPath, keys.VALUE, "`X`Z", "pt1", "pt2",),
         "loadText": ("loadText", ",", "df1.csv", "df2.csv",),
@@ -9052,7 +9084,7 @@ def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
         "loadTableBySQL": ("loadTableBySQL", dbPath, "pt1", "pt2"),
         "loadTextEx": (
             "loadTextEx",
-            n_scripts + """
+            n_scripts + f"""
             index1=long(1..n)
             time1=take(1970.01.01 10:01:01 1970.01.01 10:01:03 1970.01.01 10:01:05 1970.01.01 10:01:05, n)
             symbol1=symbol(take(`X`Z`Y`Z,n))
@@ -9066,17 +9098,17 @@ def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
             ask=long(take(90 150 100 52, n))
             bid=long(take(70 200 200 68, n))
             Quote=table(int(index2) as index, nanotimestamp(time2) as time,symbol2 as symbol,int(ask) as ask,int(bid) as bid)
-            login("admin", "123456")
+            login("{USER}", "{PASSWD}")
             if(existsDatabase("{dbPath}2"))
                 dropDatabase("{dbPath}2")
             db = database("{dbPath}2", VALUE, "X" "Z")
             db.createPartitionedTable(Trade,`pt1,`symbol)
             db.createPartitionedTable(Quote,`pt2,`symbol)
-            """.format(dbPath=dbPath), dbPath + "2", "','", "df1.csv", "df2.csv", "symbol", "pt1", "pt2"
+            """, dbPath + "2", "','", "df1.csv", "df2.csv", "symbol", "pt1", "pt2"
         ),
         "loadTextEx$": (
             "loadTextEx",
-            n_scripts + """
+            n_scripts + f"""
             index1=long(1..n)
             time1=take(1970.01.01 10:01:01 1970.01.01 10:01:03 1970.01.01 10:01:05 1970.01.01 10:01:05, n)
             symbol1=symbol(take(`X`Z`Y`Z,n))
@@ -9090,13 +9122,13 @@ def get_TableData(*args, n=100, m=100, dbPath="dfs://testmergepart", **kwargs):
             ask=long(take(90 150 100 52, n))
             bid=long(take(70 200 200 68, n))
             Quote=table(int(index2) as index, nanotimestamp(time2) as time,symbol2 as symbol,int(ask) as ask,int(bid) as bid)
-            login("admin", "123456")
+            login("{USER}", "{PASSWD}")
             if(existsDatabase("{dbPath}2"))
                 dropDatabase("{dbPath}2")
             db = database("{dbPath}2", VALUE, "X" "Z")
             db.createPartitionedTable(Trade,`pt1,`symbol)
             db.createPartitionedTable(Quote,`pt2,`symbol)
-            """.format(dbPath=dbPath), dbPath + "2", "'$'", "df1_$.csv", "df2_$.csv", "symbol", "pt1", "pt2"
+            """, dbPath + "2", "'$'", "df1_$.csv", "df2_$.csv", "symbol", "pt1", "pt2"
         ),
     }
     AllTrade_python = {
@@ -9211,7 +9243,7 @@ def get_scripts(name):
     random = str(uuid.uuid4()).replace('-', '')
     if name == "login":
         return f"""
-        login('admin','123456')
+        login('{USER}','{PASSWD}')
         dbPath='dfs://test_{random}'
         if(existsDatabase(dbPath))
         dropDatabase(dbPath)
@@ -9299,18 +9331,3 @@ def eval_sql_with_data(conntmp: ddb.session, data, test_function, *args, **kwarg
             test_function(conntmp, leftTable, rightTable, leftTable.toDF(), rightTable.toDF(), *args, **kwargs)
     else:
         raise RuntimeError("unexcepted type.")
-
-# import setup.prepare_python as P
-# import setup.prepare_server as S
-
-# def get_function(pre_p, pre_s, name):
-#     def tmp_function(*args, **kwargs):
-#         p = getattr(pre_p, name)
-#         s = getattr(pre_s, name)
-#         return p(*args, **kwargs), s(*args, **kwargs)
-#     return tmp_function
-
-# for i in DATAFORM:
-#     funcName = "get_" + i.name[3:]
-#     if hasattr(P, funcName) and hasattr(S, funcName):
-#         globals()[funcName] = get_function(P, S, funcName)

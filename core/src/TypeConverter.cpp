@@ -1,6 +1,7 @@
 #include "TypeDefine.h"
 #include "TypeConverter.h"
 #include "TypeHelper.h"
+#include "DecimalHelper.h"
 
 #include "TypeException.h"
 
@@ -261,29 +262,16 @@ T _getPyDecimalData_helper(const py::handle &data, bool &hasNull, int scale) {
         return std::numeric_limits<T>::min();
     }
 
-    py::object dataSign = decTuple.attr("sign");
-    int sign = py::cast<int>(dataSign);
-    py::list dataTuple = py::cast<py::list>(decTuple.attr("digits"));
-    long long dec_len = dataTuple.size();
-    T dec_data = 0;
-    long long exp = (-1) * py::cast<long long>(dataExp);
-    if (scale == EXPARAM_DEFAULT) scale = exp;
-    for (auto ti = 0; ti < dec_len - exp + scale; ++ti) {
-        dec_data *= 10;
-        if (ti < dec_len) {
-            py::object item = dataTuple[ti];
-            dec_data += (T)(py::cast<int>(item));
-        }
-        if (dec_data < 0) {
-            throw ConversionException("Decimal math overflow.");
-        }
+    std::string dataString = data.attr("__format__")("f").cast<std::string>();
+    T raw_data;
+    int n_scale = scale == EXPARAM_DEFAULT ? -1 : scale;
+    std::string errMsg;
+    _decimal_util::parseString(dataString.data(), dataString.length(), raw_data, n_scale, errMsg, false);
+
+    if (!errMsg.empty()) {
+        throw ConversionException(errMsg);
     }
-    if (sign) {
-        return (-1) * dec_data;
-    }
-    else {
-        return dec_data;
-    }
+    return raw_data;
 }
 
 
@@ -294,7 +282,7 @@ int getPyDecimalData<int>(const py::handle &data, bool &hasNull, int scale) {
 
 template <>
 long long getPyDecimalData<long long>(const py::handle &data, bool &hasNull, int scale) {
-    return _getPyDecimalData_helper<long long>(data, hasNull, scale);
+    return _getPyDecimalData_helper<int64_t>(data, hasNull, scale);
 }
 
 template <>
@@ -681,7 +669,6 @@ checkElemType(
         type = curType;
         return false;
     }
-    Type res;
     // TODO: need to speed up
     if (!canConvertTo(type, curType, type)) {
         return true;
@@ -961,23 +948,23 @@ Converter::toDolphinDB_Scalar(
     // FIXME: change to Util / Helper function
     if (CHECK_INS(data, py_bool_)) {
         if (type.first == HT_UNK) type.first = HT_BOOL;
-        return createObject(type, py2str(py::type::of(data)).data(), py::cast<bool>(data), nullptr, false);
+        return createObject(type, "bool", py::cast<bool>(data), nullptr, false);
     }
     if (CHECK_INS(data, py_int_)) {
         if (type.first == HT_UNK) type.first = HT_LONG;
-        return createObject(type, py2str(py::type::of(data)).data(), py::cast<long long>(data), nullptr, false);
+        return createObject(type, "int", py::cast<long long>(data), nullptr, false);
     }
     if (CHECK_INS(data, py_float_)) {
         if (type.first == HT_UNK) type.first = HT_DOUBLE;
-        return createObject(type, py2str(py::type::of(data)).data(), py::cast<double>(data), nullptr, false);
+        return createObject(type, "float", py::cast<double>(data), nullptr, false);
     }
     if (CHECK_INS(data, py_str_)) {
         if (type.first == HT_UNK) type.first = HT_STRING;
-        return createObject(type, py2str(py::type::of(data)).data(), py::cast<std::string>(data), nullptr, false);
+        return createObject(type, "str", py::cast<std::string>(data), nullptr, false);
     }
     if (CHECK_INS(data, py_bytes_)) {
         if (type.first == HT_UNK) type.first = HT_BLOB;
-        return createObject(type, py2str(py::type::of(data)).data(), py::cast<std::string>(data), nullptr, false);
+        return createObject(type, "bytes", py::cast<std::string>(data), nullptr, false);
     }
     if (CHECK_INS(data, py_decimal_)) {
         bool hasNull = false;
@@ -993,15 +980,15 @@ Converter::toDolphinDB_Scalar(
         }
         DLOG("type: ", getDataTypeString(type), " exparam: ", type.second);
         if (type.first == HT_DECIMAL128) {
-            return createObject(type, py2str(py::type::of(data)).data(), getPyDecimalData<int128>(data, hasNull, type.second), nullptr, true);
+            return createObject(type, "Decimal", getPyDecimalData<int128>(data, hasNull, type.second), nullptr, true);
         }
         if (type.first == HT_DECIMAL64) {
-            return createObject(type, py2str(py::type::of(data)).data(), getPyDecimalData<long long>(data, hasNull, type.second), nullptr, true);
+            return createObject(type, "Decimal", getPyDecimalData<long long>(data, hasNull, type.second), nullptr, true);
         }
         if (type.first == HT_DECIMAL32) {
-            return createObject(type, py2str(py::type::of(data)).data(), getPyDecimalData<int>(data, hasNull, type.second), nullptr, true);
+            return createObject(type, "Decimal", getPyDecimalData<int>(data, hasNull, type.second), nullptr, true);
         }
-        return createObject(type, py2str(py::type::of(data)).data(), py::cast<double>(data), nullptr, false);
+        return createObject(type, "Decimal", py::cast<double>(data), nullptr, false);
     }
     if (CHECK_INS(data, pd_NaT_)) {
         if (type.first == HT_UNK) type.first = HT_NANOTIMESTAMP;
@@ -1102,27 +1089,27 @@ Converter::toDolphinDB_Scalar(
     if (CHECK_EQUAL(dtype, np_bool_)) {
         if (type.first == HT_UNK) type.first = HT_BOOL;
         auto result = data.cast<bool>();
-        return createObject(type, py2str(py::type::of(data)).data(), result, nullptr, false);
+        return createObject(type, "numpy.bool", result, nullptr, false);
     }
     else if (CHECK_EQUAL(dtype, np_int8_)) {
         if (type.first == HT_UNK) type.first = HT_CHAR;
         auto result = static_cast<char>(data.cast<short>());
-        return createObject(type, py2str(py::type::of(data)).data(), result, nullptr, false);
+        return createObject(type, "numpy.int8", result, nullptr, false);
     }
     else if (CHECK_EQUAL(dtype, np_int16_)) {
         if (type.first == HT_UNK) type.first = HT_SHORT;
         auto result = static_cast<short>(data.cast<int>());
-        return createObject(type, py2str(py::type::of(data)).data(), result, nullptr, false);
+        return createObject(type, "numpy.int16", result, nullptr, false);
     }
     else if (CHECK_EQUAL(dtype, np_int32_)) {
         if (type.first == HT_UNK) type.first = HT_INT;
         auto result = data.cast<int>();
-        return createObject(type, py2str(py::type::of(data)).data(), result, nullptr, false);
+        return createObject(type, "numpy.int32", result, nullptr, false);
     }
     else if (CHECK_EQUAL(dtype, np_int64_)) {
         if (type.first == HT_UNK) type.first = HT_LONG;
         auto result = data.cast<long long>();
-        return createObject(type, py2str(py::type::of(data)).data(), result, nullptr, false);
+        return createObject(type, "numpy.int64", result, nullptr, false);
     }
     else if (CHECK_EQUAL(dtype, np_float32_)) {
         if (type.first == HT_UNK) type.first = HT_FLOAT;
@@ -1130,7 +1117,7 @@ Converter::toDolphinDB_Scalar(
         if (ISNUMPYNULL_FLOAT32(result)) {
             return createNullConstant(type);
         }
-        return createObject(type, py2str(py::type::of(data)).data(), result, nullptr, false);
+        return createObject(type, "float32", result, nullptr, false);
     }
     else if (CHECK_EQUAL(dtype, np_float64_)) {
         if (type.first == HT_UNK) type.first = HT_DOUBLE;
@@ -1138,12 +1125,12 @@ Converter::toDolphinDB_Scalar(
         if (ISNUMPYNULL_FLOAT64(result)) {
             return createNullConstant(type);
         }
-        return createObject(type, py2str(py::type::of(data)).data(), result, nullptr, false);
+        return createObject(type, "float64", result, nullptr, false);
     }
     else if (CHECK_EQUAL(py::reinterpret_borrow<py::object>(dtype.attr("type")), np_str_type_)) {
         if (type.first == HT_UNK) type.first = HT_STRING;
         auto result = data.cast<std::string>();
-        return createObject(type, py2str(py::type::of(data)).data(), result, nullptr, false);
+        return createObject(type, "numpy.str", result, nullptr, false);
     }
     else {
         throw ConversionException("Cannot convert " + py2str(dtype) + " to Scalar as it is an unsupported numpy dtype.");
@@ -1629,6 +1616,7 @@ _create_And_Infer_with_Object(
     bool is_Null = false;
     bool all_Null = true;
     int nullpri = 0;
+    bool same_kind = true;
     Type nullType = {HT_UNK, EXPARAM_DEFAULT};
 
     for (const auto &it : data) {
@@ -1638,6 +1626,14 @@ _create_And_Infer_with_Object(
         }
         if (canCheck) {
             break;
+        }
+        if (same_kind && !is_Null && option == CHILD_VECTOR_OPTION::ARRAY_VECTOR) {
+            try {
+                return _create_And_Indicate_As_Vector(data, type, size, info);
+            }
+            catch (ConversionException &e) {
+                same_kind = false;
+            }
         }
     }
 
@@ -1680,12 +1676,18 @@ _create_And_Infer_with_Object(
         ddbVec = createAllNullVector(finalType, size);
         return ddbVec;
     }
-    // TODO: NEED TO SPEED UP LIKE API
-    ddbVec = createVector(type, 0, size);
-    for (const auto &it : data) {
-        ConstantSP item = Converter::toDolphinDB_Scalar(it, type, true);
-        ddbVec->append(item);
+
+    if ((int)type.first >= ARRAY_TYPE_BASE) {
+        // Indicate as ARRAY_VECTOR
+        return _create_And_Indicate_As_ArrayVector(data, type, size, info);
     }
+    if (type.first == HT_ANY) {
+        // Indicate as ANY_VECTOR
+        return _create_And_Indicate_As_AnyVector(data, size, info);
+    }
+    // Indicate as VECTOR
+    ddbVec = _create_And_Indicate_As_Vector(data, type, size, info);
+
     return ddbVec;
 }
 

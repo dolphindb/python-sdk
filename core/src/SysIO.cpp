@@ -51,14 +51,6 @@ namespace dolphindb {
 bool Socket::ENABLE_TCP_NODELAY = true;
 unsigned int Socket::TcpTimeout = 30000;
 
-void LOG_ERR(const string& msg){
-	std::cout<<msg<<std::endl;
-}
-
-void LOG_INFO(const string& msg){
-	std::cout<<msg<<std::endl;
-}
-
 Socket::Socket():host_(""), port_(-1), blocking_(true), autoClose_(true), enableSSL_(false), ctx_(nullptr),
 	ssl_(nullptr), keepAliveTime_(30), readTimeout_(-1), writeTimeout_(-1) {
     handle_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -124,7 +116,7 @@ IO_ERR Socket::read(char* buffer, size_t length, size_t& actualLength, bool msgP
 		actualLength = recv(handle_, buffer, static_cast<int>(length), msgPeek ? MSG_PEEK : 0);
 		RECORD_READ(buffer, actualLength);
 		if (actualLength < 0) {
-			DLogger::Error("socket read error", actualLength);
+			LOG_ERR("socket read error", actualLength);
 		}
 		if (actualLength == 0)
 			return DISCONNECTED;
@@ -145,7 +137,7 @@ readdata:
 		actualLength = recv(handle_, (void*)buffer, length, (blocking_ ? 0 : MSG_DONTWAIT) | (msgPeek ? MSG_PEEK : 0));
 		RECORD_READ(buffer, actualLength);
 		if (actualLength < 0) {
-			DLogger::Error("socket read error", actualLength);
+			LOG_ERR("socket read error", actualLength);
 		}
 		if (actualLength == (size_t)SOCKET_ERROR && errno == EINTR) goto readdata;
 		if (actualLength == 0)
@@ -164,7 +156,7 @@ readdata2:
         actualLength = SSL_read(ssl_, buffer, length);
 		RECORD_READ(buffer, actualLength);
 		if (actualLength < 0) {
-			DLogger::Error("socket read error", actualLength);
+			LOG_ERR("socket read error", actualLength);
 		}
         if(actualLength <= 0){
         int err = SSL_get_error(ssl_, actualLength);
@@ -187,7 +179,7 @@ IO_ERR Socket::write(const char* buffer, size_t length, size_t& actualLength){
 		else{
 			actualLength=0;
 			int error=WSAGetLastError();
-			DLogger::Error("socket write error", error);
+			LOG_ERR("socket write error", error);
 			if(error==WSAENOTCONN || error==WSAESHUTDOWN || error==WSAENETRESET)
 				return DISCONNECTED;
 			else if(error==WSAEWOULDBLOCK || error==WSAENOBUFS)
@@ -206,7 +198,7 @@ IO_ERR Socket::write(const char* buffer, size_t length, size_t& actualLength){
 		if(actualLength != (size_t)SOCKET_ERROR)
 			return OK;
 		else{
-			DLogger::Error("socket write error", errno);
+			LOG_ERR("socket write error", errno);
 			actualLength=0;
 			if(errno==EAGAIN || errno==EWOULDBLOCK)
 				return NOSPACE;
@@ -226,7 +218,7 @@ IO_ERR Socket::write(const char* buffer, size_t length, size_t& actualLength){
 		if (actualLength <= 0) {
 			int err = SSL_get_error(ssl_, actualLength);
 			if (err == SSL_ERROR_WANT_WRITE) goto senddata2;
-			DLogger::Error("socket write error", err);
+			LOG_ERR("socket write error", err);
 			LOG_ERR("Socket(SSL)::write err =" + std::to_string(err));
 			return OTHERERR;
 		}
@@ -641,17 +633,16 @@ void Socket::showCerts(SSL *ssl) {
     char *line;
     cert = SSL_get_peer_certificate(ssl); /* get the server's certificate */
     if ( cert != NULL ){
-        std::cout << "Server certificates:\n";
         line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
-        std::cout << "Server certificates: " << line << std::endl;
+        LOG_INFO("Server certificates: ", line);
         delete [] line;
         line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
-        std::cout << "Issuer: " << line << std::endl;
+        LOG_INFO("Issuer:", line);
         delete [] line;
         X509_free(cert);
     }
     else
-        printf("Info: No client certificates configured.\n");
+        LOG_INFO("Info: No client certificates configured.");
 }
 
 UdpSocket::UdpSocket(int port) : port_(port), remotePort_(-1){
@@ -1741,7 +1732,7 @@ IO_ERR DataStream::writeLine(const char* obj, const char* newline){
 		}
 		// write to file
 		if(fputs(obj, file_)<0){
-			std::cout<<ferror(file_)<<std::endl;
+			LOG_INFO(ferror(file_));
 			return OTHERERR;
 		}
 		if(fputs(newline, file_) >= 0)

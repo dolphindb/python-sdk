@@ -54,10 +54,9 @@ def get_combinations(data_list):
     return res
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="function",autouse=True)
 def flushed_table_n100(request):
     conn_fixture = ddb.session(HOST, PORT, USER, PASSWD)
-    conn_fixture.run(get_scripts("undefShare"))
 
     (scripts, names), pythons = get_TableData(names="AllTrade", n=100)
     conn_fixture.run(scripts)
@@ -145,7 +144,6 @@ class TestFilterCond:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
@@ -481,7 +479,7 @@ class TestTable:
     def test_session_loadText(self, file):
 
         for i, name in enumerate(file[2:]):
-            tbtmp = self.conn.loadText(DATA_DIR + "/{}".format(name), file[1])
+            tbtmp = self.conn.loadText(DATA_DIR + "{}".format(name), file[1])
             re = tbtmp.toDF()
             ex = csv_df[i]
             assert_frame_equal(re, ex)
@@ -490,7 +488,7 @@ class TestTable:
     def test_session_ploadText(self, file):
 
         for i, name in enumerate(file[2:]):
-            tbtmp = self.conn.ploadText(DATA_DIR + "/{}".format(name), file[1])
+            tbtmp = self.conn.ploadText(DATA_DIR + "{}".format(name), file[1])
             re = tbtmp.toDF()
             ex = csv_df[i]
             assert_frame_equal(re, ex)
@@ -500,7 +498,7 @@ class TestTable:
 
         self.conn.run(file[1])
         for id, name in enumerate(file[4:6]):
-            re = self.conn.loadTextEx(file[2], file[id + 7], [file[6]], DATA_DIR + "/{}".format(name), file[3])
+            re = self.conn.loadTextEx(file[2], file[id + 7], [file[6]], DATA_DIR + "{}".format(name), file[3])
             re = re.toDF().sort_values("index", ascending=True).reset_index(drop=True)
             ex = csv_df[id]
             assert_frame_equal(re, ex)

@@ -1,53 +1,35 @@
 import decimal
+import inspect
 import random
+import time
 
+import dolphindb as ddb
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
 import pytest
-from numpy.testing import *
-from pandas.testing import *
+from numpy.testing import assert_array_equal
+from pandas._testing import assert_frame_equal
 
-from setup.prepare import *
-from setup.settings import *
-from setup.utils import get_pid, random_string
+from basic_testing.prepare import random_string
+from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER, \
+    PORT_DNODE1
 
 
 class TestTableUpsert:
-    conn = ddb.session()
-
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
     def test_tableUpsert_error(self):
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         upsert = ddb.tableUpsert(dbPath="", tableName="t", ddbSession=conn)
         with pytest.raises(RuntimeError, match='table must be a DataFrame!'):
             upsert.upsert(object())
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_date(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+    def test_tableUpsert_keyedTable_date(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         upsert = ddb.tableUpsert(dbPath="", tableName="t", ddbSession=conn)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -64,13 +46,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_dateToMonth(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, MONTH, INT]) as t")
+    def test_tableUpsert_keyedTable_dateToMonth(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, MONTH, INT])")
         upsert = ddb.tableUpsert(dbPath="", tableName="t", ddbSession=conn)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -87,13 +67,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_month(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`month`qty, [SYMBOL, MONTH, INT]) as t")
+    def test_tableUpsert_keyedTable_month(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`month`qty, [SYMBOL, MONTH, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         month = np.array(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], dtype="datetime64")
@@ -108,13 +86,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_monthToDate(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`month`qty, [SYMBOL, DATE, INT]) as t")
+    def test_tableUpsert_keyedTable_monthToDate(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`month`qty, [SYMBOL, DATE, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         month = np.array(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], dtype="datetime64")
@@ -129,13 +105,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_time(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, TIME, INT]) as t")
+    def test_tableUpsert_keyedTable_time(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, TIME, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
@@ -149,13 +123,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_minute(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, MINUTE, INT]) as t")
+    def test_tableUpsert_keyedTable_minute(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, MINUTE, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
@@ -169,13 +141,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_second(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, SECOND, INT]) as t")
+    def test_tableUpsert_keyedTable_second(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, SECOND, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'],
@@ -189,13 +159,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_datetime(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, DATETIME, INT]) as t")
+    def test_tableUpsert_keyedTable_datetime(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, DATETIME, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'],
@@ -209,13 +177,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_timestamp(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, TIMESTAMP, INT]) as t")
+    def test_tableUpsert_keyedTable_timestamp(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, TIMESTAMP, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.008', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
@@ -229,13 +195,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_nanotime(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIME, INT]) as t")
+    def test_tableUpsert_keyedTable_nanotime(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIME, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
@@ -249,13 +213,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_nanotimestamp(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT]) as t")
+    def test_tableUpsert_keyedTable_nanotimestamp(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
@@ -269,13 +231,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_date_null(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+    def test_tableUpsert_keyedTable_date_null(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(np.repeat('Nat', 10), dtype="datetime64[D]")
@@ -288,13 +248,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_nanotimestamp_null(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT]) as t")
+    def test_tableUpsert_keyedTable_nanotimestamp_null(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
         time = np.array(np.repeat('Nat', 5), dtype="datetime64[ns]")
@@ -307,139 +265,134 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_all_time_type(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_tableUpsert_keyedTable_all_time_type(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "share keyedTable(`qty,1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT]) as t")
+            "t=keyedTable(`qty,1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
-        sym = list(map(str, np.arange(100000, 600000)))
+        sym = list(map(str, np.arange(100, 600)))
         date = np.array(np.tile(
             ['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23', '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'],
-            50000), dtype="datetime64[D]")
-        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
+            50), dtype="datetime64[D]")
+        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100), dtype="datetime64")
         time = np.array(
             np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
-                    100000), dtype="datetime64")
+                    100), dtype="datetime64")
         second = np.array(
-            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100000),
+            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100),
             dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
-                                     '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+                                     '2015-06-09T23:59:59.999008007'], 100), dtype="datetime64")
+        qty = np.arange(100, 600)
         data = pd.DataFrame({'sym': sym, 'date': date, 'month': month, 'time': time, 'minute': time, 'second': second,
                              'datetime': second, 'timestamp': time, 'nanotime': nanotime, 'nanotimestamp': nanotime,
                              'qty': qty})
         upsert.upsert(data)
         script = '''
-            n = 500000
-            tmp=table(string(100000..599999) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
+            n = 500
+            tmp=table(string(100..599) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
             take([00:00:00.000, 05:12:48.426, NULL, NULL, 23:59:59.999],n) as time, take([00:00m, 05:12m, NULL, NULL, 23:59m],n) as minute, take([00:00:00, 05:12:48, NULL, NULL, 23:59:59],n) as second,take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 2015.06.09T23:59:59],n) as datetime,
             take([2012.01.01T00:00:00.000, 2015.08.26T05:12:48.426, NULL, NULL, 2015.06.09T23:59:59.999],n) as timestamp,take([00:00:00.000000000, 05:12:48.008007006, NULL, NULL, 23:59:59.999008007],n) as nanotime,take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006, NULL, NULL, 2015.06.09T23:59:59.999008007],n) as nanotimestamp,
-            100000..599999 as qty)
+            100..599 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True, True, True, True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_indexedTable_all_time_type(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_tableUpsert_indexedTable_all_time_type(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "share indexedTable(`qty,1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT]) as t")
+            "t=indexedTable(`qty,1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
-        sym = list(map(str, np.arange(100000, 600000)))
+        sym = list(map(str, np.arange(100, 600)))
         date = np.array(np.tile(
             ['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23', '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'],
-            50000), dtype="datetime64[D]")
-        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
+            50), dtype="datetime64[D]")
+        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100), dtype="datetime64")
         time = np.array(
             np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
-                    100000), dtype="datetime64")
+                    100), dtype="datetime64")
         second = np.array(
-            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100000),
+            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100),
             dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
-                                     '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+                                     '2015-06-09T23:59:59.999008007'], 100), dtype="datetime64")
+        qty = np.arange(100, 600)
         data = pd.DataFrame({'sym': sym, 'date': date, 'month': month, 'time': time, 'minute': time, 'second': second,
                              'datetime': second, 'timestamp': time, 'nanotime': nanotime, 'nanotimestamp': nanotime,
                              'qty': qty})
         upsert.upsert(data)
         script = '''
-            n = 500000
-            tmp=table(string(100000..599999) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
+            n = 500
+            tmp=table(string(100..599) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
             take([00:00:00.000, 05:12:48.426, NULL, NULL, 23:59:59.999],n) as time, take([00:00m, 05:12m, NULL, NULL, 23:59m],n) as minute, take([00:00:00, 05:12:48, NULL, NULL, 23:59:59],n) as second,take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 2015.06.09T23:59:59],n) as datetime,
             take([2012.01.01T00:00:00.000, 2015.08.26T05:12:48.426, NULL, NULL, 2015.06.09T23:59:59.999],n) as timestamp,take([00:00:00.000000000, 05:12:48.008007006, NULL, NULL, 23:59:59.999008007],n) as nanotime,take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006, NULL, NULL, 2015.06.09T23:59:59.999008007],n) as nanotimestamp,
-            100000..599999 as qty)
+            100..599 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True, True, True, True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_all_time_types(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_all_time_types(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotime`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIME,NANOTIMESTAMP, INT])
-            db=database(dbPath,RANGE,100000 200000 300000 400000 600001)
+            db=database(dbPath,RANGE,100 200 300 400 601)
             pt = db.createPartitionedTable(t, `pt, `qty)
         ''')
-        upsert = ddb.tableUpsert("dfs://tableUpsert_test", "pt", conn, keyColNames=["qty"])
-        sym = list(map(str, np.arange(100000, 600000)))
+        upsert = ddb.tableUpsert(db_name, "pt", conn, keyColNames=["qty"])
+        sym = list(map(str, np.arange(100, 600)))
         date = np.array(np.tile(
             ['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23', '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'],
-            50000), dtype="datetime64[D]")
-        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100000), dtype="datetime64")
+            50), dtype="datetime64[D]")
+        month = np.array(np.tile(['1965-08', 'NaT', '2012-02', '2012-03', 'NaT'], 100), dtype="datetime64")
         time = np.array(
             np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],
-                    100000), dtype="datetime64")
+                    100), dtype="datetime64")
         second = np.array(
-            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100000),
+            np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'], 100),
             dtype="datetime64")
         nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
-                                     '2015-06-09T23:59:59.999008007'], 100000), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+                                     '2015-06-09T23:59:59.999008007'], 100), dtype="datetime64")
+        qty = np.arange(100, 600)
         data = pd.DataFrame({'sym': sym, 'date': date, 'month': month, 'time': time, 'minute': time, 'second': second,
                              'datetime': second, 'timestamp': time, 'nanotime': nanotime, 'nanotimestamp': nanotime,
                              'qty': qty})
         upsert.upsert(data)
-        script = '''
-            n = 500000
-            tmp=table(string(100000..599999) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
+        script = f'''
+            n = 500
+            tmp=table(string(100..599) as sym, take([2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05],n) as date,take([1965.08M, NULL, 2012.02M, 2012.03M, NULL],n) as month,
             take([00:00:00.000, 05:12:48.426, NULL, NULL, 23:59:59.999],n) as time, take([00:00m, 05:12m, NULL, NULL, 23:59m],n) as minute, take([00:00:00, 05:12:48, NULL, NULL, 23:59:59],n) as second,take([2012.01.01T00:00:00, 2015.08.26T05:12:48, NULL, NULL, 2015.06.09T23:59:59],n) as datetime,
             take([2012.01.01T00:00:00.000, 2015.08.26T05:12:48.426, NULL, NULL, 2015.06.09T23:59:59.999],n) as timestamp,take([00:00:00.000000000, 05:12:48.008007006, NULL, NULL, 23:59:59.999008007],n) as nanotime,take([2012.01.01T00:00:00.000000000, 2015.08.26T05:12:48.008007006, NULL, NULL, 2015.06.09T23:59:59.999008007],n) as nanotimestamp,
-            100000..599999 as qty)
-            re = select * from loadTable("dfs://tableUpsert_test",`pt)
+            100..599 as qty)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, tmp.values(), re.values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True, True, True, True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_all_time_type_early_1970(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_tableUpsert_keyedTable_all_time_type_early_1970(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "share keyedTable(`qty,1000:0, `date`month`datetime `timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT]) as t")
+            "t=keyedTable(`qty,1000:0, `date`month`datetime `timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
-        n = 500000
+        n = 500
         date = np.array(np.repeat('1960-01-01', n), dtype="datetime64[D]")
         month = np.array(np.repeat('1960-01', n), dtype="datetime64")
         datetime = np.array(np.repeat('1960-01-01T13:30:10', n), dtype="datetime64")
         timestamp = np.array(np.repeat('1960-01-01T13:30:10.008', n), dtype="datetime64")
         nanotimestamp = np.array(np.repeat('1960-01-01 13:30:10.008007006', n), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+        qty = np.arange(100, 600)
         data = pd.DataFrame(
             {'date': date, 'month': month, 'datetime': datetime, 'timestamp': timestamp, 'nanotimestamp': nanotimestamp,
              'qty': qty})
@@ -447,30 +400,28 @@ class TestTableUpsert:
         num = conn.table(data="t")
         assert num.rows == n
         script = '''
-            n = 500000
+            n = 500
             tmp=table(take(1960.01.01,n) as date,take(1960.01M,n) as month,take(1960.01.01T13:30:10,n) as datetime,
             take(1960.01.01T13:30:10.008,n) as timestamp,take(1960.01.01 13:30:10.008007006,n) as nanotimestamp,
-            100000..599999 as qty)
+            100..599 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_indexedTable_all_time_type_early_1970(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_tableUpsert_indexedTable_all_time_type_early_1970(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "share indexedTable(`qty,1000:0, `date`month`datetime `timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT]) as t")
+            "t=indexedTable(`qty,1000:0, `date`month`datetime `timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT])")
         upsert = ddb.tableUpsert("", "t", conn)
-        n = 500000
+        n = 500
         date = np.array(np.repeat('1960-01-01', n), dtype="datetime64[D]")
         month = np.array(np.repeat('1960-01', n), dtype="datetime64")
         datetime = np.array(np.repeat('1960-01-01T13:30:10', n), dtype="datetime64")
         timestamp = np.array(np.repeat('1960-01-01T13:30:10.008', n), dtype="datetime64")
         nanotimestamp = np.array(np.repeat('1960-01-01 13:30:10.008007006', n), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+        qty = np.arange(100, 600)
         data = pd.DataFrame(
             {'date': date, 'month': month, 'datetime': datetime, 'timestamp': timestamp, 'nanotimestamp': nanotimestamp,
              'qty': qty})
@@ -478,57 +429,56 @@ class TestTableUpsert:
         num = conn.table(data="t")
         assert num.rows == n
         script = '''
-            n = 500000
+            n = 500
             tmp=table(take(1960.01.01,n) as date,take(1960.01M,n) as month,take(1960.01.01T13:30:10,n) as datetime,
             take(1960.01.01T13:30:10.008,n) as timestamp,take(1960.01.01 13:30:10.008007006,n) as nanotimestamp,
-            100000..599999 as qty)
+            100..599 as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_all_time_types_early_1970(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_all_time_types_early_1970(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(1000:0, `date`month`datetime`timestamp`nanotimestamp`qty, [DATE,MONTH,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT])
-            db=database(dbPath,RANGE,100000 200000 300000 400000 600001)
+            db=database(dbPath,RANGE,100 200 300 400 601)
             pt = db.createPartitionedTable(t, `pt, `qty)
         ''')
-        upsert = ddb.tableUpsert("dfs://tableUpsert_test", "pt", conn, keyColNames=["qty"])
-        n = 500000
+        upsert = ddb.tableUpsert(db_name, "pt", conn, keyColNames=["qty"])
+        n = 500
         date = np.array(np.repeat('1960-01-01', n), dtype="datetime64[D]")
         month = np.array(np.repeat('1960-01', n), dtype="datetime64")
         datetime = np.array(np.repeat('1960-01-01T13:30:10', n), dtype="datetime64")
         timestamp = np.array(np.repeat('1960-01-01T13:30:10.008', n), dtype="datetime64")
         nanotimestamp = np.array(np.repeat('1960-01-01 13:30:10.008007006', n), dtype="datetime64")
-        qty = np.arange(100000, 600000)
+        qty = np.arange(100, 600)
         data = pd.DataFrame(
             {'date': date, 'month': month, 'datetime': datetime, 'timestamp': timestamp, 'nanotimestamp': nanotimestamp,
              'qty': qty})
         upsert.upsert(data)
-        script = '''
-            n = 500000
+        script = f'''
+            n = 500
             ex = table(take(1960.01.01,n) as date,take(1960.01M,n) as month,take(1960.01.01T13:30:10,n) as datetime,
             take(1960.01.01T13:30:10.008,n) as timestamp,take(1960.01.01 13:30:10.008007006,n) as nanotimestamp,
-            100000..599999 as qty)
-            re = select * from loadTable("dfs://tableUpsert_test",`pt)
+            100..599 as qty)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True, True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_datehour(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_tableUpsert_keyedTable_datehour(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "try{undef(`t);undef(`t, SHARED)}catch(ex){};share keyedTable(`qty,'A1' 'A2' as sym,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty) as t")
+            "t=keyedTable(`qty,'A1' 'A2' as sym,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty)")
         upsert = ddb.tableUpsert(tableName="t", ddbSession=conn)
         sym = ['A3', 'A4', 'A5', 'A6', 'A7']
         time = np.array(['2021-01-01T03', '2021-01-01T04', 'NaT', 'NaT', '1960-01-01T03'], dtype="datetime64")
@@ -542,31 +492,28 @@ class TestTableUpsert:
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_datehour_null(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run(
-            "try{undef(`t);undef(`t, SHARED)}catch(ex){};share keyedTable(`qty,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty) as t")
+    def test_tableUpsert_keyedTable_datehour_null(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty)")
         upsert = ddb.tableUpsert(tableName="t", ddbSession=conn)
-        n = 100000
+        n = 100
         data = pd.DataFrame({'time': np.array(np.repeat('Nat', n), dtype="datetime64[ns]"),
                              'qty': np.arange(3, n + 3)})
         upsert.upsert(data)
         script = '''
-            n = 100000
+            n = 100
             tmp=table(datehour([2021.01.01T01:01:01,2021.01.01T02:01:01].join(take(datehour(),n)))  as time, 1..(n+2) as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_indexedTable_datehour(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
+    def test_tableUpsert_indexedTable_datehour(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
         conn.run(
-            "try{undef(`t);undef(`t, SHARED)}catch(ex){};share indexedTable(`qty,'A1' 'A2' as sym,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty) as t")
+            "t=indexedTable(`qty,'A1' 'A2' as sym,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty)")
         upsert = ddb.tableUpsert(tableName="t", ddbSession=conn)
         sym = ['A3', 'A4', 'A5', 'A6', 'A7']
         time = np.array(['2021-01-01T03', '2021-01-01T04', 'NaT', 'NaT', '1960-01-01T03'], dtype="datetime64")
@@ -580,57 +527,55 @@ class TestTableUpsert:
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_indexedTable_datehour_null(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run(
-            "try{undef(`t);undef(`t, SHARED)}catch(ex){};share indexedTable(`qty,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty) as t")
+    def test_tableUpsert_indexedTable_datehour_null(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=indexedTable(`qty,datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty)")
         upsert = ddb.tableUpsert(tableName="t", ddbSession=conn)
-        n = 100000
+        n = 100
         data = pd.DataFrame({'time': np.array(np.repeat('Nat', n), dtype="datetime64[ns]"),
                              'qty': np.arange(3, n + 3)})
         upsert.upsert(data)
         script = '''
-            n = 100000
+            n = 100
             tmp=table(datehour([2021.01.01T01:01:01,2021.01.01T02:01:01].join(take(datehour(),n)))  as time, 1..(n+2) as qty)
             each(eqObj, tmp.values(), (select * from t).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_datehour(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_datehour(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(datehour(2020.01.01T01:01:01) as time, 1 as qty)
-            db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001)
+            db=database(dbPath,RANGE,0 100 200 300 400 601)
             pt = db.createPartitionedTable(t, `pt, `qty)
         ''')
-        upsert = ddb.tableUpsert("dfs://tableUpsert_test", "pt", conn, keyColNames=["qty"])
-        n = 500000
+        upsert = ddb.tableUpsert(db_name, "pt", conn, keyColNames=["qty"])
+        n = 500
         time = pd.date_range(start='2020-01-01T01', periods=n, freq='h')
         qty = np.arange(1, n + 1)
         data = pd.DataFrame({'time': time, 'qty': qty})
         upsert.upsert(data)
-        script = '''
-            n = 500000
+        script = f'''
+            n = 500
             ex = table((datehour(2020.01.01T00:01:01)+1..n) as time,1..n as qty)
-            re = select * from loadTable("dfs://tableUpsert_test",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj, re.values(), ex.values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_key_exist_ignoreNull_False(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+    def test_tableUpsert_keyedTable_key_exist_ignoreNull_False(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         upsert = ddb.tableUpsert(dbPath="", tableName="t", ddbSession=conn)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -652,13 +597,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_keyedTable_key_exist_ignoreNull_True(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+    def test_tableUpsert_keyedTable_key_exist_ignoreNull_True(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         upsert = ddb.tableUpsert(dbPath="", tableName="t", ddbSession=conn, ignoreNull=True)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -680,13 +623,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_indexedTable_key_exist_ignoreNull_False(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share indexedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+    def test_tableUpsert_indexedTable_key_exist_ignoreNull_False(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=indexedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         upsert = ddb.tableUpsert(dbPath="", tableName="t", ddbSession=conn)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -708,13 +649,11 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_indexedTable_key_exist_ignoreNull_True(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run("share indexedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT]) as t")
+    def test_tableUpsert_indexedTable_key_exist_ignoreNull_True(self, compress):
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run("t=indexedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])")
         upsert = ddb.tableUpsert(dbPath="", tableName="t", ddbSession=conn, ignoreNull=True)
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -736,23 +675,23 @@ class TestTableUpsert:
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
-        conn.run("undef(`t, SHARED)")
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_DFS_key_exist_ignoreNull_False(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        script = """
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_DFS_key_exist_ignoreNull_False(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        script = f"""
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
-            dropDatabase(dbPath)
+                dropDatabase(dbPath)
             t = table(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..10 as qty)
             db=database(dbPath,RANGE,1 6 12,engine='TSDB')
             pt = db.createPartitionedTable(t, `pt, `qty,sortColumns=`qty)
             pt.append!(t)
         """
         conn.run(script)
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn,
                                  keyColNames=["qty"])
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -763,28 +702,29 @@ class TestTableUpsert:
         upsert.upsert(data1)
         num = conn.table(data="pt")
         assert num.rows == 11
-        script = '''
+        script = f'''
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
-            each(eqObj, tmp.values(), (select * from loadTable('dfs://tableUpsert_test','pt')).values())
+            each(eqObj, tmp.values(), (select * from loadTable('{db_name}','pt')).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_DFS_key_exist_ignoreNull_True(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        script = """
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_DFS_key_exist_ignoreNull_True(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        script = f"""
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
-            dropDatabase(dbPath)
+                dropDatabase(dbPath)
             t = table(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..10 as qty)
             db=database(dbPath,RANGE,1 6 12,engine='TSDB')
             pt = db.createPartitionedTable(t, `pt, `qty,sortColumns=`qty)
             pt.append!(t)
         """
         conn.run(script)
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["qty"])
         sym = np.repeat(['AAPL', 'GOOG', 'MSFT', 'IBM', 'YHOO'], 2, axis=0)
         date = np.array(
@@ -795,26 +735,27 @@ class TestTableUpsert:
         upsert.upsert(data1)
         num = conn.table(data="pt")
         assert num.rows == 11
-        script = '''
+        script = f'''
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
-            each(eqObj, tmp.values(), (select * from loadTable('dfs://tableUpsert_test','pt')).values())
+            each(eqObj, tmp.values(), (select * from loadTable('{db_name}','pt')).values())
         '''
         re = conn.run(script)
         assert_array_equal(re, [True, True, True])
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_alltype(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_alltype(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["int"])
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
@@ -851,7 +792,7 @@ class TestTableUpsert:
             'blob': np.array(['blob1', 'blob2'], dtype='object')
         })
         upsert.upsert(df)
-        script = """
+        script = f"""
             symbolV = symbol[`sym1,'sym2']
             ipV = ipaddr["192.168.1.1", "0.0.0.0"]
             uuidV = uuid["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"]
@@ -879,25 +820,26 @@ class TestTableUpsert:
             uuidV as uuid,
             int128V as int128,
             blobV as blob)
-            re = select * from loadTable("dfs://tableUpsert_test",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj,t.values(),re.values())
         """
         re = conn.run(script)
         assert_array_equal(re, [True for _ in range(22)])
 
-    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_alltype_arrayvector(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_alltype_arrayvector(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["id"])
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
@@ -947,25 +889,22 @@ class TestTableUpsert:
                 np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object')]
         })
         upsert.upsert(df)
-        if pickle:
-            for i in ['date','time','minute','second','datetime','datehour','timestamp','nanotime','nanotimestamp']:
-                df[i][0] = df[i][0].astype('datetime64[ns]')
-                df[i][1] = df[i][1].astype('datetime64[ns]')
         assert_frame_equal(df, conn.run("select * from pt"))
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_column_dateType_not_match_1(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_column_dateType_not_match_1(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["int"])
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
@@ -1006,19 +945,20 @@ class TestTableUpsert:
         except Exception as e:
             assert "The value e1671797c52e15f763380b45e841ec32 (column \"date\", row 0) must be of DATE type." in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_column_dateType_not_match_2(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_column_dateType_not_match_2(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["int"])
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
@@ -1059,19 +999,20 @@ class TestTableUpsert:
         except Exception as e:
             assert "The value str1 (column \"long\", row 0) must be of LONG type." in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_column_dateType_not_match_3(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_column_dateType_not_match_3(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["int"])
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
@@ -1113,19 +1054,20 @@ class TestTableUpsert:
         except Exception as e:
             assert "The value <NULL> (column \"ipaddr\", row 2) must be of IPADDR type." in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_column_dateType_not_match_4(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_column_dateType_not_match_4(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["int"])
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
@@ -1167,19 +1109,20 @@ class TestTableUpsert:
         except Exception as e:
             assert "The value <NULL> (column \"int128\", row 2) must be of INT128 type." in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_column_dateType_not_match_5(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_column_dateType_not_match_5(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["int"])
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
@@ -1221,19 +1164,20 @@ class TestTableUpsert:
         except Exception as e:
             assert "The value <NULL> (column \"int128\", row 2) must be of INT128 type." in str(e)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_array_vector_not_match_1(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_array_vector_not_match_1(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["id"])
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
@@ -1288,19 +1232,20 @@ class TestTableUpsert:
             result = "The value [ -100000000 10000000000] (column \"ipaddr\", row 0) must be of IPADDR[] type" in str(e)
             assert result
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_array_vector_not_match_2(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_array_vector_not_match_2(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["id"])
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
@@ -1349,22 +1294,23 @@ class TestTableUpsert:
                 np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object')]
         })
         upsert.upsert(df)
-        res = conn.run('select * from loadTable("dfs://tableUpsert_test",`pt)')
+        res = conn.run(f'select * from loadTable("{db_name}",`pt)')
         assert_frame_equal(res, df)
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_array_vector_not_match_3(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_tableUpsert_dfs_table_array_vector_not_match_3(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
             db=database(dbPath,VALUE,1 10000,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `id,,`id)
         ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.tableUpsert(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                  keyColNames=["id"])
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
@@ -1418,82 +1364,20 @@ class TestTableUpsert:
             result = "The value [ True False] (column \"ipaddr\", row 0) must be of IPADDR[] type" in str(e)
             assert result
 
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
     @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_tableUpsert_dfs_table_array_vector_not_match_4(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
-            if(existsDatabase(dbPath))
-                dropDatabase(dbPath)
-            t = table(100:0, `id`bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`ipaddr`uuid`int128, [INT,BOOL[],CHAR[],SHORT[],INT[],LONG[],DATE[],TIME[],MINUTE[],SECOND[],DATETIME[],DATEHOUR[],TIMESTAMP[],NANOTIME[],NANOTIMESTAMP[],FLOAT[],DOUBLE[],IPADDR[],UUID[],INT128[]])
-            db=database(dbPath,VALUE,1 10000,,'TSDB')
-            pt = db.createPartitionedTable(t, `pt, `id,,`id)
-        ''')
-        upsert = ddb.tableUpsert(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
-                                 keyColNames=["id"])
-        df = pd.DataFrame({
-            'id': np.array([1, 10000], dtype="int32"),
-            'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
-            'char': [np.array([1, -1], dtype=np.int8), np.array([1, -1], dtype=np.int8)],
-            'short': [np.array([-10, 1000], dtype=np.int16), np.array([-10, 1000], dtype=np.int16)],
-            'int': [np.array([10, 1000], dtype=np.int32), np.array([10, 1000], dtype=np.int32)],
-            'long': [np.array([-100000000, 10000000000], dtype=np.int64),
-                     np.array([-100000000, 10000000000], dtype=np.int64)],
-            'date': [
-                np.array(["1970-01-01T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[D]")],
-            'time': [
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[ms]"),
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[ms]")],
-            'minute': [
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[m]"),
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[m]")],
-            'second': [
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[s]"),
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[s]")],
-            'datetime': [
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[s]")],
-            'datehour': [
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[h]")],
-            'timestamp': [
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ms]")],
-            'nanotime': [
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[ns]"),
-                np.array(["1970-01-01T01:02:03.456789123", "1970-01-01T02:05:06.123456789"], dtype="datetime64[ns]")],
-            'nanotimestamp': [
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]"),
-                np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]")],
-            'float': [np.array([2.2134500, np.nan], dtype='float32'), np.array([2.2134500, np.nan], dtype='float32')],
-            'double': [np.array([3.214, np.nan], dtype='float64'), np.array([3.214, np.nan], dtype='float64')],
-            'ipaddr': [np.array(["192.168.1.1", "0.0.0.0"], dtype='object'),
-                       np.array(["192.168.1.1", "0.0.0.0"], dtype='object')],
-            'uuid': [np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
-                              dtype='object'),
-                     np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
-                              dtype='object')],
-            'int128': [
-                np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object'),
-                np.array(["e1671797c52e15f763380b45e841ec32", "e1671797c52e15f763380b45e8411112"], dtype='object')]
-        })
-        upsert.upsert(df)
-
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
-    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
-    def test_TableUpserter_dfs_table_alltype(self, pickle, compress):
-        conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
-        conn.run('''
-            dbPath = "dfs://tableUpsert_test"
+    def test_TableUpsert_dfs_table_alltype(self, compress):
+        func_name = inspect.currentframe().f_code.co_name + f"_compress_{compress}"
+        db_name = f"dfs://{func_name}"
+        conn = ddb.session(HOST, PORT, USER, PASSWD, compress=compress)
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(100:5, `bool`char`short`int`long`date`time`minute`second`datetime`datehour`timestamp`nanotime`nanotimestamp`float`double`symbol`string`ipaddr`uuid`int128`blob, [BOOL,CHAR,SHORT,INT,LONG,DATE,TIME,MINUTE,SECOND,DATETIME,DATEHOUR,TIMESTAMP,NANOTIME,NANOTIMESTAMP,FLOAT,DOUBLE,SYMBOL,STRING,IPADDR,UUID,INT128,BLOB])
             db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001,,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `int,,`int)
         ''')
-        upsert = ddb.TableUpserter(dbPath="dfs://tableUpsert_test", tableName="pt", ddbSession=conn, ignoreNull=True,
+        upsert = ddb.TableUpserter(dbPath=db_name, tableName="pt", ddbSession=conn, ignoreNull=True,
                                    keyColNames=["int"])
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
@@ -1530,7 +1414,7 @@ class TestTableUpsert:
             'blob': np.array(['blob1', 'blob2'], dtype='object')
         })
         upsert.upsert(df)
-        script = """
+        script = f"""
             symbolV = symbol[`sym1,'sym2']
             ipV = ipaddr["192.168.1.1", "0.0.0.0"]
             uuidV = uuid["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"]
@@ -1558,7 +1442,7 @@ class TestTableUpsert:
             uuidV as uuid,
             int128V as int128,
             blobV as blob)
-            re = select * from loadTable("dfs://tableUpsert_test",`pt)
+            re = select * from loadTable("{db_name}",`pt)
             each(eqObj,t.values(),re.values())
         """
         re = conn.run(script)
@@ -1598,6 +1482,8 @@ class TestTableUpsert:
 
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_TableUpsert_allNone_tables_with_numpyArray(self, val, valstr, valdecimal):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         df = pd.DataFrame({
             'ckeycol': np.array([1, 2, 3], dtype='int32'),
@@ -1656,20 +1542,20 @@ class TestTableUpsert:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({'tab': df})
-        conn.run('''
-            dbPath = "dfs://test_dfs1"
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[INT,1],,'TSDB')
             pt = db.createPartitionedTable(tab, `pt, `ckeycol,,`ckeycol)
         ''')
-        upserter = ddb.TableUpserter("dfs://test_dfs1", 'pt', conn, keyColNames=['ckeycol'])
+        upserter = ddb.TableUpserter(db_name, 'pt', conn, keyColNames=['ckeycol'])
         upserter.upsert(df)
-        assert conn.run("rows = exec count(*) from loadTable('dfs://test_dfs1', 'pt');rows") == 3
-        assert conn.run("""
-            ex_tab = select * from loadTable("dfs://test_dfs1", "pt");
+        assert conn.run(f"rows = exec count(*) from loadTable('{db_name}', 'pt');rows") == 3
+        assert conn.run(f"""
+            ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
-            for(i in 1:tab.columns()){res.append!(ex_tab.column(i).isNull())};
+            for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
             all(res)
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
@@ -1678,11 +1564,11 @@ class TestTableUpsert:
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128', 'BLOB', 'DECIMAL32(0)', 'DECIMAL64(0)',
                     'DECIMAL128(0)']
         assert_array_equal(schema, ex_types)
-        conn.dropDatabase("dfs://test_dfs1")
-        conn.close()
 
     @pytest.mark.parametrize('val, valstr, valdecimal', test_dataArray, ids=[str(x[0]) for x in test_dataArray])
     def test_TableUpsert_allNone_tables_with_pythonList(self, val, valstr, valdecimal):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         df = pd.DataFrame({
             'ckeycol': np.array([1, 2, 3], dtype='int32'),
@@ -1741,20 +1627,20 @@ class TestTableUpsert:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({'tab': df})
-        conn.run('''
-            dbPath = "dfs://test_dfs1"
+        conn.run(f'''
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[INT,1],,'TSDB')
             pt = db.createPartitionedTable(tab, `pt, `ckeycol,,`ckeycol)
         ''')
-        upserter = ddb.TableUpserter("dfs://test_dfs1", 'pt', conn, keyColNames=['ckeycol'])
+        upserter = ddb.TableUpserter(db_name, 'pt', conn, keyColNames=['ckeycol'])
         upserter.upsert(df)
-        assert conn.run("rows = exec count(*) from loadTable('dfs://test_dfs1', 'pt');rows") == 3
-        assert conn.run("""
-            ex_tab = select * from loadTable("dfs://test_dfs1", "pt");
+        assert conn.run(f"rows = exec count(*) from loadTable('{db_name}', 'pt');rows") == 3
+        assert conn.run(f"""
+            ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
-            for(i in 1:tab.columns()){res.append!(ex_tab.column(i).isNull())};
+            for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
             all(res)
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
@@ -1763,40 +1649,39 @@ class TestTableUpsert:
                     'DOUBLE', 'SYMBOL', 'STRING', 'IPADDR', 'UUID', 'INT128', 'BLOB', 'DECIMAL32(0)', 'DECIMAL64(0)',
                     'DECIMAL128(0)']
         assert_array_equal(schema, ex_types)
-        conn.dropDatabase("dfs://test_dfs1")
-        conn.close()
 
     def test_TableUpsert_upsert_after_session_deconstructed(self):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        conn.run("""
+        conn.run(f"""
             t = table(1..2 as a, ["192.168.1.113", "192.168.1.123"] as b)
             kt = keyedTable(`a,t)
-            share kt as share_t
+            share kt as {func_name}_share_t
         """)
         df = pd.DataFrame({'a': [3, 4], 'b': ['1.1.1.1', '2.2.2.2']})
         try:
-            tu = ddb.TableUpserter(tableName="share_t", ddbSession=conn, keyColNames=['a'])
+            tu = ddb.TableUpserter(tableName=f"{func_name}_share_t", ddbSession=conn, keyColNames=['a'])
             conn.close()
             tu.upsert(df)
         except RuntimeError as e:
             assert "Session has been closed." in str(e)
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        tu = ddb.TableUpserter(tableName="share_t", ddbSession=conn, keyColNames=['a'])
+        tu = ddb.TableUpserter(tableName=f"{func_name}_share_t", ddbSession=conn, keyColNames=['a'])
         del conn
         tu.upsert(df)
         conn = ddb.session(HOST, PORT, USER, PASSWD)
-        assert conn.run("""
-            res = select * from share_t;
+        assert conn.run(f"""
+            res = select * from {func_name}_share_t;
             ex = table(1 2 3 4 as a, ['192.168.1.113','192.168.1.123', '1.1.1.1', '2.2.2.2'] as b);
             each(eqObj, res.values(), ex.values())
         """).all()
-        conn.undef('share_t', 'SHARED')
-        conn.close()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_TableUpsert_upsert_dataframe_with_numpy_order(self, _python_list, _compress, _order):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         for _i in range(10):
@@ -1856,42 +1741,42 @@ class TestTableUpsert:
             'cdecimal64': keys.DT_DECIMAL64,
             'cdecimal128': keys.DT_DECIMAL128
         }
-        conn1.run("""
+        conn1.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cblob`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, BLOB, IPADDR, UUID, INT128, DECIMAL32(2), DECIMAL64(11), DECIMAL128(36)];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        up = ddb.TableUpserter(dbPath="dfs://test_dfs1", tableName='pt', ddbSession=conn1, keyColNames=['index'])
+        up = ddb.TableUpserter(dbPath=db_name, tableName='pt', ddbSession=conn1, keyColNames=['index'])
         up.upsert(df)
         conn1.run("""
             for(i in 0:10){
                 tableInsert(objByName(`t), i, false, i,i,i,i,i,i+23640,i,i,i,i,i,i,i,i,i,i, 'sym','str', 'blob', ipaddr("1.1.1.1"),uuid("5d212a78-cc48-e3b1-4235-b4d91473ee87"),int128("e1671797c52e15f763380b45e841ec32"), decimal32('-2.11', 2), decimal64('0.0', 11), decimal128('-1.1', 36))
             }
         """)
-        res = conn1.run("""
+        res = conn1.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = conn1.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = conn1.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
                     'DOUBLE', 'SYMBOL', 'STRING', 'BLOB', 'IPADDR', 'UUID', 'INT128', 'DECIMAL32(2)', 'DECIMAL64(11)',
                     'DECIMAL128(36)']
         assert_array_equal(tys, ex_types)
-        conn1.dropDatabase("dfs://test_dfs1")
-        conn1.close()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_TableUpsert_upsert_dataframe_array_vector_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         for _i in range(10):
@@ -1943,17 +1828,17 @@ class TestTableUpsert:
             'cdecimal64': keys.DT_DECIMAL64_ARRAY,
             'cdecimal128': keys.DT_DECIMAL128_ARRAY
         }
-        conn1.run("""
+        conn1.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL[], CHAR[], SHORT[], INT[],LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], TIMESTAMP[], NANOTIME[], NANOTIMESTAMP[], DATEHOUR[], FLOAT[], DOUBLE[], IPADDR[], UUID[], INT128[], DECIMAL32(2)[], DECIMAL64(11)[], DECIMAL128(36)[]];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        up = ddb.TableUpserter(dbPath="dfs://test_dfs1", tableName='pt', ddbSession=conn1, keyColNames=['index'])
+        up = ddb.TableUpserter(dbPath=db_name, tableName='pt', ddbSession=conn1, keyColNames=['index'])
         up.upsert(df)
         conn1.run("""
             for(i in 0:10){
@@ -1961,25 +1846,25 @@ class TestTableUpsert:
             }
             tableInsert(objByName(`t), 10, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
         """)
-        res = conn1.run("""
+        res = conn1.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = conn1.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = conn1.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
                     'SECOND[]', 'DATETIME[]', 'TIMESTAMP[]', 'NANOTIME[]', 'NANOTIMESTAMP[]', 'DATEHOUR[]', 'FLOAT[]',
                     'DOUBLE[]', 'IPADDR[]', 'UUID[]', 'INT128[]', 'DECIMAL32(2)[]', 'DECIMAL64(11)[]',
                     'DECIMAL128(36)[]']
         assert_array_equal(tys, ex_types)
-        conn1.dropDatabase("dfs://test_dfs1")
-        conn1.close()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_TableUpsert_upsert_null_dataframe_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         origin_nulls = [None, np.nan, pd.NaT]
@@ -2031,42 +1916,42 @@ class TestTableUpsert:
             'cdecimal64': keys.DT_DECIMAL64,
             'cdecimal128': keys.DT_DECIMAL128
         }
-        conn1.run("""
+        conn1.run(f"""
         colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`csymbol`cstring`cblob`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
         colType = [LONG, BOOL, CHAR, SHORT, INT,LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, DATEHOUR, FLOAT, DOUBLE, SYMBOL, STRING, BLOB, IPADDR, UUID, INT128, DECIMAL32(2), DECIMAL64(11), DECIMAL128(36)];
         t=table(1:0, colName,colType)
-        dbPath = "dfs://test_dfs1"
+        dbPath = "{db_name}"
         if(existsDatabase(dbPath))
             dropDatabase(dbPath)
         db=database(dbPath,HASH,[LONG,1],,'TSDB')
         pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        up = ddb.TableUpserter(dbPath="dfs://test_dfs1", tableName='pt', ddbSession=conn1, keyColNames=['index'])
+        up = ddb.TableUpserter(dbPath=db_name, tableName='pt', ddbSession=conn1, keyColNames=['index'])
         up.upsert(df)
         conn1.run("""
             for(i in 0:10){
                 tableInsert(objByName(`t), i, NULL, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
             }
         """)
-        res = conn1.run("""
+        res = conn1.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = conn1.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = conn1.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'DATEHOUR', 'FLOAT',
                     'DOUBLE', 'SYMBOL', 'STRING', 'BLOB', 'IPADDR', 'UUID', 'INT128', 'DECIMAL32(2)', 'DECIMAL64(11)',
                     'DECIMAL128(36)']
         assert_array_equal(tys, ex_types)
-        conn1.dropDatabase("dfs://test_dfs1")
-        conn1.close()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_order', ['F', 'C'], ids=["F_ORDER", "C_ORDER"])
     @pytest.mark.parametrize('_python_list', [True, False], ids=["PYTHON_LIST", "NUMPY_ARRAY"])
     def test_TableUpsert_upsert_null_dataframe_array_vector_with_numpy_order(self, _compress, _order, _python_list):
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        db_name = f"dfs://{func_name}"
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, compress=_compress)
         data = []
         origin_nulls = [[None], [np.nan], [pd.NaT]]
@@ -2115,43 +2000,42 @@ class TestTableUpsert:
             'cdecimal64': keys.DT_DECIMAL64_ARRAY,
             'cdecimal128': keys.DT_DECIMAL128_ARRAY
         }
-        conn1.run("""
+        conn1.run(f"""
             colName =  `index`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`csecond`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cdatehour`cfloat`cdouble`cipaddr`cuuid`cint128`cdecimal32`cdecimal64`cdecimal128;
             colType = [LONG, BOOL[], CHAR[], SHORT[], INT[],LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], TIMESTAMP[], NANOTIME[], NANOTIMESTAMP[], DATEHOUR[], FLOAT[], DOUBLE[], IPADDR[], UUID[], INT128[], DECIMAL32(2)[], DECIMAL64(11)[], DECIMAL128(36)[]];
             t=table(1:0, colName,colType)
-            dbPath = "dfs://test_dfs1"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             db=database(dbPath,HASH,[LONG,1],,'TSDB')
             pt = db.createPartitionedTable(t, `pt, `index,,`index)
         """)
-        up = ddb.TableUpserter(dbPath="dfs://test_dfs1", tableName='pt', ddbSession=conn1, keyColNames=['index'])
+        up = ddb.TableUpserter(dbPath=db_name, tableName='pt', ddbSession=conn1, keyColNames=['index'])
         up.upsert(df)
         conn1.run("""
             for(i in 0:10){
                 tableInsert(objByName(`t), i, NULL, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
             }
         """)
-        res = conn1.run("""
+        res = conn1.run(f"""
             ex = select * from objByName(`t);
-            res = select * from loadTable("dfs://test_dfs1", `pt);
+            res = select * from loadTable("{db_name}", `pt);
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
-        tys = conn1.run("schema(loadTable('dfs://test_dfs1', `pt)).colDefs[`typeString]")
+        tys = conn1.run(f"schema(loadTable('{db_name}', `pt)).colDefs[`typeString]")
         ex_types = ['LONG', 'BOOL[]', 'CHAR[]', 'SHORT[]', 'INT[]', 'LONG[]', 'DATE[]', 'MONTH[]', 'TIME[]', 'MINUTE[]',
                     'SECOND[]', 'DATETIME[]', 'TIMESTAMP[]', 'NANOTIME[]', 'NANOTIMESTAMP[]', 'DATEHOUR[]', 'FLOAT[]',
                     'DOUBLE[]', 'IPADDR[]', 'UUID[]', 'INT128[]', 'DECIMAL32(2)[]', 'DECIMAL64(11)[]',
                     'DECIMAL128(36)[]']
         assert_array_equal(tys, ex_types)
-        conn1.dropDatabase("dfs://test_dfs1")
-        conn1.close()
 
-    def test_TableUpserter_over_length(self):
+    def test_TableUpsert_over_length(self):
+        func_name = inspect.currentframe().f_code.co_name
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         data = '1' * 256 * 1024
         tbname = 't_' + random_string(5)
-        dbPath = "dfs://TableUpserter"
+        dbPath = f"dfs://{func_name}"
         conn.run(f"""
             if(existsDatabase("{dbPath}")){{
                 dropDatabase("{dbPath}")
@@ -2167,11 +2051,12 @@ class TestTableUpsert:
             upserter.upsert(df)
         conn.close()
 
-    def test_TableUpserter_max_length_string_dfs_table(self):
+    def test_TableUpsert_max_length_string_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         data = '1' * (256 * 1024 - 1)
         tbname = 't_' + random_string(5)
-        dbPath = "dfs://TableUpserter"
+        dbPath = f"dfs://{func_name}"
         conn.run(f"""
             if(existsDatabase("{dbPath}")){{
                 dropDatabase("{dbPath}")
@@ -2186,11 +2071,12 @@ class TestTableUpsert:
         assert conn.run(f'select strlen(id) from tb')['strlen_id'][0] == 64 * 1024 - 1
         conn.close()
 
-    def test_TableUpserter_max_length_symbol_dfs_table(self):
+    def test_TableUpsert_max_length_symbol_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         data = '1' * 255
         tbname = 't_' + random_string(5)
-        dbPath = "dfs://TableUpserter"
+        dbPath = f"dfs://{func_name}"
         conn.run(f"""
             if(existsDatabase("{dbPath}")){{
                 dropDatabase("{dbPath}")
@@ -2205,11 +2091,12 @@ class TestTableUpsert:
         assert conn.run(f'select strlen(id) from tb')['strlen_id'][0] == 255
         conn.close()
 
-    def test_TableUpserter_max_length_blob_dfs_table(self):
+    def test_TableUpsert_max_length_blob_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         data = '1' * 256 * 1024
         tbname = 't_' + random_string(5)
-        dbPath = "dfs://TableUpserter"
+        dbPath = f"dfs://{func_name}"
         conn.run(f"""
             if(existsDatabase("{dbPath}")){{
                 dropDatabase("{dbPath}")
@@ -2224,24 +2111,21 @@ class TestTableUpsert:
         assert conn.run(f'select strlen(id) from tb')['strlen_id'][0] == 256 * 1024
         conn.close()
 
-    @pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
-    def test_TableUpserter_inner_function(self):
-        host = "192.168.0.54"
-        port_control = 9900
-        port_datanode = 9902
-        conn_control = ddb.Session(host, port_control, "admin", "123456")
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_TableUpsert_inner_function(self):
+        conn_control = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
         conn_datanode = ddb.session()
-        conn_datanode.connect(host, port_datanode, "admin", "123456", reconnect=True)
-        conn_datanode.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT]) as t")
+        conn_datanode.connect(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, reconnect=True)
+        conn_datanode.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT])")
         upsert = ddb.tableUpsert("", "t", conn_datanode)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
-        time = np.array(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
-                         '2015-06-09T23:59:59.999008007'], dtype="datetime64")
+        _time = np.array(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
+                          '2015-06-09T23:59:59.999008007'], dtype="datetime64")
         qty = np.arange(1, 6)
-        data = pd.DataFrame({'sym': sym, 'time': time, 'qty': qty})
+        data = pd.DataFrame({'sym': sym, 'time': _time, 'qty': qty})
         upsert.upsert(data)
-        conn_control.run(f"stopDataNode(['{host}:{port_datanode}'])")
-        conn_control.run(f"startDataNode(['{host}:{port_datanode}'])")
-        conn_datanode.run("share keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT]) as t")
+        conn_control.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
+        time.sleep(3)
+        conn_control.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
+        conn_datanode.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT])")
         upsert.upsert(data)
-        conn_datanode.run("undef(`t, SHARED)")

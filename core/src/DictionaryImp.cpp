@@ -2434,7 +2434,7 @@ bool FloatAnyDictionary::set(const ConstantSP& key, const ConstantSP& value){
         if(dict_.empty())
             dict_.reserve((std::size_t)(len*1.33));
         int bufSize = std::min(len, Util::BUF_SIZE);
-        std::unique_ptr<float> buf(new float[bufSize]);
+        std::unique_ptr<float[]> buf(new float[bufSize]);
         const float* pbuf;
         int start = 0, count = 0;
         while(start < len){
@@ -2458,7 +2458,7 @@ bool FloatAnyDictionary::remove(const ConstantSP& key){
     else{
         int len = key->size();
         int bufSize = std::min(len, Util::BUF_SIZE);
-        std::unique_ptr<float> buf(new float[bufSize]);
+        std::unique_ptr<float[]> buf(new float[bufSize]);
         const float* pbuf = nullptr;
         int count = 0, start = 0;
         while(start < len){
@@ -2486,7 +2486,7 @@ ConstantSP FloatAnyDictionary::getMember(const ConstantSP& key) const{
         ConstantSP result = Util::createVector(DT_ANY, key->size());
         int len = key->size();
         int bufSize = std::min(len, Util::BUF_SIZE);
-        std::unique_ptr<float> buf(new float[bufSize]);
+        std::unique_ptr<float[]> buf(new float[bufSize]);
         const float* pbuf = nullptr;
         int start = 0, count = 0;
         unordered_map<float, ConstantSP>::const_iterator it;
@@ -2511,7 +2511,7 @@ ConstantSP FloatAnyDictionary::keys() const{
     ConstantSP resultSP = Util::createVector(keyType_, len);
     int start = 0, count = 0;
     int bufSize = std::min(len, Util::BUF_SIZE);
-    std::unique_ptr<float> buf(new float[bufSize]);
+    std::unique_ptr<float[]> buf(new float[bufSize]);
     float* pbuf = nullptr;
 
     while(start < len){
@@ -2550,9 +2550,9 @@ void FloatAnyDictionary::contain(const ConstantSP& target, const ConstantSP& res
     else{
         int len = target->size();
         int bufSize = std::min(len, Util::BUF_SIZE);
-        std::unique_ptr<char> ret(new char[bufSize]);
+        std::unique_ptr<char[]> ret(new char[bufSize]);
         char* pret = nullptr;
-        std::unique_ptr<float> buf(new float[bufSize]);
+        std::unique_ptr<float[]> buf(new float[bufSize]);
         const float* pbuf = nullptr;
         int start = 0, count = 0;
 
@@ -2635,7 +2635,7 @@ bool DoubleAnyDictionary::set(const ConstantSP& key, const ConstantSP& value){
         if(dict_.empty())
             dict_.reserve((std::size_t)(len*1.33));
         int bufSize = std::min(len, Util::BUF_SIZE);
-        std::unique_ptr<double> buf(new double[bufSize]);
+        std::unique_ptr<double[]> buf(new double[bufSize]);
         const double* pbuf = nullptr;
         int start = 0, count = 0;
         while(start < len){
@@ -2659,7 +2659,7 @@ bool DoubleAnyDictionary::remove(const ConstantSP& key){
     else{
         int len = key->size();
         int bufSize = std::min(len, Util::BUF_SIZE);
-        std::unique_ptr<double> buf(new double[bufSize]);
+        std::unique_ptr<double[]> buf(new double[bufSize]);
         const double* pbuf = nullptr;
         int count = 0, start = 0;
         while(start < len){
@@ -2687,7 +2687,7 @@ ConstantSP DoubleAnyDictionary::getMember(const ConstantSP& key) const{
         ConstantSP result = Util::createVector(DT_ANY, key->size());
         int len = key->size();
         int bufSize = std::min(len, Util::BUF_SIZE);
-        std::unique_ptr<double> buf(new double[bufSize]);
+        std::unique_ptr<double[]> buf(new double[bufSize]);
         const double* pbuf = nullptr;
         int start = 0, count = 0;
         unordered_map<double, ConstantSP>::const_iterator it;
@@ -2712,7 +2712,7 @@ ConstantSP DoubleAnyDictionary::keys() const{
     ConstantSP resultSP = Util::createVector(keyType_, len);
     int start = 0, count = 0;
     int bufSize = std::min(len, Util::BUF_SIZE);
-    std::unique_ptr<double> buf(new double[bufSize]);
+    std::unique_ptr<double[]> buf(new double[bufSize]);
     double* pbuf = nullptr;
 
     while(start < len){
@@ -2751,9 +2751,9 @@ void DoubleAnyDictionary::contain(const ConstantSP& target, const ConstantSP& re
     else{
         int len = target->size();
         int bufSize = std::min(len, Util::BUF_SIZE);
-        std::unique_ptr<char> ret(new char[bufSize]);
+        std::unique_ptr<char[]> ret(new char[bufSize]);
         char* pret = nullptr;
-        std::unique_ptr<double> buf(new double[bufSize]);
+        std::unique_ptr<double[]> buf(new double[bufSize]);
         const double* pbuf = nullptr;
         int start = 0, count = 0;
 
@@ -2826,7 +2826,7 @@ bool LongAnyDictionary::remove(const ConstantSP& key){
 	else{
 		int len=key->size();
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<long long> buf(new long long[bufSize]);
+		std::unique_ptr<long long[]> buf(new long long[bufSize]);
 		//long long buf[bufSize];
 		const long long* pbuf;
 		int count;
@@ -2859,7 +2859,8 @@ bool LongAnyDictionary::set(const ConstantSP& key, const ConstantSP& value){
 			dict_.reserve((int)(len*1.33));
 		int bufSize=std::min(len,Util::BUF_SIZE);
 		//long long buf[bufSize];
-		std::unique_ptr<long long> buf(new long long[bufSize]);
+		// std::unique_ptr<long long> buf(new long long[bufSize]);
+		std::unique_ptr<long long[]> buf(new long long[bufSize]);
 		const long long* pbuf;
 		int start=0;
 		int count;
@@ -2921,7 +2922,7 @@ ConstantSP LongAnyDictionary::keys() const {
 	int start=0;
 	int count;
 	int bufSize=std::min(len,Util::BUF_SIZE);
-	std::unique_ptr<long long> buf(new long long[bufSize]); //long long buf[bufSize];
+	std::unique_ptr<long long[]> buf(new long long[bufSize]); //long long buf[bufSize];
 	long long* pbuf;
 
 	while(start<len){
@@ -2960,9 +2961,9 @@ void LongAnyDictionary::contain(const ConstantSP& target, const ConstantSP& resu
 	else{
 		int len=target->size();
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<char> ret(new char[bufSize]);//char ret[bufSize];
+		std::unique_ptr<char[]> ret(new char[bufSize]);//char ret[bufSize];
 		char* pret;
-		std::unique_ptr<long long> buf(new long long[bufSize]); //long long buf[bufSize];
+		std::unique_ptr<long long[]> buf(new long long[bufSize]); //long long buf[bufSize];
 		const long long* pbuf;
 		int start=0;
 		int count;
@@ -3067,7 +3068,7 @@ bool Int128Dictionary::remove(const ConstantSP& key){
 	else{
 		int len=key->size();
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<unsigned char> buf(new unsigned char[bufSize*16]);//unsigned char buf[bufSize*16];
+		std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize*16]);//unsigned char buf[bufSize*16];
 		const Guid* pbuf;
 		int count;
 		int start = 0;
@@ -3097,9 +3098,9 @@ bool Int128Dictionary::set(const ConstantSP& key, const ConstantSP& value){
 		if(dict_.empty())
 			dict_.reserve((int)(len*1.33));
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<unsigned char> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
+		std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
 		const Guid* pbuf;
-		std::unique_ptr<U8> tmp(new U8[bufSize]); //U8 tmp[bufSize];
+		std::unique_ptr<U8[]> tmp(new U8[bufSize]); //U8 tmp[bufSize];
 		int start=0;
 		int count;
 		std::size_t dictSize=dict_.size();
@@ -3139,9 +3140,9 @@ ConstantSP Int128Dictionary::getMember(const ConstantSP& key) const{
 	else{
 		int len=key->size();
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<unsigned char> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
+		std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
 		const Guid* pbuf;
-		std::unique_ptr<U8> value(new U8[bufSize ]); //U8 value[bufSize];
+		std::unique_ptr<U8[]> value(new U8[bufSize ]); //U8 value[bufSize];
 		int start=0;
 		int count;
 		unordered_map<Guid,U8>::const_iterator it;
@@ -3168,9 +3169,9 @@ void Int128Dictionary::contain(const ConstantSP& target, const ConstantSP& resul
 	else{
 		int len=target->size();
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<char> ret(new char[bufSize]); //char ret[bufSize];
+		std::unique_ptr<char[]> ret(new char[bufSize]); //char ret[bufSize];
 		char* pret;
-		std::unique_ptr<unsigned char> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
+		std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
 		const Guid* pbuf;
 		int start=0;
 		int count;
@@ -3196,7 +3197,7 @@ ConstantSP Int128Dictionary::keys() const {
 	int start=0;
 	int count;
 	int bufSize=std::min(len,Util::BUF_SIZE);
-	std::unique_ptr<unsigned char> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
+	std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
 	Guid* pbuf;
 
 	while(start<len){
@@ -3220,7 +3221,7 @@ ConstantSP Int128Dictionary::values() const {
 	int start=0;
 	int count;
 	int bufSize=std::min(len,Util::BUF_SIZE);
-	std::unique_ptr<U8> buf(new U8[bufSize]); //U8 buf[bufSize];
+	std::unique_ptr<U8[]> buf(new U8[bufSize]); //U8 buf[bufSize];
 
 	while(start<len){
 		count=std::min(len-start,bufSize);
@@ -3277,7 +3278,7 @@ bool Int128AnyDictionary::remove(const ConstantSP& key){
 	else{
 		int len=key->size();
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<unsigned char> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
+		std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
 		const Guid* pbuf;
 		int count;
 		int start = 0;
@@ -3308,7 +3309,7 @@ bool Int128AnyDictionary::set(const ConstantSP& key, const ConstantSP& value){
 		if(dict_.empty())
 			dict_.reserve((int)(len*1.33));
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<unsigned char> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
+		std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
 		const Guid* pbuf;
 		int start=0;
 		int count;
@@ -3341,7 +3342,7 @@ ConstantSP Int128AnyDictionary::getMember(const ConstantSP& key) const {
 		ConstantSP result = Util::createVector(DT_ANY, key->size());
 		int len=key->size();
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<unsigned char> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
+		std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
 		const Guid* pbuf;
 		int start=0;
 		int count;
@@ -3368,7 +3369,7 @@ ConstantSP Int128AnyDictionary::keys() const {
 	int start=0;
 	int count;
 	int bufSize=std::min(len,Util::BUF_SIZE);
-	std::unique_ptr<unsigned char> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
+	std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
 	Guid* pbuf;
 
 	while(start<len){
@@ -3407,9 +3408,9 @@ void Int128AnyDictionary::contain(const ConstantSP& target, const ConstantSP& re
 	else{
 		int len=target->size();
 		int bufSize=std::min(len,Util::BUF_SIZE);
-		std::unique_ptr<char> ret(new char[bufSize]); //char ret[bufSize];
+		std::unique_ptr<char[]> ret(new char[bufSize]); //char ret[bufSize];
 		char* pret;
-		std::unique_ptr<unsigned char> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
+		std::unique_ptr<unsigned char[]> buf(new unsigned char[bufSize * 16]); //unsigned char buf[bufSize*16];
 		const Guid* pbuf;
 		int start=0;
 		int count;

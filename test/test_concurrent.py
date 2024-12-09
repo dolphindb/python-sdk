@@ -1,10 +1,10 @@
 import asyncio
+import inspect
 import threading
 
 import dolphindb as ddb
 
-from setup.settings import *
-from setup.utils import get_pid
+from setup.settings import HOST, PORT, USER, PASSWD
 
 
 def insert_job(tablename, sleep_time, conn: ddb.Session = None):
@@ -23,54 +23,33 @@ def insert_job(tablename, sleep_time, conn: ddb.Session = None):
 
 
 class TestConcurrent:
-    conn = ddb.session(enablePickle=False)
+    conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=False)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    def test_session_concurrent_insert_datas(self):
-        self.conn.run("share table(1:0, `c1`c2`c3, [INT, SYMBOL, TIMESTAMP]) as test_cur_share")
+    def test_concurrent_session_insert_datas(self):
+        func_name = inspect.currentframe().f_code.co_name
+        self.conn.run(f"share table(1:0, `c1`c2`c3, [INT, SYMBOL, TIMESTAMP]) as {func_name}_test_cur_share")
         thds = []
         for _ in range(100):
-            thds.append(threading.Thread(target=insert_job, args=('test_cur_share', 500)))
+            thds.append(threading.Thread(target=insert_job, args=(f'{func_name}_test_cur_share', 500)))
         for thd in thds:
             thd.start()
         for thd in thds:
             thd.join()
-        assert self.conn.run("exec count(*) from test_cur_share") == 100
+        assert self.conn.run(f"exec count(*) from {func_name}_test_cur_share") == 100
 
-    def test_session_concurrent_insert_datas_single(self):
-        self.conn.run("share table(1:0, `c1`c2`c3, [INT, SYMBOL, TIMESTAMP]) as test_cur_share")
+    def test_concurrent_session_insert_datas_single(self):
+        func_name = inspect.currentframe().f_code.co_name
+        self.conn.run(f"share table(1:0, `c1`c2`c3, [INT, SYMBOL, TIMESTAMP]) as {func_name}_test_cur_share")
         thds = []
         for _ in range(100):
-            thds.append(threading.Thread(target=insert_job, args=('test_cur_share', 500, self.conn)))
+            thds.append(threading.Thread(target=insert_job, args=(f'{func_name}_test_cur_share', 500, self.conn)))
         for thd in thds:
             thd.start()
         for thd in thds:
             thd.join()
-        assert self.conn.run("exec count(*) from test_cur_share") == 100
+        assert self.conn.run(f"exec count(*) from {func_name}_test_cur_share") == 100
 
-    def test_connectionPool_concurrent_insert_datas(self):
+    def test_concurrent_DBConnectionPool_concurrent_insert_datas(self):
         dbpath = "dfs://test_concurrent"
         tab = 'pt'
         self.conn.run(f"""

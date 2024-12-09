@@ -6,10 +6,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from basic_testing.prepare import DataUtils,PANDAS_VERSION
+from basic_testing.prepare import DataUtils, PANDAS_VERSION
 from basic_testing.utils import assertPlus
-from setup.settings import *
-from setup.utils import get_pid
+from setup.settings import HOST, PORT, USER, PASSWD
 
 if find_spec("pyarrow") is not None:
     import pyarrow as pa
@@ -17,31 +16,7 @@ if find_spec("pyarrow") is not None:
 
 @pytest.mark.BASIC
 class TestUploadNew(object):
-    conn: ddb.Session
-
-    @classmethod
-    def setup_class(cls):
-        cls.conn = ddb.Session(HOST, PORT, USER, PASSWD)
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    def setup_method(self):
-        try:
-            self.__class__.conn.run("1")
-        except RuntimeError:
-            self.__class__.conn.connect(HOST, PORT, USER, PASSWD)
-
-    # def teardown_method(self):
-    #     self.__class__.conn.undefAll()
-    #     self.__class__.conn.clearAllCache()
+    conn: ddb.Session = ddb.Session(HOST, PORT, USER, PASSWD)
 
     @pytest.mark.parametrize('data', [b'\x00\x00\x00\x00\x00\x00\xf8\xff', b'\x00\x00\x00\x00\x00\x00\xf8\x7f',
                                       b'\xff\xff\xff\xff\xff\xff\xff\x7f', b'\xff\xff\xff\xff\xff\xff\xff\xff'],
@@ -224,6 +199,10 @@ class TestUploadNew(object):
     def test_upload_scalar(self, data):
         for k, v in data.items():
             self.__class__.conn.upload({k: v['value']})
+            if v['value'] is None:
+                with pytest.raises(RuntimeError, match="isn't initialized yet"):
+                    self.__class__.conn.run(k)
+                continue
             assertPlus(self.__class__.conn.run(f"typestr({k})=={v['expect_typestr']}"))
             if 'decimal' in k:
                 assertPlus(self.__class__.conn.run(f"string({k})==string({v['expect_value']})"))
@@ -580,7 +559,6 @@ class TestUploadNew(object):
     def test_upload_table_set_type_MONTH(self, data):
         for k, v in data.items():
             self.__class__.conn.upload({k: v['value']})
-            self.__class__.conn.run(f'share {k} as `ttMoth')
             for i in v['value'].columns:
                 assertPlus(self.__class__.conn.run(f"typestr({k}[`{i}])=={v['expect_typestr']}"))
             assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
@@ -751,7 +729,7 @@ class TestUploadNew(object):
         for k, v in data.items():
             pd.set_option('display.max_columns', None)
             pd.set_option('display.max_rows', None)
-            print(k,v['value'])
+            print(k, v['value'])
 
             self.__class__.conn.upload({k: v['value']})
             for i in v['value'].columns:

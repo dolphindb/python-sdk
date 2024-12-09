@@ -12,10 +12,9 @@ import pytest
 from memory_profiler import profile
 
 from basic_testing.prepare import DataUtils
-from setup.settings import *
+from setup.settings import HOST, PORT, USER, PASSWD
 
 
-@pytest.mark.skipif(AUTO_TESTING, reason="auto test not support")
 class TestMemoryLeak:
     N = 100
 

@@ -49,7 +49,6 @@ class TestDocs:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
@@ -1100,7 +1099,7 @@ class TestDocs:
     def test_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_3(self):
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
-        trade = s.loadText(DATA_DIR + "/example.csv")
+        trade = s.loadText(DATA_DIR + "example.csv")
         # res1:pd.DataFrame = trade.select(["ticker", "date"]).toDF()
         # res2 = trade.select("ticker, date, bid").toDF()
         # assert_array_equal(res1.columns, ['ticker', 'date'])
@@ -1129,7 +1128,7 @@ class TestDocs:
         s.database(dbName='mydb', partitionType=keys.VALUE,
                    partitions=["AMZN", "NFLX", "NVDA"], dbPath=dbPath)
         trade = s.loadTextEx(dbPath=dbPath, partitionColumns=[
-            "TICKER"], tableName='trade', remoteFilePath=DATA_DIR + "/example.csv")
+            "TICKER"], tableName='trade', remoteFilePath=DATA_DIR + "example.csv")
         res1 = trade.select(['sum(vol)', 'sum(prc)']
                             ).groupby(['ticker']).toDF()
         ex1 = s.run(
@@ -1279,9 +1278,9 @@ class TestDocs:
         s.database(partitionType=keys.VALUE, partitions=[
             "AAPL", "FB"], dbPath=dbPath)
         trades = s.loadTextEx(dbPath, tableName='trades', partitionColumns=[
-            "Symbol"], remoteFilePath=DATA_DIR + "/trades.csv")
+            "Symbol"], remoteFilePath=DATA_DIR + "trades.csv")
         quotes = s.loadTextEx(dbPath, tableName='quotes', partitionColumns=[
-            "Symbol"], remoteFilePath=DATA_DIR + "/quotes.csv")
+            "Symbol"], remoteFilePath=DATA_DIR + "quotes.csv")
 
         res1 = trades.top(5).toDF()
 
@@ -1332,7 +1331,7 @@ class TestDocs:
         s.database(dbName='USdb', partitionType=keys.VALUE, partitions=[
             "GFGC", "EWST", "EGAS"], dbPath="dfs://US")
         US = s.loadTextEx(dbPath="dfs://US", partitionColumns=[
-            "TICKER"], tableName='US', remoteFilePath=DATA_DIR + "/US.csv")
+            "TICKER"], tableName='US', remoteFilePath=DATA_DIR + "US.csv")
         US = s.loadTable(dbPath="dfs://US", tableName="US")
 
         def loadPriceData(inData):

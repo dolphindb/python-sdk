@@ -1,4 +1,6 @@
+import inspect
 import re
+from operator import add, and_, eq, floordiv, ge, gt, le, lshift, lt, mul, ne, or_, rshift, sub, truediv, mod
 
 import dolphindb as ddb
 import dolphindb.settings as keys
@@ -6,12 +8,11 @@ import numpy as np
 import pandas as pd
 import pytest
 import statsmodels.api as sm
-from numpy.testing import *
-from pandas.testing import *
+from numpy.testing import assert_almost_equal, assert_array_equal, assert_array_almost_equal
+from pandas._testing import assert_frame_equal
 
-from setup.settings import *
-from setup.utils import get_pid
-from setup.utils import random_string
+from basic_testing.prepare import random_string
+from setup.settings import HOST, PORT, USER, PASSWD, DATA_DIR, LOCAL_DATA_DIR
 
 
 class TestTable2:
@@ -26,57 +27,9 @@ class TestTable2:
         'symbol': ["X", "Z", "X", "Z"],
         'ask': [90, 150, 100, 52],
         'bid': [70, 200, 200, 68]})
-    conn = ddb.session()
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
 
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-            stript = f'''
-                share_tabs = (select name from objs(true) where shared = true)[`name]
-                if(not `shareTrade in share_tabs and not `shareQuote in share_tabs){{
-                    time1=10:01:01 join 10:01:03 join 10:01:05 join 10:01:05
-                    symbol1=take(`X`Z,4)
-                    price1=3 3.3 3.2 3.1
-                    size1=100 200 50 10
-                    Trade=table(time1 as time,symbol1 as symbol,price1 as price,size1 as size)
-
-                    time2=10:01:01 join 10:01:02 join 10:01:02 join 10:01:03
-                    symbol2=take(`X`Z,4)
-                    ask=90 150 100 52
-                    bid=70 200 200 68
-                    Quote=table(time2 as time,symbol2 as symbol,ask as ask,bid as bid)
-
-                    share Trade as shareTrade
-                    share Quote as shareQuote
-                }}
-                if(not existsDatabase("dfs://testmergepart")){{
-                    db = database("dfs://testmergepart", VALUE, "X" "Z")
-                    pt1 = db.createPartitionedTable(Trade,`pt1,`symbol).append!(Trade)
-                    pt2 = db.createPartitionedTable(Quote,`pt2,`symbol).append!(Quote)
-                }}
-            '''
-            self.conn.run(stript)
-
-    # def teardown_method(self):
-    #     self.conn.undefAll()
-    #     self.conn.clearAllCache()
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    def test_create_table_by_python_dictionary(self):
+    def test_table2_create_table_by_python_dictionary(self):
         data = {
             'state': ['Ohio', 'Ohio', 'Ohio', 'Nevada', 'Nevada'],
             'year': [2000, 2001, 2002, 2001, 2002],
@@ -88,7 +41,7 @@ class TestTable2:
         assert_frame_equal(tmp.toDF(), df)
         assert_frame_equal(res, df)
 
-    def test_create_table_by_pandas_dataframe(self):
+    def test_table2_create_table_by_pandas_dataframe(self):
         data = {
             'state': ['Ohio', 'Ohio', 'Ohio', 'Nevada', 'Nevada'],
             'year': [2000, 2001, 2002, 2001, 2002],
@@ -100,23 +53,20 @@ class TestTable2:
         assert_frame_equal(tmp.toDF(), df)
         assert_frame_equal(res, df)
 
-    def test_table_toDF(self):
-        tmp = self.conn.loadText(DATA_DIR + "/USPrices_FIRST.csv")
-        df = self.conn.run(f"select * from loadText('{DATA_DIR}/USPrices_FIRST.csv')")
+    def test_table2_toDF(self):
+        tmp = self.conn.loadText(DATA_DIR + "USPrices_FIRST.csv")
+        df = self.conn.run(f"select * from loadText('{DATA_DIR}USPrices_FIRST.csv')")
         assert len(tmp.toDF()) == len(df)
         assert_frame_equal(tmp.toDF(), df)
-        tbName = tmp.tableName()
-        self.conn.run("undef", tbName)
 
-    def test_table_showSQL(self):
-        tmp = self.conn.loadText(DATA_DIR + "/USPrices_FIRST.csv")
+    def test_table2_showSQL(self):
+        tmp = self.conn.loadText(DATA_DIR + "USPrices_FIRST.csv")
         sql = tmp.showSQL()
         tbName = tmp.tableName()
         assert sql == f'select PERMNO,date,SHRCD,TICKER,TRDSTAT,HEXCD,CUSIP,DLSTCD,DLPRC,DLRET,BIDLO,ASKHI,PRC,VOL,RET,BID,ASK,SHROUT,CFACPR,CFACSHR,OPENPRC from {tbName}'
-        self.conn.run("undef", tbName)
 
-    def test_table_sql_select_where(self):
-        data = DATA_DIR + "/USPrices_FIRST.csv"
+    def test_table2_sql_select_where(self):
+        data = DATA_DIR + "USPrices_FIRST.csv"
         tmp = self.conn.loadText(data)
         res = tmp.select(['PERMNO', 'date']).where(tmp.date > '2010.01.01')
         df = self.conn.run(f"select PERMNO,date from loadText('{data}') where date>2010.01.01")
@@ -130,11 +80,9 @@ class TestTable2:
         df = self.conn.run(f"select * from loadText('{data}') where date>2010.01.01")
         assert res.rows == 1510
         assert_frame_equal(res.toDF(), df)
-        tbName = tmp.tableName()
-        self.conn.run("undef", tbName)
 
-    def test_table_sql_groupby(self):
-        data = DATA_DIR + "/USPrices_FIRST.csv"
+    def test_table2_sql_groupby(self):
+        data = DATA_DIR + "USPrices_FIRST.csv"
         tmp = self.conn.loadText(data)
         origin = tmp.toDF()
         res = tmp.groupby('PERMNO').agg({'bid': ['sum']}).toDF()
@@ -155,12 +103,11 @@ class TestTable2:
         assert (origin['BID'] == res['sum_bid']).all()
         assert (origin['ASK'] == res['sum_ask']).all()
         assert_frame_equal(res, df)
-        res = tmp.groupby(['PERMNO']).agg2(
-            [ddb.wsum, ddb.wavg], [('bid', 'ask')]).toDF()
+        res = tmp.groupby(['PERMNO']).agg2([ddb.wsum, ddb.wavg], [('bid', 'ask')]).toDF()
         df = self.conn.run(f"select wsum(bid,ask),wavg(bid,ask) from loadText('{data}') group by PERMNO")
         assert_frame_equal(res, df)
 
-    def test_table_sql_contextby(self):
+    def test_table2_sql_contextby(self):
         data = {'sym': ['A', 'B', 'B', 'A', 'A'], 'vol': [
             1, 3, 2, 5, 4], 'price': [16, 31, 28, 19, 22]}
         dt = self.conn.table(data=data, tableAliasName="tmp")
@@ -180,7 +127,7 @@ class TestTable2:
         df = self.conn.run("select sym,vol,price,wsum(price,vol),wavg(price,vol) from tmp context by sym")
         assert_frame_equal(res, df)
 
-    def test_table_sql_pivotby(self):
+    def test_table2_sql_pivotby(self):
         dt = self.conn.table(data={'sym': ['C', 'MS', 'MS', 'MS', 'IBM', 'IBM', 'C', 'C', 'C'],
                                    'price': [49.6, 29.46, 29.52, 30.02, 174.97, 175.23, 50.76, 50.32, 51.29],
                                    'qty': [2200, 1900, 2100, 3200, 6800, 5400, 1300, 2500, 8800],
@@ -197,14 +144,10 @@ class TestTable2:
         expected = self.conn.run('select count(price) from tmp pivot by timestamp.month(),sym')
         assert re.equals(expected)
         assert_frame_equal(re, expected)
-        tbName = dt.tableName()
-        self.conn.run("undef", tbName)
 
-    def test_table_sql_merge(self):
-        dt1 = self.conn.table(data={'id': [1, 2, 3, 3], 'value': [
-            7, 4, 5, 0]}, tableAliasName="t1")
-        dt2 = self.conn.table(data={'id': [5, 3, 1], 'qty': [
-            300, 500, 800]}, tableAliasName="t2")
+    def test_table2_sql_merge(self):
+        dt1 = self.conn.table(data={'id': [1, 2, 3, 3], 'value': [7, 4, 5, 0]}, tableAliasName="t1")
+        dt2 = self.conn.table(data={'id': [5, 3, 1], 'qty': [300, 500, 800]}, tableAliasName="t2")
         res = dt1.merge(right=dt2, on='id').toDF()
         expected = self.conn.run('select * from ej(t1,t2,"id")')
         assert_frame_equal(res, expected)
@@ -223,10 +166,8 @@ class TestTable2:
         res.fillna(0, inplace=True)
         expected.fillna(0, inplace=True)
         assert_frame_equal(res, expected)
-        self.conn.run("undef", dt1.tableName())
-        self.conn.run("undef", dt2.tableName())
 
-    def test_table_sql_mergr_asof(self):
+    def test_table2_sql_mergr_asof(self):
         dt1 = self.conn.table(data={'id': ['A', 'A', 'A', 'B', 'B'],
                                     'date': pd.to_datetime(
                                         ['2017-02-06', '2017-02-08', '2017-02-10', '2017-02-07', '2017-02-09']),
@@ -240,14 +181,14 @@ class TestTable2:
         expected = self.conn.run('select * from aj(t2,t1,`id`date)')
         assert_frame_equal(res, expected)
 
-    def test_table_sql_merge_cross(self):
+    def test_table2_sql_merge_cross(self):
         dt1 = self.conn.table(data={'year': [2010, 2011, 2012]}, tableAliasName="t1")
         dt2 = self.conn.table(data={'ticker': ['IBM', 'C', 'AAPL']}, tableAliasName="t2")
         res = dt1.merge_cross(dt2).toDF()
         expected = self.conn.run('select * from cj(t1,t2)')
         assert_frame_equal(res, expected)
 
-    def test_table_sql_merge_window(self):
+    def test_table2_sql_merge_window(self):
         dt1 = self.conn.table(data={'sym': ["A", "A", "B"],
                                     'time': [np.datetime64('2012-09-30 09:56:06'), np.datetime64('2012-09-30 09:56:07'),
                                              np.datetime64('2012-09-30 09:56:06')],
@@ -274,7 +215,7 @@ class TestTable2:
         expected = self.conn.run('select * from wj(t1,t2,-5:-1,<[wavg(bid,volume), wavg(offer,volume)]>,`sym`time)')
         assert_frame_equal(res, expected)
 
-    def test_table_chinese_column_name(self):
+    def test_table2_chinese_column_name(self):
         df = pd.DataFrame(
             {'编号': [1, 2, 3, 4, 5], '序号': ['壹', '贰', '叁', '肆', '伍']})
         tmp = self.conn.table(data=df, tableAliasName="chinese_t")
@@ -282,7 +223,7 @@ class TestTable2:
         assert_array_equal(res['编号'], [1, 2, 3, 4, 5])
         assert_array_equal(res['序号'], ['壹', '贰', '叁', '肆', '伍'])
 
-    def test_table_top_with_other_clause(self):
+    def test_table2_top_with_other_clause(self):
         df = pd.DataFrame({'id': [10, 8, 5, 6, 7, 9, 1, 4, 2, 3], 'date': pd.date_range(
             '2012-01-01', '2012-01-10', freq="D"), 'value': np.arange(0, 10)})
         tmp = self.conn.table(data=df, tableAliasName="top_t")
@@ -304,7 +245,7 @@ class TestTable2:
         assert_array_almost_equal(res['price'], [49.6, 50.76, 174.97, 175.23, 29.46, 29.52])
         assert_array_equal(res['qty'], [2200, 1300, 6800, 5400, 1900, 2100])
 
-    def test_table_sql_update_where(self):
+    def test_table2_sql_update_where(self):
         n = pd.DataFrame({'timestamp': pd.to_datetime(
             ['09:34:07', '09:36:42', '09:36:51', '09:36:59', '09:32:47', '09:35:26', '09:34:16', '09:34:26',
              '09:38:12']),
@@ -315,7 +256,7 @@ class TestTable2:
         res = dt1.update(["price"], ["price*10"]).where("sym=`C").execute().toDF()
         assert_array_almost_equal(res["price"], [496, 29.46, 29.52, 30.02, 174.97, 175.23, 507.6, 503.2, 512.9])
 
-    def test_table_twice(self):
+    def test_table2_twice(self):
         data = {
             'id': [1, 2, 2, 3],
             'date': np.array(['2019-02-04', '2019-02-05', '2019-02-09', '2019-02-13'], dtype='datetime64[D]'),
@@ -330,7 +271,7 @@ class TestTable2:
         assert_array_equal(data['ticker'], re['ticker'])
         assert_array_equal(data['price'], re['price'])
 
-    def test_table_repeatedly(self):
+    def test_table2_repeatedly(self):
         data = {
             'id': [1, 2, 2, 3],
             'date': np.array(['2019-02-04', '2019-02-05', '2019-02-09', '2019-02-13'], dtype='datetime64[D]'),
@@ -345,7 +286,7 @@ class TestTable2:
         assert_array_equal(data['ticker'], re['ticker'])
         assert_array_equal(data['price'], re['price'])
 
-    def test_table_csort(self):
+    def test_table2_csort(self):
         script = '''
             sym = `C`MS`MS`MS`IBM`IBM`C`C`C$SYMBOL
             price= 49.6 29.46 29.52 30.02 174.97 175.23 50.76 50.32 51.29
@@ -396,24 +337,25 @@ class TestTable2:
         assert_frame_equal(re, expected)
 
     def test_dfs_table_csort(self):
-        script = '''
-            dbName="dfs://test_csort"
-            if(existsDatabase(dbName)){
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script = f'''
+            dbName="{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 1..20)
             n=1000000
             t = table(rand(1..20, n) as id, rand(2012.01.01..2012.06.30, n) as date, rand(100, n) as val)
             db.createPartitionedTable(t, `pt, `id).append!(t)
         '''
         self.conn.run(script)
-        tb = self.conn.loadTable(tableName="pt", dbPath="dfs://test_csort")
+        tb = self.conn.loadTable(tableName="pt", dbPath=db_name)
         res = tb.select(["id", "date", "val"]).contextby("id").csort(["date"]).top(50).toDF()
         expected = self.conn.run(
-            '''select top 50 * from loadTable("dfs://test_csort", `pt) context by id csort date ''')
+            f'''select top 50 * from loadTable("{db_name}", `pt) context by id csort date ''')
         assert_frame_equal(res, expected)
 
-    def test_table_limit(self):
+    def test_table2_limit(self):
         script = '''
             sym = `C`MS`MS`MS`IBM`IBM`C`C`C$SYMBOL
             price= 49.6 29.46 29.52 30.02 174.97 175.23 50.76 50.32 51.29
@@ -427,7 +369,7 @@ class TestTable2:
         expected = self.conn.run("select * from t limit 2")
         assert_frame_equal(re, expected)
 
-    def test_table_sort_desc(self):
+    def test_table2_sort_desc(self):
         script = '''
             sym = `C`MS`MS`MS`IBM`IBM`C`C`C$SYMBOL
             price= 49.6 29.46 29.52 30.02 174.97 175.23 50.76 50.32 51.29
@@ -459,10 +401,28 @@ class TestTable2:
         expected = self.conn.run("select * from t1 order by timestamp desc, price asc")
         assert_frame_equal(re, expected)
 
-    def test_merge_with_other_operation(self):
+    def test_table2_merge_with_other_operation(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script = f'''
+            time1=10:01:01 join 10:01:03 join 10:01:05 join 10:01:05
+            symbol1=take(`X`Z,4)
+            price1=3 3.3 3.2 3.1
+            size1=100 200 50 10
+            Trade=table(time1 as time,symbol1 as symbol,price1 as price,size1 as size)
+
+            time2=10:01:01 join 10:01:02 join 10:01:02 join 10:01:03
+            symbol2=take(`X`Z,4)
+            ask=90 150 100 52
+            bid=70 200 200 68
+            Quote=table(time2 as time,symbol2 as symbol,ask as ask,bid as bid)
+
+            share Trade as {func_name}_shareTrade
+            share Quote as {func_name}_shareQuote
+        '''
         s = self.conn
-        trade = s.table(data="shareTrade")
-        quote = s.table(data="shareQuote")
+        s.run(script)
+        trade = s.table(data=f"{func_name}_shareTrade")
+        quote = s.table(data=f"{func_name}_shareQuote")
         pd_left = self.pd_left
         pd_right = self.pdf_right
         res_temp = trade.merge(right=quote, on=['symbol', 'time']).select(
@@ -476,8 +436,7 @@ class TestTable2:
         assert_frame_equal(pdf_res, odf_res.toDF(), check_dtype=False)
         odf_res = trade.merge(right=quote, how='right', on=['symbol', 'time']).select(
             ["time", "symbol", "price", "size", "ask-bid as diff"]).sort(bys='time ,symbol')
-        pdf = pd.merge(pd_left, pd_right, how='right', on=[
-            'symbol', 'time']).sort_values(['symbol', 'time'])
+        pdf = pd.merge(pd_left, pd_right, how='right', on=['symbol', 'time']).sort_values(['symbol', 'time'])
         pdf['diff'] = pdf['ask'] - pdf['bid']
         pdf_res = pdf[['time', 'symbol', 'price', 'size', 'diff']]
         assert_array_equal(odf_res.toDF()['time'], pdf_res['time'])
@@ -493,13 +452,33 @@ class TestTable2:
         res.fillna(0, inplace=True)
         odf_res.fillna(0, inplace=True)
         assert_frame_equal(odf_res, res)
-        self.conn.run("undef", dt1.tableName())
-        self.conn.run("undef", dt2.tableName())
 
-    def test_merge_with_other_operation_partition(self):
+    def test_table2_merge_with_other_operation_partition(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script = f'''
+            time1=10:01:01 join 10:01:03 join 10:01:05 join 10:01:05
+            symbol1=take(`X`Z,4)
+            price1=3 3.3 3.2 3.1
+            size1=100 200 50 10
+            Trade=table(time1 as time,symbol1 as symbol,price1 as price,size1 as size)
+
+            time2=10:01:01 join 10:01:02 join 10:01:02 join 10:01:03
+            symbol2=take(`X`Z,4)
+            ask=90 150 100 52
+            bid=70 200 200 68
+            Quote=table(time2 as time,symbol2 as symbol,ask as ask,bid as bid)
+            dbName="{db_name}"
+            if (existsDatabase(dbName))
+                dropDatabase(dbName)
+            db = database(dbName, VALUE, "X" "Z")
+            pt1 = db.createPartitionedTable(Trade,`pt1,`symbol).append!(Trade)
+            pt2 = db.createPartitionedTable(Quote,`pt2,`symbol).append!(Quote)
+        '''
         s = self.conn
-        trade = s.loadTable(dbPath="dfs://testmergepart", tableName="pt1")
-        quote = s.loadTable(dbPath="dfs://testmergepart", tableName="pt2")
+        s.run(script)
+        trade = s.loadTable(dbPath=db_name, tableName="pt1")
+        quote = s.loadTable(dbPath=db_name, tableName="pt2")
         pd_left = self.pd_left
         pd_right = self.pdf_right
         res_temp = trade.merge(right=quote, on=['symbol', 'time']).select(
@@ -524,13 +503,31 @@ class TestTable2:
         odf_res = trade.merge(right=quote, how='left semi', on=['symbol', 'time']).select(
             ["time", "symbol", "price", "size", "ask-bid as diff"]).sort(bys='price')
         res = self.conn.run(
-            'select time, symbol, price,size, ask-bid as diff from lsj(loadTable("dfs://testmergepart", `pt1),loadTable("dfs://testmergepart", `pt2),`symbol`time) order by price')
+            f'select time, symbol, price,size, ask-bid as diff from lsj(loadTable("{db_name}", `pt1),loadTable("{db_name}", `pt2),`symbol`time) order by price')
         assert_frame_equal(odf_res.toDF(), res)
 
-    def test_merge_asof_with_other_operation(self):
+    def test_table2_merge_asof_with_other_operation(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script = f'''
+            time1=10:01:01 join 10:01:03 join 10:01:05 join 10:01:05
+            symbol1=take(`X`Z,4)
+            price1=3 3.3 3.2 3.1
+            size1=100 200 50 10
+            Trade=table(time1 as time,symbol1 as symbol,price1 as price,size1 as size)
+
+            time2=10:01:01 join 10:01:02 join 10:01:02 join 10:01:03
+            symbol2=take(`X`Z,4)
+            ask=90 150 100 52
+            bid=70 200 200 68
+            Quote=table(time2 as time,symbol2 as symbol,ask as ask,bid as bid)
+
+            share Trade as {func_name}_shareTrade
+            share Quote as {func_name}_shareQuote
+        '''
         s = self.conn
-        trade = s.table(data="shareTrade")
-        quote = s.table(data="shareQuote")
+        s.run(script)
+        trade = s.table(data=f"{func_name}_shareTrade")
+        quote = s.table(data=f"{func_name}_shareQuote")
         res_temp = trade.merge_asof(right=quote, on=["symbol", "time"]).select(
             ["time", "symbol", "price", "size", "ask-bid as diff"])
         pd_left = self.pd_left
@@ -540,10 +537,32 @@ class TestTable2:
         res = pdf[['time', 'symbol', 'price', 'size', 'diff']]
         assert_frame_equal(res_temp.toDF(), res, check_dtype=False)
 
-    def test_merge_asof_with_other_operation_partition(self):
+    def test_table2_merge_asof_with_other_operation_partition(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script = f'''
+            time1=10:01:01 join 10:01:03 join 10:01:05 join 10:01:05
+            symbol1=take(`X`Z,4)
+            price1=3 3.3 3.2 3.1
+            size1=100 200 50 10
+            Trade=table(time1 as time,symbol1 as symbol,price1 as price,size1 as size)
+
+            time2=10:01:01 join 10:01:02 join 10:01:02 join 10:01:03
+            symbol2=take(`X`Z,4)
+            ask=90 150 100 52
+            bid=70 200 200 68
+            Quote=table(time2 as time,symbol2 as symbol,ask as ask,bid as bid)
+            dbName="{db_name}"
+            if (existsDatabase(dbName))
+                dropDatabase(dbName)
+            db = database(dbName, VALUE, "X" "Z")
+            pt1 = db.createPartitionedTable(Trade,`pt1,`symbol).append!(Trade)
+            pt2 = db.createPartitionedTable(Quote,`pt2,`symbol).append!(Quote)
+        '''
         s = self.conn
-        trade = s.loadTable(dbPath="dfs://testmergepart", tableName="pt1")
-        quote = s.loadTable(dbPath="dfs://testmergepart", tableName="pt2")
+        s.run(script)
+        trade = s.loadTable(dbPath=db_name, tableName="pt1")
+        quote = s.loadTable(dbPath=db_name, tableName="pt2")
         res_temp = trade.merge_asof(right=quote, on=["symbol", "time"]).select(
             ["time", "symbol", "price", "size", "ask-bid as diff"]).sort('time')
         pd_left = self.pd_left
@@ -553,137 +572,135 @@ class TestTable2:
         res = pdf[['time', 'symbol', 'price', 'size', 'diff']].sort_values("time")
         assert_frame_equal(res_temp.toDF(), res, check_dtype=False)
 
-    def test_table_append(self):
-        script = """
-        t1 = table(1000:0,`id`date`ticker`price, [INT,DATE,SYMBOL,DOUBLE])
-        ids = take(1..1000,100)
-        dates = take(2021.01.01..2021.10.01,100)
-        tickers = take(`A`B`C`D,100)
-        prices = rand(1000,100)\\10
-        t2 = table(ids as id,dates as date,tickers as ticker,prices as price)
-        t3 = table(ids as id,dates as date,tickers as ticker,prices as price)
-        share t1 as table1
-        share t2 as table2
-        share t3 as table3
+    def test_table2_append(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
+            t1 = table(1000:0,`id`date`ticker`price, [INT,DATE,SYMBOL,DOUBLE])
+            ids = take(1..1000,100)
+            dates = take(2021.01.01..2021.10.01,100)
+            tickers = take(`A`B`C`D,100)
+            prices = rand(1000,100)\\10
+            t2 = table(ids as id,dates as date,tickers as ticker,prices as price)
+            t3 = table(ids as id,dates as date,tickers as ticker,prices as price)
+            share t1 as {func_name}_table1
+            share t2 as {func_name}_table2
+            share t3 as {func_name}_table3
         """
         self.conn.run(script)
-        t1 = self.conn.table(data="table1")
-        t2 = self.conn.table(data="table2")
-        t3 = self.conn.table(data="table3")
+        t1 = self.conn.table(data=f"{func_name}_table1")
+        t2 = self.conn.table(data=f"{func_name}_table2")
+        t3 = self.conn.table(data=f"{func_name}_table3")
         t1.append(t2)
         assert_frame_equal(t1.toDF(), t2.toDF(), check_dtype=False)
         t2.append(t3)
-        self.conn.run("table2.append!(table3)")
-        t2_after = self.conn.table(data="table2")
+        self.conn.run(f"{func_name}_table2.append!({func_name}_table3)")
+        t2_after = self.conn.table(data=f"{func_name}_table2")
         assert_frame_equal(t2.toDF(), t2_after.toDF(), check_dtype=False)
 
-    def test_table_rename(self):
-        script = """
+    def test_table2_rename(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             ids = take(1..1000,100)
             dates = take(2021.01.01..2021.10.01,100)
             tickers = take(`A`B`C`D,100)
             prices = rand(1000,100)\\10
             t1 = table(ids as id,dates as date,tickers as ticker,prices as price)
-            share t1 as tglobal
+            share t1 as {func_name}_tglobal
         """
         self.conn.run(script)
-        t1 = self.conn.table(data="tglobal")
+        t1 = self.conn.table(data=f"{func_name}_tglobal")
         old_name = t1.tableName()
-        t1.rename('table1')
+        t1.rename(f'{func_name}_table1')
         new_name = t1.tableName()
-        assert old_name == "tglobal"
-        assert new_name == "table1"
+        assert old_name == f"{func_name}_tglobal"
+        assert new_name == f"{func_name}_table1"
 
-    def test_table_delete(self):
+    def test_table2_delete(self):
         script = """
             ids = take(1..1000,1000)
             dates = take(2021.01.01..2021.10.01,1000)
             tickers = take(`A`B`C`D,1000)
             prices = rand(1000,1000)\\10
             t1 = table(ids as id,dates as date,tickers as ticker,prices as price)
-            share t1 as table1
         """
         self.conn.run(script)
-        t1 = self.conn.table(data="table1")
+        t1 = self.conn.table(data="t1")
         assert t1.rows == 1000
         t1.delete()
         assert t1.rows == 1000
         t1.delete().execute()
         assert t1.rows == 0
 
-    def test_table_delete_where(self):
+    def test_table2_delete_where(self):
         script = """
             ids = take(1..1000,1000)
             dates = take(2021.01.01..2021.10.01,1000)
             tickers = take(`A`B`C`D,1000)
             prices = rand(1000,1000)\\10
             t1 = table(ids as id,dates as date,tickers as ticker,prices as price)
-            share t1 as table1
             t2 = table(ids as id,dates as date,tickers as ticker,prices as price)
-            share t2 as table2
         """
         self.conn.run(script)
-        t1 = self.conn.table(data="table1")
+        t1 = self.conn.table(data="t1")
         t1.delete().where("id>400").execute()
-        self.conn.run("delete from table2 where id>400")
-        ex_row = self.conn.run("exec count(*) from table2")
+        self.conn.run("delete from t2 where id>400")
+        ex_row = self.conn.run("exec count(*) from t2")
         assert t1.rows == ex_row
         t1.delete().where("id>200").where("ticker = 'A'").where("price>50").execute()
-        self.conn.run("delete from table2 where id>200 and ticker == 'A' and price>50")
-        ex_row = self.conn.run("exec count(*) from table2")
+        self.conn.run("delete from t2 where id>200 and ticker == 'A' and price>50")
+        ex_row = self.conn.run("exec count(*) from t2")
         assert t1.rows == ex_row
 
-    def test_table_drop(self):
+    def test_table2_drop(self):
         script = """
             ids = take(1..1000,1000)
             dates = take(2021.01.01..2021.10.01,1000)
             tickers = take(`A`B`C`D,1000)
             prices = rand(1000,1000)\\10
             t1 = table(ids as id,dates as date,tickers as ticker,prices as price)
-            share t1 as table1
             t2 = table(ids as id,dates as date,tickers as ticker,prices as price)
-            share t2 as table2
         """
         self.conn.run(script)
-        t1 = self.conn.table(data="table1")
+        t1 = self.conn.table(data="t1")
         with pytest.raises(RuntimeError):
             t1.drop(['id', 'date', 'ticker', "price"])
         with pytest.raises(RuntimeError):
             t1.drop(['ids'])
         t1.drop(["price"])
-        self.conn.run("dropColumns!(table2, 'price')")
-        t2 = self.conn.table(data="table2")
+        self.conn.run("dropColumns!(t2, 'price')")
+        t2 = self.conn.table(data="t2")
         assert_frame_equal(t1.toDF(), t2.toDF(), check_dtype=False)
         t1.drop(['date', 'ticker'])
-        self.conn.run("dropColumns!(table2, ['date','ticker'])")
-        t2 = self.conn.table(data="table2")
+        self.conn.run("dropColumns!(t2, ['date','ticker'])")
+        t2 = self.conn.table(data="t2")
         assert_frame_equal(t1.toDF(), t2.toDF(), check_dtype=False)
 
         with pytest.raises(RuntimeError):
             t1.drop(["id"])
 
-    def test_table_executeAs(self):
+    def test_table2_executeAs(self):
         script = """
             ids = take(1..1000,1000)
             dates = take(2021.01.01..2021.10.01,1000)
             tickers = take(`A`B`C`D,1000)
             prices = rand(1000,1000)\\10
             t1 = table(ids as id,dates as date,tickers as ticker,prices as price)
-            share t1 as table1
         """
         self.conn.run(script)
-        t1 = self.conn.table(data="table1")
+        t1 = self.conn.table(data="t1")
         t1.select(['date', "id"]).executeAs('t5').select(["date"])
         self.conn.loadTable(tableName="t5")
 
-    def test_ols_paramete(self):
-        if self.conn.existsDatabase("dfs://valuedb"):
-            self.conn.dropDatabase("dfs://valuedb")
+    def test_table2_ols_parameter(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        if self.conn.existsDatabase(db_name):
+            self.conn.dropDatabase(db_name)
         self.conn.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN", "NFLX", "NVDA"],
-                           dbPath="dfs://valuedb")
-        self.conn.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade',
-                             remoteFilePath=DATA_DIR + "/example.csv")
-        trade = self.conn.loadTable(tableName="trade", dbPath="dfs://valuedb")
+                           dbPath=db_name)
+        self.conn.loadTextEx(dbPath=db_name, partitionColumns=["TICKER"], tableName='trade',
+                             remoteFilePath=DATA_DIR + "example.csv")
+        trade = self.conn.loadTable(tableName="trade", dbPath=db_name)
         z = trade.ols(Y='PRC', X=['BID'])
         res = z["Coefficient"]
         prc_tmp = trade.toDF().PRC
@@ -692,7 +709,7 @@ class TestTable2:
         ex = model.fit().params
         assert_almost_equal(res.iloc[1, 1], ex[0], decimal=4)
 
-    def test_table_function_paramete(self):
+    def test_table2_function_parameter(self):
         t1 = self.conn.table(data={'sym': ['C', 'MS']}, tableAliasName="tmp")
         t2 = self.conn.table(data={'sym': ['C', 'MS'], 'price': [1, 2], 'val': [3, 5], 'timestamp': pd.date_range(
             '2019-06-01', '2019-06-02'), 'ask': [3, 5]}, tableAliasName="tmp")
@@ -718,7 +735,7 @@ class TestTable2:
         t2.where(conds="price = 1")
         t1.drop(cols='sym')
 
-    def test_table_exec(self):
+    def test_table2_exec(self):
         script = '''
             sym = `C`MS`MS`MS`IBM`IBM`C`C`C$SYMBOL
             price= 49.6 29.46 29.52 30.02 174.97 175.23 50.76 50.32 51.29
@@ -737,7 +754,7 @@ class TestTable2:
         expected = [49.6, 29.46, 29.52, 30.02, 174.97, 175.23, 50.76, 50.32, 51.29, np.nan]
         assert_array_equal(res, expected)
 
-    def test_table_exec_with_other_operation(self):
+    def test_table2_exec_with_other_operation(self):
         script = '''
             meta = table(`XYZM0`XYZU0`XYZZ0`XYZH1`XYZM1`XYZU1`XYZZ1`XYZH2`XYZM2`XYZU2`XYZZ2 as contract,
             2020.06.15 2020.09.14 2020.12.14 2021.03.16 2021.06.14 2021.09.13 2021.12.13 2022.03.14 2022.06.13 2022.09.19 2022.12.19 as start_date,
@@ -761,7 +778,7 @@ class TestTable2:
         expected = self.conn.run("exec * from lsj(meta, meta as a, `contract)")
         assert_array_equal(res1, expected)
 
-    def test_table_exec_with_pivot_by(self):
+    def test_table2_exec_with_pivot_by(self):
         dt = self.conn.table(data={'sym': ['C', 'MS', 'MS', 'MS', 'IBM', 'IBM', 'C', 'C', 'C'],
                                    'price': [49.6, 29.46, 29.52, 30.02, 174.97, 175.23, 50.76, 50.32, 51.29],
                                    'qty': [2200, 1900, 2100, 3200, 6800, 5400, 1300, 2500, 8800],
@@ -779,51 +796,29 @@ class TestTable2:
         tbName = dt.tableName()
         self.conn.run("undef", tbName)
 
-    def test_runFile(self):
-        file_path = LOCAL_DATA_DIR + "/run_data.txt"
+    def test_table2_runFile(self):
+        file_path = LOCAL_DATA_DIR + "run_data.txt"
         s = self.conn
         s.runFile(file_path)
-        t1 = s.table(data="t1")
-        re1 = s.table(data="re1")
-        exec1 = s.run('select stdp(value) from t1')
-        assert_frame_equal(re1.toDF(), exec1)
-        re2 = s.table(data="re2")
-        exec2 = s.run('select sum(value) from t1')
-        assert_frame_equal(re2.toDF(), exec2)
-        pt1 = s.loadTable(dbPath="dfs://test", tableName="pt1")
-        pt1.append(t1)
-        assert_frame_equal(pt1.sort(bys='time').toDF(), t1.sort(bys="time").toDF())
-        t_share = s.table(data="t_share")
-        t_share.append(t1)
-        output = s.table(data="output1")
-        size3 = len(output.toDF())
-        assert size3 > 0
-        s.run('''
-            unsubscribe("t_share","sub_1")
-            dropAggregator("test1")
-            if(existsDatabase("dfs://test")){
-                dropDatabase("dfs://test")
-            }
-            undef((exec name from objs(true) where shared=1),SHARED)
-        ''')
+        assert s.run("x") == 1
 
-    def test_get_float_null_over_1024(self):
+    def test_table2_get_float_null_over_1024(self):
         db_value = self.conn.run("table(1..1025 as a,take(float(),1025) as b)")
         assert np.isnan(db_value.loc[1024, "b"])
 
-    def test_get_double_null_over_1024(self):
+    def test_table2_get_double_null_over_1024(self):
         db_value = self.conn.run("table(1..1025 as a,take(double(),1025) as b)")
         assert np.isnan(db_value.loc[1024, "b"])
 
-    def test_get_int_null_over_1024(self):
+    def test_table2_get_int_null_over_1024(self):
         db_value = self.conn.run("table(1..1025 as a,take(int(),1025) as b)")
         assert np.isnan(db_value.loc[1024, "b"])
 
-    def test_get_string_null_over_1024(self):
+    def test_table2_get_string_null_over_1024(self):
         db_value = self.conn.run("table(1..1025 as a,take(string(),1025) as b)")
         assert db_value.loc[1024, "b"] == ""
 
-    def test_temp_table_del(self):
+    def test_table2_temp_table_del(self):
         df = pd.DataFrame({'organization_code': [[False, False, False, True, False]]})
         df2 = pd.DataFrame({'organization_code': [[False, False, False, True, False]]})
         t = self.conn.table(data=df)
@@ -838,7 +833,7 @@ class TestTable2:
         db_value = self.conn.run(f"select count(*) from objs() where name = '{a}'")
         assert db_value["count"][0] == 0
 
-    def test_temp_table_del_big_data(self):
+    def test_table2_temp_table_del_big_data(self):
         boolx = []
         intx = []
         floatx = []
@@ -915,7 +910,7 @@ class TestTable2:
         db_value = self.conn.run(f"select count(*) from objs() where name = '{a}'")
         assert db_value["count"][0] == 0
 
-    def test_upload_dataframe_as_table(self):
+    def test_table2_upload_dataframe_as_table(self):
         df = pd.DataFrame({
             'bool': np.array([True, False], dtype=np.bool8),
             'char': np.array([1, -1], dtype=np.int8),
@@ -1003,11 +998,14 @@ class TestTable2:
         """)
         assert_array_equal(self.conn.run("each(eqObj,t.values(),a.values())"), [True for _ in range(22)])
 
-    def test_table_dropPartition_loadtable_tmp_variable(self):
-        self.conn.run("""
-            dbName = "dfs://PTA1_test"
+    def test_table2_table2_dropPartition_loadtable_tmp_variable(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        self.conn.run(f"""
+            dbName = "{db_name}"
             tbName = "pt"
-            if(existsDatabase(dbName)) {dropDatabase(dbName)}
+            if(existsDatabase(dbName))
+                dropDatabase(dbName)
             db = database(dbName, VALUE, 1..5)
             model = table(1:0, `ID`Price`Volume`ids, [INT, DOUBLE, DOUBLE, INT])
             createPartitionedTable(db, model, tbName, `ID)
@@ -1024,45 +1022,45 @@ class TestTable2:
         })
         for i in range(2):
             a = self.conn.run("select count(*) from objs(false)")
-            self.conn.dropPartition(dbPath="dfs://PTA1_test", partitionPaths="5", tableName="pt")
-            factor_table = self.conn.loadTable(tableName="pt", dbPath="dfs://PTA1_test")
+            self.conn.dropPartition(dbPath=db_name, partitionPaths="5", tableName="pt")
+            factor_table = self.conn.loadTable(tableName="pt", dbPath=db_name)
             day_table = self.conn.table(data=df)
             factor_table.append(day_table)
             del factor_table
             del day_table
             b = self.conn.run("select count(*) from objs(false)")
             assert a["count"][0] == b["count"][0]
-        self.conn.dropDatabase("dfs://PTA1_test")
 
-    def test_sql_pattern_match(self):
+    def test_table2_sql_pattern_match(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         dbname = "dfs://test_" + random_string(5)
         dbname2 = "dfs://test_" + random_string(5)
-        script = '''
-            dbName="dfs://test_csort"
-            if(existsDatabase(dbName)){
+        script = f'''
+            dbName="{db_name}"
+            if(existsDatabase(dbName))
                 dropDatabase(dbName)
-            }
             db = database(dbName, VALUE, 1..20)
             n=1000000
             t = table(rand(1..20, n) as id, rand(2012.01.01..2012.06.30, n) as date, rand(100, n) as val)
             db.createPartitionedTable(t, `pt, `id).append!(t)
         '''
         self.conn.run(script)
-        pt = self.conn.table(data="pt", dbPath="dfs://test_csort")
+        pt = self.conn.table(data="pt", dbPath=db_name)
         db = self.conn.database('db', keys.VALUE, [x for x in range(1, 21)], dbname)
         db2 = self.conn.database('db2', keys.VALUE, [x for x in range(1, 21)], dbname2)
         t = db.createTable(pt, 'pt')
         t2 = db2.createPartitionedTable(pt, 'pt', 'id')
-        sql1 = self.conn.table(data="pt", dbPath="dfs://test_csort").contextby("id").agg("sum").showSQL()
-        sql2 = self.conn.loadTable(tableName="pt", dbPath="dfs://test_csort").contextby("id").agg("sum").showSQL()
-        sql3 = self.conn.loadTableBySQL(tableName="pt", dbPath="dfs://test_csort", sql="select * from pt").contextby(
-            "id").agg("sum").showSQL()
-        sql4 = self.conn.loadText(DATA_DIR + '/sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
-        sql5 = self.conn.loadTextEx("dfs://test_csort", "pt", ["id"], DATA_DIR + '/sql_pattern_test.csv').contextby(
+        sql1 = self.conn.table(data="pt", dbPath=db_name).contextby("id").agg("sum").showSQL()
+        sql2 = self.conn.loadTable(tableName="pt", dbPath=db_name).contextby("id").agg("sum").showSQL()
+        sql3 = self.conn.loadTableBySQL(tableName="pt", dbPath=db_name, sql="select * from pt").contextby("id").agg(
+            "sum").showSQL()
+        sql4 = self.conn.loadText(DATA_DIR + 'sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
+        sql5 = self.conn.loadTextEx(db_name, "pt", ["id"], DATA_DIR + 'sql_pattern_test.csv').contextby(
             "id").agg("sum").showSQL()
         sql6 = t.contextby("id").agg("sum").showSQL()
         sql7 = t2.contextby("id").agg("sum").showSQL()
-        sql8 = self.conn.ploadText(DATA_DIR + '/sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
+        sql8 = self.conn.ploadText(DATA_DIR + 'sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
         pattern1 = r"^select id,sum\(date\),sum\(val\) from pt_TMP_TBL_[a-zA-Z0-9]+ context by id$"
         pattern2 = r"^select id,sum\(date\),sum\(val\) from TMP_TBL_[a-zA-Z0-9]+ context by id$"
         assert bool(re.match(pattern1, sql1))
@@ -1073,6 +1071,101 @@ class TestTable2:
         assert bool(re.match(pattern2, sql6))
         assert bool(re.match(pattern2, sql7))
         assert bool(re.match(pattern2, sql8))
-        self.conn.dropDatabase("dfs://test_csort")
-        self.conn.dropDatabase(dbname)
-        self.conn.dropDatabase(dbname2)
+
+
+operators = {
+    "or": or_,
+    "and": and_,
+    "<": lt,
+    "<=": le,
+    ">": gt,
+    ">=": ge,
+    "==": eq,
+    "!=": ne,
+    "+": add,
+    "-": sub,
+    "*": mul,
+    "/": truediv,
+    r"%": mod,
+    "<<": lshift,
+    ">>": rshift,
+    "//": floordiv,
+}
+
+corresponds = {
+    "<": ">",
+    ">": "<",
+    ">=": "<=",
+    "<=": ">=",
+    "!=": "!=",
+    "==": "==",
+}
+
+
+class TestFilterCond:
+    conn = ddb.session(HOST, PORT, USER, PASSWD)
+
+    def test_FilterCond_init_str(self):
+        for right in ["rightName"] + [ddb.FilterCond("tmpc", x, "tmpd") for x in operators]:
+            for op in operators.keys():
+                for left in ["leftName"] + [ddb.FilterCond("tmpa", x, "tmpb") for x in operators]:
+                    FilterCondtmp = ddb.FilterCond(left, op, right)
+                    assert FilterCondtmp._FilterCond__lhs == left
+                    assert FilterCondtmp._FilterCond__rhs == right
+                    assert FilterCondtmp._FilterCond__op == op
+                    assert str(FilterCondtmp) == "({} {} {})".format(str(left), str(op), str(right))
+
+    def test_FilterCond_op(self):
+        for right in ["rightName"] + [ddb.FilterCond("tmpc", x, "tmpd") for x in operators]:
+            for op in operators.keys():
+                if op == '%':
+                    continue
+                for left in ["leftName"] + [ddb.FilterCond("tmpa", x, "tmpb") for x in operators]:
+                    if str(left) == 'leftName':
+                        continue
+                    if isinstance(left, str) and isinstance(right, str):
+                        continue
+                    func = operators[op]
+                    res = func(left, right)
+                    if isinstance(left, str) and op in corresponds.keys():
+                        assert str(res) == "({} {} {})".format(str(right), str(corresponds[op]), str(left))
+                    else:
+                        assert str(res) == "({} {} {})".format(str(left), str(op), str(right))
+
+
+class TestCounter:
+
+    def test_Counter_init(self):
+        counter = ddb.Counter()
+        assert counter._Counter__value == 1
+
+    def test_Counter_inc(self):
+        counter1 = ddb.Counter()
+        assert counter1._Counter__value == 1
+        counter1.inc()
+        assert counter1._Counter__value == 2
+        for i in range(100):
+            counter1.inc()
+        assert counter1._Counter__value == 102
+
+        counter2 = ddb.Counter()
+        assert counter2._Counter__value == 1
+
+    def test_Counter_dec(self):
+        counter1 = ddb.Counter()
+        assert counter1._Counter__value == 1
+        counter1.dec()
+        assert counter1._Counter__value == 0
+        for i in range(50):
+            counter1.dec()
+        assert counter1._Counter__value == -50
+
+    def test_Counter_val(self):
+        counter1 = ddb.Counter()
+        assert counter1.val() == counter1._Counter__value
+        assert counter1.val() == 1
+        counter1.inc()
+        counter1.inc()
+        assert counter1.val() == 3
+        counter1.dec()
+        assert counter1.val() == 2

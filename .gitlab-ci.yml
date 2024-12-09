@@ -60,7 +60,7 @@ build-Windows-amd64-job:
     - echo $env:CIBW_ENVIRONMENT_WINDOWS
     - echo $env:path
     - echo "COMPILE:"
-    - python -m pip install cibuildwheel==2.15.0
+    - python -m pip install cibuildwheel==2.17.0
     - python -m cibuildwheel --platform windows --output-dir wheelhouse
   artifacts:
     name: "$CI_PROJECT_NAME-$CI_JOB_NAME"

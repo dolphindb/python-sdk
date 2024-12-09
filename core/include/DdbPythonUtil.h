@@ -67,8 +67,6 @@ private:
     int convertingCount_;
 	std::queue<vector<py::object>*> rows_;
     std::queue<vector<py::object>*> failedRows_;
-    //when main thread call exit, new pGilRelease_ to release GIL, then run can exit
-    SmartPointer<ProtectGil> pGil_;
 };
 
 }

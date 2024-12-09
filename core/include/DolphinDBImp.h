@@ -69,6 +69,7 @@ public:
         return sessionId_;
     }
     DataInputStreamSP getDataInputStream(){return inputStream_;}
+    std::shared_ptr<Logger> getMsgLogger() { return logger_; }
 private:
     long generateRequestFlag(bool clearSessionMemory = false, bool disableprotocol = false, bool pickleTableToList = false, bool disableDecimal = false);
     ConstantSP run(const string& script, const string& scriptType, vector<ConstantSP>& args, int priority = 4, int parallelism = 64,int fetchSize = 0, bool clearMemory = false);
@@ -103,6 +104,7 @@ private:
     int writeTimeout_;
     DataInputStreamSP inputStream_;
     Mutex mutex_;
+    std::shared_ptr<Logger> logger_;
 };
 
 }

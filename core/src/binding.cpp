@@ -43,8 +43,6 @@
 namespace py = pybind11;
 namespace ddb = dolphindb;
 
-using std::cout;
-using std::endl;
 
 using converter::Converter;
 using converter::createType;
@@ -63,9 +61,7 @@ using converter::Type;
 #ifdef DLOG
     #undef DLOG
 #endif
-#define DLOG true?ddb::DLogger::GetMinLevel():ddb::DLogger::Info
-
-//#define RECORD_TIME true?ddb::DLogger::GetMinLevel() : ddb::RecordTime _recordTime
+#define DLOG        // ddb::DLogger::Info
 
 #ifndef MAC
     #define TRY                     try {
@@ -87,6 +83,7 @@ using converter::Type;
 void ddbinit() {
     if (converter::PyObjs::cache_ == nullptr) {
         converter::PyObjs::Initialize();
+        dolphindb::DLogger::init();
     }
 }
 
@@ -732,8 +729,10 @@ public:
         return dbConnection_;
     }
     void printPerformance(){
-        ddb::DLogger::Info(ddb::RecordTime::printAllTime());
+        LOG_INFO(ddb::RecordTime::printAllTime());
     }
+
+    std::shared_ptr<dolphindb::Logger> getMsgLogger() { return dbConnection_.getMsgLogger(); }
 
 private:
     using policy = void (*)(ddb::VectorSP);
@@ -928,14 +927,14 @@ public:
                                 const py::list &highAvailabilitySites = py::list(0),
                                 int batchSize = 1, float throttle = 0.01f,int threadCount = 1, const string& partitionCol ="",
                                 const py::list &compressMethods = py::list(0),
-                                const string &mode = "", const py::list &modeOption = py::list(0)){
+                                const string &mode = "", const py::list &modeOption = py::list(0), bool reconnect = true){
         TRY
             writer_ = new ddb::MultithreadedTableWriter(host, port, userId, password,
                                 dbPath, tableName, useSSL,
                                 enableHighAvailability, pylist2Stringvector(highAvailabilitySites).get(),
                                 batchSize,throttle,threadCount,partitionCol,
                                 pylist2Compressvector(compressMethods).get(),
-                                pymode2Mtwmode(mode), pymodelist2Vector(modeOption).get());
+                                pymode2Mtwmode(mode), pymodelist2Vector(modeOption).get(), reconnect);
         CATCH_EXCEPTION("<Exception> in MultithreadedTableWriter: ")
     }
     ~MultithreadedTableWriter(){}
@@ -1346,9 +1345,57 @@ private:
 };
 
 
+std::shared_ptr<dolphindb::Logger> dolphindb::DLogger::defaultLogger_ = std::make_shared<dolphindb::Logger>();
+
+
 PYBIND11_MODULE(_dolphindbcpp, m) {
     m.doc() = R"pbdoc(_dolphindbcpp: this is a C++ boosted DolphinDB Python API)pbdoc";
     m.def("init", &ddbinit);
+
+    py::enum_<dolphindb::Logger::Level>(m, "Level")
+        .value("DEBUG", dolphindb::Logger::LevelDebug)
+        .value("INFO", dolphindb::Logger::LevelInfo)
+        .value("WARNING", dolphindb::Logger::LevelWarn)
+        .value("ERROR", dolphindb::Logger::LevelError)
+        .export_values();
+
+    py::class_<dolphindb::LogMessage>(m, "LogMessage")
+        .def(py::init<dolphindb::Logger::Level, const std::string &>())
+        .def_readwrite("level", &dolphindb::LogMessage::level_)
+        .def_readwrite("log", &dolphindb::LogMessage::msg_);
+
+    py::class_<dolphindb::custom_sink, std::shared_ptr<dolphindb::custom_sink>, dolphindb::py_custom_sink>(m, "Sink")
+        .def(py::init<const std::string &>())
+        .def("handle", &dolphindb::custom_sink::handle)
+        .def("flush", &dolphindb::custom_sink::pyflush)
+        .def("__str__", &dolphindb::custom_sink::print)
+        .def_property_readonly("name", &dolphindb::custom_sink::get_identifier);
+
+    py::class_<dolphindb::Logger, std::shared_ptr<dolphindb::Logger>>(m, "Logger")
+        .def("enable_stdout_sink", [](dolphindb::Logger& self) {
+            self.setStdoutFlag(true);
+        })
+        .def("disable_stdout_sink", [](dolphindb::Logger& self) {
+            self.setStdoutFlag(false);
+        })
+        .def("enable_file_sink", &dolphindb::Logger::setFilePath)
+        .def("disable_file_sink", [](dolphindb::Logger& self) {
+            self.setFilePath("");
+        })
+        .def("add_sink", &dolphindb::Logger::addSink)
+        .def("remove_sink", &dolphindb::Logger::removeSink)
+        .def("list_sinks", &dolphindb::Logger::listSinks)
+        .def_property(
+            "min_level",
+            [](dolphindb::Logger& self) {
+                return self.GetMinLevel();
+            },
+            [](dolphindb::Logger& self, dolphindb::Logger::Level level) {
+                self.SetMinLevel(level);
+            }
+        );
+
+    m.add_object("default_logger", py::cast(dolphindb::DLogger::defaultLogger_));
 
     py::class_<DBConnectionPoolImpl>(m, "dbConnectionPoolImpl")
         .def(py::init<const std::string &,int,int,const std::string &,const std::string &,bool, bool, bool, bool, bool, int, bool, int, int>())
@@ -1405,7 +1452,8 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
         .def("hashBucket", &SessionImpl::hashBucket)
         .def("getSubscriptionTopics", &SessionImpl::getSubscriptionTopics)
         .def("printPerformance", &SessionImpl::printPerformance)
-        .def("loadPickleFile", &SessionImpl::loadPickleFile);
+        .def("loadPickleFile", &SessionImpl::loadPickleFile)
+        .def_property_readonly("msg_logger", &SessionImpl::getMsgLogger);
     
     py::class_<StreamDeserializer>(m, "streamDeserializer")
         .def(py::init<py::dict&>())
@@ -1441,7 +1489,7 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
     py::class_<MultithreadedTableWriter>(m, "multithreadedTableWriter")
         .def(py::init<const std::string &, int, const std::string &, const std::string &,const std::string &, const std::string &,
                 bool, bool,const py::list &,int, float,int, const std::string&,const py::list &,
-                const string &, const py::list &>())
+                const string &, const py::list &, bool>())
         .def("getStatus", &MultithreadedTableWriter::getStatus)
         .def("getUnwrittenData", &MultithreadedTableWriter::getUnwrittenData)
         .def("insert", &MultithreadedTableWriter::insert)

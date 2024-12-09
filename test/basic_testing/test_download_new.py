@@ -1,40 +1,16 @@
+import dolphindb as ddb
+import numpy as np
+import pandas as pd
 import pytest
 
 from basic_testing.prepare import DataUtils
 from basic_testing.utils import equalPlus
-from setup.prepare import *
-from setup.settings import *
-from setup.utils import get_pid
+from setup.settings import HOST, PORT, USER, PASSWD
 
 
 @pytest.mark.BASIC
 class TestDownloadNew(object):
-    conn: ddb.Session
-
-    @classmethod
-    def setup_class(cls):
-        cls.conn = ddb.Session(enablePickle=False)
-        cls.conn.connect(HOST, PORT)
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
-
-    def setup_method(self):
-        try:
-            self.__class__.conn.run("1")
-        except RuntimeError:
-            self.__class__.conn.connect(HOST, PORT, USER, PASSWD)
-
-    # def teardown_method(self):
-    #     self.__class__.conn.undefAll()
-    #     self.__class__.conn.clearAllCache()
+    conn: ddb.Session = ddb.Session(HOST, PORT, USER, PASSWD)
 
     @pytest.mark.parametrize('data', DataUtils.getScalar('download').values(),
                              ids=[i for i in DataUtils.getScalar('download')])

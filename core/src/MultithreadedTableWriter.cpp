@@ -13,7 +13,7 @@ MultithreadedTableWriter::MultithreadedTableWriter(const std::string& hostName, 
 										bool enableHighAvailability, const vector<string> *pHighAvailabilitySites,
 										int batchSize, float throttle, int threadCount, const string& partitionCol,
 										const vector<COMPRESS_METHOD> *pCompressMethods, MultithreadedTableWriter::Mode mode,
-                                        vector<string> *pModeOption):
+                                        vector<string> *pModeOption, bool reconnect):
                         dbName_(dbName),
                         tableName_(tableName),
                         batchSize_(batchSize),
@@ -197,7 +197,7 @@ MultithreadedTableWriter::MultithreadedTableWriter(const std::string& hostName, 
         writerThread.idleSem.release();
 
         writerThread.conn = new DBConnection(useSSL, false, keepAliveTime, isCompress);
-        if (writerThread.conn->connect(hostName, port, userId, password, "", enableHighAvailability, highAvailabilitySites, 30, true) == false) {
+        if (writerThread.conn->connect(hostName, port, userId, password, "", enableHighAvailability, highAvailabilitySites, 30, reconnect) == false) {
             throw RuntimeException("Failed to connect to server " + hostName + ":" + std::to_string(port));
         }
 
@@ -229,20 +229,21 @@ void MultithreadedTableWriter::waitForThreadCompletion() {
     LockGuard<Mutex> LockGuard(&exitMutex_);
     if (exited_)
         return;
-    //if(pytoDdb_->isExit())
-    //    return;
-    pytoDdb_->startExit();
-    for (auto& thread : threads_) {
-        thread.exit = true;
-        thread.nonemptySignal.set();
+    {
+        py::gil_scoped_release gil;
+        pytoDdb_->startExit();
+        for (auto& thread : threads_) {
+            thread.exit = true;
+            thread.nonemptySignal.set();
+        }
+        for (auto& thread : threads_) {
+            thread.writeThread->join();
+        }
+        for (auto& thread : threads_) {
+            thread.conn->close();
+        }
+        pytoDdb_->endExit();
     }
-    for (auto& thread : threads_) {
-        thread.writeThread->join();
-    }
-    for (auto& thread : threads_) {
-        thread.conn->close();
-    }
-    pytoDdb_->endExit();
     setError(0, "");
     exited_ = true;
 }
@@ -353,7 +354,7 @@ void MultithreadedTableWriter::insertThreadWrite(int threadhashkey, std::vector<
     writerThread.nonemptySignal.set();
 }
 
-void MultithreadedTableWriter::SendExecutor::run(){
+void MultithreadedTableWriter::SendExecutor::run() {
     if(init()==false){
         return;
     }
@@ -443,11 +444,11 @@ bool MultithreadedTableWriter::SendExecutor::writeAllData(){
             if (constsp->getType() == DT_INT && constsp->getForm() == DF_SCALAR) {
                 int addresult = constsp->getInt();
                 if (addresult != addRowCount) {
-                    std::cout << "Rows changed: " << addresult << " / " << addRowCount << std::endl;
+                    LOG_INFO("Rows changed:", addresult, "/", addRowCount);
                 }
             }
             else {
-                std::cout << "None row changed of " << addRowCount << std::endl;
+                LOG_INFO("None row changed of", addRowCount);
             }
             if (tableWriter_.scriptSaveTable_.empty() == false) {
                 runscript = tableWriter_.scriptSaveTable_;
@@ -475,7 +476,7 @@ bool MultithreadedTableWriter::SendExecutor::writeAllData(){
         if(runscript.empty()==false && errmsg.find(" script:")==string::npos){
             errmsg+=" script: "+runscript;
         }
-        DLogger::Error("threadid", writeThread_.threadId, "Failed to save the inserted data: ", errmsg);
+        LOG_ERR("threadid", writeThread_.threadId, "Failed to save the inserted data: ", errmsg);
         tableWriter_.setError(ErrorCodeInfo::EC_Server,std::string("Failed to save the inserted data: ")+errmsg);
         writeOK = false;
     }

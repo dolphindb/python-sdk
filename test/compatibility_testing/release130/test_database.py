@@ -14,7 +14,7 @@ PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
 
 class DBInfo:
     dfsDBName = 'dfs://testDatabase'
-    diskDBName = WORK_DIR + '/testDatabase'
+    diskDBName = WORK_DIR + 'testDatabase'
 
 
 def existsDB(dbName) -> bool:
@@ -62,7 +62,6 @@ class TestDatabase:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')

@@ -1,64 +1,121 @@
 #pragma once
 
 #include <string>
+#include <iostream>
 #include "Exports.h"
+
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/basic_file_sink.h"
+
+#include "pybind11/pybind11.h"
+
+namespace py = pybind11;
+
 namespace dolphindb {
 
-class EXPORT_DECL DLogger {
+
+class identifier {
 public:
+    identifier(const std::string &name): name_(name) {}
+    const std::string & get_identifier() const { return name_; }
+private:
+    std::string name_;
+};
+
+
+class custom_sink : public spdlog::sinks::base_sink<std::mutex>, public identifier {
+public:
+    custom_sink(const std::string &name)
+    : spdlog::sinks::base_sink<std::mutex>(), identifier(name) {}
+    ~custom_sink() override {}
+    virtual void handle(const py::handle &msg) = 0;
+    virtual void pyflush() {}
+    std::string print() { return std::string("Sink(") + get_identifier() + ")"; }
+protected:
+    void sink_it_(const spdlog::details::log_msg &msg) override;
+    void flush_() override { this->pyflush(); }
+};
+
+
+class py_custom_sink : public custom_sink {
+public:
+    py_custom_sink(const std::string &name): custom_sink(name) {}
+
+    void handle(const py::handle &msg) override {
+        PYBIND11_OVERRIDE_PURE(void, custom_sink, handle, msg);
+    }
+
+    void pyflush() override {
+        PYBIND11_OVERRIDE_PURE(void, custom_sink, pyflush, );
+    }
+};
+
+
+class Logger {
+public:
+    Logger(): minLevel_(LevelInfo), enableStdout_(true), filePath_("") {}
+    ~Logger() {}
     enum Level {
-        LevelDebug,
-        LevelInfo,
-        LevelWarn,
-        LevelError,
+        LevelDebug = spdlog::level::debug,
+        LevelInfo = spdlog::level::info,
+        LevelWarn = spdlog::level::warn,
+        LevelError = spdlog::level::err,
         LevelCount,
     };
     template<typename... TArgs>
-    static bool Info(TArgs... args) {
+    bool Info(TArgs... args) {
         std::string text;
         return Write(text, LevelInfo, 0, args...);
     }
     template<typename... TArgs>
-    static bool Debug(TArgs... args) {
+    bool Debug(TArgs... args) {
         std::string text;
         return Write(text, LevelDebug, 0, args...);
     }
     template<typename... TArgs>
-    static bool Warn(TArgs... args) {
+    bool Warn(TArgs... args) {
         std::string text;
         return Write(text, LevelWarn, 0, args...);
     }
     template<typename... TArgs>
-    static bool Error(TArgs... args) {
+    bool Error(TArgs... args) {
         std::string text;
         return Write(text, LevelError, 0, args...);
     }
-    static void SetLogFilePath(const std::string &filepath){ logFilePath_=filepath; }
-    static void SetMinLevel(Level level);
-    static Level GetMinLevel(){ return minLevel_; }
+    void SetMinLevel(Level level);
+    Level GetMinLevel() { return minLevel_; }
+    void init(bool useFormatter=true);
+
+    void setStdoutFlag(bool flag) { enableStdout_ = flag; }
+    void setFilePath(const std::string &path);
+    void addSink(py::handle sink);
+    std::vector<py::handle> listSinks();
+    void removeSink(const std::string & name);
+    void clear();
 private:
-    static Level minLevel_;
-    static std::string logFilePath_;
-    static std::string levelText_[LevelCount];
-    static bool FormatFirst(std::string &text, Level level);
-    static bool WriteLog(std::string &text);
+    bool useFormatter_;
+    Level minLevel_;
+    bool enableStdout_;
+    std::string filePath_;
+    bool WriteLog(std::string &text, Level level);
+    std::shared_ptr<spdlog::logger> stdoutlogger_;
+    std::shared_ptr<spdlog::logger> filelogger_;
+    std::shared_ptr<spdlog::logger> customlogger_;
+    std::vector<py::handle> customsinks_;
+    static spdlog::level::level_enum levelMap_[LevelCount];
+private:
     template<typename TA, typename... TArgs>
-    static bool Write(std::string &text, Level level, int deepth, TA first, TArgs... args) {
-        if (deepth == 0) {
-            if (FormatFirst(text, level) == false)
-                return false;
-        }
-        text += " " + Create(first);
+    bool Write(std::string &text, Level level, int deepth, TA first, TArgs... args) {
+        if (deepth == 0) text += Create(first);
+        else text += " " + Create(first);
         return Write(text, level, deepth + 1, args...);
     }
     template<typename TA>
-    static bool Write(std::string &text, Level level, int deepth, TA first) {
-        if (deepth == 0) {
-            if (FormatFirst(text, level) == false)
-                return false;
-        }
-        text += " " + Create(first);
-        return WriteLog(text);
+    bool Write(std::string &text, Level level, int deepth, TA first) {
+        if (deepth == 0) text += Create(first);
+        else text += " " + Create(first);
+        return WriteLog(text, level);
     }
     static std::string Create(const char *value) {
         std::string str(value);
@@ -102,6 +159,56 @@ private:
     }
 };
 
-#define DLOG true ? dolphindb::DLogger::GetMinLevel() : dolphindb::DLogger::Info
+
+class LogMessage {
+public:
+    Logger::Level level_;
+    std::string msg_;
+    LogMessage(): level_(Logger::LevelDebug), msg_("") {}
+    LogMessage(Logger::Level level, const std::string &msg): level_(level), msg_(msg) {}
+};
+
+
+class EXPORT_DECL DLogger {
+public:
+    enum Level {
+        LevelDebug = Logger::LevelDebug,
+        LevelInfo = Logger::LevelInfo,
+        LevelWarn = Logger::LevelWarn,
+        LevelError = Logger::LevelError,
+        LevelCount,
+    };
+    template<typename... TArgs>
+    static bool Info(TArgs... args) {
+        return defaultLogger_->Info(args...);
+    }
+    template<typename... TArgs>
+    static bool Debug(TArgs... args) {
+        return defaultLogger_->Debug(args...);
+    }
+    template<typename... TArgs>
+    static bool Warn(TArgs... args) {
+        return defaultLogger_->Warn(args...);
+    }
+    template<typename... TArgs>
+    static bool Error(TArgs... args) {
+        return defaultLogger_->Error(args...);
+    }
+    static void SetLogFilePath(const std::string &filepath);
+    static void SetMinLevel(Level level) { defaultLogger_->SetMinLevel((Logger::Level)level); }
+    static Level GetMinLevel(){ return (DLogger::Level)defaultLogger_->GetMinLevel(); }
+
+    static void init(); 
+
+    static std::shared_ptr<Logger> defaultLogger_;
+};
+
+
+#define DLOG        // ddb::DLogger::Info
+
+#define LOG_DEBUG dolphindb::DLogger::Debug
+#define LOG_INFO dolphindb::DLogger::Info
+#define LOG_WARN dolphindb::DLogger::Warn
+#define LOG_ERR dolphindb::DLogger::Error
 
 }

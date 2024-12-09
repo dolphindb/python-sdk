@@ -70,7 +70,6 @@ class TestTable2:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
@@ -96,16 +95,16 @@ class TestTable2:
         assert_frame_equal(re, df)
 
     def test_table_toDF(self):
-        tmp = self.conn.loadText(DATA_DIR + "/USPrices_FIRST.csv")
+        tmp = self.conn.loadText(DATA_DIR + "USPrices_FIRST.csv")
         df = self.conn.run(
-            "select * from loadText('{data}')".format(data=DATA_DIR + "/USPrices_FIRST.csv"))
+            "select * from loadText('{data}')".format(data=DATA_DIR + "USPrices_FIRST.csv"))
         assert len(tmp.toDF()) == len(df)
         assert_frame_equal(tmp.toDF(), df)
         tbName = tmp.tableName()
         self.conn.run("undef", tbName)
 
     def test_table_showSQL(self):
-        tmp = self.conn.loadText(DATA_DIR + "/USPrices_FIRST.csv")
+        tmp = self.conn.loadText(DATA_DIR + "USPrices_FIRST.csv")
         sql = tmp.showSQL()
         tbName = tmp.tableName()
         assert sql == 'select PERMNO,date,SHRCD,TICKER,TRDSTAT,HEXCD,CUSIP,DLSTCD,DLPRC,DLRET,BIDLO,ASKHI,PRC,VOL,RET,BID,ASK,SHROUT,CFACPR,CFACSHR,OPENPRC from {tbName}'.format(
@@ -113,7 +112,7 @@ class TestTable2:
         self.conn.run("undef", tbName)
 
     def test_table_sql_select_where(self):
-        data = DATA_DIR + "/USPrices_FIRST.csv"
+        data = DATA_DIR + "USPrices_FIRST.csv"
         tmp = self.conn.loadText(data)
 
         re = tmp.select(['PERMNO', 'date']).where(tmp.date > '2010.01.01')
@@ -139,7 +138,7 @@ class TestTable2:
         self.conn.run("undef", tbName)
 
     def test_table_sql_groupby(self):
-        data = DATA_DIR + "/USPrices_FIRST.csv"
+        data = DATA_DIR + "USPrices_FIRST.csv"
         tmp = self.conn.loadText(data)
         origin = tmp.toDF()
 
@@ -821,7 +820,7 @@ class TestTable2:
         self.conn.database(dbName='mydb', partitionType=keys.VALUE, partitions=[
             "AMZN", "NFLX", "NVDA"], dbPath="dfs://valuedb")
         self.conn.loadTextEx(dbPath="dfs://valuedb", partitionColumns=[
-            "TICKER"], tableName='trade', remoteFilePath=DATA_DIR + "/example.csv")
+            "TICKER"], tableName='trade', remoteFilePath=DATA_DIR + "example.csv")
         trade = self.conn.loadTable(tableName="trade", dbPath="dfs://valuedb")
         z = trade.ols(Y='PRC', X=['BID'], INTERCEPT=True)
         re = z["Coefficient"]
@@ -943,7 +942,7 @@ class TestTable2:
         self.conn.run("undef", tbName)
 
     def test_runFile(self):
-        file_path = LOCAL_DATA_DIR + "/run_data.txt"
+        file_path = LOCAL_DATA_DIR + "run_data.txt"
         s = self.conn
         s.runFile(file_path)
         t1 = s.table(data="t1")
@@ -1152,12 +1151,12 @@ class TestTable2:
         sql2 = self.conn.loadTable(tableName="pt", dbPath="dfs://test_csort").contextby("id").agg("sum").showSQL()
         sql3 = self.conn.loadTableBySQL(tableName="pt", dbPath="dfs://test_csort", sql="select * from pt").contextby(
             "id").agg("sum").showSQL()
-        sql4 = self.conn.loadText(DATA_DIR + '/sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
-        sql5 = self.conn.loadTextEx("dfs://test_csort", "pt", ["id"], DATA_DIR + '/sql_pattern_test.csv').contextby(
+        sql4 = self.conn.loadText(DATA_DIR + 'sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
+        sql5 = self.conn.loadTextEx("dfs://test_csort", "pt", ["id"], DATA_DIR + 'sql_pattern_test.csv').contextby(
             "id").agg("sum").showSQL()
         sql6 = t.contextby("id").agg("sum").showSQL()
         sql7 = t2.contextby("id").agg("sum").showSQL()
-        sql8 = self.conn.ploadText(DATA_DIR + '/sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
+        sql8 = self.conn.ploadText(DATA_DIR + 'sql_pattern_test.csv').contextby("id").agg("sum").showSQL()
 
         pattern1 = r"^select id,sum\(date\),sum\(val\) from pt_TMP_TBL_[a-zA-Z0-9]+ context by id$"
         pattern2 = r"^select id,sum\(date\),sum\(val\) from TMP_TBL_[a-zA-Z0-9]+ context by id$"

@@ -18,7 +18,7 @@ std::string PyObject2String(PyObject *obj);
 #define DLOG(text) DLOGPRINT(text);
 
 void PYERR_SETSTRING(PyObject *pyObject,const string &text){
-    dolphindb::DLogger::Error(text);
+    LOG_ERR(text);
 }
 
 inline static void DDB_Py_Size(PyVarObject *o, Py_ssize_t size) {
@@ -685,8 +685,12 @@ static int
 _pickle_Unpickler___init__(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     int return_value = -1;
-    static const char *const _keywords[] = {"file", "fix_imports", "encoding", "errors", NULL};
+    static const char *const _keywords[] = {"file", "fix_imports", "encoding", "errors", "buffers", NULL};
+#if PY_MINOR_VERSION >= 12
+    static _PyArg_Parser _parser = {0, NULL, _keywords, "Unpickler", 0};
+#else
     static _PyArg_Parser _parser = {"O|$pss:Unpickler", _keywords, 0};
+#endif
     PyObject *file;
     int fix_imports = 1;
     const char *encoding = "ASCII";
@@ -2220,7 +2224,7 @@ namespace dolphindb
         if (frameLen_ - frameIdx_ < (Py_ssize_t)nbytes)
         {
             if ((ret = in_->readBytes(shortBuf_, nbytes, false)) != OK){
-                ddb::DLogger::Error("load_counted_binbytes read failed",ret);
+                LOG_ERR("load_counted_binbytes read failed",ret);
                 return -1;
             }
             *(&s) = shortBuf_;
@@ -2237,7 +2241,7 @@ namespace dolphindb
             PyErr_Format(PyExc_OverflowError,
                          "BINBYTES exceeds system's maximum size of %zd bytes",
                          PY_SSIZE_T_MAX);
-            ddb::DLogger::Error("load_counted_binbytes invalid size",size);
+            LOG_ERR("load_counted_binbytes invalid size",size);
             return -1;
         }
 
@@ -2245,7 +2249,7 @@ namespace dolphindb
         {
             bytes = PyBytes_FromStringAndSize(NULL, size);
             if (bytes == NULL) {
-                ddb::DLogger::Error("load_counted_binbytes invalid size",size);
+                LOG_ERR("load_counted_binbytes invalid size",size);
                 return -1;
             }
             size_t begIdx = 0, actualSize = 0;
@@ -2254,7 +2258,7 @@ namespace dolphindb
             {
                 actualSize = std::min(size - begIdx, BUFFSIZE);
                 if ((ret = in_->readBytes(PyBytes_AS_STRING(bytes) + begIdx, actualSize, actualSize)) != OK){
-                    ddb::DLogger::Error("load_counted_binbytes read bytes in failed",ret);
+                    LOG_ERR("load_counted_binbytes read bytes in failed",ret);
                     return -1;
                 }
                 begIdx += actualSize;
@@ -2268,7 +2272,7 @@ namespace dolphindb
             frameIdx_ += size;
             bytes = PyBytes_FromStringAndSize(s, size);
             if (bytes == NULL){
-                ddb::DLogger::Error("load_counted_binbytes read bytes in frame failed",size);
+                LOG_ERR("load_counted_binbytes read bytes in frame failed",size);
                 return -1;
             }
             PDATA_PUSH(unpickler_->stack, bytes, -1);
@@ -2795,7 +2799,7 @@ namespace dolphindb
             PickleState *st = _Pickle_GetGlobalState();
             if(st != NULL)
                 PYERR_SETSTRING(st->UnpicklingError, "STACK_GLOBAL requires str");
-            DLogger::Error("no STACK_GLOBAL module",PyObject2String(module_name),PyObject2String(global_name));
+            LOG_ERR("no STACK_GLOBAL module",PyObject2String(module_name),PyObject2String(global_name));
             Py_XDECREF(global_name);
             Py_XDECREF(module_name);
             return -1;
@@ -2804,7 +2808,7 @@ namespace dolphindb
         Py_DECREF(global_name);
         Py_DECREF(module_name);
         if (global == NULL){
-            DLogger::Error("can't find STACK_GLOBAL module _",PyObject2String(module_name),"_",PyObject2String(global_name),"_");
+            LOG_ERR("can't find STACK_GLOBAL module _",PyObject2String(module_name),"_",PyObject2String(global_name),"_");
             return -1;
         }
         PDATA_PUSH(unpickler_->stack, global, -1);
@@ -3310,7 +3314,7 @@ namespace dolphindb
 #if PY_MINOR_VERSION == 7
             _Py_IDENTIFIER(extend);
             extend_func = _PyObject_GetAttrId(list, &PyId_extend);
-#elif PY_MINOR_VERSION <= 11
+#else
             _Py_IDENTIFIER(extend);
 #endif
             if (_PyObject_LookupAttrId(list, &PyId_extend, &extend_func) < 0) {
@@ -3503,7 +3507,7 @@ namespace dolphindb
             if (PyErr_ExceptionMatches(PyExc_AttributeError))
                 PyErr_Clear();
             else {
-                DLogger::Error("load_build _PyObject_GetAttrId failed");
+                LOG_ERR("load_build _PyObject_GetAttrId failed");
                 Py_DECREF(state);
                 return -1;
             }
@@ -3521,7 +3525,7 @@ namespace dolphindb
         }
 #else
         if (_PyObject_LookupAttrId(inst, &PyId___setstate__, &setstate) < 0) {
-            DLogger::Error("load_build _PyObject_LookupAttrId failed");
+            LOG_ERR("load_build _PyObject_LookupAttrId failed");
             Py_DECREF(state);
             return -1;
         }
@@ -3565,12 +3569,12 @@ namespace dolphindb
                 PickleState *st = _Pickle_GetGlobalState();
                 if(st != NULL)
                     PYERR_SETSTRING(st->UnpicklingError, "state is not a dictionary");
-                DLogger::Error("load_build state is not a dictionary");
+                LOG_ERR("load_build state is not a dictionary");
                 goto error;
             }
             dict = _PyObject_GetAttrId(inst, &PyId___dict__);
             if (dict == NULL){
-                DLogger::Error("load_build state can't get dictionary");
+                LOG_ERR("load_build state can't get dictionary");
                 goto error;
             }
             i = 0;
@@ -3584,7 +3588,7 @@ namespace dolphindb
                 if (PyObject_SetItem(dict, d_key, d_value) < 0)
                 {
                     Py_DECREF(d_key);
-                    DLogger::Error("load_build PyObject_SetItem dictionary failed");
+                    LOG_ERR("load_build PyObject_SetItem dictionary failed");
                     goto error;
                 }
                 Py_DECREF(d_key);
@@ -3603,14 +3607,14 @@ namespace dolphindb
                 if(st != NULL)
                     PYERR_SETSTRING(st->UnpicklingError,
                                 "slot state is not a dictionary");
-                DLogger::Error("load_build slot state is not a dictionary");
+                LOG_ERR("load_build slot state is not a dictionary");
                 goto error;
             }
             i = 0;
             while (PyDict_Next(slotstate, &i, &d_key, &d_value))
             {
                 if (PyObject_SetAttr(inst, d_key, d_value) < 0){
-                    DLogger::Error("load_build set attr failed");
+                    LOG_ERR("load_build set attr failed");
                     goto error;
                 }
             }
@@ -3819,7 +3823,7 @@ namespace dolphindb
                     op==Pickle::opcode::BINBYTES||
                         op==Pickle::opcode::BINBYTES8){
                 if(stage != 1){
-                    ddb::DLogger::Error("No frame before symbol index",stage);
+                    LOG_ERR("No frame before symbol index",stage);
                     retCode=-1;
                     break;
                 }
@@ -3836,7 +3840,7 @@ namespace dolphindb
                     PDATA_POP(unpickler_->stack, pyBytesObject);
                     //DLOG2("index start.",pyBytesObject);
                     if(pyBytesObject==NULL){
-                        ddb::DLogger::Error("Pop invalid symbol bytes");
+                        LOG_ERR("Pop invalid symbol bytes");
                         //DLOG("index pop failed.");
                         retCode=-1;
                         break;
@@ -3858,7 +3862,7 @@ namespace dolphindb
                     idx = calc_binsize(pyBytes->ob_sval + i, lenByteSize);
                     if(idx<0||(size_t)idx>=symbolStringArray.size()){
                         retCode=-1;
-                        DLogger::Error("load_frame invalid index", idx,"size",symbolStringArray.size());
+                        LOG_ERR("load_frame invalid index", idx,"size",symbolStringArray.size());
                         break;
                     }
                     value = symbolStringArray[idx];
@@ -3925,7 +3929,7 @@ namespace dolphindb
             if ((ret = in_->readChar(op)) != OK)
             {
                 DLOG2("read char error", op & 0xff);
-                DLogger::Error("read next opr failed", ret);
+                LOG_ERR("read next opr failed", ret);
                 return false;
             }
         }
@@ -4211,14 +4215,14 @@ namespace dolphindb
             unsigned char c = (unsigned char)op;
             if (0x20 <= c && c <= 0x7e && c != '\'' && c != '\\')
             {
-                DLogger::Error("read invalid key", c & 0xff);
+                LOG_ERR("read invalid key", c & 0xff);
                 if(st != NULL)
                     PyErr_Format(st->UnpicklingError,
                              "invalid load key, '%c'.", c);
             }
             else
             {
-                DLogger::Error("read invalid key", c & 0xff);
+                LOG_ERR("read invalid key", c & 0xff);
                 if(st != NULL)
                     PyErr_Format(st->UnpicklingError,
                              "invalid load key, '\\x%02x'.", c);
@@ -4234,7 +4238,7 @@ namespace dolphindb
         //DLogger::SetLogFilePath("/tmp/ddb_python_api.log");
         if ((ret = in_->readBytes(shortBuf_, 2, false)) != OK)
         {
-            DLogger::Error("start readBytes failed",ret);
+            LOG_ERR("start readBytes failed",ret);
             return false;
         }
         unpickler_->num_marks = 0;
@@ -4243,13 +4247,13 @@ namespace dolphindb
         if (shortBuf_[0] != Pickle::opcode::PROTO)
         {
             ret = INVALIDDATA;
-            DLogger::Error("start op PROTO error",shortBuf_[0] & 0xff);
+            LOG_ERR("start op PROTO error",shortBuf_[0] & 0xff);
             return false;
         }
         int i = (unsigned char)shortBuf_[1];
         if (i > HIGHEST_PROTOCOL)
         {
-            DLogger::Error("start invalid version",i);
+            LOG_ERR("start invalid version",i);
             ret = INVALIDDATA;
             return false;
         }
@@ -4263,27 +4267,27 @@ namespace dolphindb
             {
                 if (!do_opr(op, ret)){
                     if(op != Pickle::opcode::STOP){
-                        DLogger::Error("unmarshall failed");
+                        LOG_ERR("unmarshall failed");
                     }
                     break;
                 }
             }
         }catch(...){
-            DLogger::Error("unmarshall failed");
+            LOG_ERR("unmarshall failed");
         }
         if (ret != OK)
         {
-            DLogger::Error("unmarshall end with error",ret);
+            LOG_ERR("unmarshall end with error",ret);
             return false;
         }
         if (PyErr_Occurred())
         {
-            DLogger::Error("unmarshall occurred");
+            LOG_ERR("unmarshall occurred");
             return false;
         }
         if (_Unpickler_SkipConsumed(unpickler_) < 0)
         {
-            DLogger::Error("unmarshall failed");
+            LOG_ERR("unmarshall failed");
             return false;
         }
         PDATA_POP(unpickler_->stack, obj_);

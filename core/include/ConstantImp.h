@@ -27,6 +27,7 @@
 #include "WideInteger.h"
 #include "SysIO.h"
 #include "Matrix.h"
+#include "Logger.h"
 
 
 namespace dolphindb {
@@ -3676,7 +3677,7 @@ public:  /// Interface of Constant
             }
         }
         catch(const std::exception& e){
-            std::cerr << "assign decimal fail for " << e.what() << std::endl; 
+            LOG_ERR("assign decimal fail for ", e.what()); 
             return false;
         }
         return true;

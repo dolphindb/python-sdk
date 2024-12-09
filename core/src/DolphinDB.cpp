@@ -44,10 +44,6 @@ int min(INDEX a, int b) {
 }    // namespace std
 #endif
 
-//#define APIMinVersionRequirement 100
-
-
-
 
 #define RECORDTIME(name) //RecordTime _##name(name)
 
@@ -55,73 +51,12 @@ int min(INDEX a, int b) {
 #ifdef DLOG
     #undef DLOG
 #endif
-#define DLOG true?DLogger::GetMinLevel() : DLogger::Info
+#define DLOG        //dolphindb::DLogger::Info
 
 
 
 namespace dolphindb {
 
-ProtectGil::ProtectGil(bool release, const string &name) {
-    name_ = name;
-    DLOG("GIL...",name_,!release);
-    if(release == false){
-        gstate_ = PyGILState_Ensure();
-        acquired_ = true;
-    }else{
-        acquired_ = false;
-        if(PyGILState_Check() == 1){
-            pgilRelease_ = new py::gil_scoped_release;
-        }
-    }
-    DLOG("GIL",name_,acquired_);
-}
-void ProtectGil::acquire(){
-    if(acquired_)
-        return;
-    DLOG("acquireGIL...",name_,acquired_);
-    pgilRelease_.clear();
-    gstate_ = PyGILState_Ensure();
-    acquired_ = true;
-    DLOG("acquireGIL",name_,acquired_);
-}
-ProtectGil::~ProtectGil() {
-    DLOG("~Gil...",name_,acquired_);
-    if(acquired_)
-        PyGILState_Release(gstate_);
-    else
-        pgilRelease_.clear();
-    DLOG("~Gil",name_,acquired_);
-}
-
-
-
-
-
-
-
-
-class HIDEVISIBILITY AsynWorker: public Runnable {
-public:
-    using Task = DBConnectionPoolImpl::Task;
-    AsynWorker(DBConnectionPoolImpl& pool, CountDownLatchSP latch, const SmartPointer<DBConnection>& conn,
-               const SmartPointer<SynchronizedQueue<Task>>& queue, TaskStatusMgmt& status,
-               const string& hostName, int port, const string& userId , const string& password)
-            : pool_(pool), latch_(latch), conn_(conn), queue_(queue),taskStatus_(status),
-              hostName_(hostName), port_(port), userId_(userId), password_(password){}
-protected:
-    virtual void run();
-
-private:
-    DBConnectionPoolImpl& pool_;
-    CountDownLatchSP latch_;
-    SmartPointer<DBConnection> conn_;
-	SmartPointer<SynchronizedQueue<Task>> queue_;
-    TaskStatusMgmt& taskStatus_;
-    const string hostName_;
-    int port_;
-    const string userId_;
-    const string password_;
-};
 
 string Constant::EMPTY("");
 string Constant::NULL_STR("NULL");
@@ -236,7 +171,7 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 					Thread::sleep(100);
 				}
                 if (tryReconnectNums_ > 0 && attempt >= tryReconnectNums_) {
-                    std::cerr<< "Connect failed after " << tryReconnectNums_ << " reconnect attempts for every node in high availability sites.";
+                    LOG_ERR("Connect failed after", tryReconnectNums_, "reconnect attempts for every node in high availability sites.");
                     return false;
                 }
 			}
@@ -245,7 +180,7 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
                 break;
 			}
 			catch (exception& e) {
-				std::cerr << "ERROR getting other data nodes, exception: " << e.what() << std::endl;
+				LOG_ERR("ERROR getting other data nodes, exception:", e.what());
 				string host;
 				int port = 0;
 				if (connected()) {
@@ -288,13 +223,12 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 					}
 					//node is out of highAvailabilitySites
 					if (pexistNode == NULL) {
-						DLogger::Info("Site", nodeHost, ":", nodePort,"is not in cluster.");
+						LOG_INFO("Site", nodeHost, ":", nodePort,"is not in cluster.");
 						continue;
 					}
 				}
 				if (colconnectionNum->getInt(i) < colmaxConnections->getInt(i)) {
 					load = (colconnectionNum->getInt(i) + colworkerNum->getInt(i) + colexecutorNum->getInt(i)) / 3.0;
-					//DLogger::Info("Site", nodeHost, ":", nodePort,"load",load);
 				}
 				else {
 					load = DBL_MAX;
@@ -314,7 +248,6 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 				pMinNode = &one;
 			}
 		}
-		//DLogger::Info("Connect to min load", pMinNode->load, "site", pMinNode->hostName, ":", pMinNode->port);
 		
 		if (!pMinNode->isEqual(connectedNode)) {
 			conn_->close();
@@ -328,7 +261,7 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
                 switchDataNode(hostName, port);
             }
             catch (std::exception &e) {
-                std::cerr << e.what() << std::endl;
+                LOG_ERR(e.what());
                 return false;
             }
 		}
@@ -353,7 +286,7 @@ bool DBConnection::connected() {
 }
 
 bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
-	DLOG("Connect to",hostName ,":",port,".");
+	DLOG("Connect to", hostName, ":", port);
 	//int attempt = 0;
 	while (closed_ == false) {
 		try {
@@ -368,14 +301,14 @@ bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
 					else if (type == ET_NODENOTAVAIL)
 						return false;
 					else { //UNKNOW
-						std::cerr << "Connect " << hostName << ":" << port << " failed, exception message: " << e.what() << std::endl;
+						LOG_ERR("Connect", hostName, ":", port, "failed, exception message:", e.what());
 						return false;
 						//throw;
 					}
 				}
 			}
 			else {
-                std::cerr << e.what() << std::endl;
+                LOG_ERR(e.what());
 				return false;
 			}
 		}
@@ -390,7 +323,7 @@ DBConnection::ExceptionType DBConnection::parseException(const string &msg, stri
 		index = msg.find(">");
 		string ipport = msg.substr(index + 1);
 		parseIpPort(ipport,host,port);
-		DLogger::Info("Got NotLeaderException, switch to leader node [",host,":",port,"] to run script");
+		LOG_INFO("Got NotLeaderException, switch to leader node [",host,":",port,"] to run script");
 		return ET_NEWLEADER;
 	}
 	else {
@@ -420,16 +353,15 @@ void DBConnection::switchDataNode(const string &host, int port) {
                 break;
             }
         }
-        else {
-            if (nodes_.empty()) {
-                throw RuntimeException("Failed to connect to " + host + ":" + std::to_string(port));
-            }
-            for (int i = static_cast<int>(nodes_.size() - 1); i >= 0; i--) {
-                lastConnNodeIndex_ = (lastConnNodeIndex_ + 1) % nodes_.size();
-                if (connectNode(nodes_[lastConnNodeIndex_].hostName, nodes_[lastConnNodeIndex_].port)) {
-                    connected = true;
-                    break;
-                }
+        if (nodes_.empty()) {
+            throw RuntimeException("Failed to connect to " + host + ":" + std::to_string(port));
+        }
+        for (int i = static_cast<int>(nodes_.size() - 1); i >= 0; i--) {
+            lastConnNodeIndex_ = (lastConnNodeIndex_ + 1) % nodes_.size();
+            if (!host.empty() && nodes_[lastConnNodeIndex_].hostName == host && port == nodes_[lastConnNodeIndex_].port) continue;
+            if (connectNode(nodes_[lastConnNodeIndex_].hostName, nodes_[lastConnNodeIndex_].port)) {
+                connected = true;
+                break;
             }
         }
         Thread::sleep(1000);
@@ -684,6 +616,10 @@ void DBConnection::setShowOutput(bool flag) {
 
 const string DBConnection::getSessionId() const {
     return conn_->getSessionId();
+}
+
+std::shared_ptr<Logger> DBConnection::getMsgLogger() {
+    return conn_->getMsgLogger();
 }
 
 
@@ -1176,34 +1112,6 @@ void AutoFitTableUpsert::checkColumnType(int col, DATA_CATEGORY category, DATA_T
 }
 
 
-
-DLogger::Level DLogger::minLevel_ = DLogger::LevelDebug;
-std::string DLogger::levelText_[] = { "Debug","Info","Warn","Error" };
-//std::string DLogger::logFilePath_="/tmp/ddb_python_api.log";
-std::string DLogger::logFilePath_;
-void DLogger::SetMinLevel(Level level) {
-	minLevel_ = level;
-}
-
-bool DLogger::WriteLog(std::string &text){
-    puts(text.data());
-    if(logFilePath_.empty()==false){
-        text+="\n";
-        Util::writeFile(logFilePath_.data(),text.data(),text.length());
-    }
-    return true;
-}
-
-bool DLogger::FormatFirst(std::string &text, Level level) {
-	if (level < minLevel_) {
-		return false;
-	}
-	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-	text = text + Util::toMicroTimestampStr(now, true) + ": [" +
-		std::to_string(Util::getCurThreadId()) + "] " + levelText_[level] + ":";
-	return true;
-}
-
 std::unordered_map<std::string, RecordTime::Node*> RecordTime::codeMap_;
 Mutex RecordTime::mapMutex_;
 long RecordTime::lastRecordOrder_ = 0;
@@ -1213,7 +1121,6 @@ RecordTime::RecordTime(const string &name) :
 	LockGuard<Mutex> LockGuard(&mapMutex_);
 	lastRecordOrder_++;
 	recordOrder_ = lastRecordOrder_;
-	//std::cout<<Util::getEpochTime()<<" "<<name_<<recordOrder_<<" start..."<<std::endl;
 }
 RecordTime::~RecordTime() {
 	long long diff = Util::getNanoEpochTime() - startTime_;

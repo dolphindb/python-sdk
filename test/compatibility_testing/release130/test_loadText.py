@@ -27,19 +27,18 @@ class TestLoadText:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
 
     def test_loadText_param_fileName(self):
-        data = DATA_DIR + "/trades.csv"
+        data = DATA_DIR + "trades.csv"
         tb = self.conn.loadText(data)
         rs = self.conn.run("select * from loadText('{data}')".format(data=data))
         assert_frame_equal(tb.toDF(), rs)
 
     def test_loadText_param_delimiter(self):
-        data = DATA_DIR + "/trades.csv"
+        data = DATA_DIR + "trades.csv"
         tb = self.conn.loadText(data, ";")
         rs = self.conn.run("select * from loadText('{data}', ';')".format(data=data))
         assert_frame_equal(tb.toDF(), rs)
@@ -47,7 +46,7 @@ class TestLoadText:
 
 class DBInfo:
     dfsDBName = 'dfs://testLoadTextEx'
-    diskDBName = WORK_DIR + '/testLoadTextEx'
+    diskDBName = WORK_DIR + 'testLoadTextEx'
     table1 = 'tb1'
     table2 = 'tb2'
 
@@ -302,8 +301,8 @@ def create_disk_compo_range_value_list_db(s: ddb.session):
 
 class TestLoadTextEx:
     conn = ddb.session()
-    data1 = DATA_DIR + "/loadTextExTest1.csv"
-    data2 = DATA_DIR + "/loadTextExTest2.csv"
+    data1 = DATA_DIR + "loadTextExTest1.csv"
+    data2 = DATA_DIR + "loadTextExTest2.csv"
 
     def setup_method(self):
         try:
@@ -323,7 +322,6 @@ class TestLoadTextEx:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')

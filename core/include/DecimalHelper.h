@@ -13,6 +13,7 @@ namespace _decimal_util {
 using namespace dolphindb;
 using pybind_dolphindb::int128;
 using decimal_util::exp10_i128;
+using decimal_util::parseString;
 
 
 inline bool isDecimalType(DATA_TYPE type) {

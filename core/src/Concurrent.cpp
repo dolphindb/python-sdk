@@ -14,6 +14,7 @@
 
 #include "Concurrent.h"
 #include "Exceptions.h"
+#include "Logger.h"
 
 namespace dolphindb {
 
@@ -470,12 +471,12 @@ void Thread::start(){
 #ifdef WINDOWS
 	thread_=CreateThread(NULL,0,(LPTHREAD_START_ROUTINE) startFunc,this,0,&threadId_);
 	if(thread_==0){
-		std::cout<<"Failed to create thread with error code "<<GetLastError()<<std::endl;
+		LOG_INFO("Failed to create thread with error code",GetLastError());
 	}
 #else
 	int ret=pthread_create(&thread_, &attr_, startFunc, this);
 	if(ret!=0){
-		std::cout<<"Failed to create thread with return value: "<<ret<<std::endl;
+		LOG_INFO("Failed to create thread with return value:", ret);
 	}
 #endif
 }

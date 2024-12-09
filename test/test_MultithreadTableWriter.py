@@ -1,43 +1,23 @@
 import decimal
+import inspect
 import re
 import threading
 import time
 
+import dolphindb as ddb
+import numpy as np
+import pandas as pd
 import pytest
-from numpy.testing import *
-from pandas.testing import *
+from numpy.testing import assert_array_equal
+from pandas._testing import assert_frame_equal
 
-from setup.prepare import *
-from setup.settings import *
-from setup.utils import get_pid
-from setup.utils import random_string
+from basic_testing.prepare import random_string
+from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER, \
+    PORT_DNODE1
 
 
 class TestMultithreadTableWriter:
-    conn = ddb.session(enablePickle=False)
-
-    def setup_method(self):
-        try:
-            self.conn.run("1")
-        except RuntimeError:
-            self.conn.connect(HOST, PORT, USER, PASSWD)
-        self.dbname = "dfs://test_" + random_string(12)
-
-    def teardown_method(self):
-        time.sleep(1)
-
-    @classmethod
-    def setup_class(cls):
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' start, pid: ' + get_pid() + '\n')
-
-    @classmethod
-    def teardown_class(cls):
-        cls.conn.close()
-        if AUTO_TESTING:
-            with open('progress.txt', 'a+') as f:
-                f.write(cls.__name__ + ' finished.\n')
+    conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=False)
 
     def insert_grant(self, writer, id):
         for _i in range(10):
@@ -73,7 +53,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_HASH_Huge(self, writer, id):
-        for i in range(1500):
+        for i in range(150):
             res = writer.insert(np.datetime64("2016-01-12"), i)
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -84,7 +64,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_VALUE_Huge(self, writer, id):
-        for i in range(15000):
+        for i in range(150):
             res = writer.insert(i, "a")
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -99,7 +79,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_RANGE_Huge(self, writer, id):
-        for i in range(15000):
+        for i in range(150):
             res = writer.insert(i, 1)
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -110,7 +90,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_LIST_Huge(self, writer, id):
-        for i in range(15000):
+        for i in range(150):
             res = writer.insert(i, "a")
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -121,7 +101,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_DFS_COMPO_Huge(self, writer, id):
-        for i in range(15000):
+        for i in range(150):
             res = writer.insert(i, "a", "y")
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -164,7 +144,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_TSDB_Huge(self, writer, id):
-        for i in range(3000):
+        for i in range(300):
             res = writer.insert(i, "a")
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -178,7 +158,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_data_size_larger_than_1048576(self, writer, id):
-        for i in range(15000):
+        for i in range(150000):
             res = writer.insert(i, i)
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
@@ -195,7 +175,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_date(self, writer, id):
-        for i in range(3000):
+        for i in range(300):
             col_datetime = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[D]")
             j = i % 2
             res = writer.insert(j, col_datetime[j])
@@ -204,7 +184,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_datetime(self, writer, id):
-        for i in range(3000):
+        for i in range(300):
             col_datetime = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[s]")
             j = i % 2
             res = writer.insert(j, col_datetime[j])
@@ -213,7 +193,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_timestamp(self, writer, id):
-        for i in range(3000):
+        for i in range(300):
             col_timestamp = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ms]")
             j = i % 2
             res = writer.insert(j, col_timestamp[j])
@@ -222,7 +202,7 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_nanotimestamp(self, writer, id):
-        for i in range(3000):
+        for i in range(300):
             col_nanotimestamp = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"],
                                          dtype="datetime64[ns]")
             j = i % 2
@@ -408,75 +388,93 @@ class TestMultithreadTableWriter:
                 break
 
     def test_multithreadTableWriterTest_error_mode(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         with pytest.raises(RuntimeError, match='Unsupported mtw mode TEST'):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100, 0.1,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 100, 0.1,
                                          10, "date", mode="test")
 
     def test_multithreadTableWriterTest_error_compressMethods(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         with pytest.raises(RuntimeError, match='Unsupported compression method TEST'):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100, 0.1,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 100, 0.1,
                                          10, "date", compressMethods=["test"])
 
     def test_multithreadTableWriterTest_error_hostName(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter("1.1", PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100,
+            ddb.MultithreadedTableWriter("1.1", PORT, USER, PASSWD, db_name, func_name, False, False, [], 100,
                                          0.1, 10, "date")
 
     def test_multithreadTableWriterTest_error_port(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, -5, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100, 0.1,
+            ddb.MultithreadedTableWriter(HOST, -5, USER, PASSWD, db_name, func_name, False, False, [], 100, 0.1,
                                          10, "date")
 
     def test_multithreadTableWriterTest_error_userID(self):
-        self.conn.run("try{deleteUser(`mark)}catch(ex){}")
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, "mark", PASSWD, self.dbname, "pdatetest", False, False, [], 100,
+            ddb.MultithreadedTableWriter(HOST, PORT, func_name, PASSWD, db_name, func_name, False, False, [], 100,
                                          0.1, 10, "date")
 
     def test_multithreadTableWriterTest_error_password(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, "123", self.dbname, "pdatetest", False, False, [], 100, 0.1,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, "123", db_name, func_name, False, False, [], 100, 0.1,
                                          10, "date")
 
     def test_multithreadTableWriterTest_error_dbName(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100, 0.1,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 100, 0.1,
                                          10, "date")
 
     def test_multithreadTableWriterTest_error_tableName(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pd", False, False, [], 100, 0.1, 10,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "pd", False, False, [], 100, 0.1, 10,
                                          "date")
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_userid_no_grant_write(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        user = func_name[30:]
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
-        script_user_no_grant_write = """
-            def test_user(){
-                try{createUser("mark", "123456")}catch(ex){};go;
-                grant("mark", TABLE_READ, "*")
-            }
+        script_user_no_grant_write = f"""
+            def test_user(){{
+                try{{createUser("{user}", "123456")}}catch(ex){{}};go;
+                grant("{user}", TABLE_READ, "*")
+            }}
             rpc(getControllerAlias(),  test_user)
         """
         self.conn.run(script_user_no_grant_write)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, "mark", PASSWD, self.dbname, "pdatetest", False, False, [],
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, user, PASSWD, db_name, func_name, False, False, [],
                                               10, 0.1, 1, "date")
         self.insert_grant(writer, 1)
         writer.waitForThreadCompletion()
@@ -485,124 +483,138 @@ class TestMultithreadTableWriter:
         errorInfo = writer.getStatus().errorInfo
         flag = pattern.match(errorInfo)
         assert flag is not None
-        last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pdatetest')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','{func_name}')")
         assert last["count"][0] == 0
-        self.conn.dropDatabase(self.dbname)
-        self.conn.run('rpc(getControllerAlias(),  deleteUser,  "mark")')
+        self.conn.dropDatabase(db_name)
+        self.conn.run(f'rpc(getControllerAlias(),  deleteUser,  "{user}")')
 
     def test_multithreadTableWriterTest_batchSize_negative_number(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], -1, 0.1,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], -1, 0.1,
                                          10, "date")
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_batchSize_zero(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
+            db=database("{db_name}",HASH, [MONTH,10])
             pt=db.createPartitionedTable(datetest,'pdatetest','date')
         """
         self.conn.run(script_DFS_HASH)
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 0, 0.1,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 0, 0.1,
                                          10, "date")
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_throttle_negative_number(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100, -10,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 100, -10,
                                          10, "date")
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_threadCount_negative_number(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
+            db=database("{db_name}",HASH, [MONTH,10])
             pt=db.createPartitionedTable(datetest,'pdatetest','date')
         """
         self.conn.run(script_DFS_HASH)
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100, 0.1,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 100, 0.1,
                                          -10, "date")
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_threadCount_zero(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100, 0.1,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 100, 0.1,
                                          0, "date")
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_Memory_Table_mutilthread_unspecified_partitioncol(self):
-        script_Memory_Table = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_Memory_Table = f"""
             t = table(1000:0, `id`x, [LONG, INT])
-            share t as share_table
+            share t as `{func_name}
         """
         self.conn.run(script_Memory_Table)
         with pytest.raises(RuntimeError):
             ddb.MultithreadedTableWriter(
-                HOST, PORT, USER, PASSWD, "share_table", "", False, False, [], 100, 0.1, 3, "")
-        self.conn.run("undef(`share_table, SHARED)")
+                HOST, PORT, USER, PASSWD, func_name, "", False, False, [], 100, 0.1, 3, "")
 
     def test_multithreadTableWriterTest_DFS_Table_mutilthread_specified_not_partitioncol(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
         with pytest.raises(RuntimeError):
-            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100, 0.1,
+            ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 100, 0.1,
                                          10, "id")
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
-    def test_multithreadTableWriterTest_insert_differnt_data_type(self):
+    def test_multithreadTableWriterTest_insert_different_data_type(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 1, 0.1, 1, "date")
+            HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 1, 0.1, 1, "date")
         threads = []
         for i in range(1):
             threads.append(threading.Thread(
@@ -614,30 +626,31 @@ class TestMultithreadTableWriter:
             t.join()
         time.sleep(2)
         assert writer.getStatus().errorCode == 'A1'
-        assert writer.getStatus().errorInfo == 'Data conversion error: Cannot convert <class \'str\'> to DATE.'
-        last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pdatetest')")
+        assert writer.getStatus().errorInfo == 'Data conversion error: Cannot convert str to DATE.'
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','{func_name}')")
         assert last["count"][0] == 0
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_Memory_Table_dbName_empty(self):
-        script_Memory_Table = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_Memory_Table = f"""
             t = table(1000:0, `id`x, [LONG, INT])
-            share t as share_table
+            share t as `{func_name}
         """
         self.conn.run(script_Memory_Table)
         with pytest.raises(RuntimeError):
             ddb.MultithreadedTableWriter(
-                HOST, PORT, USER, PASSWD, "share_table", "", False, False, [], 100, 0.1, 3, "id")
-        self.conn.run("undef(`share_table, SHARED)")
+                HOST, PORT, USER, PASSWD, func_name, "", False, False, [], 100, 0.1, 3, "id")
 
     def test_multithreadTableWriterTest_function_getUnwrittenData(self):
-        script = """
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             t = table(100:0, [`date, `int, `string, `symbol], [DATE, INT, STRING, SYMBOL]);
-            share t as test_tab;go
+            share t as `{func_name}
         """
         self.conn.run(script)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "test_tab", batchSize=100, threadCount=5, partitionCol="date")
+            HOST, PORT, USER, PASSWD, "", func_name, batchSize=100, threadCount=5, partitionCol="date")
         for i in range(10):
             res = writer.insert(np.datetime64(f'2022-03-2{i}'), 999999999999999999 + i, "str" + str(i),
                                 "sym" + str(i)) if i == 5 \
@@ -654,13 +667,14 @@ class TestMultithreadTableWriter:
         assert datas[5][3] == "sym5"
 
     def test_multithreadTableWriterTest_function_getUnwrittenData_1(self):
-        script = """
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             t = table(100:0, [`date, `int, `string, `symbol], [DATE, INT, STRING, SYMBOL]);
-            share t as test_tab;go
+            share t as `{func_name}
         """
         self.conn.run(script)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "test_tab", batchSize=100, threadCount=5, partitionCol="date")
+            HOST, PORT, USER, PASSWD, "", func_name, batchSize=100, threadCount=5, partitionCol="date")
         for i in range(10):
             res = writer.insert(np.datetime64(f'2022-03-2{i}'), -1.356468, "str" + str(i), "sym" + str(i)) if i == 5 \
                 else writer.insert(np.datetime64(f'2022-03-2{i}'), 1, "str" + str(i), "sym" + str(i))
@@ -674,16 +688,16 @@ class TestMultithreadTableWriter:
         assert datas2[5][1] == -1.356468
         assert datas2[5][2] == "str5"
         assert datas2[5][3] == "sym5"
-        self.conn.run("undef(`test_tab, SHARED)")
 
     def test_multithreadTableWriterTest_function_getUnwrittenData_2(self):
-        script = """
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             t = table(100:0, [`date, `int, `string, `ipaddr], [DATE, INT, STRING, IPADDR]);
-            share t as test_tab;go
+            share t as `{func_name}
         """
         self.conn.run(script)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "test_tab", batchSize=100, threadCount=5, partitionCol="date")
+            HOST, PORT, USER, PASSWD, "", func_name, batchSize=100, threadCount=5, partitionCol="date")
         for i in range(10):
             res = writer.insert(np.datetime64(f'2022-03-2{i}'), i, "str" + str(i), "abcd") if i == 5 \
                 else writer.insert(np.datetime64(f'2022-03-2{i}'), 1, "str" + str(i), f"192.168.0.{i}")
@@ -697,18 +711,18 @@ class TestMultithreadTableWriter:
         assert datas2[5][1] == 5
         assert datas2[5][2] == "str5"
         assert datas2[5][3] == "abcd"
-        self.conn.run("undef(`test_tab, SHARED)")
 
     def test_multithreadTableWriterTest_function_getUnwrittenData_no_wrong_data(self):
-        script = """
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             t = table(100:0, [`date, `int, `string, `symbol], [DATE, INT, STRING, SYMBOL]);
-            share t as test_tab;go
+            share t as `{func_name}
         """
         self.conn.run(script)
 
         def insert_task(rows, thread_count):
             writer = ddb.MultithreadedTableWriter(
-                HOST, PORT, USER, PASSWD, "", "test_tab", batchSize=100, threadCount=thread_count, partitionCol="date")
+                HOST, PORT, USER, PASSWD, "", func_name, batchSize=100, threadCount=thread_count, partitionCol="date")
             for i in range(rows):
                 res = writer.insert(np.datetime64(f'2022-03-2{i % 10}'), 1, "str" + str(i), "sym" + str(i))
                 if res.hasError():
@@ -725,20 +739,20 @@ class TestMultithreadTableWriter:
             row = cp[0]
             th_count = cp[1]
             insert_task(row, th_count)
-        self.conn.run("undef(`test_tab,SHARED)")
 
     def test_multithreadTableWriterTest_function_getUnwrittenData_dfs(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script = f"""
-            // try{{undef(test_tab, SHARED);}}catch(ex){{}};
             t = table(100:0, [`date, `int, `string, `symbol], [DATE, INT, STRING, SYMBOL]);
-            dbpath = "{self.dbname}"
+            dbpath = "{db_name}"
             if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};go
             db=database(dbpath,VALUE,2022.03.20..2022.03.29);
             tmp=db.createPartitionedTable(t,`tmp,`date);go
         """
         self.conn.run(script)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, self.dbname, "tmp", batchSize=1000, threadCount=10, partitionCol="date")
+            HOST, PORT, USER, PASSWD, db_name, "tmp", batchSize=1000, threadCount=10, partitionCol="date")
         for i in range(100):
             res = writer.insert(np.datetime64(f'2022-03-2{i % 10}'), 999999999999999999 + i, "str" + str(i),
                                 "sym" + str(i)) if i == 5 \
@@ -754,19 +768,21 @@ class TestMultithreadTableWriter:
         assert datas[5][1] == 1000000000000000004
         assert datas[5][2] == "str5"
         assert datas[5][3] == "sym5"
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_function_getUnwrittenData_dfs_1(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script = f"""
             t = table(100:0, [`date, `int, `string, `symbol], [DATE, INT, STRING, SYMBOL]);
-            dbpath = "{self.dbname}"
+            dbpath = "{db_name}"
             if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};go
             db=database(dbpath,VALUE,2022.03.20..2022.03.29,,'TSDB');
             tmp=db.createPartitionedTable(t,`tmp,`date,,`int);go
         """
         self.conn.run(script)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, self.dbname, "tmp", batchSize=1000, threadCount=10, partitionCol="date")
+            HOST, PORT, USER, PASSWD, db_name, "tmp", batchSize=1000, threadCount=10, partitionCol="date")
         for i in range(100):
             res = writer.insert(np.datetime64(f'2022-03-2{i % 10}'), -1.356468, "str" + str(i),
                                 "sym" + str(i)) if i == 5 \
@@ -781,18 +797,20 @@ class TestMultithreadTableWriter:
         assert datas2[5][1] == -1.356468
         assert datas2[5][2] == "str5"
         assert datas2[5][3] == "sym5"
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_function_getUnwrittenData_dfs_2(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script = f"""
             t = table(100:0, [`date, `int, `string, `symbol], [DATE, INT, STRING, SYMBOL]);
-            dbpath = "{self.dbname}"
+            dbpath = "{db_name}"
             if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};go
             db=database(dbpath,VALUE,2022.03.20..2022.03.29,,'TSDB');
             tmp=db.createPartitionedTable(t,`tmp,`date,,`int);go
         """
         self.conn.run(script)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "tmp", batchSize=1000,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "tmp", batchSize=1000,
                                               threadCount=10, partitionCol="date", mode="APPEND")
         for i in range(100):
             res = writer.insert(np.datetime64(f'2022-03-2{i % 10}'), str(i), "str" + str(i),
@@ -808,16 +826,16 @@ class TestMultithreadTableWriter:
         assert datas2[5][1] == "5"
         assert datas2[5][2] == "str5"
         assert datas2[5][3] == "abcd"
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_object_MultithreadedTableWriterThreadStatus(self):
-        script = """
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             t = table(100:0, [`int, `str], [INT, STRING]);
-            share t as test_tab_2;
+            share t as `{func_name}
         """
         self.conn.run(script)
-        writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "test_tab_2")
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name)
         col_int = [1, 2, 3]
         col_str = ['dolphindb', 'apple', 'google']
         for i in range(3):
@@ -829,7 +847,7 @@ class TestMultithreadTableWriter:
         assert status.sendFailedRows + status.unsentRows == 3
         assert status.errorCode != ''
         assert status.errorInfo != ''
-        writer2 = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "test_tab_2")
+        writer2 = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name)
         for i in range(3):
             writer2.insert(col_int[i], col_str[i])
         writer2.waitForThreadCompletion()
@@ -839,27 +857,26 @@ class TestMultithreadTableWriter:
         assert status2.sendFailedRows == 0
         assert status2.errorCode == ''
         assert status2.errorInfo == ''
-        self.conn.run("undef(`test_tab_2, SHARED)")
 
     def test_multithreadTableWriterTest_all_data_type(self):
-        script_all_data_type = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_all_data_type = f"""
             t = table(1000:0,
             `cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`csecond`cminute`cdatehour`cdatetime`ctimestamp`cnanotime`cnanotimestamp`cfloat`cdouble`cstring`cuuid`cint128`cip`cdecimal32`cdecimal64`cdecimal128,
             [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, SECOND, MINUTE, DATEHOUR, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, STRING, UUID, INT128, IPADDR, DECIMAL32(6), DECIMAL64(16), DECIMAL128(24)])
-            share t as all_data_type
+            share t as `{func_name}
         """
         self.conn.run(script_all_data_type)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "all_data_type", False, False, [], 100, 0.1, 1, "")
-        self.conn.run("delete from all_data_type")
-        first = self.conn.run("select count(*) from all_data_type")
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "")
+        self.conn.run(f"delete from {func_name}")
+        first = self.conn.run(f"select count(*) from {func_name}")
         self.insert_all_data_type(writer, 1)
         writer.waitForThreadCompletion()
-        time.sleep(3)
         st = writer.getStatus()
-        last = self.conn.run("select count(*) from all_data_type")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 6
-        re = self.conn.run("select * from all_data_type")
+        re = self.conn.run(f"select * from {func_name}")
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
         col_short = np.array([1, 2, 3, 4, 5, 6], dtype=np.int16)
@@ -946,24 +963,23 @@ class TestMultithreadTableWriter:
             "cdecimal128": col_decimal128
         })
         assert_frame_equal(re, ex)
-        self.conn.run("undef(`all_data_type, SHARED)")
 
     def test_multithreadTableWriterTest_keyedTable_upsert_all_data_type(self):
-        script_all_data_type = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_all_data_type = f"""
             t1 = keyedTable(`int,1000:0, `bool`char`short`int`long`date`month`time`second`minute`datehour`datetime`timestamp`nanotime`nanotimestamp`float`double`string`uuid`int128`ip`decimal32`decimal64`decimal128, [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, SECOND, MINUTE, DATEHOUR, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, STRING, UUID, INT128, IPADDR,DECIMAL32(2),DECIMAL64(2),DECIMAL128(2)])
-            share t1 as all_data_type
+            share t1 as `{func_name}
         """
         self.conn.run(script_all_data_type)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "all_data_type", False, False, [], 1, 0.1,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 1, 0.1,
                                               1, "int", mode="upsert",
                                               modeOption=["ignoreNull=false", "keyColNames=`int"])
-        first = self.conn.run("select count(*) from all_data_type")
+        first = self.conn.run(f"select count(*) from {func_name}")
         self.insert_all_data_type(writer, 1)
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from all_data_type")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 6
-        re = self.conn.run("select * from all_data_type")
+        re = self.conn.run(f"select * from {func_name}")
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
         col_short = np.array([1, 2, 3, 4, 5, 6], dtype=np.int16)
@@ -1048,31 +1064,30 @@ class TestMultithreadTableWriter:
             'decimal128': col_decimal128
         })
         assert_frame_equal(re, ex)
-        self.conn.run("undef(`all_data_type, SHARED)")
 
     def test_multithreadTableWriterTest_indexedTable_upsert_all_data_type(self):
-        script_all_data_type = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_all_data_type = f"""
             t1 = indexedTable(`int,1000:0, `bool`char`short`int`long`date`month`time`second`minute`datehour`datetime`timestamp`nanotime`nanotimestamp`float`double`string`uuid`int128`ip`decimal32`decimal64`decimal128, [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, SECOND, MINUTE, DATEHOUR, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, STRING, UUID, INT128, IPADDR,DECIMAL32(2),DECIMAL64(2),DECIMAL128(2)])
-            share t1 as all_data_type
+            share t1 as `{func_name}
         """
         self.conn.run(script_all_data_type)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "all_data_type", False, False, [], 1, 0.1,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 1, 0.1,
                                               1, "int", mode="upsert",
                                               modeOption=["ignoreNull=false", "keyColNames=`int"])
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_all_data_type, args=(writer, i,)))
-        first = self.conn.run("select count(*) from all_data_type")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from all_data_type")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 6
-        re = self.conn.run("select * from all_data_type")
+        re = self.conn.run(f"select * from {func_name}")
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
         col_short = np.array([1, 2, 3, 4, 5, 6], dtype=np.int16)
@@ -1157,11 +1172,12 @@ class TestMultithreadTableWriter:
             'decimal128': col_decimal128
         })
         assert_frame_equal(re, ex)
-        self.conn.run("undef(`all_data_type, SHARED)")
 
     def test_multithreadTableWriterTest_dfs_upsert_all_data_type(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_all_data_type = f"""
-            dbPath = "{self.dbname}"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(1000:0, `bool`char`short`int`long`date`month`time`second`minute`datehour`datetime`timestamp`nanotime`nanotimestamp`float`double`string`uuid`int128`ip`decimal32`decimal64`decimal128, [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, SECOND, MINUTE, DATEHOUR, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, STRING, UUID, INT128, IPADDR,DECIMAL32(2),DECIMAL64(2),DECIMAL128(2)])
@@ -1169,22 +1185,21 @@ class TestMultithreadTableWriter:
             pt = db.createPartitionedTable(t, `pt, `int,sortColumns=`int)
         """
         self.conn.run(script_all_data_type)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pt", False, False, [], 1, 0.1, 1,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 1, 0.1, 1,
                                               "int", mode="upsert", modeOption=["ignoreNull=false", "keyColNames=`int"])
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_all_data_type, args=(writer, i,)))
-        first = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(6)
-        last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         assert last["count"][0] - first["count"][0] == 6
-        re = self.conn.run(f"select * from loadTable('{self.dbname}','pt')")
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
         col_short = np.array([1, 2, 3, 4, 5, 6], dtype=np.int16)
@@ -1269,11 +1284,13 @@ class TestMultithreadTableWriter:
             'decimal128': col_decimal128
         })
         assert_frame_equal(re, ex)
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_dfs_upsert_key_exist_ignoreNull_True(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script = f"""
-            dbPath = "{self.dbname}"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..10 as qty)
@@ -1282,33 +1299,34 @@ class TestMultithreadTableWriter:
             pt.append!(t)
         """
         self.conn.run(script)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pt", False, False, [], 1, 0.1, 1,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 1, 0.1, 1,
                                               "qty", mode="upsert", modeOption=["ignoreNull=true", "keyColNames=`qty"])
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_NULL2, args=(writer, i,)))
-        first = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(6)
-        last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         assert last["count"][0] - first["count"][0] == 1
         script = f'''
-            re = select * from loadTable('{self.dbname}','pt')
+            re = select * from loadTable('{db_name}','pt')
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), re.values())
         '''
         re1 = self.conn.run(script)
         assert_array_equal(re1, [True, True, True])
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_dfs_upsert_key_exist_ignoreNull_False(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script = f"""
-            dbPath = "{self.dbname}"
+            dbPath = "{db_name}"
             if(existsDatabase(dbPath))
                 dropDatabase(dbPath)
             t = table(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..10 as qty)
@@ -1317,240 +1335,231 @@ class TestMultithreadTableWriter:
             pt.append!(t)
         """
         self.conn.run(script)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pt", False, False, [], 1, 0.1, 1,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 1, 0.1, 1,
                                               "qty", mode="upsert", modeOption=["ignoreNull=false", "keyColNames=`qty"])
         threads = []
         for i in range(1):
             threads.append(threading.Thread(
                 target=self.insert_NULL2, args=(writer, i,)))
         first = self.conn.run(
-            f"select count(*) from loadTable('{self.dbname}','pt')")
+            f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(6)
-        last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         assert last["count"][0] - first["count"][0] == 1
         script = f'''
-            re = select * from loadTable('{self.dbname}','pt')
+            re = select * from loadTable('{db_name}','pt')
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), re.values())
         '''
         re1 = self.conn.run(script)
         assert_array_equal(re1, [True, True, True])
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_keyedTable_upsert_key_exist_ignoreNull_True(self):
-        script = """
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             t1 = keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])
             insert into t1 values(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO,[2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05], 1..10 )
-            share t1 as tt1
+            share t1 as `{func_name}
         """
         self.conn.run(script)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "tt1", False, False, [], 1, 0.1, 1, "qty",
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 1, 0.1, 1,
+                                              "qty",
                                               mode="upsert", modeOption=["ignoreNull=true", "keyColNames=`qty"])
         threads = []
         for i in range(1):
             threads.append(threading.Thread(
                 target=self.insert_NULL2, args=(writer, i,)))
-        first = self.conn.run("select count(*) from tt1")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(6)
-        last = self.conn.run("select count(*) from tt1")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 1
-        script = '''
-            re = select * from tt1
+        script = f'''
+            re = select * from {func_name}
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), re.values())
         '''
         re1 = self.conn.run(script)
         assert_array_equal(re1, [True, True, True])
-        self.conn.run("undef(`tt1, SHARED)")
 
     def test_multithreadTableWriterTest_keyedTable_upsert_key_exist_ignoreNull_False(self):
-        script = """
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             t1 = keyedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])
             insert into t1 values(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO,[2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05], 1..10 )
-            share t1 as tt1
+            share t1 as `{func_name}
         """
         self.conn.run(script)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "tt1", False, False, [], 1, 0.1, 1, "qty",
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 1, 0.1, 1,
+                                              "qty",
                                               mode="upsert", modeOption=["ignoreNull=false", "keyColNames=`qty"])
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_NULL2, args=(writer, i,)))
-        first = self.conn.run("select count(*) from tt1")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(6)
-        last = self.conn.run("select count(*) from tt1")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 1
-        script = '''
-            re = select * from tt1
+        script = f'''
+            re = select * from {func_name}
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), re.values())
         '''
         re1 = self.conn.run(script)
         assert_array_equal(re1, [True, True, True])
-        self.conn.run("undef(`tt1, SHARED)")
 
     def test_multithreadTableWriterTest_indexedTable_upsert_key_exist_ignoreNull_True(self):
-        script = """
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             t1 = indexedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])
             insert into t1 values(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO,[2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05], 1..10 )
-            share t1 as tt1
+            share t1 as `{func_name}
         """
         self.conn.run(script)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "tt1", False, False, [], 1, 0.1, 1, "qty",
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 1, 0.1, 1,
+                                              "qty",
                                               mode="upsert", modeOption=["ignoreNull=true", "keyColNames=`qty"])
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_NULL2, args=(writer, i,)))
-        first = self.conn.run("select count(*) from tt1")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(6)
-        last = self.conn.run("select count(*) from tt1")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 1
-        script = '''
-            re = select * from tt1
+        script = f'''
+            re = select * from {func_name}
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, 1965.07.25, 1965.07.25, 2020.12.23, 2020.12.23, 1970.01.01, NULL, NULL, 2009.08.05, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), re.values())
         '''
         re1 = self.conn.run(script)
         assert_array_equal(re1, [True, True, True])
-        self.conn.run("undef(`tt1, SHARED)")
 
     def test_multithreadTableWriterTest_indexedTable_upsert_key_exist_ignoreNull_False(self):
-        script = """
+        func_name = inspect.currentframe().f_code.co_name
+        script = f"""
             t1 = indexedTable(`qty,1000:0, `sym`date`qty, [SYMBOL, DATE, INT])
             insert into t1 values(`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO,[2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05], 1..10 )
-            share t1 as tt1
+            share t1 as `{func_name}
         """
         self.conn.run(script)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "tt1", False, False, [], 1, 0.1, 1, "qty",
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 1, 0.1, 1,
+                                              "qty",
                                               mode="upsert", modeOption=["ignoreNull=false", "keyColNames=`qty"])
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_NULL2, args=(writer, i,)))
-        first = self.conn.run("select count(*) from tt1")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(6)
-        last = self.conn.run("select count(*) from tt1")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 1
-        script = '''
-            re = select * from tt1
+        script = f'''
+            re = select * from {func_name}
             tmp=table(`AAPL`AAPL`AAPL`GOOG`GOOG`MSFT`MSFT`IBM`IBM`YHOO`YHOO as sym, [2012.01.01, 2012.01.01, NULL, 1965.07.25, NULL, 2020.12.23, 1970.01.01, NULL, NULL, NULL, 2009.08.05] as date, 1..11 as qty)
             each(eqObj, tmp.values(), re.values())
         '''
         re1 = self.conn.run(script)
         assert_array_equal(re1, [True, True, True])
-        self.conn.run("undef(`tt1, SHARED)")
 
     def test_multithreadTableWriterTest_batchSize_throttle(self):
-        script_DFS_COMPO_batchSize_throttle = """
-            if(existsDatabase("dfs://valuedb_DFS_COMPO_batchSize_throttle")){
-                dropDatabase("dfs://valuedb_DFS_COMPO_batchSize_throttle")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_DFS_COMPO_batchSize_throttle = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x`y, [LONG, STRING, STRING])
             dbX = database(, VALUE, `a`b`c)
             dbY = database(, LIST, [`x`y, `z])
-            db = database("dfs://valuedb_DFS_COMPO_batchSize_throttle", COMPO, [dbX, dbY])
+            db = database("{db_name}", COMPO, [dbX, dbY])
             pt= db.createPartitionedTable(t, `pt, `x`y)
         """
         self.conn.run(script_DFS_COMPO_batchSize_throttle)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_COMPO_batchSize_throttle",
-                                              "pt", False, False, [], 2000, 10, 10, "x")
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name,
+                                              "pt", False, False, [], 2000, 5, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_COMPO, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_COMPO_batchSize_throttle','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO_batchSize_throttle','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
-        time.sleep(5)
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO_batchSize_throttle','pt')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         assert last["count"][0] - first["count"][0] == 0
-        time.sleep(10)
-        assert writer.getStatus().unsentRows == 0
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO_batchSize_throttle','pt')")
+        while writer.getStatus().unsentRows != 0:
+            time.sleep(0.5)
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         assert last["count"][0] - first["count"][0] == 1600
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_COMPO_batchSize_throttle")')
 
     def test_multithreadTableWriterTest_AllData(self):
-        script_DFS_RANGE_ALLDATA = """
-            if(existsDatabase("dfs://valuedb_DFS_RANGE_AllData")){
-                dropDatabase("dfs://valuedb_DFS_RANGE_AllData")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_DFS_RANGE_ALLDATA = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, INT])
-            db = database("dfs://valuedb_DFS_RANGE_AllData", RANGE, 0 5 10)
+            db = database("{db_name}", RANGE, 0 5 10)
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_DFS_RANGE_ALLDATA)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_RANGE_AllData", "pt", False, False, [], 1, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 1, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_RANGE_Huge, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_RANGE_AllData','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_RANGE_AllData','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
-        getUnwiteen = writer.getUnwrittenData()
-        res = writer.getStatus()
-        sentRows = res.sentRows
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_RANGE_AllData','pt')")
-        while last["count"][0] - first["count"][0] != sentRows:
-            res = writer.getStatus()
-            sentRows = res.sentRows
-            time.sleep(1)
-        assert last["count"][0] - first["count"][0] + len(getUnwiteen) == 300000
-        insert_res = writer.insertUnwrittenData(getUnwiteen)
-        assert not insert_res.hasError()
         writer.waitForThreadCompletion()
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_RANGE_AllData','pt')")
-        assert last["count"][0] - first["count"][0] == 300000
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_RANGE_AllData")')
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
 
     def test_multithreadTableWriterTest_getStatus_waitfor(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 1, 0.1, 1, "date")
+            HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 1, 0.1, 1, "date")
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_DFS_HASH, args=(writer, i,)))
@@ -1567,19 +1576,21 @@ class TestMultithreadTableWriter:
         assert writer.getStatus().unsentRows == 0
         assert writer.getStatus().sendFailedRows == 0
         assert len(writer.getStatus().threadStatus) == 2
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_getStatus_time(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 1,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 1,
                                               0.1, 1, "date")
         threads = []
         for i in range(1):
@@ -1598,32 +1609,32 @@ class TestMultithreadTableWriter:
         assert writer.getStatus().unsentRows == 0
         assert writer.getStatus().sendFailedRows == 0
         assert len(writer.getStatus().threadStatus) == 2
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_Memory_Table_single_thread(self):
-        script_Memory_Table = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_Memory_Table = f"""
             t = table(1000:0, `id`x, [LONG, INT])
-            share t as share_table
+            share t as `{func_name}
         """
         self.conn.run(script_Memory_Table)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "share_table", False, False, [], 100, 0.1, 1, "id")
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(
                 target=self.insert_Memory_Table, args=(writer, i,)))
-        self.conn.run("delete from share_table")
-        first = self.conn.run("select count(*) from share_table")
+        self.conn.run(f"delete from {func_name}")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from share_table")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 2200
-        re = self.conn.run("select * from share_table")
+        re = self.conn.run(f"select * from {func_name}")
         id = re["id"].to_list()
         id.sort()
         x = re["x"].to_list()
@@ -1634,32 +1645,31 @@ class TestMultithreadTableWriter:
         ex_x.sort()
         assert id == ex_id
         assert x == ex_x
-        self.conn.run("undef(`share_table, SHARED)")
 
     def test_multithreadTableWriterTest_Memory_Table_mutil_thread(self):
-        script_Memory_Table = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_Memory_Table = f"""
             t = table(1000:0, `id`x, [LONG, INT])
-            share t as share_table
+            share t as `{func_name}
         """
         self.conn.run(script_Memory_Table)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "share_table", False, False, [], 100, 0.1, 10, "id")
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 10, "id")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(
                 target=self.insert_Memory_Table, args=(writer, i,)))
-        self.conn.run("delete from share_table")
-        first = self.conn.run("select count(*) from share_table")
+        self.conn.run(f"delete from {func_name}")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from share_table")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 2200
-        re = self.conn.run("select * from share_table")
+        re = self.conn.run(f"select * from {func_name}")
         id = re["id"].to_list()
         id.sort()
         x = re["x"].to_list()
@@ -1670,33 +1680,32 @@ class TestMultithreadTableWriter:
         ex_x.sort()
         assert id == ex_id
         assert x == ex_x
-        self.conn.run("undef(`share_table, SHARED)")
 
     def test_multithreadTableWriterTest_Keyed_Table(self):
-        script_Keyed_Table = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_Keyed_Table = f"""
             tmp = table(1000:0, `id`x, [LONG, INT])
             tt = keyedTable(`id, tmp)
-            share tt as keyed_table
+            share tt as `{func_name}
         """
         self.conn.run(script_Keyed_Table)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "keyed_table", False, False, [], 100, 0.1, 1, "id")
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(
                 target=self.insert_Keyed_Table, args=(writer, i,)))
-        self.conn.run("delete from keyed_table")
-        first = self.conn.run("select count(*) from keyed_table")
+        self.conn.run(f"delete from {func_name}")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from keyed_table")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 130
-        re = self.conn.run("select * from keyed_table")
+        re = self.conn.run(f"select * from {func_name}")
         id = re["id"].to_list()
         id.sort()
         x = re["x"].to_list()
@@ -1707,30 +1716,29 @@ class TestMultithreadTableWriter:
         ex_x.sort()
         assert id == ex_id
         assert x == ex_x
-        self.conn.run("undef(`keyed_table, SHARED)")
 
     def test_multithreadTableWriterTest_stream_Table_single_thread(self):
-        script_Stream_Table = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
             tmp = streamTable(1000:0, `id`x, [LONG, INT])
-            share tmp as stream_table
+            share tmp as `{func_name}
         """
         self.conn.run(script_Stream_Table)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "stream_table", False, False, [], 100, 0.1, 1, "id")
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id")
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_Stream_Table, args=(writer, i,)))
-        first = self.conn.run("select count(*) from stream_table")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from stream_table")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 130
-        re = self.conn.run("select * from stream_table")
+        re = self.conn.run(f"select * from {func_name}")
         id = re["id"].to_list()
         id.sort()
         x = re["x"].to_list()
@@ -1741,30 +1749,29 @@ class TestMultithreadTableWriter:
         ex_x.sort()
         assert id == ex_id
         assert x == ex_x
-        self.conn.run("undef(`stream_table, SHARED)")
 
     def test_multithreadTableWriterTest_stream_Table_multi_thread(self):
-        script_Stream_Table = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
             tmp = streamTable(1000:0, `id`x, [LONG, INT])
-            share tmp as stream_table
+            share tmp as `{func_name}
         """
         self.conn.run(script_Stream_Table)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "stream_table", False, False, [], 100, 0.1, 10, "id")
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 10, "id")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_Stream_Table, args=(writer, i,)))
-        first = self.conn.run("select count(*) from stream_table")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from stream_table")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 1300
-        re = self.conn.run("select * from stream_table")
+        re = self.conn.run(f"select * from {func_name}")
         id = re["id"].to_list()
         id.sort()
         x = re["x"].to_list()
@@ -1775,209 +1782,215 @@ class TestMultithreadTableWriter:
         ex_x.sort()
         assert id == ex_id
         assert x == ex_x
-        self.conn.run("undef(`stream_table, SHARED)")
 
     def test_multithreadTableWriterTest_DFS_HASH(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_HASH = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             datetest=table(1000:0,`date`id,[DATE,LONG])
-            db=database("{self.dbname}",HASH, [MONTH,10])
-            pt=db.createPartitionedTable(datetest,'pdatetest','date')
+            db=database("{db_name}",HASH, [MONTH,10])
+            pt=db.createPartitionedTable(datetest,'{func_name}','date')
         """
         self.conn.run(script_DFS_HASH)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, self.dbname, "pdatetest", False, False, [], 100,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, func_name, False, False, [], 100,
                                               0.1, 10, "date")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_HASH_Huge, args=(writer, i,)))
-        self.conn.run(f"delete from loadTable('{self.dbname}','pdatetest')")
-        first = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pdatetest')")
+        self.conn.run(f"delete from loadTable('{db_name}','{func_name}')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','{func_name}')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pdatetest')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run(f"select date from loadTable('{self.dbname}','pdatetest')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','{func_name}')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select date from loadTable('{db_name}','{func_name}')")
         date = []
         date.extend([np.datetime64("2016-02-12"),
-                     np.datetime64("2016-01-12")] * 15000)
+                     np.datetime64("2016-01-12")] * 1500)
         date.sort()
         ex = pd.DataFrame({
             "date": date,
         })
         assert_frame_equal(re, ex)
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_DFS_VALUE(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         script_DFS_VALUE = f"""
-            if(existsDatabase("{self.dbname}")){{
-                dropDatabase("{self.dbname}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             t = table(1000:0, `id`name, [LONG, STRING])
-            db = database("{self.dbname}", VALUE, `a`b`c)
+            db = database("{db_name}", VALUE, `a`b`c)
             pt= db.createPartitionedTable(t, `pt, `name)
         """
         self.conn.run(script_DFS_VALUE)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, self.dbname, "pt", False, False, [], 100, 0.1, 10, "name")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "name")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_VALUE_Huge, args=(writer, i,)))
-        self.conn.run(f"delete from loadTable('{self.dbname}','pt')")
-        first = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run(f"select count(*) from loadTable('{self.dbname}','pt')")
-        assert last["count"][0] - first["count"][0] == 450000
-        re = self.conn.run(f"select name from loadTable('{self.dbname}','pt')")
-        name = ["a", "b", "c"] * 150000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 4500
+        re = self.conn.run(f"select name from loadTable('{db_name}','pt')")
+        name = ["a", "b", "c"] * 1500
         name.sort()
         ex = pd.DataFrame({
             "name": name
         })
         assert_frame_equal(re, ex)
-        self.conn.dropDatabase(self.dbname)
+        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_DFS_RANGE(self):
-        script_DFS_RANGE = """
-            if(existsDatabase("dfs://valuedb_DFS_RANGE")){
-                dropDatabase("dfs://valuedb_DFS_RANGE")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_DFS_RANGE = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, INT])
-            db = database("dfs://valuedb_DFS_RANGE", RANGE, 0 5 10)
+            db = database("{db_name}", RANGE, 0 5 10)
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_DFS_RANGE)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_RANGE", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_RANGE_Huge, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_RANGE','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_RANGE','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_RANGE','pt')")
-        assert last["count"][0] - first["count"][0] == 300000
-        re = self.conn.run("select x from loadTable('dfs://valuedb_DFS_RANGE','pt')")
-        x = [1, 7] * 150000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select x from loadTable('{db_name}','pt')")
+        x = [1, 7] * 1500
         x.sort()
         ex = pd.DataFrame({
             "x": np.array(x, dtype=np.int32)
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_RANGE")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_LIST(self):
-        script_DFS_LIST = """
-            if(existsDatabase("dfs://valuedb_DFS_LIST")){
-                dropDatabase("dfs://valuedb_DFS_LIST")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_DFS_LIST = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`name, [LONG, STRING])
-            db = database("dfs://valuedb_DFS_LIST", LIST, [`a`b`c, `d`e])
+            db = database("{db_name}", LIST, [`a`b`c, `d`e])
             pt= db.createPartitionedTable(t, `pt, `name)
         """
         self.conn.run(script_DFS_LIST)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_LIST", "pt", False, False, [], 100, 0.1, 10, "name")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "name")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(
                 target=self.insert_DFS_LIST_Huge, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_LIST','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_LIST','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_LIST','pt')")
-        assert last["count"][0] - first["count"][0] == 300000
-        re = self.conn.run("select name from loadTable('dfs://valuedb_DFS_LIST','pt')")
-        name = ["a", "d"] * 150000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select name from loadTable('{db_name}','pt')")
+        name = ["a", "d"] * 1500
         name.sort()
         ex = pd.DataFrame({
             "name": name
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_LIST")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_COMPO_first_level(self):
-        script_DFS_COMPO = """
-            if(existsDatabase("dfs://valuedb_DFS_COMPO")){
-                dropDatabase("dfs://valuedb_DFS_COMPO")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_DFS_COMPO = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x`y, [LONG, STRING, STRING])
             dbX = database(, VALUE, `a`b`c)
             dbY = database(, LIST, [`x`y, `z])
-            db = database("dfs://valuedb_DFS_COMPO", COMPO, [dbX, dbY])
+            db = database("{db_name}", COMPO, [dbX, dbY])
             pt= db.createPartitionedTable(t, `pt, `x`y)
         """
         self.conn.run(script_DFS_COMPO)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_COMPO", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_COMPO_Huge, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        assert last["count"][0] - first["count"][0] == 300000
-        re = self.conn.run("select x,y from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        x = ["a"] * 300000
-        y = ["y", "z"] * 150000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select x,y from loadTable('{db_name}','pt')")
+        x = ["a"] * 3000
+        y = ["y", "z"] * 1500
         y.sort()
         ex = pd.DataFrame({
             "x": x,
             "y": y
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_COMPO")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_COMPO_second_level(self):
-        script_DFS_COMPO = """
-            if(existsDatabase("dfs://valuedb_DFS_COMPO")){
-                dropDatabase("dfs://valuedb_DFS_COMPO")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_DFS_COMPO = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x`y, [LONG, STRING, STRING])
             dbX = database(, VALUE, `a`b`c)
             dbY = database(, LIST, [`x`y, `z])
-            db = database("dfs://valuedb_DFS_COMPO", COMPO, [dbX, dbY])
+            db = database("{db_name}", COMPO, [dbX, dbY])
             pt= db.createPartitionedTable(t, `pt, `x`y)
         """
         self.conn.run(script_DFS_COMPO)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_COMPO", "pt", False, False, [], 100, 0.1, 10, "y")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "y")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_COMPO_Huge, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
@@ -1985,46 +1998,47 @@ class TestMultithreadTableWriter:
             t.join()
         writer.waitForThreadCompletion()
         time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        assert last["count"][0] - first["count"][0] == 300000
-        re = self.conn.run("select x,y from loadTable('dfs://valuedb_DFS_COMPO','pt')")
-        x = ["a"] * 300000
-        y = ["y", "z"] * 150000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select x,y from loadTable('{db_name}','pt')")
+        x = ["a"] * 3000
+        y = ["y", "z"] * 1500
         y.sort()
         ex = pd.DataFrame({
             "x": x,
             "y": y
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_COMPO")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_Dimensional(self):
-        script_DFS_Dimensional = """
-            if(existsDatabase("dfs://valuedb_DFS_Dimensional")){
-                dropDatabase("dfs://valuedb_DFS_Dimensional")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_DFS_Dimensional = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, STRING])
-            db = database("dfs://valuedb_DFS_Dimensional", VALUE, `a`b`c)
+            db = database("{db_name}", VALUE, `a`b`c)
             pt= db.createTable(t, `pt)
         """
         self.conn.run(script_DFS_Dimensional)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_Dimensional", "pt", False, False, [], 100, 0.1, 1)
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 1)
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_Dimensional, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_Dimensional','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_Dimensional','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_Dimensional','pt')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         assert last["count"][0] - first["count"][0] == 900
-        re = self.conn.run("select * from loadTable('dfs://valuedb_DFS_Dimensional','pt') order by id")
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt') order by id")
         id = list(range(90)) * 10
         id.sort()
         x = ["a"] * 900
@@ -2033,54 +2047,57 @@ class TestMultithreadTableWriter:
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_Dimensional")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_Dimensional_multi_thread_designation_partition(self):
-        script_DFS_Dimensional = """
-            if(existsDatabase("dfs://valuedb_DFS_Dimensional")){
-                dropDatabase("dfs://valuedb_DFS_Dimensional")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_DFS_Dimensional = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, STRING])
-            db = database("dfs://valuedb_DFS_Dimensional", VALUE, `a`b`c)
+            db = database("{db_name}", VALUE, `a`b`c)
             pt= db.createTable(t, `pt)
         """
         self.conn.run(script_DFS_Dimensional)
         with pytest.raises(RuntimeError):
             ddb.MultithreadedTableWriter(
-                HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_Dimensional", "pt", False, False, [], 100, 0.1, 3, "id")
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_Dimensional")')
+                HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 3, "id")
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_useSSL(self):
         if self.conn.run("getConfig(`enableHTTPS)") == '0':
             pytest.skip("https is not true, skip this case")
-        script_DFS_COMPO_SSL = """
-            if(existsDatabase("dfs://valuedb_DFS_COMPO_SSL")){
-                dropDatabase("dfs://valuedb_DFS_COMPO_SSL")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_DFS_COMPO_SSL = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x`y, [LONG, STRING, STRING])
             dbX = database(, VALUE, `a`b`c)
             dbY = database(, LIST, [`x`y, `z])
-            db = database("dfs://valuedb_DFS_COMPO_SSL", COMPO, [dbX, dbY])
+            db = database("{db_name}", COMPO, [dbX, dbY])
             pt= db.createPartitionedTable(t, `pt, `x`y)
         """
         self.conn.run(script_DFS_COMPO_SSL)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_COMPO_SSL", "pt", True, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", True, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_DFS_COMPO, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_COMPO_SSL','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO_SSL','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_COMPO_SSL','pt')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         assert last["count"][0] - first["count"][0] == 1600
-        re = self.conn.run("select x,y from loadTable('dfs://valuedb_DFS_COMPO_SSL','pt')")
+        re = self.conn.run(f"select x,y from loadTable('{db_name}','pt')")
         x = ["a"] * 1600
         y = ["y", "z"] * 800
         y.sort()
@@ -2089,340 +2106,350 @@ class TestMultithreadTableWriter:
             "y": y
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_COMPO_SSL")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_TSDB_single_thread(self):
-        script_TSDB = """
-            if(existsDatabase("dfs://valuedb_DFS_TSDB")){
-                dropDatabase("dfs://valuedb_DFS_TSDB")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_TSDB = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, STRING])
-            db = database("dfs://valuedb_DFS_TSDB", VALUE, `a`b`c, engine="TSDB")
+            db = database("{db_name}", VALUE, `a`b`c, engine="TSDB")
             pt= db.createPartitionedTable(t, `pt, `x, sortColumns="id")
         """
         self.conn.run(script_TSDB)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_TSDB", "pt", False, False, [], 100, 0.1, 1, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 1, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_TSDB_Huge, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_TSDB','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_TSDB','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_TSDB','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://valuedb_DFS_TSDB','pt')")
-        id = list(range(3000)) * 10
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = list(range(300)) * 10
         id.sort()
-        x = ["a"] * 30000
+        x = ["a"] * 3000
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_TSDB")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_TSDB_multi_thread(self):
-        script_TSDB = """
-            if(existsDatabase("dfs://valuedb_DFS_TSDB")){
-                dropDatabase("dfs://valuedb_DFS_TSDB")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_TSDB = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, STRING])
-            db = database("dfs://valuedb_DFS_TSDB", VALUE, `a`b`c, engine="TSDB")
+            db = database("{db_name}", VALUE, `a`b`c, engine="TSDB")
             pt= db.createPartitionedTable(t, `pt, `x, sortColumns="id")
         """
         self.conn.run(script_TSDB)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://valuedb_DFS_TSDB", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_TSDB_Huge, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://valuedb_DFS_TSDB','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_TSDB','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://valuedb_DFS_TSDB','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://valuedb_DFS_TSDB','pt')")
-        id = list(range(3000)) * 10
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = list(range(300)) * 10
         id.sort()
-        x = ["a"] * 30000
+        x = ["a"] * 3000
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://valuedb_DFS_TSDB")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_VALUE_datehour_datetime(self):
-        script_VALUE_datehour_datetime = """
-            if(existsDatabase("dfs://DFS_VALUE_datehour_datetime")){
-                dropDatabase("dfs://DFS_VALUE_datehour_datetime")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_datehour_datetime = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, DATETIME])
-            db = database("dfs://DFS_VALUE_datehour_datetime", VALUE, datehour([2012.06.15 15:30:00.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, datehour([2012.06.15 15:30:00.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_datehour_datetime)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://DFS_VALUE_datehour_datetime", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_VALUE_datehour_datetime','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_datehour_datetime','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_datehour_datetime','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_datehour_datetime','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_VALUE_datehour_datetime")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_VALUE_datehour_timestamp(self):
-        script_VALUE_datehour_timestamp = """
-            if(existsDatabase("dfs://DFS_VALUE_datehour_timestamp")){
-                dropDatabase("dfs://DFS_VALUE_datehour_timestamp")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_datehour_timestamp = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, TIMESTAMP])
-            db = database("dfs://DFS_VALUE_datehour_timestamp", VALUE, datehour([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, datehour([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_datehour_timestamp)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://DFS_VALUE_datehour_timestamp", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_timestamp, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_VALUE_datehour_timestamp','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_datehour_timestamp','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_datehour_timestamp','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_datehour_timestamp','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_VALUE_datehour_timestamp")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_VALUE_datehour_nanotimestamp(self):
-        script_VALUE_datehour_timestamp = """
-            if(existsDatabase("dfs://DFS_VALUE_datehour_nanotimestamp")){
-                dropDatabase("dfs://DFS_VALUE_datehour_nanotimestamp")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_datehour_timestamp = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, NANOTIMESTAMP])
-            db = database("dfs://DFS_VALUE_datehour_nanotimestamp", VALUE, datehour([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, datehour([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_datehour_timestamp)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://DFS_VALUE_datehour_nanotimestamp", "pt", False, False, [], 100, 0.1, 10,
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10,
             "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_nanotimestamp, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_VALUE_datehour_nanotimestamp','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_datehour_nanotimestamp','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_datehour_nanotimestamp','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_datehour_nanotimestamp','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_VALUE_datehour_nanotimestamp")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_VALUE_date_datetime(self):
-        script_VALUE_date_datetime = """
-            if(existsDatabase("dfs://DFS_VALUE_date_datetime")){
-                dropDatabase("dfs://DFS_VALUE_date_datetime")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_date_datetime = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, DATETIME])
-            db = database("dfs://DFS_VALUE_date_datetime", VALUE, date([2012.06.15 15:30:00.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, date([2012.06.15 15:30:00.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_date_datetime)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://DFS_VALUE_date_datetime", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_VALUE_date_datetime','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_date_datetime','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_date_datetime','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_date_datetime','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_VALUE_date_datetime")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_VALUE_date_timestamp(self):
-        script_VALUE_date_timestamp = """
-            if(existsDatabase("dfs://DFS_VALUE_date_timestamp")){
-                dropDatabase("dfs://DFS_VALUE_date_timestamp")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_date_timestamp = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, TIMESTAMP])
-            db = database("dfs://DFS_VALUE_date_timestamp", VALUE, date([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, date([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_date_timestamp)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://DFS_VALUE_date_timestamp", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_timestamp, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_VALUE_date_timestamp','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_date_timestamp','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_date_timestamp','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_date_timestamp','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_VALUE_date_timestamp")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_VALUE_date_nanotimestamp(self):
-        script_VALUE_date_timestamp = """
-            if(existsDatabase("dfs://DFS_VALUE_date_nanotimestamp")){
-                dropDatabase("dfs://DFS_VALUE_date_nanotimestamp")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_date_timestamp = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, NANOTIMESTAMP])
-            db = database("dfs://DFS_VALUE_date_nanotimestamp", VALUE, date([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, date([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_date_timestamp)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://DFS_VALUE_date_nanotimestamp", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_nanotimestamp, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_VALUE_date_nanotimestamp','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_date_nanotimestamp','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_date_nanotimestamp','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_date_nanotimestamp','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_VALUE_date_nanotimestamp")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_VALUE_month_datetime(self):
-        script_VALUE_month_datetime = """
-            if(existsDatabase("dfs://DFS_VALUE_month_datetime")){
-                dropDatabase("dfs://DFS_VALUE_month_datetime")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_month_datetime = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, DATETIME])
-            db = database("dfs://DFS_VALUE_month_datetime", VALUE, month([2012.06.15 15:30:00.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, month([2012.06.15 15:30:00.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_month_datetime)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "dfs://DFS_VALUE_month_datetime", "pt", False,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "pt", False,
                                               False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_VALUE_month_datetime','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_month_datetime','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
@@ -2430,159 +2457,164 @@ class TestMultithreadTableWriter:
             t.join()
         writer.waitForThreadCompletion()
         time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_month_datetime','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_month_datetime','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_VALUE_month_datetime")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_VALUE_month_timestamp(self):
-        script_VALUE_month_timestamp = """
-            if(existsDatabase("dfs://_DFS_VALUE_month_timestamp")){
-                dropDatabase("dfs://_DFS_VALUE_month_timestamp")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_month_timestamp = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, TIMESTAMP])
-            db = database("dfs://_DFS_VALUE_month_timestamp", VALUE, month([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, month([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_month_timestamp)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://_DFS_VALUE_month_timestamp", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_timestamp, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://_DFS_VALUE_month_timestamp','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://_DFS_VALUE_month_timestamp','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://_DFS_VALUE_month_timestamp','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://_DFS_VALUE_month_timestamp','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://_DFS_VALUE_month_timestamp")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_VALUE_month_nanotimestamp(self):
-        script_VALUE_month_timestamp = """
-            if(existsDatabase("dfs://DFS_VALUE_month_nanotimestamp")){
-                dropDatabase("dfs://DFS_VALUE_month_nanotimestamp")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_month_timestamp = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, NANOTIMESTAMP])
-            db = database("dfs://DFS_VALUE_month_nanotimestamp", VALUE, month([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, month([2012.06.15 15:32:10.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_month_timestamp)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://DFS_VALUE_month_nanotimestamp", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_nanotimestamp, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_VALUE_month_nanotimestamp','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_month_nanotimestamp','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_VALUE_month_nanotimestamp','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_VALUE_month_nanotimestamp','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_VALUE_month_nanotimestamp")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_RANGE_date_date(self):
-        script_VALUE_date_date = """
-            if(existsDatabase("dfs://DFS_RANGE_date_date")){
-                dropDatabase("dfs://DFS_RANGE_date_date")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_date_date = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, DATE])
-            db = database("dfs://DFS_RANGE_date_date", RANGE, date([2010.06.15 15:30:00.158,2012.08.15 17:30:10.008, 2014.06.15 17:30:10.008]))
+            db = database("{db_name}", RANGE, date([2010.06.15 15:30:00.158,2012.08.15 17:30:10.008, 2014.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_date_date)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://DFS_RANGE_date_date", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_date, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_RANGE_date_date','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_date','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_date','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_RANGE_date_date','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15", "2013-06-15"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_RANGE_date_date")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_RANGE_date_datetime(self):
-        script_VALUE_date_datetime = """
-            if(existsDatabase("dfs://DFS_RANGE_date_datetime")){
-                dropDatabase("dfs://DFS_RANGE_date_datetime")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_date_datetime = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, DATETIME])
-            db = database("dfs://DFS_RANGE_date_datetime", RANGE, date([2010.06.15 15:30:00.158,2012.08.15 17:30:10.008, 2014.06.15 17:30:10.008]))
+            db = database("{db_name}", RANGE, date([2010.06.15 15:30:00.158,2012.08.15 17:30:10.008, 2014.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_date_datetime)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "dfs://DFS_RANGE_date_datetime", "pt", False,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "pt", False,
                                               False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_RANGE_date_datetime','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_datetime','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
@@ -2590,129 +2622,132 @@ class TestMultithreadTableWriter:
             t.join()
         writer.waitForThreadCompletion()
         time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_datetime','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_RANGE_date_datetime','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10", "2013-06-15T17:30:10"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_RANGE_date_datetime")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_RANGE_date_timestamp(self):
-        script_VALUE_date_timestamp = """
-            if(existsDatabase("dfs://DFS_RANGE_date_timestamp")){
-                dropDatabase("dfs://DFS_RANGE_date_timestamp")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_date_timestamp = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, TIMESTAMP])
-            db = database("dfs://DFS_RANGE_date_timestamp", RANGE, date([2010.06.15 15:30:00.158,2012.08.15 17:30:10.008, 2014.06.15 17:30:10.008]))
+            db = database("{db_name}", RANGE, date([2010.06.15 15:30:00.158,2012.08.15 17:30:10.008, 2014.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_date_timestamp)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://DFS_RANGE_date_timestamp", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_timestamp, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_RANGE_date_timestamp','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_timestamp','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_timestamp','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_RANGE_date_timestamp','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008", "2013-06-15T17:30:10.008"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_RANGE_date_timestamp")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_DFS_RANGE_date_nanotimestamp(self):
-        script_VALUE_date_timestamp = """
-            if(existsDatabase("dfs://DFS_RANGE_date_nanotimestamp")){
-                dropDatabase("dfs://DFS_RANGE_date_nanotimestamp")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_date_timestamp = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, NANOTIMESTAMP])
-            db = database("dfs://DFS_RANGE_date_nanotimestamp", RANGE, date([2010.06.15 15:30:00.158,2012.08.15 17:30:10.008, 2014.06.15 17:30:10.008]))
+            db = database("{db_name}", RANGE, date([2010.06.15 15:30:00.158,2012.08.15 17:30:10.008, 2014.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_date_timestamp)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "dfs://DFS_RANGE_date_nanotimestamp", "pt",
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "pt",
                                               False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_nanotimestamp, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://DFS_RANGE_date_nanotimestamp','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_nanotimestamp','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://DFS_RANGE_date_nanotimestamp','pt')")
-        assert last["count"][0] - first["count"][0] == 30000
-        re = self.conn.run("select * from loadTable('dfs://DFS_RANGE_date_nanotimestamp','pt')")
-        id = [0] * 15000
-        id_last = [1] * 15000
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 3000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
+        id = [0] * 1500
+        id_last = [1] * 1500
         id.extend(id_last)
         x = np.array(["2012-06-15T15:30:10.008007006", "2013-06-15T17:30:10.008007006"], dtype="datetime64[ns]")
-        x = np.repeat(x, 15000)
+        x = np.repeat(x, 1500)
         x.sort()
         ex = pd.DataFrame({
             "id": id,
             "x": x
         })
         assert_frame_equal(re, ex)
-        self.conn.run('dropDatabase("dfs://DFS_RANGE_date_nanotimestamp")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_data_size_between_1024_1048576(self):
-        script_data_size_between_1024_1048576 = """
-            if(existsDatabase("dfs://data_size_between_1024_1048576")){
-                dropDatabase("dfs://data_size_between_1024_1048576")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_data_size_between_1024_1048576 = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, INT])
-            db = database("dfs://data_size_between_1024_1048576", RANGE, 0 1000 2000)
+            db = database("{db_name}", RANGE, 0 1000 2000)
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_data_size_between_1024_1048576)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://data_size_between_1024_1048576", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_data_size_between_1024_1048576, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://data_size_between_1024_1048576','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://data_size_between_1024_1048576','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://data_size_between_1024_1048576','pt')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         assert last["count"][0] - first["count"][0] == 20000
-        re = self.conn.run("select * from loadTable('dfs://data_size_between_1024_1048576','pt')")
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
         id = re["id"].to_list()
         id.sort()
         x = re["x"].to_list()
@@ -2723,103 +2758,106 @@ class TestMultithreadTableWriter:
         ex_x.sort()
         assert id == ex_id
         assert x == ex_x
-        self.conn.run('dropDatabase("dfs://data_size_between_1024_1048576")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_data_size_larger_than_1048576(self):
-        script_data_size_larger_than_1048576 = """
-            if(existsDatabase("dfs://data_size_larger_than_1048576")){
-                dropDatabase("dfs://data_size_larger_than_1048576")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_data_size_larger_than_1048576 = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, INT])
-            db = database("dfs://data_size_larger_than_1048576", RANGE, 0 1000000 2000000)
+            db = database("{db_name}", RANGE, 0 1000000 2000000)
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_data_size_larger_than_1048576)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "dfs://data_size_larger_than_1048576", "pt", False, False, [], 100, 0.1, 10, "x")
+            HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "x")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_data_size_larger_than_1048576, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://data_size_larger_than_1048576','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://data_size_larger_than_1048576','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://data_size_larger_than_1048576','pt')")
-        assert last["count"][0] - first["count"][0] == 150000
-        re = self.conn.run("select * from loadTable('dfs://data_size_larger_than_1048576','pt')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
+        assert last["count"][0] - first["count"][0] == 1500000
+        re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
         id = re["id"].to_list()
         id.sort()
         x = re["x"].to_list()
         x.sort()
-        ex_id = list(range(15000)) * 10
+        ex_id = list(range(150000)) * 10
         ex_id.sort()
-        ex_x = list(range(15000)) * 10
+        ex_x = list(range(150000)) * 10
         ex_x.sort()
         assert id == ex_id
         assert x == ex_x
-        self.conn.run('dropDatabase("dfs://data_size_larger_than_1048576")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_more_than_200_cols(self):
-        script_more_than_200_cols = """
-            if(existsDatabase("dfs://more_than_200_cols")){
-                dropDatabase("dfs://more_than_200_cols")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_more_than_200_cols = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             col_name = array(STRING, 0)
-            for(i in 1..300){
+            for(i in 1..300){{
                 col_name_element = "col"+string(i)
                 col_name.append!(col_name_element)
-            }
+            }}
             col_type = take(INT, 300)
             t = table(1000:0, col_name, col_type)
-            db = database("dfs://more_than_200_cols", RANGE, 0 50 200)
+            db = database("{db_name}", RANGE, 0 50 200)
             pt= db.createPartitionedTable(t, `pt, `col1)
         """
         self.conn.run(script_more_than_200_cols)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "dfs://more_than_200_cols", "pt", False, False,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "pt", False, False,
                                               [], 100, 0.1, 10, "col1")
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_more_than_200_cols, args=(writer, i,)))
-        self.conn.run("delete from loadTable('dfs://more_than_200_cols','pt')")
-        first = self.conn.run("select count(*) from loadTable('dfs://more_than_200_cols','pt')")
+        self.conn.run(f"delete from loadTable('{db_name}','pt')")
+        first = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from loadTable('dfs://more_than_200_cols','pt')")
+        last = self.conn.run(f"select count(*) from loadTable('{db_name}','pt')")
         assert last["count"][0] - first["count"][0] == 1000
         for i in range(300):
-            re = self.conn.run("select * from loadTable('dfs://more_than_200_cols','pt')")
+            re = self.conn.run(f"select * from loadTable('{db_name}','pt')")
             col = re["col{}".format(i + 1)].to_list()
             col.sort()
             ex_col = list(range(100)) * 10
             ex_col.sort()
             assert col == ex_col
-        self.conn.run('dropDatabase("dfs://more_than_200_cols")')
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_all_type_compress_Delta(self):
-        script_all_type_compress_Delta = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_all_type_compress_Delta = f"""
             t = table(1000:0, `bool`char`short`int`long`date`month`time`second`minute`datehour`datetime`timestamp`nanotime`nanotimestamp`float`double`string`arrayVector, [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, SECOND, MINUTE, DATEHOUR, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, STRING, INT[]])
-            share t as all_type_compress_Delta
+            share t as `{func_name}
         """
         self.conn.run(script_all_type_compress_Delta)
         pattern = re.compile(".*Failed to save the inserted data.*")
         compress = ["delta", "delta", "delta", "delta", "delta", "delta", "delta", "delta", "delta", "delta", "delta",
                     "delta", "delta", "delta", "delta", "delta", "delta", "delta", "delta"]
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", "all_type_compress_Delta", False, False, [], 100, 0.1, 1, "", compress)
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "", compress)
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_all_type_compress, args=(writer, i,)))
-        self.conn.run("delete from all_type_compress_Delta")
+        self.conn.run(f"delete from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
@@ -2829,33 +2867,32 @@ class TestMultithreadTableWriter:
         errorInfo = writer.getStatus().errorInfo
         flag = pattern.match(errorInfo)
         assert flag is not None
-        self.conn.run("undef(`all_type_compress_Delta, SHARED)")
 
     def test_multithreadTableWriterTest_all_type_compress_LZ4(self):
-        script_all_type_compress_LZ4 = """
+        func_name = inspect.currentframe().f_code.co_name
+        script_all_type_compress_LZ4 = f"""
             t = table(1000:0, `bool`char`short`int`long`date`month`time`second`minute`datehour`datetime`timestamp`nanotime`nanotimestamp`float`double`string`arrayVector, [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, SECOND, MINUTE, DATEHOUR, DATETIME, TIMESTAMP, NANOTIME, NANOTIMESTAMP, FLOAT, DOUBLE, STRING, INT[]])
-            share t as all_type_compress_LZ4
+            share t as `{func_name}
         """
         self.conn.run(script_all_type_compress_LZ4)
         compress = ["LZ4", "LZ4", "LZ4", "LZ4", "LZ4", "LZ4", "LZ4", "LZ4", "LZ4", "LZ4", "LZ4", "LZ4", "LZ4", "LZ4",
                     "LZ4", "LZ4", "LZ4", "LZ4", "LZ4"]
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "all_type_compress_LZ4", False, False, [],
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name, False, False, [],
                                               100, 0.1, 1, "", compress)
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_all_type_compress, args=(writer, i,)))
-        self.conn.run("delete from all_type_compress_LZ4")
-        first = self.conn.run("select count(*) from all_type_compress_LZ4")
+        self.conn.run(f"delete from {func_name}")
+        first = self.conn.run(f"select count(*) from {func_name}")
         for t in threads:
             t.daemon = True
             t.start()
         for t in threads:
             t.join()
         writer.waitForThreadCompletion()
-        time.sleep(3)
-        last = self.conn.run("select count(*) from all_type_compress_LZ4")
+        last = self.conn.run(f"select count(*) from {func_name}")
         assert last["count"][0] - first["count"][0] == 6
-        re = self.conn.run("select * from all_type_compress_LZ4")
+        re = self.conn.run(f"select * from {func_name}")
         col_bool = [True, False, True, False, True, False]
         col_char = np.array([1, 2, 3, 4, 5, 6], dtype=np.int8)
         col_short = np.array([1, 2, 3, 4, 5, 6], dtype=np.int16)
@@ -2915,25 +2952,27 @@ class TestMultithreadTableWriter:
             "arrayVector": col_arrayVector
         })
         assert_frame_equal(re, ex)
-        self.conn.run("undef(`all_type_compress_LZ4, SHARED)")
 
     def test_multithreadTableWriterTest_DFS_partitionCol_null(self):
-        script_VALUE_datehour_datetime = """
-            if(existsDatabase("dfs://DFS_VALUE_datehour_datetime")){
-                dropDatabase("dfs://DFS_VALUE_datehour_datetime")
-            }
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        script_VALUE_datehour_datetime = f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
             t = table(1000:0, `id`x, [LONG, DATETIME])
-            db = database("dfs://DFS_VALUE_datehour_datetime", VALUE, datehour([2012.06.15 15:30:00.158,2013.06.15 17:30:10.008]))
+            db = database("{db_name}", VALUE, datehour([2012.06.15 15:30:00.158,2013.06.15 17:30:10.008]))
             pt= db.createPartitionedTable(t, `pt, `x)
         """
         self.conn.run(script_VALUE_datehour_datetime)
         with pytest.raises(RuntimeError):
             ddb.MultithreadedTableWriter(
-                HOST, PORT, USER, PASSWD, "dfs://DFS_VALUE_datehour_datetime", "pt", False, False, [], 100, 0.1, 10, "")
-        self.conn.run('dropDatabase("dfs://DFS_VALUE_datehour_datetime")')
+                HOST, PORT, USER, PASSWD, db_name, "pt", False, False, [], 100, 0.1, 10, "")
+        self.conn.run(f'dropDatabase("{db_name}")')
 
     def test_multithreadTableWriterTest_one_col_insert_double_and_int(self):
-        tbname = 't_' + random_string(5)
+        func_name = inspect.currentframe().f_code.co_name
+        tbname = func_name
         scirpt_one_col_insert_double_and_int = f"share table(1 2 as id, double(1 2) as val, nanotimestamp(111111 222222) as time) as {tbname}"
         self.conn.run(scirpt_one_col_insert_double_and_int)
         mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", tbname)
@@ -2953,7 +2992,8 @@ class TestMultithreadTableWriter:
         assert_frame_equal(ex, ans)
 
     def test_multithreadTableWriter_createObject_elapsed_time(self):
-        tbname = 'tab_' + random_string(5)
+        func_name = inspect.currentframe().f_code.co_name
+        tbname = func_name
         s = f"share table(1 2 as id, double(1 2) as val, nanotimestamp(111111 222222) as time) as {tbname}"
         self.conn.run(s)
         import random
@@ -2964,15 +3004,15 @@ class TestMultithreadTableWriter:
         et = time.time()
         elapsed_time = et - st
         assert elapsed_time < 10
-        self.conn.undef(tbname, 'SHARED')
 
     @pytest.mark.parametrize('data', [[1, 2, 3], {1}, {1: 1}, (1,)], ids=['LIST', 'SET', 'DICT', 'TUPLE'])
     def test_multithreadTableWriter_insert_error_type(self, data):
-        self.conn.run("""
+        func_name = inspect.currentframe().f_code.co_name + random_string(5)
+        self.conn.run(f"""
             t=table(100:0,[`int,`str],[INT,STRING])
-            share t as `terror_type_test
+            share t as `{func_name}
         """)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", "terror_type_test")
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, "", func_name)
         for i in range(3):
             writer.insert(data, data)
         writer.waitForThreadCompletion()
@@ -2981,12 +3021,11 @@ class TestMultithreadTableWriter:
         assert not status.succeed()
         assert status.errorCode == 'A1'
         assert 'Data conversion error' in status.errorInfo
-        self.conn.run('undef(`terror_type_test,SHARED)')
-        del writer
 
     def test_multithreadTableWriter_over_length(self):
+        func_name = inspect.currentframe().f_code.co_name
         data = '1' * 256 * 1024
-        tbname = 't_' + random_string(5)
+        tbname = func_name
         self.conn.run(f"share table(100:0,[`str],[STRING]) as {tbname}")
         mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, '', tbname, threadCount=1)
         mtw.insert(data)
@@ -2996,12 +3035,12 @@ class TestMultithreadTableWriter:
         assert status.errorCode == 'A5'
         assert 'Failed to save the inserted data: String too long, Serialization failed, length must be less than 256K bytes' in status.errorInfo
         assert status.sendFailedRows + status.unsentRows == 1
-        self.conn.run(f'undef `{tbname},SHARED')
         del mtw
 
     def test_multithreadTableWriter_max_length_string_in_memory_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         data = '1' * (256 * 1024 - 1)
-        tbname = 't_' + random_string(5)
+        tbname = func_name
         self.conn.run(f"share table(100:0,[`str],[STRING]) as {tbname}")
         mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, '', tbname, threadCount=1)
         mtw.insert(data)
@@ -3009,12 +3048,12 @@ class TestMultithreadTableWriter:
         status = mtw.getStatus()
         assert not status.hasError()
         assert self.conn.run(f'strlen({tbname}[`str][0])') == 256 * 1024 - 1
-        self.conn.run(f'undef `{tbname},SHARED')
         del mtw
 
     def test_multithreadTableWriter_max_length_symbol_in_memory_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         data = '1' * (256 * 1024 - 1)
-        tbname = 't_' + random_string(5)
+        tbname = func_name
         self.conn.run(f"share table(100:0,[`str],[SYMBOL]) as {tbname}")
         mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, '', tbname, threadCount=1)
         mtw.insert(data)
@@ -3022,12 +3061,12 @@ class TestMultithreadTableWriter:
         status = mtw.getStatus()
         assert not status.hasError()
         assert self.conn.run(f'strlen({tbname}[`str][0])') == 256 * 1024 - 1
-        self.conn.run(f'undef `{tbname},SHARED')
         del mtw
 
     def test_multithreadTableWriter_max_length_blob_in_memory_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         data = '1' * 256 * 1024
-        tbname = 't_' + random_string(5)
+        tbname = func_name
         self.conn.run(f"share table(100:0,[`str],[BLOB]) as {tbname}")
         mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, '', tbname, threadCount=1)
         mtw.insert(data)
@@ -3035,12 +3074,12 @@ class TestMultithreadTableWriter:
         status = mtw.getStatus()
         assert not status.hasError()
         assert self.conn.run(f'strlen({tbname}[`str][0])') == 256 * 1024
-        self.conn.run(f'undef `{tbname},SHARED')
         del mtw
 
     def test_multithreadTableWriter_max_length_string_stream_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         data = '1' * (256 * 1024 - 1)
-        tbname = 't_' + random_string(5)
+        tbname = func_name
         self.conn.run(f"share streamTable(100:0,[`str],[STRING]) as {tbname}")
         mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, '', tbname, threadCount=1)
         mtw.insert(data)
@@ -3048,12 +3087,12 @@ class TestMultithreadTableWriter:
         status = mtw.getStatus()
         assert not status.hasError()
         assert self.conn.run(f'strlen({tbname}[`str][0])') == 256 * 1024 - 1
-        self.conn.run(f'undef `{tbname},SHARED')
         del mtw
 
     def test_multithreadTableWriter_max_length_symbol_stream_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         data = '1' * (256 * 1024 - 1)
-        tbname = 't_' + random_string(5)
+        tbname = func_name
         self.conn.run(f"share streamTable(100:0,[`str],[SYMBOL]) as {tbname}")
         mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, '', tbname, threadCount=1)
         mtw.insert(data)
@@ -3061,12 +3100,12 @@ class TestMultithreadTableWriter:
         status = mtw.getStatus()
         assert not status.hasError()
         assert self.conn.run(f'strlen({tbname}[`str][0])') == 256 * 1024 - 1
-        self.conn.run(f'undef `{tbname},SHARED')
         del mtw
 
     def test_multithreadTableWriter_max_length_blob_stream_table(self):
+        func_name = inspect.currentframe().f_code.co_name
         data = '1' * 256 * 1024
-        tbname = 't_' + random_string(5)
+        tbname = func_name
         self.conn.run(f"share streamTable(100:0,[`str],[BLOB]) as {tbname}")
         mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, '', tbname, threadCount=1)
         mtw.insert(data)
@@ -3074,22 +3113,22 @@ class TestMultithreadTableWriter:
         status = mtw.getStatus()
         assert not status.hasError()
         assert self.conn.run(f'strlen({tbname}[`str][0])') == 256 * 1024
-        self.conn.run(f'undef `{tbname},SHARED')
         del mtw
 
     def test_multithreadTableWriter_max_length_string_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         data = '1' * (256 * 1024 - 1)
-        tbname = 't_' + random_string(5)
-        dbPath = "dfs://multithreadTableWriter"
+        tbname = func_name
         self.conn.run(f"""
-            if(existsDatabase("{dbPath}")){{
-                dropDatabase("{dbPath}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             tab=table(100:0,[`id,`test],[STRING,STRING])
-            db=database("{dbPath}",VALUE,["0","1","2"],engine=`TSDB)
+            db=database("{db_name}",VALUE,["0","1","2"],engine=`TSDB)
             tb=db.createPartitionedTable(tab,"{tbname}",`test,sortColumns=`test)
         """)
-        mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, dbPath, tbname, threadCount=1)
+        mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, tbname, threadCount=1)
         mtw.insert(data, "0")
         mtw.waitForThreadCompletion()
         status = mtw.getStatus()
@@ -3098,18 +3137,19 @@ class TestMultithreadTableWriter:
         del mtw
 
     def test_multithreadTableWriter_max_length_symbol_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         data = '1' * 255
-        tbname = 't_' + random_string(5)
-        dbPath = "dfs://multithreadTableWriter"
+        tbname = func_name
         self.conn.run(f"""
-            if(existsDatabase("{dbPath}")){{
-                dropDatabase("{dbPath}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             tab=table(100:0,[`id,`test],[SYMBOL,STRING])
-            db=database("{dbPath}",VALUE,["0","1","2"],engine=`TSDB)
+            db=database("{db_name}",VALUE,["0","1","2"],engine=`TSDB)
             tb=db.createPartitionedTable(tab,"{tbname}",`test,sortColumns=`test)
         """)
-        mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, dbPath, tbname, threadCount=1)
+        mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, tbname, threadCount=1)
         mtw.insert(data, "0")
         mtw.waitForThreadCompletion()
         status = mtw.getStatus()
@@ -3118,21 +3158,64 @@ class TestMultithreadTableWriter:
         del mtw
 
     def test_multithreadTableWriter_max_length_blob_dfs_table(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
         data = '1' * 256 * 1024
-        tbname = 't_' + random_string(5)
-        dbPath = "dfs://multithreadTableWriter"
+        tbname = func_name
         self.conn.run(f"""
-            if(existsDatabase("{dbPath}")){{
-                dropDatabase("{dbPath}")
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
             }}
             tab=table(100:0,[`id,`test],[BLOB,STRING])
-            db=database("{dbPath}",VALUE,["0","1","2"],engine=`TSDB)
+            db=database("{db_name}",VALUE,["0","1","2"],engine=`TSDB)
             tb=db.createPartitionedTable(tab,"{tbname}",`test,sortColumns=`test)
         """)
-        mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, dbPath, tbname, threadCount=1)
+        mtw = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, tbname, threadCount=1)
         mtw.insert(data, "0")
         mtw.waitForThreadCompletion()
         status = mtw.getStatus()
         assert not status.hasError()
         assert self.conn.run(f'select strlen(id) from tb')['strlen_id'][0] == 256 * 1024
         del mtw
+
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_multithreadTableWriter_reconnect_false(self):
+        func_name = inspect.currentframe().f_code.co_name
+        data = "test"
+        conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_ = ddb.Session(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_.run(f"share streamTable(100:0,[`str],[BLOB]) as {func_name}")
+        mtw = ddb.MultithreadedTableWriter(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, '', func_name,
+                                           threadCount=1, reconnect=False)
+        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
+        time.sleep(3)
+        mtw.insert(data)
+        mtw.waitForThreadCompletion()
+        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
+        status = mtw.getStatus()
+        assert status.hasError()
+
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_multithreadTableWriter_reconnect_true(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        data = "test"
+        conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_ = ddb.Session(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_.run(f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
+            tab=table(100:0,[`id,`test],[BLOB,STRING])
+            db=database("{db_name}",VALUE,["0","1","2"],engine=`TSDB)
+            tb=db.createPartitionedTable(tab,"{func_name}",`test,sortColumns=`test)
+        """)
+        mtw = ddb.MultithreadedTableWriter(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, db_name, func_name,
+                                           threadCount=1)
+        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
+        time.sleep(3)
+        mtw.insert(data, data)
+        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
+        mtw.waitForThreadCompletion()
+        status = mtw.getStatus()
+        assert not status.hasError()

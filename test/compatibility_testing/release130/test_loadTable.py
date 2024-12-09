@@ -10,7 +10,7 @@ from setup.utils import get_pid
 
 class DBInfo:
     dfsDBName = 'dfs://testLoadTable'
-    diskDBName = WORK_DIR + '/testLoadTable'
+    diskDBName = WORK_DIR + 'testLoadTable'
     table1 = 'tb1'
     table2 = 'tb2'
 
@@ -397,7 +397,6 @@ class TestLoadTable:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
@@ -934,7 +933,7 @@ class TestLoadTable:
         assert_array_equal(after >= before, True)
 
     def test_loadTable_disk_value_partition_string_scalar(self):
-        myDBName = WORK_DIR + "/db1"
+        myDBName = WORK_DIR + "db1"
         script = '''
         login("admin","123456")
         if(exists("{dbName}"))
@@ -949,7 +948,7 @@ class TestLoadTable:
         assert_frame_equal(res, expected)
 
     def test_loadTable_disk_value_partition_string_vector(self):
-        myDBName = WORK_DIR + "/db1"
+        myDBName = WORK_DIR + "db1"
         script = '''
         login("admin","123456")
         if(exists("{dbName}"))
@@ -1037,7 +1036,6 @@ class TestLoadTableBySQL:
 
     @classmethod
     def teardown_class(cls):
-        cls.conn.close()
         if AUTO_TESTING:
             with open('progress.txt', 'a+') as f:
                 f.write(cls.__name__ + ' finished.\n')
