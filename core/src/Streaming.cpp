@@ -746,7 +746,8 @@ void StreamingClientImpl::checkServerVersion(std::string host, int port, const s
         }
     }
      
-    auto versionStr = conn.run("version()")->getString();
+    vector<ConstantSP> args;
+    auto versionStr = conn.run("version", args)->getString();
     auto _ = Util::split(Util::split(versionStr, ' ')[0], '.');
     auto v0 = std::stoi(_[0]);
     auto v1 = std::stoi(_[1]);

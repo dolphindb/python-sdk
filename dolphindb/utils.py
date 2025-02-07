@@ -1,7 +1,9 @@
 import uuid
 
-from typing import List, Union
+import pandas as pd
 
+from typing import List, Union, Dict
+from dolphindb.settings import TYPE_STRING
 
 def _generate_tablename(tableName=None):
     if tableName is None:
@@ -80,6 +82,47 @@ def _convertToBool(value: bool, errMsg: str = ""):
     if not isinstance(value, bool):
         __raise_or_not(errMsg)
     return str(bool(value)).lower()
+
+
+def get_types_from_schema(df_schema_info: pd.DataFrame) -> Dict[str, List]:
+    """
+    Extracts column names, types, and extra information from df_schema_info into a dictionary.
+
+    Args:
+        df_schema_info (pd.DataFrame): A pandas DataFrame containing schema information.
+            It must include at least the following columns:
+                - 'name': The name of the column.
+                - 'typeInt': The integer representing the DolphinDB data type.
+            Optionally, it can include:
+                - 'extra': A number indicating the precision of DECIMAL data.
+
+    Returns:
+        dict: A dictionary where keys are column names and values are lists containing:
+            - DolphinDB type as a string.
+            - Optional extra value (integer) or None if not applicable.
+    """
+    ddb_type_dict = {}
+    has_extra = 'extra' in df_schema_info.columns
+
+    for _, row in df_schema_info.iterrows():
+        name = row['name']
+        typeInt = row['typeInt']
+        typeString = TYPE_STRING[typeInt]
+
+        if has_extra:
+            extra = row['extra']
+            if pd.notna(extra):
+                try:
+                    extra = int(extra)
+                except (ValueError, TypeError):
+                    raise ValueError(f"Invalid type for 'extra'. Expected an int, but received a value of type {type(extra)}.")
+                ddb_type_dict[name] = [typeString, extra]
+            else:
+                ddb_type_dict[name] = [typeString, None]
+        else:
+            ddb_type_dict[name] = [typeString, None]
+
+    return ddb_type_dict
 
 
 class month(object):

@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal
 from pandas._testing import assert_frame_equal
 
 from basic_testing.prepare import random_string
+from basic_testing.utils import operateNodes
 from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER, \
     PORT_DNODE1
 
@@ -778,11 +779,11 @@ class TestMultithreadTableWriter:
             dbpath = "{db_name}"
             if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};go
             db=database(dbpath,VALUE,2022.03.20..2022.03.29,,'TSDB');
-            tmp=db.createPartitionedTable(t,`tmp,`date,,`int);go
+            db.createPartitionedTable(t,`mtw,`date,,`int);go
         """
         self.conn.run(script)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, db_name, "tmp", batchSize=1000, threadCount=10, partitionCol="date")
+            HOST, PORT, USER, PASSWD, db_name, "mtw", batchSize=1000, threadCount=10, partitionCol="date")
         for i in range(100):
             res = writer.insert(np.datetime64(f'2022-03-2{i % 10}'), -1.356468, "str" + str(i),
                                 "sym" + str(i)) if i == 5 \
@@ -797,7 +798,6 @@ class TestMultithreadTableWriter:
         assert datas2[5][1] == -1.356468
         assert datas2[5][2] == "str5"
         assert datas2[5][3] == "sym5"
-        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_function_getUnwrittenData_dfs_2(self):
         func_name = inspect.currentframe().f_code.co_name
@@ -807,10 +807,10 @@ class TestMultithreadTableWriter:
             dbpath = "{db_name}"
             if(existsDatabase(dbpath)){{dropDatabase(dbpath)}};go
             db=database(dbpath,VALUE,2022.03.20..2022.03.29,,'TSDB');
-            tmp=db.createPartitionedTable(t,`tmp,`date,,`int);go
+            db.createPartitionedTable(t,`mtw,`date,,`int);go
         """
         self.conn.run(script)
-        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "tmp", batchSize=1000,
+        writer = ddb.MultithreadedTableWriter(HOST, PORT, USER, PASSWD, db_name, "mtw", batchSize=1000,
                                               threadCount=10, partitionCol="date", mode="APPEND")
         for i in range(100):
             res = writer.insert(np.datetime64(f'2022-03-2{i % 10}'), str(i), "str" + str(i),
@@ -826,7 +826,6 @@ class TestMultithreadTableWriter:
         assert datas2[5][1] == "5"
         assert datas2[5][2] == "str5"
         assert datas2[5][3] == "abcd"
-        self.conn.dropDatabase(db_name)
 
     def test_multithreadTableWriterTest_object_MultithreadedTableWriterThreadStatus(self):
         func_name = inspect.currentframe().f_code.co_name
@@ -3187,11 +3186,10 @@ class TestMultithreadTableWriter:
         conn_.run(f"share streamTable(100:0,[`str],[BLOB]) as {func_name}")
         mtw = ddb.MultithreadedTableWriter(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, '', func_name,
                                            threadCount=1, reconnect=False)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(3)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
         mtw.insert(data)
         mtw.waitForThreadCompletion()
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         status = mtw.getStatus()
         assert status.hasError()
 
@@ -3212,10 +3210,9 @@ class TestMultithreadTableWriter:
         """)
         mtw = ddb.MultithreadedTableWriter(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, db_name, func_name,
                                            threadCount=1)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(3)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
         mtw.insert(data, data)
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         mtw.waitForThreadCompletion()
         status = mtw.getStatus()
         assert not status.hasError()

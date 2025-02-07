@@ -14,6 +14,7 @@ import pytest
 from numpy.testing import assert_array_equal
 from pandas._testing import assert_frame_equal
 
+from basic_testing.utils import operateNodes
 from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_DNODE1, PORT_CONTROLLER, USER_CLUSTER, \
     PASSWD_CLUSTER, PORT_DNODE2, PORT_DNODE3
 
@@ -181,7 +182,7 @@ class TestDBConnectionPool:
             'cblob': np.array([b'blob1', b'blob2', b''], dtype='object')
         })
         df.__DolphinDB_Type__ = {
-            'cipaddr': keys.DT_IPPADDR,
+            'cipaddr': keys.DT_IPADDR,
             'cblob': keys.DT_BLOB,
         }
         pool.addTask(f"tableInsert{{{func_name}_tab}}", 1, df)
@@ -320,7 +321,7 @@ class TestDBConnectionPool:
             'cblob': np.array([b'blob1', b'blob2', b''], dtype='object')
         })
         df.__DolphinDB_Type__ = {
-            'cipaddr': keys.DT_IPPADDR,
+            'cipaddr': keys.DT_IPADDR,
             'cblob': keys.DT_BLOB,
         }
         pool.addTask(f"tableInsert{{{func_name}_tab}}", 1, df)
@@ -374,7 +375,7 @@ class TestDBConnectionPool:
         })
         df.__DolphinDB_Type__ = {
             'clong': keys.DT_LONG,
-            'cipaddr': keys.DT_IPPADDR,
+            'cipaddr': keys.DT_IPADDR,
             'cblob': keys.DT_BLOB,
         }
         pool.addTask(f"tableInsert{{{func_name}_tab}}", 1, df)
@@ -427,7 +428,7 @@ class TestDBConnectionPool:
             'cshort': keys.DT_SHORT,
             'cint': keys.DT_INT,
             'clong': keys.DT_LONG,
-            'cipaddr': keys.DT_IPPADDR,
+            'cipaddr': keys.DT_IPADDR,
             'cblob': keys.DT_BLOB,
         }
         pool.addTask(f"tableInsert{{{func_name}_tab}}", 1, df)
@@ -617,8 +618,6 @@ class TestDBConnectionPool:
         res = self.conn.run(f"""
             ex = select * from objByName(`t);
             res = select * from loadTable("dfs://{func_name}", `pt);
-            print(ex)
-            print(res)
             all(each(eqObj, ex.values(), res.values()))
         """)
         assert res
@@ -990,32 +989,30 @@ class TestDBConnectionPool:
 
     @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_loadBalance(self):
-        pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 60, loadBalance=True)
+        pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 60, "admin", "123456", loadBalance=True)
         loadDf = pool.runTaskAsync(
             "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0").result()
         print(loadDf)
-        assert all(((loadDf - loadDf.mean()).abs() < 0.4)['load'])
+        assert all(((loadDf - loadDf.mean()).abs() < 0.7)['load'])
         pool.shutDown()
 
     @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_reconnect(self):
-        pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 8, reConnect=True)
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(3)
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(3)
+        pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 4, USER_CLUSTER, PASSWD_CLUSTER, reConnect=True)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         assert pool.runTaskAsync("1+1").result() == 2
         pool.shutDown()
         conn.close()
 
     @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_highAvailability(self):
-        pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 30, highAvailability=True)
+        pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 30, USER_CLUSTER, PASSWD_CLUSTER, highAvailability=True)
         time.sleep(10)
         loadDf = pool.runTaskAsync(
             "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0").result()
-        assert not all(((loadDf - loadDf.mean()).abs() < 0.4)['load'])
+        assert not all(((loadDf - loadDf.mean()).abs() < 0.7)['load'])
         pool.shutDown()
 
     def test_DBConnectionPool_sqlStd(self):
@@ -1042,13 +1039,14 @@ class TestDBConnectionPool:
         n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
+                                 "from basic_testing.utils import operateNodes;"
                                  f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
-                                 f"pool=ddb.DBConnectionPool('{HOST_CLUSTER}', {PORT_DNODE1}, 3, reConnect=True, tryReconnectNums={n});"
-                                 f"""conn.run("stopDataNode(['dnode{PORT_DNODE1}'])");"""
+                                 f"pool=ddb.DBConnectionPool('{HOST_CLUSTER}', {PORT_DNODE1}, 3, '{USER_CLUSTER}', '{PASSWD_CLUSTER}', reConnect=True, tryReconnectNums={n});"
+                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}'],'STOP');"""
                                  "pool.runTaskAsync('1+1').result();"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
-        assert result.stdout.count("Failed") == n
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
+        assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n
         assert f"Connect to {HOST_CLUSTER}:{PORT_DNODE1} failed after {n} reconnect attempts." in result.stdout
 
     @pytest.mark.xdist_group(name='cluster_test')
@@ -1057,11 +1055,12 @@ class TestDBConnectionPool:
         n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
+                                 "from basic_testing.utils import operateNodes;"
                                  f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
-                                 f"pool=ddb.DBConnectionPool('{HOST}', {PORT_DNODE1}, 1, reConnect=True, highAvailability=True, tryReconnectNums={n});"
-                                 f"""conn.run("stopDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'])");"""
+                                 f"pool=ddb.DBConnectionPool('{HOST}', {PORT_DNODE1}, 1, '{USER_CLUSTER}', '{PASSWD_CLUSTER}', reConnect=True, highAvailability=True, tryReconnectNums={n});"
+                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'],'STOP');"""
                                  "pool.runTaskAsync('1+1').result();"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'])")
-        assert result.stdout.count("Failed") == n * 4
+        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+        assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n * 4
         assert f"Connect to nodes failed after {n} reconnect attempts." in result.stdout

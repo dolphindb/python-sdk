@@ -1,5 +1,6 @@
 import math
 from decimal import Decimal
+from time import sleep
 
 import numpy as np
 import pandas as pd
@@ -132,3 +133,63 @@ def assertPlus(data):
             assertPlus(data[key])
     else:
         assert False, f'{type(data)} is not support'
+
+
+# def operateNodes(conn, nodes, operate):
+#     conn.run("""
+#         def check_nodes(state_,nodes){
+#             return all(exec state==state_ from getClusterPerf(true) where name in nodes)
+#         }
+#     """)
+#     while True:
+#         if operate.upper() == "STOP":
+#             conn.run("stopDataNode", nodes)
+#             result = conn.run("check_nodes", 0, nodes)
+#         else:
+#             conn.run("startDataNode", nodes)
+#             result = conn.run("check_nodes", 1, nodes)
+#         if result:
+#             break
+#         else:
+#             sleep(0.5)
+
+def operateNodes(conn,nodes,operate):
+    conn.run("""
+        def check_nodes(state_,nodes){
+            return all(exec state==state_ from rpc(getControllerAlias(),getClusterPerf) where name in nodes)
+        }
+        def check_nodes_start(nodes){
+            for (i in nodes){
+                do {
+                    try{
+                        startDataNode(nodes)
+                    }catch(ex){}
+                    try {
+                        result = rpc(i,check_nodes,1,nodes)
+                    } catch (ex) {
+                        sleep(500)
+                        continue
+                    }
+                    if (result) {
+                        break
+                    } else {
+                        sleep(500)
+                        continue
+                    }
+                } while (true);
+            }
+        }
+    """)
+    if operate.upper() == "STOP":
+        while True:
+            try:
+                conn.run("stopDataNode", nodes)
+            except Exception:
+                pass
+            result = conn.run("check_nodes", 0, nodes)
+            if result:
+                break
+            else:
+                sleep(0.5)
+    else:
+        conn.run("check_nodes_start", nodes)

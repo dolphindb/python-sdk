@@ -25,10 +25,10 @@ from basic_testing.utils import equalPlus
 from setup.settings import HOST, PORT, USER, PASSWD
 
 
-class TestCEP(object):
+class TestCep(object):
     conn: ddb.Session = ddb.Session(HOST, PORT, USER, PASSWD, enablePickle=False)
 
-    def test_CEP_scalar_bool(self):
+    def test_cep_scalar_bool(self):
         class EventScalarBool(Event):
             _event_name = "EventScalarBool"
             s_bool: Scalar[keys.DT_BOOL]
@@ -131,7 +131,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_char(self):
+    def test_cep_scalar_char(self):
         class EventScalarChar(Event):
             _event_name = "EventScalarChar"
             s_char: Scalar[keys.DT_CHAR]
@@ -236,7 +236,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_short(self):
+    def test_cep_scalar_short(self):
         class EventScalarShort(Event):
             _event_name = "EventScalarShort"
             s_short: Scalar[keys.DT_SHORT]
@@ -341,7 +341,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_int(self):
+    def test_cep_scalar_int(self):
         class EventScalarInt(Event):
             _event_name = "EventScalarInt"
             s_int: Scalar[keys.DT_INT]
@@ -445,7 +445,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_long(self):
+    def test_cep_scalar_long(self):
         class EventScalarLong(Event):
             _event_name = "EventScalarLong"
             s_long: Scalar[keys.DT_LONG]
@@ -551,7 +551,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_date(self):
+    def test_cep_scalar_date(self):
         class EventScalarDate(Event):
             _event_name = "EventScalarDate"
             s_date: Scalar[keys.DT_DATE]
@@ -655,7 +655,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_month(self):
+    def test_cep_scalar_month(self):
         class EventScalarMonth(Event):
             _event_name = "EventScalarMonth"
             s_month: Scalar[keys.DT_MONTH]
@@ -759,7 +759,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_time(self):
+    def test_cep_scalar_time(self):
         class EventScalarTime(Event):
             _event_name = "EventScalarTime"
             s_time: Scalar[keys.DT_TIME]
@@ -863,7 +863,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_minute(self):
+    def test_cep_scalar_minute(self):
         class EventScalarMinute(Event):
             _event_name = "EventScalarMinute"
             s_minute: Scalar[keys.DT_MINUTE]
@@ -967,7 +967,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_second(self):
+    def test_cep_scalar_second(self):
         class EventScalarSecond(Event):
             _event_name = "EventScalarSecond"
             s_second: Scalar[keys.DT_SECOND]
@@ -1071,7 +1071,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_datetime(self):
+    def test_cep_scalar_datetime(self):
         class EventScalarDatetime(Event):
             _event_name = "EventScalarDatetime"
             s_datetime: Scalar[keys.DT_DATETIME]
@@ -1176,7 +1176,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_timestamp(self):
+    def test_cep_scalar_timestamp(self):
         class EventScalarTimestamp(Event):
             _event_name = "EventScalarTimestamp"
             s_timestamp: Scalar[keys.DT_TIMESTAMP]
@@ -1281,7 +1281,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_nanotime(self):
+    def test_cep_scalar_nanotime(self):
         class EventScalarNanotime(Event):
             _event_name = "EventScalarNanotime"
             s_nanotime: Scalar[keys.DT_NANOTIME]
@@ -1386,7 +1386,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_nanotimestamp(self):
+    def test_cep_scalar_nanotimestamp(self):
         class EventScalarNanotimestamp(Event):
             _event_name = "EventScalarNanotimestamp"
             s_nanotimestamp: Scalar[keys.DT_NANOTIMESTAMP]
@@ -1493,7 +1493,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_datehour(self):
+    def test_cep_scalar_datehour(self):
         class EventScalarDatehour(Event):
             _event_name = "EventScalarDatehour"
             s_datehour: Scalar[keys.DT_DATEHOUR]
@@ -1598,7 +1598,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_float(self):
+    def test_cep_scalar_float(self):
         class EventScalarFloat(Event):
             _event_name = "EventScalarFloat"
             s_float: Scalar[keys.DT_FLOAT]
@@ -1708,7 +1708,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_double(self):
+    def test_cep_scalar_double(self):
         class EventScalarDouble(Event):
             _event_name = "EventScalarDouble"
             s_double: Scalar[keys.DT_DOUBLE]
@@ -1820,7 +1820,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_string(self):
+    def test_cep_scalar_string(self):
         class EventScalarString(Event):
             _event_name = "EventScalarString"
             s_string: Scalar[keys.DT_STRING]
@@ -1923,7 +1923,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_blob(self):
+    def test_cep_scalar_blob(self):
         class EventScalarBlob(Event):
             _event_name = "EventScalarBlob"
             s_blob: Scalar[keys.DT_BLOB]
@@ -2034,7 +2034,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_int128(self):
+    def test_cep_scalar_int128(self):
         class EventScalarInt128(Event):
             _event_name = "EventScalarInt128"
             s_int128: Scalar[keys.DT_INT128]
@@ -2138,7 +2138,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_uuid(self):
+    def test_cep_scalar_uuid(self):
         class EventScalarUuid(Event):
             _event_name = "EventScalarUuid"
             s_uuid: Scalar[keys.DT_UUID]
@@ -2242,7 +2242,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_ipaddr(self):
+    def test_cep_scalar_ipaddr(self):
         class EventScalarIpaddr(Event):
             _event_name = "EventScalarIpaddr"
             s_ipaddr: Scalar[keys.DT_IPADDR]
@@ -2344,7 +2344,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_decimal32_4(self):
+    def test_cep_scalar_decimal32_4(self):
         class EventScalarDecimal32(Event):
             _event_name = "EventScalarDecimal32"
             s_decimal32_4: Scalar[keys.DT_DECIMAL32, 4]
@@ -2449,7 +2449,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_decimal64_12(self):
+    def test_cep_scalar_decimal64_12(self):
         class EventScalarDecimal64(Event):
             _event_name = "EventScalarDecimal64"
             s_decimal64_12: Scalar[keys.DT_DECIMAL64, 12]
@@ -2555,7 +2555,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_scalar_decimal128_26(self):
+    def test_cep_scalar_decimal128_26(self):
         class EventScalarDecimal128(Event):
             _event_name = "EventScalarDecimal128"
             s_decimal128_26: Scalar[keys.DT_DECIMAL128, 26]
@@ -2663,7 +2663,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_bool(self):
+    def test_cep_vector_bool(self):
         class EventVectorBool(Event):
             _event_name = "EventVectorBool"
             v_bool: Vector[keys.DT_BOOL]
@@ -2839,7 +2839,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_char(self):
+    def test_cep_vector_char(self):
         class EventVectorChar(Event):
             _event_name = "EventVectorChar"
             v_char: Vector[keys.DT_CHAR]
@@ -3017,7 +3017,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_short(self):
+    def test_cep_vector_short(self):
         class EventVectorShort(Event):
             _event_name = "EventVectorShort"
             v_short: Vector[keys.DT_SHORT]
@@ -3197,7 +3197,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_int(self):
+    def test_cep_vector_int(self):
         class EventVectorInt(Event):
             _event_name = "EventVectorInt"
             v_int: Vector[keys.DT_INT]
@@ -3376,7 +3376,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_long(self):
+    def test_cep_vector_long(self):
         class EventVectorLong(Event):
             _event_name = "EventVectorLong"
             v_long: Vector[keys.DT_LONG]
@@ -3556,7 +3556,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_date(self):
+    def test_cep_vector_date(self):
         class EventVectorDate(Event):
             _event_name = "EventVectorDate"
             v_date: Vector[keys.DT_DATE]
@@ -3721,7 +3721,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_month(self):
+    def test_cep_vector_month(self):
         class EventVectorMonth(Event):
             _event_name = "EventVectorMonth"
             v_month: Vector[keys.DT_MONTH]
@@ -3886,7 +3886,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_time(self):
+    def test_cep_vector_time(self):
         class EventVectorTime(Event):
             _event_name = "EventVectorTime"
             v_time: Vector[keys.DT_TIME]
@@ -4051,7 +4051,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_minute(self):
+    def test_cep_vector_minute(self):
         class EventVectorMinute(Event):
             _event_name = "EventVectorMinute"
             v_minute: Vector[keys.DT_MINUTE]
@@ -4216,7 +4216,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_second(self):
+    def test_cep_vector_second(self):
         class EventVectorSecond(Event):
             _event_name = "EventVectorSecond"
             v_second: Vector[keys.DT_SECOND]
@@ -4381,7 +4381,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_datetime(self):
+    def test_cep_vector_datetime(self):
         class EventVectorDatetime(Event):
             _event_name = "EventVectorDatetime"
             v_datetime: Vector[keys.DT_DATETIME]
@@ -4546,7 +4546,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_timestamp(self):
+    def test_cep_vector_timestamp(self):
         class EventVectorTimestamp(Event):
             _event_name = "EventVectorTimestamp"
             v_timestamp: Vector[keys.DT_TIMESTAMP]
@@ -4711,7 +4711,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_nanotime(self):
+    def test_cep_vector_nanotime(self):
         class EventVectorNanotime(Event):
             _event_name = "EventVectorNanotime"
             v_nanotime: Vector[keys.DT_NANOTIME]
@@ -4876,7 +4876,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_nanotimestamp(self):
+    def test_cep_vector_nanotimestamp(self):
         class EventVectorNanotimestamp(Event):
             _event_name = "EventVectorNanotimestamp"
             v_nanotimestamp: Vector[keys.DT_NANOTIMESTAMP]
@@ -5053,7 +5053,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_datehour(self):
+    def test_cep_vector_datehour(self):
         class EventVectorDatehour(Event):
             _event_name = "EventVectorDatehour"
             v_datehour: Vector[keys.DT_DATEHOUR]
@@ -5218,7 +5218,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_float(self):
+    def test_cep_vector_float(self):
         class EventVectorFloat(Event):
             _event_name = "EventVectorFloat"
             v_float: Vector[keys.DT_FLOAT]
@@ -5428,7 +5428,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_double(self):
+    def test_cep_vector_double(self):
         class EventVectorDouble(Event):
             _event_name = "EventVectorDouble"
             v_double: Vector[keys.DT_DOUBLE]
@@ -5651,7 +5651,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_string(self):
+    def test_cep_vector_string(self):
         class EventVectorString(Event):
             _event_name = "EventVectorString"
             v_string: Vector[keys.DT_STRING]
@@ -5810,7 +5810,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_blob(self):
+    def test_cep_vector_blob(self):
         class EventVectorBlob(Event):
             _event_name = "EventVectorBlob"
             v_blob: Vector[keys.DT_BLOB]
@@ -5972,7 +5972,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_symbol(self):
+    def test_cep_vector_symbol(self):
         class EventVectorSymbol(Event):
             _event_name = "EventVectorSymbol"
             v_symbol: Vector[keys.DT_SYMBOL]
@@ -6106,7 +6106,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_int128(self):
+    def test_cep_vector_int128(self):
         class EventVectorInt128(Event):
             _event_name = "EventVectorInt128"
             v_int128: Vector[keys.DT_INT128]
@@ -6283,7 +6283,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_uuid(self):
+    def test_cep_vector_uuid(self):
         class EventVectorUuid(Event):
             _event_name = "EventVectorUuid"
             v_uuid: Vector[keys.DT_UUID]
@@ -6469,7 +6469,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_ipaddr(self):
+    def test_cep_vector_ipaddr(self):
         class EventVectorIpaddr(Event):
             _event_name = "EventVectorIpaddr"
             v_ipaddr: Vector[keys.DT_IPADDR]
@@ -6623,7 +6623,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_decimal32_4(self):
+    def test_cep_vector_decimal32_4(self):
         class EventVectorDecimal32(Event):
             _event_name = "EventVectorDecimal32"
             v_decimal32_4: Vector[keys.DT_DECIMAL32, 4]
@@ -6785,7 +6785,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_decimal64_12(self):
+    def test_cep_vector_decimal64_12(self):
         class EventVectorDecimal64(Event):
             _event_name = "EventVectorDecimal64"
             v_decimal64_12: Vector[keys.DT_DECIMAL64, 12]
@@ -6947,7 +6947,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_decimal128_26(self):
+    def test_cep_vector_decimal128_26(self):
         class EventVectorDecimal128(Event):
             _event_name = "EventVectorDecimal128"
             v_decimal128_26: Vector[keys.DT_DECIMAL128, 26]
@@ -7129,7 +7129,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_event_all_type(self):
+    def test_cep_event_all_type(self):
         class EventAllType(Event):
             s_bool: Scalar[keys.DT_BOOL]
             s_char: Scalar[keys.DT_CHAR]
@@ -7363,7 +7363,7 @@ class TestCEP(object):
         sleep(1)
         client.unsubscribe(HOST, PORT, f"{func_name}_output", "ttt")
 
-    def test_CEP_double_events(self):
+    def test_cep_double_events(self):
         class Event1(Event):
             s_bool: Scalar[keys.DT_BOOL]
             eventTime1: Scalar[keys.DT_TIMESTAMP]
@@ -7473,7 +7473,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_events_double_commonFields(self):
+    def test_cep_events_double_commonFields(self):
         class EventTest(Event):
             s_bool1: Scalar[keys.DT_BOOL]
             s_bool2: Scalar[keys.DT_BOOL]
@@ -7559,7 +7559,7 @@ class TestCEP(object):
         for r, e in zip(result, expect):
             assert r == e
 
-    def test_CEP_vector_65535(self):
+    def test_cep_vector_65535(self):
         class EventVectorInt(Event):
             _event_name = "EventVectorInt"
             v_int: Vector[keys.DT_INT]
@@ -7793,7 +7793,7 @@ class TestEventClient(object):
             f"share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as {func_name}_input")
         sender = EventSender(self.__class__.conn, f"{func_name}_input", [EventErrorExtraParam])
         client = EventClient([EventErrorExtraParam])
-        client.subscribe(HOST, PORT, print, f"{func_name}_input", "ttt")
+        client.subscribe(HOST, PORT, print, f"{func_name}_input", "ttt", userName=USER, password=PASSWD)
         sender.sendEvent(EventErrorExtraParam(True))
         sleep(1)
         client.unsubscribe(HOST, PORT, f"{func_name}_input", "ttt")
@@ -7810,7 +7810,7 @@ class TestEventClient(object):
             f"share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as {func_name}_input")
         sender = EventSender(self.__class__.conn, f"{func_name}_input", [EventSchema])
         client = EventClient([EventReceive])
-        client.subscribe(HOST, PORT, print, f"{func_name}_input", "ttt")
+        client.subscribe(HOST, PORT, print, f"{func_name}_input", "ttt", userName=USER, password=PASSWD)
         sender.sendEvent(EventSchema(True))
         sleep(1)
         # todo:check
@@ -7826,7 +7826,7 @@ class TestEventClient(object):
             f"share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as {func_name}_input")
         client = EventClient([EventTest], "eventTime")
         with pytest.raises(RuntimeError, match="Schema mismatch"):
-            client.subscribe(HOST, PORT, print, f"{func_name}_input")
+            client.subscribe(HOST, PORT, print, f"{func_name}_input", userName=USER, password=PASSWD)
 
     def test_EventClient_eventTimeFields_not_time(self):
         class EventTest(Event):
@@ -7838,7 +7838,7 @@ class TestEventClient(object):
             f"share streamTable(array(STRING, 0) as eventType, array(BLOB, 0) as blobs,array(BLOB, 0) as eventTime) as {func_name}_input")
         sender = EventSender(self.__class__.conn, f"{func_name}_input", [EventTest], commonFields=["eventTime"])
         client = EventClient([EventTest], commonFields=["eventTime"])
-        client.subscribe(HOST, PORT, print, f"{func_name}_input")
+        client.subscribe(HOST, PORT, print, f"{func_name}_input", userName=USER, password=PASSWD)
         sender.sendEvent(EventTest(True, b""))
         sleep(1)
         client.unsubscribe(HOST, PORT, f"{func_name}_input")
@@ -7867,7 +7867,7 @@ class TestEventClient(object):
             f"share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as {func_name}_input")
         client = EventClient([EventTestClass], eventTimeFields="eventTime", commonFields=["a"])
         with pytest.raises(RuntimeError, match="Schema mismatch"):
-            client.subscribe(HOST, PORT, print, f"{func_name}_input")
+            client.subscribe(HOST, PORT, print, f"{func_name}_input", userName=USER, password=PASSWD)
 
     def test_EventClient_subscribe_host_error(self):
         class EventTest(Event):
@@ -7876,7 +7876,7 @@ class TestEventClient(object):
 
         client = EventClient([EventTest])
         with pytest.raises(RuntimeError, match="Subscribe Fail"):
-            client.subscribe("192.168.0.0", 8848, print, "input")
+            client.subscribe("192.168.0.0", 8848, print, "input", userName=USER, password=PASSWD)
 
     def test_EventClient_subscribe_port_error(self):
         class EventTest(Event):
@@ -7885,7 +7885,7 @@ class TestEventClient(object):
 
         client = EventClient([EventTest])
         with pytest.raises(RuntimeError, match="Subscribe Fail"):
-            client.subscribe("192.168.0.54", 8888, print, "input")
+            client.subscribe("192.168.0.54", 8888, print, "input", userName=USER, password=PASSWD)
 
     def test_EventClient_subscribe_table_absent(self):
         class EventTest(Event):
@@ -7894,7 +7894,7 @@ class TestEventClient(object):
 
         client = EventClient([EventTest])
         with pytest.raises(RuntimeError, match=r"Can\'t find the object with name absent\'"):
-            client.subscribe(HOST, PORT, print, "absent")
+            client.subscribe(HOST, PORT, print, "absent", userName=USER, password=PASSWD)
 
     def test_EventClient_subscribe_action_existed(self):
         class EventTest(Event):
@@ -7905,9 +7905,9 @@ class TestEventClient(object):
         self.__class__.conn.run(
             f"share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as {func_name}_input")
         client = EventClient([EventTest], eventTimeFields="eventTime")
-        client.subscribe(HOST, PORT, print, f"{func_name}_input", "existed")
+        client.subscribe(HOST, PORT, print, f"{func_name}_input", "existed", userName=USER, password=PASSWD)
         with pytest.raises(RuntimeError, match="already exists"):
-            client.subscribe(HOST, PORT, print, f"{func_name}_input", "existed")
+            client.subscribe(HOST, PORT, print, f"{func_name}_input", "existed", userName=USER, password=PASSWD)
 
     def test_EventClient_subscribe_twice(self):
         class EventTest1(Event):
@@ -7924,8 +7924,10 @@ class TestEventClient(object):
         sender1 = EventSender(self.__class__.conn, f"{func_name}_input1", [EventTest1])
         sender2 = EventSender(self.__class__.conn, f"{func_name}_input2", [EventTest2])
         client = EventClient([EventTest1, EventTest2])
-        client.subscribe(HOST, PORT, print, f"{func_name}_input1", f"{func_name}_input1")
-        client.subscribe(HOST, PORT, print, f"{func_name}_input2", f"{func_name}_input2")
+        client.subscribe(HOST, PORT, print, f"{func_name}_input1", f"{func_name}_input1", userName=USER,
+                         password=PASSWD)
+        client.subscribe(HOST, PORT, print, f"{func_name}_input2", f"{func_name}_input2", userName=USER,
+                         password=PASSWD)
         sender1.sendEvent(EventTest1(True))
         sender2.sendEvent(EventTest2([True]))
         sleep(1)
@@ -7943,7 +7945,7 @@ class TestEventClient(object):
         """)
         sender = EventSender(self.__class__.conn, f"{func_name}_input", [EventTest])
         client = EventClient([EventTest])
-        client.subscribe(HOST, PORT, print, f"{func_name}_input", offset=-2)
+        client.subscribe(HOST, PORT, print, f"{func_name}_input", offset=-2, userName=USER, password=PASSWD)
         sender.sendEvent(EventTest(True))
         sender.sendEvent(EventTest(False))
         sleep(1)
@@ -7961,7 +7963,7 @@ class TestEventClient(object):
         sender = EventSender(self.__class__.conn, f"{func_name}_input", [EventTest])
         client = EventClient([EventTest])
         sender.sendEvent(EventTest(True))
-        client.subscribe(HOST, PORT, print, f"{func_name}_input", offset=1)
+        client.subscribe(HOST, PORT, print, f"{func_name}_input", offset=1, userName=USER, password=PASSWD)
         sender.sendEvent(EventTest(False))
         sleep(1)
         # todo:check
@@ -7986,7 +7988,7 @@ class TestEventClient(object):
         sender = EventSender(self.__class__.conn, f"{func_name}_input", [EventTest])
         client = EventClient([EventTest])
         sender.sendEvent(EventTest(True))
-        client.subscribe(HOST, PORT, print, f"{func_name}_input")
+        client.subscribe(HOST, PORT, print, f"{func_name}_input", userName=USER, password=PASSWD)
         sender.sendEvent(EventTest(False))
         assert client.getSubscriptionTopics() == [HOST + "/" + str(PORT) + f"/{func_name}_input/"]
         sleep(1)

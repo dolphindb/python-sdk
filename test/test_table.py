@@ -1349,7 +1349,7 @@ class TestTableDelete:
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
     ])
-    def test_table_showSQL(self, data):
+    def test_table_delete_showSQL(self, data):
         data = get_global(data)
 
         def test_showSQL(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
@@ -1459,7 +1459,7 @@ class TestTableDelete:
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
     ])
-    def test_table_toDF(self, data):
+    def test_table_delete_toDF(self, data):
         data = get_global(data)
         n = 5
 
@@ -1620,7 +1620,7 @@ class TestTableUpdate:
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
     ])
-    def test_table_showSQL(self, data):
+    def test_table_update_showSQL(self, data):
         data = get_global(data)
 
         def test_showSQL(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
@@ -1655,7 +1655,7 @@ class TestTableUpdate:
         "Table", "STable", "indexTable", "SindexTable", "keyTable", "SkeyTable",
         "DF", "DICT", "DICT_List", "PTable",
     ])
-    def test_table_toDF(self, data):
+    def test_table_update_toDF(self, data):
         data = get_global(data)
 
         def test_toDF(conntmp: ddb.session, tb1: ddb.Table, tb2: ddb.Table, df1: pd.DataFrame, df2: pd.DataFrame,
@@ -3190,7 +3190,7 @@ class TestTableContextby:
         for limit in [5, [5], "5", ["5"]]:
             eval_sql_with_data(self.conn, data, test_limit)
 
-    def test_table_illegal_columns(self):
+    def test_table_contextby_illegal_columns(self):
         data = pd.DataFrame({
             '2017.1': [1, 2, 3],
             '2017.1.1': [1, 2, 3]

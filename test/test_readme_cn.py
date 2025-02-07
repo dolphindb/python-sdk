@@ -188,7 +188,7 @@ class TestReadmeCn:
         loop.create_task(stop_thread_loop(loop))
 
     def test_readme_BasicOperation_DBConnectionPool_Coprocess_3(self):
-        pool = ddb.DBConnectionPool(HOST, PORT, 8)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD)
         taskid = 12
         pool.addTask("sleep(1500);1+2", taskId=taskid)
         while True:
@@ -353,7 +353,8 @@ class TestReadmeCn:
 
             return handler
 
-        s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "action", offset=-1, filter=np.array(["000905"]))
+        s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "action", offset=-1, filter=np.array(["000905"]),
+                    userName=USER, password=PASSWD)
         s.run(
             f"insert into {func_name} values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0, 1..10)")
         Event().wait(timeout=5)
@@ -722,7 +723,8 @@ class TestReadmeCn:
 
             return handler
 
-        s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "SingleMode", offset=-1)
+        s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "SingleMode", offset=-1, userName=USER,
+                    password=PASSWD)
         s.run(
             f"insert into {func_name} values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
         time.sleep(5)
@@ -746,7 +748,7 @@ class TestReadmeCn:
             return handler
 
         s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "MultiMode1",
-                    offset=-1, batchSize=2, throttle=0.1, msgAsTable=False)
+                    offset=-1, batchSize=2, throttle=0.1, msgAsTable=False, userName=USER, password=PASSWD)
         s.run(
             f"insert into {func_name} values(take(now(), 6), take(`000905`600001`300201`000908`600002, 6), rand(1000,6)/10.0, 1..6)")
         time.sleep(5)
@@ -770,7 +772,7 @@ class TestReadmeCn:
             return handler
 
         s.subscribe(HOST, PORT, tmp_handler(msg_count), func_name, "MultiMode2",
-                    offset=-1, batchSize=1000, throttle=0.1, msgAsTable=True)
+                    offset=-1, batchSize=1000, throttle=0.1, msgAsTable=True, userName=USER, password=PASSWD)
         s.run(
             f"n=1500;insert into {func_name} values(take(now(), n), take(`000905`600001`300201`000908`600002, n), rand(1000,n)/10.0, 1..n)")
         time.sleep(5)
@@ -872,6 +874,7 @@ class TestReadmeCn:
         s.close()
 
     def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_1(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         data1 = pd.DataFrame({
@@ -888,7 +891,7 @@ class TestReadmeCn:
         t2 = s.table(data=data2)
         assert t2.tableName().startswith('TMP_TBL')
         assert isinstance(t2, ddb.Table)
-        dbPath = "dfs://testTable"
+        dbPath = f"dfs://{func_name}_1"
         if s.existsDatabase(dbPath):
             s.dropDatabase(dbPath)
         db = s.database(partitionType=keys.VALUE, partitions=[
@@ -919,13 +922,12 @@ class TestReadmeCn:
         t2 = s.table(data=data2, tableAliasName="data2")
         assert t2.tableName() == 'data2'
         assert isinstance(t2, ddb.Table)
-        dbPath = "dfs://testTable"
+        dbPath = f"dfs://{func_name}_2"
         if s.existsDatabase(dbPath):
             s.dropDatabase(dbPath)
         db = s.database(partitionType=keys.VALUE, partitions=[
             1, 2, 3], dbPath=dbPath, engine="TSDB")
-        s.run(
-            "schema_t = table(100:0, `ctime`csymbol`price`qty, [TIMESTAMP, SYMBOL, DOUBLE, INT])")
+        s.run("schema_t = table(100:0, `ctime`csymbol`price`qty, [TIMESTAMP, SYMBOL, DOUBLE, INT])")
         schema_t = s.table(data="schema_t")
         db.createTable(schema_t, "pt", ["csymbol"])
         pt = s.table(dbPath=dbPath, data="pt", tableAliasName="tmp_pt")
@@ -939,13 +941,14 @@ class TestReadmeCn:
         s.close()
 
     def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_2(self):
+        func_name = inspect.currentframe().f_code.co_name
         s = ddb.Session()
         s.connect(HOST, PORT, USER, PASSWD)
         s.run("test_t = table(100:0, `ctime`csymbol`price`qty, [TIMESTAMP, SYMBOL, DOUBLE, INT])")
         t = s.loadTable("test_t")
         assert t.tableName() == 'test_t'
         assert t.toDF().empty
-        dbPath = "dfs://testTable"
+        dbPath = f"dfs://{func_name}"
         if s.existsDatabase(dbPath):
             s.dropDatabase(dbPath)
         db = s.database(partitionType=keys.VALUE, partitions=[1, 2, 3], dbPath=dbPath, engine="TSDB")

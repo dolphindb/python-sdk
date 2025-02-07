@@ -84,7 +84,7 @@ class DATATYPE(Enum):
     DT_STRING = keys.DT_STRING
     DT_UUID = keys.DT_UUID
     DT_DATEHOUR = keys.DT_DATEHOUR
-    DT_IPADDR = keys.DT_IPPADDR
+    DT_IPADDR = keys.DT_IPADDR
     DT_INT128 = keys.DT_INT128
     DT_BLOB = keys.DT_BLOB
     DT_DECIMAL32 = keys.DT_DECIMAL32

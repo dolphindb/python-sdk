@@ -124,7 +124,7 @@ class TestSubscribeReverse:
                                  "conn.enableStreaming(28852);"
                                  "df=pd.DataFrame(columns=['time', 'sym', 'price']);"
                                  f"conn.run(\"\"\"{script}\"\"\");"
-                                 f"conn.subscribe('{HOST}',{PORT},print,'{func_name}','action',0,False);"
+                                 f"conn.subscribe('{HOST}',{PORT},print,'{func_name}','action',0,False, userName='{USER}', password='{PASSWD}');"
                                  "conn.close();"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         ex = "The server only supports transferring subscribed data using the connection initiated by the subsriber. The specified port will not take effect."
@@ -150,8 +150,8 @@ class TestSubscribeReverse:
         """
         conn1.run(script)
         with pytest.raises(Exception):
-            conn1.subscribe(HOST, PORT, self.handler, func_name, "action", 0, False)
-            conn1.subscribe(HOST, PORT, self.handler, func_name, "action", 0, False)
+            conn1.subscribe(HOST, PORT, self.handler, func_name, "action", 0, False, userName=USER, password=PASSWD)
+            conn1.subscribe(HOST, PORT, self.handler, func_name, "action", 0, False, userName=USER, password=PASSWD)
         conn1.unsubscribe(HOST, PORT, func_name, "action")
         conn1.close()
 
@@ -181,7 +181,8 @@ class TestSubscribeReverse:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -214,7 +215,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(1)
         conn1.subscribe(HOST, PORT, self.handler_df(counter), func_name, "action", 0, False, msgAsTable=True,
-                        batchSize=1000, throttle=1.0)
+                        batchSize=1000, throttle=1.0, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(self.df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -277,7 +278,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(10)
         conn1.subscribe(HOST, PORT, self.handler_batch_list(counter), func_name, "action", 0, False,
-                        msgAsTable=False, batchSize=5)
+                        msgAsTable=False, batchSize=5, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert self.num == 10, "1"
         df = pd.DataFrame(self.lst,
@@ -356,7 +357,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(1)
         conn1.subscribe(HOST, PORT, self.handler_batch_list(counter), func_name, "action", 0, False,
-                        msgAsTable=False, batchSize=5)
+                        msgAsTable=False, batchSize=5, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert self.num == 1
         ans = [True, 1, 1, 1, 1, np.datetime64('1970-01-02'), np.datetime64('2012-12'),
@@ -410,7 +411,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(10)
         conn1.subscribe(HOST, PORT, self.handler_batch_list(counter), func_name, "action", 0, False,
-                        msgAsTable=False, batchSize=5)
+                        msgAsTable=False, batchSize=5, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert self.num == 10, "1"
         df = pd.DataFrame(self.lst, columns=["time", "sym", "price"])
@@ -443,7 +444,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(70005)
         conn1.subscribe(HOST, PORT, self.handler_batch_list(counter), func_name, "action", 0, False,
-                        msgAsTable=False, batchSize=10000)
+                        msgAsTable=False, batchSize=10000, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert self.num == 70005
         df = pd.DataFrame(self.lst, columns=["time", "sym", "price"])
@@ -508,7 +509,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(10)
         conn1.subscribe(HOST, PORT, self.handler_batch_df(counter), func_name, "action", 0, False, msgAsTable=True,
-                        batchSize=5)
+                        batchSize=5, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert self.num == 10, "1"
         ex = conn1.run(f"select * from {func_name}")
@@ -579,7 +580,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(1)
         conn1.subscribe(HOST, PORT, self.handler_batch_df(counter), func_name, "action", 0, False, msgAsTable=True,
-                        batchSize=5)
+                        batchSize=5, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert self.num == 1, "1"
         assert_frame_equal(self.df, conn1.run(f"select * from {func_name}"))
@@ -610,7 +611,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(10)
         conn1.subscribe(HOST, PORT, self.handler_batch_df(counter), func_name, "action", 0, False, msgAsTable=True,
-                        batchSize=5)
+                        batchSize=5, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert self.num == 10
         assert_frame_equal(self.df, conn1.run(f"select * from {func_name}"))
@@ -642,7 +643,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(70005)
         conn1.subscribe(HOST, PORT, self.handler_batch_df(counter), func_name, "action", 0, False, msgAsTable=True,
-                        batchSize=10000)
+                        batchSize=10000, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert self.num == 70005, "1"
         assert_frame_equal(self.df, conn1.run(f"select * from {func_name}"))
@@ -674,7 +675,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(2020)
         conn1.subscribe(HOST, PORT, self.handler_batch_df(counter), func_name, "action", 0, False, msgAsTable=True,
-                        batchSize=1200, throttle=5)
+                        batchSize=1200, throttle=5, userName=USER, password=PASSWD)
         time.sleep(5.5)
         script = f"""
             for(i in 1..100){{
@@ -714,7 +715,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(2020)
         conn1.subscribe(HOST, PORT, self.handler_batch_df_sleep_10(counter), func_name, "action", 0, False,
-                        msgAsTable=True, batchSize=1200, throttle=2)
+                        msgAsTable=True, batchSize=1200, throttle=2, userName=USER, password=PASSWD)
         time.sleep(1)
         script = f"""
             for(i in 1..100){{
@@ -754,7 +755,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(2020)
         conn1.subscribe(HOST, PORT, self.handler_batch_list(counter), func_name, "action", 0, False,
-                        msgAsTable=False, batchSize=1200, throttle=5.5)
+                        msgAsTable=False, batchSize=1200, throttle=5.5, userName=USER, password=PASSWD)
         time.sleep(10)
         script = f"""
             for(i in 1..100){{
@@ -794,7 +795,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(2020)
         conn1.subscribe(HOST, PORT, self.handler_batch_list_sleep_10(counter), func_name, "action", 0, False,
-                        msgAsTable=False, batchSize=1200, throttle=5.5)
+                        msgAsTable=False, batchSize=1200, throttle=5.5, userName=USER, password=PASSWD)
         script = f"""
             for(i in 1..100){{
                 insert into {func_name} values(take(now(), 20), take(`000905`600001`300201`000908`600002, 20), rand(1000,20)/10.0)
@@ -831,7 +832,8 @@ class TestSubscribeReverse:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -859,13 +861,15 @@ class TestSubscribeReverse:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
         df = pd.DataFrame(columns=["time", "sym", "price"])
         counter.reset(5)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", -1, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", -1, False, userName=USER,
+                        password=PASSWD)
         script = f"""
             insert_table = table(take(now(), 5) as time, take(`000905`600001`300201`000908`600002, 5) as sym, rand(1000,5)/10.0 as price)
             {func_name}.append!(insert_table)
@@ -898,7 +902,8 @@ class TestSubscribeReverse:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, True)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, True, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         script = f"""
@@ -945,7 +950,8 @@ class TestSubscribeReverse:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         script = f"""
             all_pubTables = getStreamingStat().pubTables
@@ -990,7 +996,8 @@ class TestSubscribeReverse:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(2)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, np.array(["000905"]))
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, np.array(["000905"]),
+                        userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         df["id"] = df["id"].astype(np.int32)
         assert_frame_equal(df, conn1.run(f"select * from {func_name} where sym=`000905"))
@@ -1023,7 +1030,8 @@ class TestSubscribeReverse:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, msgAsTable=False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, msgAsTable=False,
+                        userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -1056,7 +1064,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(1)
         conn1.subscribe(HOST, PORT, self.handler_df(counter), func_name, "action", 0, False, msgAsTable=True,
-                        batchSize=1000, throttle=1)
+                        batchSize=1000, throttle=1, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(self.df, conn1.run(func_name))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -1088,7 +1096,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(10)
         conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, msgAsTable=False,
-                        batchSize=-1)
+                        batchSize=-1, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -1121,7 +1129,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(5)
         conn1.subscribe(HOST, PORT, gethandler_multi_row(df, counter), func_name, "action", 0, False,
-                        msgAsTable=False, batchSize=2)
+                        msgAsTable=False, batchSize=2, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -1150,7 +1158,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(1)
         conn1.subscribe(HOST, PORT, self.handler_df(counter), func_name, "action", 0, False, msgAsTable=True,
-                        batchSize=5)
+                        batchSize=5, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(self.df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -1179,7 +1187,7 @@ class TestSubscribeReverse:
         counter = CountBatchDownLatch(1)
         counter.reset(1)
         conn1.subscribe(HOST, PORT, self.handler_df(counter), func_name, "action", 0, False, msgAsTable=True,
-                        batchSize=1000, throttle=10.1)
+                        batchSize=1000, throttle=10.1, userName=USER, password=PASSWD)
         assert not counter.wait_s(10)
         assert len(self.df) == 0
         assert counter.wait_s(20)
@@ -1221,7 +1229,7 @@ class TestSubscribeReverse:
         counter.reset(20)
         sd = ddb.streamDeserializer({"msg1": f"{func_name}_1", "msg2": f"{func_name}_2"}, None)
         conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2, counter), func_name, "action", 0, False,
-                        msgAsTable=False, streamDeserializer=sd)
+                        msgAsTable=False, streamDeserializer=sd, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df1.loc[:, :"price2"], conn1.run(f"select * from {func_name}_1"))
         assert_frame_equal(df2.loc[:, :"price1"], conn1.run(f"select * from {func_name}_2"))
@@ -1303,7 +1311,7 @@ class TestSubscribeReverse:
         counter.reset(20)
         sd = ddb.streamDeserializer({"msg1": "table1", "msg2": "table2"}, conn1)
         conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2, counter), func_name, "action", 0, False,
-                        msgAsTable=False, streamDeserializer=sd)
+                        msgAsTable=False, streamDeserializer=sd, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df1.loc[:, :"price2"], conn1.run("select * from table1"))
         assert_frame_equal(df2.loc[:, :"price1"], conn1.run("select * from table2"))
@@ -1341,7 +1349,7 @@ class TestSubscribeReverse:
         counter.reset(10000)
         sd = ddb.streamDeserializer({"msg1": "table1", "msg2": "table2"}, conn1)
         conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2, counter), func_name, "action", 0, False,
-                        msgAsTable=False, streamDeserializer=sd)
+                        msgAsTable=False, streamDeserializer=sd, userName=USER, password=PASSWD)
         assert counter.wait_s(200)
         assert_frame_equal(df1.loc[:, :"price2"], conn1.run("select * from table1"))
         assert_frame_equal(df2.loc[:, :"price1"], conn1.run("select * from table2"))
@@ -1458,7 +1466,8 @@ class TestSubscribeReverse:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         ans = conn1.getSubscriptionTopics()
@@ -1477,25 +1486,25 @@ class TestSubscribeReverse:
     def test_subscribe_reverse_many_tables(self):
         func_name = inspect.currentframe().f_code.co_name
         self.conn.run(f"""
-            share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}
-            insert into {func_name} values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
-            share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}2
-            insert into {func_name}2 values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
-            share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}3
-            insert into {func_name}3 values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
-            share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}4
-            insert into {func_name}4 values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
-            share streamTable(120000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}5
-            insert into {func_name}5 values(take(now(), 200000), take(`000905`600001`300201`000908`600002, 200000), rand(1000,200000)/10.0, 1..200000)
+            share streamTable(1000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}
+            insert into {func_name} values(take(now(), 1000), take(`000905`600001`300201`000908`600002, 1000), rand(1000,1000)/10.0, 1..1000)
+            share streamTable(1000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}2
+            insert into {func_name}2 values(take(now(), 1000), take(`000905`600001`300201`000908`600002, 1000), rand(1000,1000)/10.0, 1..1000)
+            share streamTable(1000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}3
+            insert into {func_name}3 values(take(now(), 1000), take(`000905`600001`300201`000908`600002, 1000), rand(1000,1000)/10.0, 1..1000)
+            share streamTable(1000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}4
+            insert into {func_name}4 values(take(now(), 1000), take(`000905`600001`300201`000908`600002, 1000), rand(1000,1000)/10.0, 1..1000)
+            share streamTable(1000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as {func_name}5
+            insert into {func_name}5 values(take(now(), 1000), take(`000905`600001`300201`000908`600002, 1000), rand(1000,1000)/10.0, 1..1000)
         """)
         conn1 = ddb.session()
         conn1.connect(HOST, PORT, USER, PASSWD)
         conn1.enableStreaming(0)
-        counter = CountBatchDownLatch(200000)
-        counter2 = CountBatchDownLatch(200000)
-        counter3 = CountBatchDownLatch(200000)
-        counter4 = CountBatchDownLatch(200000)
-        counter5 = CountBatchDownLatch(200000)
+        counter = CountBatchDownLatch(1000)
+        counter2 = CountBatchDownLatch(1000)
+        counter3 = CountBatchDownLatch(1000)
+        counter4 = CountBatchDownLatch(1000)
+        counter5 = CountBatchDownLatch(1000)
         counters = [counter, counter2, counter3, counter4, counter5]
         results = [[], [], [], [], []]
         tables = [func_name, f'{func_name}2', f'{func_name}3', f'{func_name}4', f'{func_name}5']
@@ -1517,13 +1526,11 @@ class TestSubscribeReverse:
                 resub=True,
                 filter=None,
                 batchSize=100,
-                throttle=1
+                throttle=1, userName=USER, password=PASSWD
             )
         for ind, co in enumerate(counters):
-            assert co.wait_s(200)
+            assert co.wait_s(5)
             ex_df = self.conn.run(f"select * from {tables[ind]}")
-            for res in results:
-                print(len(res))
             res1 = list(chain.from_iterable(results[ind]))
             for i in range(len(res1)):
                 assert res1[i] == list(ex_df.iloc[i])
@@ -1542,11 +1549,10 @@ class TestSubscribeReverse:
         """
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
-                                 "from time import sleep;"
                                  f"conn=ddb.Session('{HOST}', {PORT}, '{USER}', '{PASSWD}');"
                                  "conn.enableStreaming();"
                                  f"conn.run(\"\"\"{script}\"\"\");"
-                                 f"conn.subscribe('{HOST}',{PORT},lambda :raise RuntimeError('this should be catched'),'st','test',0,True);"
+                                 f"conn.subscribe('{HOST}',{PORT},lambda :raise RuntimeError('this should be catched'),'st','test',0,True,userName='{USER}',password='{PASSWD}');"
                                  f"conn.run('insert into {func_name} values(now(), rand(100.00,1))');"
                                  "sleep(3);"
                                  f"conn.unsubscribe('{HOST}',{PORT},'{func_name}','test');"
@@ -1578,7 +1584,8 @@ class TestSubscribeReverse:
 
             return myhandler
 
-        conn1.subscribe(HOST, PORT, tmp_handle(res, counter), func_name, "test", 0, True)
+        conn1.subscribe(HOST, PORT, tmp_handle(res, counter), func_name, "test", 0, True, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(10)
         conn1.unsubscribe(HOST, PORT, func_name, "test")
         ex_df = conn1.run(f'select * from {func_name} order by time')

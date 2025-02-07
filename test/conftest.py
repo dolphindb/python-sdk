@@ -1,88 +1,110 @@
+import platform
+
 import dolphindb as ddb
 import pytest
-import platform
 from _pytest.outcomes import Skipped
 
-from setup.settings import HOST_REPORT, PORT_REPORT, USER_REPORT, PASSWD_REPORT, REPORT
 from basic_testing.prepare import PYTHON_VERSION
+from setup.settings import HOST_REPORT, PORT_REPORT, USER_REPORT, PASSWD_REPORT, REPORT
 
 if REPORT:
     conn = ddb.Session(HOST_REPORT, PORT_REPORT, USER_REPORT, PASSWD_REPORT)
 
-    DATABASE_NAME="dfs://py_api_auto_test_report"
-    TABLE_NAME=f"py_api_auto_test_report_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}"
-    SHARE_TABLE=f"py_api_auto_test_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}"
+    DATABASE_NAME = "dfs://py_report"
+    TABLE_NAME = f"{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}".lower()
+    SHARE_TABLE = f"py_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}".lower()
+    SHARE_DICT = f"py_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}_dict".lower()
 
-    total_test_count = 0
-
-    def pytest_collection_modifyitems(items):
-        global total_test_count
-        total_test_count = len(items)
 
     @pytest.fixture(scope="session", autouse=True)
     def create_share_table(request):
-        worker_id = request.config.workerinput['workerid']
-        if worker_id=='gw0':
-            conn.run(
-                f"share table([]$STRING as case_name,[]$STRING as case_result,[]$BLOB as case_info,[]$BLOB as case_trace,[]$DOUBLE as case_time) as {SHARE_TABLE}")
-        else:
+        worker_id = request.config.workerinput['workerid'].lower()
+        conn.run(
+            f"share table([]$STRING as worker_id,[]$STRING as case_name,[]$STRING as case_result,[]$BLOB as case_info,[]$BLOB as case_trace,[]$DOUBLE as case_time) as {SHARE_TABLE}_{worker_id}",
+            priority=1)
+        if worker_id == "gw0":
             conn.run(f"""
-                do {{
-                    if ("{SHARE_TABLE}" in objs(true)['name']){{
-                        break
-                    }} else {{
-                        sleep(500)
-                    }}
-                }}while(true);
-            """)
-        yield
-        if worker_id == 'gw0':
-            global total_test_count
-            conn.run(f"""
-                do {{
-                    size_=select count(*) from {SHARE_TABLE} where case_result!='running'
-                    if (size_['count'][0]<{total_test_count}){{
-                        sleep(500)
-                    }} else {{
-                        break
-                    }}
-                }}while(true);
                 if (not existsDatabase('{DATABASE_NAME}')){{
-                    database('{DATABASE_NAME}',VALUE,1 5 10,engine='TSDB')
+                    partitionScheme_=[]$STRING
+                    for (i in 0..63){{
+                        partitionScheme_.append!("gw"+string(i))
+                    }}
+                    database('{DATABASE_NAME}',VALUE,partitionScheme_,engine='TSDB')
                 }}
                 db=database('{DATABASE_NAME}')
                 if (not existsTable('{DATABASE_NAME}','{TABLE_NAME}')){{
-                    db.createTable({SHARE_TABLE},'{TABLE_NAME}',sortColumns='case_name')
+                    db.createPartitionedTable({SHARE_TABLE}_{worker_id},'{TABLE_NAME}','worker_id',sortColumns='case_name')
                 }}
                 truncate('{DATABASE_NAME}','{TABLE_NAME}')
-                t=loadTable('{DATABASE_NAME}','{TABLE_NAME}')
-                t.append!({SHARE_TABLE})
-                undef(`{SHARE_TABLE},SHARED)
-            """)
+                syncDict(STRING,BOOL,`{SHARE_DICT})
+                go
+                {SHARE_DICT}[`{worker_id}]=00b
+            """, priority=1)
         else:
             conn.run(f"""
                 do {{
-                    if ("{SHARE_TABLE}" in objs(true)['name']){{
-                        sleep(500)
-                    }} else {{
+                    if ("{SHARE_DICT}" in objs(true)['name']){{
                         break
+                    }} else {{
+                        sleep(500)
                     }}
                 }}while(true);
-            """)
+            """, priority=4)
+            conn.run(f"{SHARE_DICT}[`{worker_id}]=00b", priority=1)
+        yield
+        if worker_id == 'gw0':
+            conn.run(f"""
+                {SHARE_DICT}[`{worker_id}]=false
+                do {{
+                    keys_={SHARE_DICT}.keys()
+                    values_={SHARE_DICT}.values()
+                    if (all(values_==true)){{
+                        break
+                    }}
+                    for (key in keys_){{
+                        check_ = {SHARE_DICT}[key]
+                        if (isNull(check_)){{
+                            continue
+                        }} else if (!check_){{
+                            t=loadTable('{DATABASE_NAME}','{TABLE_NAME}')
+                            t.append!(objByName(`{SHARE_TABLE}_ + key))
+                            undef(`{SHARE_TABLE}_ + key,SHARED)
+                            {SHARE_DICT}[key]=true
+                        }} else {{
+                            continue
+                        }}
+                    }}
+                    sleep(500)
+                }}while(true);
+                undef(`{SHARE_DICT},SHARED)
+            """, priority=1)
+        else:
+            conn.run(f"{SHARE_DICT}[`{worker_id}]=false", priority=1)
+
 
     def pytest_runtest_makereport(item, call):
+        worker_id = getattr(item.config, 'workerinput', {}).get('workerid').lower()
         if call.when == "setup":
-            if hasattr(call.excinfo,'type') and call.excinfo.type is Skipped:
-                conn.run(f"insert into {SHARE_TABLE} values('{item.name}','skipped','','',0)")
+            if hasattr(call.excinfo, 'type') and call.excinfo.type is Skipped:
+                conn.run(
+                    f"insert into {SHARE_TABLE}_{worker_id} values(\"{worker_id}\",\"{item.name}\",\"skipped\",\"\",\"\",0)",
+                    priority=1)
             else:
-                conn.run(f"insert into {SHARE_TABLE} values('{item.name}','running','','',0)")
+                conn.run(
+                    f"insert into {SHARE_TABLE}_{worker_id} values(\"{worker_id}\",\"{item.name}\",\"running\",\"\",\"\",0)",
+                    priority=1)
         elif call.when == "call":
             if call.excinfo is None:
-                conn.run(f"update {SHARE_TABLE} set case_result='success',case_time={call.duration} where case_name='{item.name}'")
-            elif call.excinfo.type is Skipped:
-                conn.run(f"update {SHARE_TABLE} set case_result='skipped' where case_name='{item.name}'")
-            else:
-                case_info = f'{call.excinfo.value}'.replace("'", '"')
-                case_trace = f'{call.excinfo.traceback}'.replace("'", '"').replace('\\','\\\\')
                 conn.run(
-                    f"update {SHARE_TABLE} set case_result='fail',case_time={call.duration},case_info='{case_info}',case_trace='{case_trace}' where case_name='{item.name}'")
+                    f"update {SHARE_TABLE}_{worker_id} set case_result=\"success\",case_time={call.duration} where case_name=\"{item.name}\"",
+                    priority=1)
+            elif call.excinfo.type is Skipped:
+                conn.run(
+                    f"update {SHARE_TABLE}_{worker_id} set case_result=\"skipped\" where case_name=\"{item.name}\"",
+                    priority=1)
+            else:
+                case_info = f'{call.excinfo.value}'.replace('"', "'")
+                case_trace = f'{call.excinfo.traceback}'.replace('"', "'").replace('\\', '\\\\')
+                conn.run(
+                    f"update {SHARE_TABLE}_{worker_id} set case_result=\"fail\",case_time={call.duration},case_info=\"{case_info}\",case_trace=\"{case_trace}\" where case_name=\"{item.name}\"",
+                    priority=1)

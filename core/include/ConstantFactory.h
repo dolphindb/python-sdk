@@ -83,6 +83,16 @@ public:
 	}
 
 	DATA_TYPE getDataType(const string& type) const {
+		auto size = type.size();
+		if (type[size - 1] == ']' && type[size - 2] == '[') {
+			string baseType = type.substr(0, size - 2);
+			std::unordered_map<string, DATA_TYPE>::const_iterator it = typeMap_.find(baseType);
+			if (it == typeMap_.end())
+				return DT_VOID;
+			else
+				return (DATA_TYPE)(it->second + ARRAY_TYPE_BASE);
+		}
+
 		std::unordered_map<string,DATA_TYPE>::const_iterator it=typeMap_.find(type);
 		if(it==typeMap_.end())
 			return DT_VOID;
@@ -943,6 +953,8 @@ private:
 		typeMap_.insert(std::pair<string, DATA_TYPE>("decimal128", DT_DECIMAL128));
 		typeMap_.insert(std::pair<string, DATA_TYPE>("object", DT_OBJECT));
 		typeMap_.insert(std::pair<string, DATA_TYPE>("unknown", DATA_TYPE::DT_UNK));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("blob",DT_BLOB));
+		typeMap_.insert(std::pair<string,DATA_TYPE>("decimal",DT_DECIMAL));
 
 		formMap_.insert(std::pair<string,DATA_FORM>("scalar",DF_SCALAR));
 		formMap_.insert(std::pair<string,DATA_FORM>("pair",DF_PAIR));

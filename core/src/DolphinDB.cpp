@@ -9,6 +9,7 @@
 #include <fstream>
 #include <istream>
 #include <stack>
+#include <regex>
 #include "Concurrent.h"
 #ifndef WINDOWS
 #include <uuid/uuid.h>
@@ -411,15 +412,28 @@ ConstantSP DBConnection::run(const string& script, int priority, int parallelism
     return NULL;
 }
 
+std::string extractRefId(const std::string& errorMsg) {
+    std::regex refIdRegex(R"(RefId:\s*(\w+))");
+    std::smatch match;
+    if (std::regex_search(errorMsg, match, refIdRegex)) {
+        return match[1];
+    }
+    return "";
+}
+
 py::object DBConnection::runPy(
     const string &script, int priority, int parallelism,
-    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal
+    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal, bool withTableSchema
 ) {
     if (nodes_.empty() == false) {
         while (closed_ == false) {
             try {
-                return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
+                return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
             } catch (IOException& e) {
+                if (extractRefId(e.what()) == "S04009") {
+                    throw;
+                }
+
                 string host;
                 int port = 0;
                 if (connected()) {
@@ -442,7 +456,7 @@ py::object DBConnection::runPy(
         }
         return py::none();
     } else {
-        return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
+        return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
     }
 }
 
@@ -476,12 +490,12 @@ ConstantSP DBConnection::run(const string& funcName, vector<dolphindb::ConstantS
 
 py::object DBConnection::runPy(
     const string &funcName, vector<ConstantSP> &args, int priority, int parallelism,
-    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal
+    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal, bool withTableSchema
 ) {
     if (nodes_.empty() == false) {
         while (closed_ == false) {
             try {
-                return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
+                return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
             } catch (IOException& e) {
                 string host;
                 int port = 0;
@@ -499,7 +513,7 @@ py::object DBConnection::runPy(
         }
         return py::none();
     } else {
-        return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal);
+        return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
     }
 }
 

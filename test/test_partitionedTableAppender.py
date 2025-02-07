@@ -2715,9 +2715,8 @@ class TestPartitionedTableAppender:
         conn.run(f"""
             dbPath = "{db_name}"
             if(existsDatabase(dbPath)){{dropDatabase(dbPath)}}
-            tab=table(100:0,[`id,`test],[SYMBOL,STRING])
             db = database(dbPath, VALUE, `APPL`IBM`AMZN)
-            pt = db.createPartitionedTable(tab, `pt, `test)
+            pt = db.createPartitionedTable(table(100:0,[`id,`test],[SYMBOL,STRING]), `pt, `test)
          """)
         pool = self.pool_list["COMPRESS_CLOSE"]
         appender = ddb.PartitionedTableAppender(dbPath=db_name, tableName="pt", partitionColName="test",

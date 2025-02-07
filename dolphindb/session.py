@@ -602,6 +602,34 @@ class Session(object):
             disableDecimal=disableDecimal,
         )
 
+    def _run_with_table_schema(
+        self,
+        script: str,
+        *args,
+        clearMemory: Optional[bool] = None,
+        pickleTableToList: Optional[bool] = None,
+        priority: Optional[int] = None,
+        parallelism: Optional[int] = None,
+        disableDecimal: Optional[bool] = None,
+    ):
+        if priority is not None:
+            if not isinstance(priority, int) or priority > 9 or priority < 0:
+                raise RuntimeError("priority must be an integer from 0 to 9")
+        if parallelism is not None:
+            if not isinstance(parallelism, int) or parallelism <= 0:
+                raise RuntimeError("parallelism must be an integer greater than 0")
+
+        return self.cpp.run(
+            script,
+            *args,
+            clearMemory=clearMemory,
+            pickleTableToList=pickleTableToList,
+            priority=priority,
+            parallelism=parallelism,
+            disableDecimal=disableDecimal,
+            withTableSchema=True
+        )
+
     def runFile(self, filepath: str, *args, **kwargs):
         """Execute script.
 

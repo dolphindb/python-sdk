@@ -2,8 +2,8 @@ import inspect
 import random
 import subprocess
 import sys
-import time
 from itertools import chain
+from time import sleep
 
 import dolphindb as ddb
 import numpy as np
@@ -12,6 +12,7 @@ import pytest
 from pandas._testing import assert_frame_equal
 
 from basic_testing.prepare import random_string
+from basic_testing.utils import operateNodes
 from setup.prepare import CountBatchDownLatch
 from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, \
     PORT_CONTROLLER, PORT_DNODE2, PORT_DNODE3
@@ -72,16 +73,18 @@ class TestSubscribe:
     def test_subscribe_error(self):
         conn = ddb.Session(HOST, PORT, USER, PASSWD)
         with pytest.raises(RuntimeError, match='streaming is not enabled'):
-            conn.subscribe(HOST, PORT, self.handler, "trades1", None, 0, False)
+            conn.subscribe(HOST, PORT, self.handler, "trades1", None, 0, False, userName=USER, password=PASSWD)
         with pytest.raises(RuntimeError, match='streaming is not enabled'):
-            conn.subscribe(HOST, PORT, self.handler, "trades1", None, 0, False, batchSize=2)
+            conn.subscribe(HOST, PORT, self.handler, "trades1", None, 0, False, batchSize=2, userName=USER,
+                           password=PASSWD)
         with pytest.raises(RuntimeError, match='streaming is not enabled'):
             conn.unsubscribe(HOST, PORT, "trades1", None)
         conn.enableStreaming(0, 2)
         with pytest.raises(RuntimeError, match='streaming is already enabled'):
             conn.enableStreaming()
         with pytest.raises(RuntimeError, match="Thread pool streaming doesn't support batch subscribe"):
-            conn.subscribe(HOST, PORT, self.handler, "trades1", None, 0, False, batchSize=2)
+            conn.subscribe(HOST, PORT, self.handler, "trades1", None, 0, False, batchSize=2, userName=USER,
+                           password=PASSWD)
         conn = ddb.Session(HOST, PORT, USER, PASSWD)
         conn.enableStreaming()
         with pytest.raises(RuntimeError, match='streaming is already enabled'):
@@ -93,7 +96,7 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
-            conn1.subscribe(1, PORT, self.handler, 'test', None, 0, False)
+            conn1.subscribe(1, PORT, self.handler, 'test', None, 0, False, userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_host_fail_connect(self):
@@ -102,7 +105,8 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort, 2)
         with pytest.raises(RuntimeError):
-            conn1.subscribe("999999:9999:9999:9999", PORT, self.handler, "test", "action", 0, False)
+            conn1.subscribe("255.255.255.255", PORT, self.handler, "test", "action", 0, False, userName=USER,
+                            password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_port_string(self):
@@ -111,7 +115,7 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
-            conn1.subscribe(HOST, "dsf", self.handler, "test", "action", 0, False)
+            conn1.subscribe(HOST, "dsf", self.handler, "test", "action", 0, False, userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_port_fail_connect(self):
@@ -120,7 +124,7 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(RuntimeError):
-            conn1.subscribe(HOST, -1, self.handler, "test", "action", 0, False)
+            conn1.subscribe(HOST, -1, self.handler, "test", "action", 0, False, userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_tableName_int(self):
@@ -129,7 +133,7 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
-            conn1.subscribe(HOST, PORT, self.handler, 1, "action", 0, False)
+            conn1.subscribe(HOST, PORT, self.handler, 1, "action", 0, False, userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_tableName_not_exist(self):
@@ -138,7 +142,7 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(RuntimeError):
-            conn1.subscribe(HOST, PORT, self.handler, "skdfls", "action", 0, False)
+            conn1.subscribe(HOST, PORT, self.handler, "skdfls", "action", 0, False, userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_actionName_int(self):
@@ -147,7 +151,7 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
-            conn1.subscribe(HOST, PORT, self.handler, "test", 1, 0, False)
+            conn1.subscribe(HOST, PORT, self.handler, "test", 1, 0, False, userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_actionName_same_name(self):
@@ -172,8 +176,8 @@ class TestSubscribe:
         """
         conn1.run(script)
         with pytest.raises(RuntimeError):
-            conn1.subscribe(HOST, PORT, self.handler, func_name, "action", 0, False)
-            conn1.subscribe(HOST, PORT, self.handler, func_name, "action", 0, False)
+            conn1.subscribe(HOST, PORT, self.handler, func_name, "action", 0, False, userName=USER, password=PASSWD)
+            conn1.subscribe(HOST, PORT, self.handler, func_name, "action", 0, False, userName=USER, password=PASSWD)
         conn1.unsubscribe(HOST, PORT, func_name, "action")
         conn1.close()
 
@@ -183,7 +187,7 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
-            conn1.subscribe(HOST, PORT, self.handler, "test", "action", "fsd", False)
+            conn1.subscribe(HOST, PORT, self.handler, "test", "action", "fsd", False, userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_resub_string(self):
@@ -192,7 +196,7 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
-            conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, "fsd")
+            conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, "fsd", userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_filter(self):
@@ -201,7 +205,7 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
-            conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, False, "dfs")
+            conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, False, "dfs, userName=USER, password=PASSWD")
         conn1.close()
 
     def test_subscribe_error_msgAsTable_string(self):
@@ -210,7 +214,8 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
-            conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, False, np.array(["000905"]), "11")
+            conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, False, np.array(["000905"]), "11",
+                            userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_msgAsTable_True_batchSize_zero(self):
@@ -219,7 +224,8 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(ValueError):
-            conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, False, np.array(["000905"]), True)
+            conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, False, np.array(["000905"]), True,
+                            userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_batchSize_string(self):
@@ -229,7 +235,7 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
             conn1.subscribe(HOST, PORT, self.handler, "trades15", "action", 0, False, np.array(["000905"]), False,
-                            "fdsf")
+                            "fdsf", userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_batchSize_float(self):
@@ -238,7 +244,8 @@ class TestSubscribe:
         listenPort = getListenPort()
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
-            conn1.subscribe(HOST, PORT, self.handler, "trades15", "action", 0, False, np.array(["000905"]), False, 1.1)
+            conn1.subscribe(HOST, PORT, self.handler, "trades15", "action", 0, False, np.array(["000905"]), False, 1.1,
+                            userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_throttle_string(self):
@@ -248,7 +255,7 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
             conn1.subscribe(HOST, PORT, self.handler, "trades15", "action", 0, False, np.array(["000905"]), False, -1,
-                            "sdfse")
+                            "sdfse", userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_throttle_float(self):
@@ -258,7 +265,7 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         with pytest.raises(ValueError):
             conn1.subscribe(HOST, PORT, self.handler, "trades15", "action", 0, False, np.array(["000905"]), False, -1,
-                            -1)
+                            -1, userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_error_throttle_lt_zero(self):
@@ -268,7 +275,7 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         with pytest.raises(ValueError):
             conn1.subscribe(HOST, PORT, self.handler, "trades15",
-                            "action", 0, False, np.array(["000905"]), False, -1, -1)
+                            "action", 0, False, np.array(["000905"]), False, -1, -1, userName=USER, password=PASSWD)
         conn1.close()
 
     def test_subscribe_offset_zero(self):
@@ -294,7 +301,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -323,13 +331,15 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
         df = pd.DataFrame(columns=["time", "sym", "price"])
         counter.reset(5)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", -1, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", -1, False, userName=USER,
+                        password=PASSWD)
         script = f"""
             insert_table = table(take(now(), 5) as time, take(`000905`600001`300201`000908`600002, 5) as sym, rand(1000,5)/10.0 as price)
             {func_name}.append!(insert_table)
@@ -363,7 +373,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, True)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, True, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         script = f"""
@@ -376,7 +387,7 @@ class TestSubscribe:
             }}
         """
         conn1.run(script)
-        time.sleep(1)
+        sleep(1)
         script = f"""
             insert_table = table(take(now(), 5) as time, take(`000905`600001`300201`000908`600002, 5) as sym, rand(1000,5)/10.0 as price)
             {func_name}.append!(insert_table)
@@ -411,7 +422,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         script = f"""
             all_pubTables = getStreamingStat().pubTables
@@ -423,13 +435,13 @@ class TestSubscribe:
             }}
         """
         conn1.run(script)
-        time.sleep(1)
+        sleep(1)
         script = f"""
             insert_table = table(take(now(), 5) as time, take(`000905`600001`300201`000908`600002, 5) as sym, rand(1000,5)/10.0 as price)
             {func_name}.append!(insert_table)
         """
         conn1.run(script)
-        time.sleep(3)
+        sleep(3)
         assert len(df) == 10
         conn1.unsubscribe(HOST, PORT, func_name, "action")
         conn1.close()
@@ -457,7 +469,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(2)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, np.array(["000905"]))
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, np.array(["000905"]),
+                        userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         df["id"] = df["id"].astype(np.int32)
         assert_frame_equal(df, conn1.run(f"select * from {func_name} where sym=`000905"))
@@ -491,7 +504,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, msgAsTable=False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, msgAsTable=False,
+                        userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -525,7 +539,7 @@ class TestSubscribe:
         counter = CountBatchDownLatch(1)
         counter.reset(1)
         conn1.subscribe(HOST, PORT, self.handler_df(counter), func_name,
-                        "action", 0, False, msgAsTable=True, batchSize=1000, throttle=1)
+                        "action", 0, False, msgAsTable=True, batchSize=1000, throttle=1, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(self.df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -557,8 +571,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(
-            df, counter), func_name, "action", 0, False, msgAsTable=False, batchSize=-1)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, msgAsTable=False,
+                        batchSize=-1, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -592,7 +606,7 @@ class TestSubscribe:
         counter = CountBatchDownLatch(1)
         counter.reset(5)
         conn1.subscribe(HOST, PORT, gethandler_multi_row(
-            df, counter), func_name, "action", 0, False, msgAsTable=False, batchSize=2)
+            df, counter), func_name, "action", 0, False, msgAsTable=False, batchSize=2, userName=USER, password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         conn1.unsubscribe(HOST, PORT, func_name, "action")
@@ -622,7 +636,8 @@ class TestSubscribe:
         counter = CountBatchDownLatch(1)
         counter.reset(1)
         conn1.subscribe(HOST, PORT, self.handler_df(counter), func_name,
-                        "action", 0, False, msgAsTable=True, batchSize=1000, throttle=10.1)
+                        "action", 0, False, msgAsTable=True, batchSize=1000, throttle=10.1, userName=USER,
+                        password=PASSWD)
         assert not counter.wait_s(10)
         assert len(self.df) == 0
         counter.reset(1)
@@ -726,7 +741,8 @@ class TestSubscribe:
         sd = ddb.streamDeserializer({"msg1": "table1", "msg2": "table2"}, conn1)
         with pytest.raises(Exception):
             conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2), func_name,
-                            "action", 0, False, msgAsTable=True, streamDeserializer=sd, batchSize=5)
+                            "action", 0, False, msgAsTable=True, streamDeserializer=sd, batchSize=5, userName=USER,
+                            password=PASSWD)
         conn1.close()
 
     def test_subscribe_streamDeserializer_memory_table_session_None(self):
@@ -763,7 +779,8 @@ class TestSubscribe:
         counter.reset(20)
         sd = ddb.streamDeserializer({"msg1": f"{func_name}_1", "msg2": f"{func_name}_2"}, None)
         conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2, counter),
-                        func_name, "action", 0, False, msgAsTable=False, streamDeserializer=sd)
+                        func_name, "action", 0, False, msgAsTable=False, streamDeserializer=sd, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df1.loc[:, :"price2"], conn1.run(f"select * from {func_name}_1"))
         assert_frame_equal(df2.loc[:, :"price1"], conn1.run(f"select * from {func_name}_2"))
@@ -847,7 +864,8 @@ class TestSubscribe:
         counter.reset(20)
         sd = ddb.streamDeserializer({"msg1": "table1", "msg2": "table2"}, conn1)
         conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2, counter),
-                        func_name, "action", 0, False, msgAsTable=False, streamDeserializer=sd)
+                        func_name, "action", 0, False, msgAsTable=False, streamDeserializer=sd, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df1.loc[:, :"price2"], conn1.run("select * from table1"))
         assert_frame_equal(df2.loc[:, :"price1"], conn1.run("select * from table2"))
@@ -886,7 +904,8 @@ class TestSubscribe:
         counter.reset(10000)
         sd = ddb.streamDeserializer({"msg1": "table1", "msg2": "table2"}, conn1)
         conn1.subscribe(HOST, PORT, streamDSgethandler(df1, df2, counter),
-                        func_name, "action", 0, False, msgAsTable=False, streamDeserializer=sd)
+                        func_name, "action", 0, False, msgAsTable=False, streamDeserializer=sd, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(200)
         assert_frame_equal(df1.loc[:, :"price2"], conn1.run("select * from table1"))
         assert_frame_equal(df2.loc[:, :"price1"], conn1.run("select * from table2"))
@@ -983,7 +1002,7 @@ class TestSubscribe:
         conn1.unsubscribe(HOST, PORT, func_name, "action")
         conn1.close()
 
-    @pytest.mark.parametrize(argnames="error_host", argvalues=[None, "999.999.999.9"],
+    @pytest.mark.parametrize(argnames="error_host", argvalues=[None, "255.255.255.255"],
                              ids=["host_none", "host_error"])
     def test_subscribe_unsubscribe_error_host(self, error_host):
         func_name = inspect.currentframe().f_code.co_name + random_string(5)
@@ -1008,7 +1027,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         with pytest.raises(Exception):
@@ -1041,7 +1061,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         with pytest.raises(Exception):
@@ -1074,7 +1095,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         with pytest.raises(Exception):
@@ -1107,7 +1129,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         with pytest.raises(Exception):
@@ -1148,7 +1171,8 @@ class TestSubscribe:
         conn1.run(script)
         counter = CountBatchDownLatch(1)
         counter.reset(10)
-        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         ans = conn1.getSubscriptionTopics()
@@ -1212,7 +1236,7 @@ class TestSubscribe:
                 resub=True,
                 filter=None,
                 batchSize=100,
-                throttle=1
+                throttle=1, userName=USER, password=PASSWD
             )
 
         for ind, co in enumerate(counters):
@@ -1240,7 +1264,7 @@ class TestSubscribe:
                                  f"conn=ddb.Session('{HOST}', {PORT}, '{USER}', '{PASSWD}');"
                                  "conn.enableStreaming();"
                                  f"conn.run(\"\"\"{script}\"\"\");"
-                                 f"conn.subscribe('{HOST}',{PORT},lambda :raise RuntimeError('this should be catched'),'{func_name}','test',0,True);"
+                                 f"conn.subscribe('{HOST}',{PORT},lambda :raise RuntimeError('this should be catched'),'{func_name}','test',0,True, userName='{USER}', password='{PASSWD}');"
                                  f"conn.run('insert into {func_name} values(now(), rand(100.00,1))');"
                                  "sleep(3);"
                                  f"conn.unsubscribe('{HOST}',{PORT},'{func_name}','test');"
@@ -1273,7 +1297,8 @@ class TestSubscribe:
 
             return myhandler
 
-        conn1.subscribe(HOST, PORT, tmp_handle(res, counter), func_name, "test", 0, True)
+        conn1.subscribe(HOST, PORT, tmp_handle(res, counter), func_name, "test", 0, True, userName=USER,
+                        password=PASSWD)
         assert counter.wait_s(10)
         conn1.unsubscribe(HOST, PORT, func_name, "test")
         ex_df = conn1.run(f'select * from {func_name} order by time')
@@ -1308,10 +1333,17 @@ class TestSubscribe:
             return inner
 
         df = pd.DataFrame(columns=['a', 'b'])
+
+        def wait_until(count):
+            while True:
+                if len(df) < count:
+                    sleep(0.5)
+                else:
+                    break
+
         conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), func_name, "test", resub=True,
                        backupSites=[f"{HOST_CLUSTER}:{PORT_DNODE2}", f"{HOST_CLUSTER}:{PORT_DNODE3}"],
-                       resubscribeInterval=20)
-        time.sleep(3)
+                       resubscribeInterval=20, userName=USER, password=PASSWD)
         conn1_insert = [f'insert into {func_name} values({i},"DataNode1")' for i in range(1, 11)]
         conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 21)]
         conn3_insert = [f'insert into {func_name} values({i},"DataNode3")' for i in range(1, 31)]
@@ -1321,12 +1353,12 @@ class TestSubscribe:
             conn2.run(sql)
         for sql in conn3_insert:
             conn3.run(sql)
-        time.sleep(3)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(6)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE2}'])")
-        time.sleep(6)
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}'])")
+        wait_until(10)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+        wait_until(20)
+        operateNodes(conn, [f'dnode{PORT_DNODE2}'], "STOP")
+        wait_until(30)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}'], "START")
         df_expect = pd.DataFrame({
             'a': [i for i in range(1, 31)],
             'b': ["DataNode1"] * 10 + ["DataNode2"] * 10 + ["DataNode3"] * 10,
@@ -1336,17 +1368,16 @@ class TestSubscribe:
         conn1_insert = [f'insert into {func_name} values({i},"DataNode1")' for i in range(1, 41)]
         for sql in conn1_insert:
             conn1.run(sql)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE3}'])")
-        time.sleep(6)
-        conn.run(f"startDataNode(['dnode{PORT_DNODE3}'])")
+        operateNodes(conn, [f'dnode{PORT_DNODE3}'], "STOP")
+        wait_until(40)
+        operateNodes(conn, [f'dnode{PORT_DNODE3}'], "START")
         conn2.run(script)
         conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 51)]
         for sql in conn2_insert:
             conn2.run(sql)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(10)
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(3)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+        wait_until(50)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         conn.unsubscribe(HOST_CLUSTER, PORT_DNODE1, func_name, "test")
         df_expect = pd.DataFrame({
             'a': [i for i in range(1, 51)],
@@ -1381,11 +1412,18 @@ class TestSubscribe:
             return inner
 
         df = pd.DataFrame(columns=['a', 'b'])
+
+        def wait_until(count):
+            while True:
+                if len(df) < count:
+                    sleep(0.5)
+                else:
+                    break
+
         conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), func_name, "test", resub=True,
                        backupSites=[f"{HOST_CLUSTER}:{PORT_DNODE2}", f"{HOST_CLUSTER}:{PORT_DNODE3}"],
                        resubscribeInterval=20,
-                       subOnce=True)
-        time.sleep(3)
+                       subOnce=True, userName=USER, password=PASSWD)
         conn1_insert = [f'insert into {func_name} values({i},"DataNode1")' for i in range(1, 11)]
         conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 21)]
         conn3_insert = [f'insert into {func_name} values({i},"DataNode3")' for i in range(1, 31)]
@@ -1395,12 +1433,12 @@ class TestSubscribe:
             conn2.run(sql)
         for sql in conn3_insert:
             conn3.run(sql)
-        time.sleep(3)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(6)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE2}'])")
-        time.sleep(6)
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}'])")
+        wait_until(10)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+        wait_until(20)
+        operateNodes(conn, [f'dnode{PORT_DNODE2}'], "STOP")
+        wait_until(30)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}'], "START")
         conn1.run(script)
         conn2.run(script)
         df_expect = pd.DataFrame({
@@ -1411,16 +1449,16 @@ class TestSubscribe:
         conn1_insert = [f'insert into {func_name} values({i},"DataNode1")' for i in range(1, 41)]
         for sql in conn1_insert:
             conn1.run(sql)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE3}'])")
-        time.sleep(6)
-        conn.run(f"startDataNode(['dnode{PORT_DNODE3}'])")
+        operateNodes(conn, [f'dnode{PORT_DNODE3}'], "STOP")
+        wait_until(30)
+        operateNodes(conn, [f'dnode{PORT_DNODE3}'], "START")
         conn3.run(script)
         conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 51)]
         for sql in conn2_insert:
             conn2.run(sql)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(6)
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+        wait_until(30)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         conn.unsubscribe(HOST_CLUSTER, PORT_DNODE1, func_name, "test")
         assert_frame_equal(df, df_expect, check_dtype=False)
 
@@ -1448,18 +1486,20 @@ class TestSubscribe:
         df = pd.DataFrame(columns=['a', 'b'])
         conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
         conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), func_name, "test", resub=True,
-                       backupSites=[f"{HOST_CLUSTER}:{PORT_DNODE2}", f"{HOST_CLUSTER}:{PORT_DNODE3}"])
-        time.sleep(3)
+                       backupSites=[f"{HOST_CLUSTER}:{PORT_DNODE2}", f"{HOST_CLUSTER}:{PORT_DNODE3}"], userName=USER,
+                       password=PASSWD)
+        sleep(3)
         conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 11)]
         conn3_insert = [f'insert into {func_name} values({i},"DataNode3")' for i in range(1, 21)]
         for sql in conn2_insert:
             conn2.run(sql)
         for sql in conn3_insert:
             conn3.run(sql)
-        time.sleep(3)
+        sleep(3)
         conn.run(f"stopDataNode(['dnode{PORT_DNODE2}'])")
-        time.sleep(6)
+        sleep(6)
         conn.run(f"startDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}'])")
+        sleep(6)
         conn.unsubscribe(HOST_CLUSTER, PORT_DNODE1, func_name, "test")
         df_expect = pd.DataFrame({
             'a': [i for i in range(1, 21)],
@@ -1486,9 +1526,11 @@ class TestSubscribe:
 
         df = pd.DataFrame(columns=['a', 'b'])
         with pytest.raises(TypeError, match="backupSites must be a list of str."):
-            conn.subscribe(HOST_CLUSTER, PORT, handler(df), func_name, "test", backupSites="127.0.0.1:8848")
+            conn.subscribe(HOST_CLUSTER, PORT, handler(df), func_name, "test", backupSites="127.0.0.1:8848",
+                           userName=USER, password=PASSWD)
         with pytest.raises(TypeError, match="backupSites must be a list of str."):
-            conn.subscribe(HOST_CLUSTER, PORT, handler(df), func_name, "test", backupSites=[1])
+            conn.subscribe(HOST_CLUSTER, PORT, handler(df), func_name, "test", backupSites=[1], userName=USER,
+                           password=PASSWD)
 
     @pytest.mark.xdist_group(name='cluster_test')
     def test_subscribe_backupSites_format_error(self):
@@ -1505,7 +1547,7 @@ class TestSubscribe:
         df = pd.DataFrame(columns=['a', 'b'])
         with pytest.raises(RuntimeError):
             conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), "st", "test",
-                           backupSites=[f"{HOST_CLUSTER}{PORT_DNODE2}"])
+                           backupSites=[f"{HOST_CLUSTER}{PORT_DNODE2}"], userName=USER, password=PASSWD)
 
     @pytest.mark.xdist_group(name='cluster_test')
     def test_subscribe_backupSites_port_gt_65535(self):
@@ -1521,10 +1563,11 @@ class TestSubscribe:
 
         df = pd.DataFrame(columns=['a', 'b'])
         with pytest.raises(RuntimeError,
-                           match="<Exception> in subscribe: Incorrect input .* for backupSite. The port number must be a positive integer no greater than 65535"):
-            conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), "st", "test", backupSites=[f"{HOST_CLUSTER}:65536"])
+                           match="Incorrect input .* for backupSite\. The port number must be a positive integer no greater than 65535"):
+            conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), "st", "test", backupSites=[f"{HOST_CLUSTER}:65536"],
+                           userName=USER, password=PASSWD)
 
     def test_subscribe_resubTimeout_error(self):
         conn = ddb.Session(HOST, PORT, USER, PASSWD)
         with pytest.raises(ValueError, match="Please use resubscibeInterval instead of resubTimeout"):
-            conn.subscribe(HOST, PORT, print, "test", "test", resubTimeout=20)
+            conn.subscribe(HOST, PORT, print, "test", "test", resubTimeout=20, userName=USER, password=PASSWD)

@@ -5,6 +5,7 @@
 #include "DdbPythonUtil.h"
 #include "Pickle.h"
 #include "Wrappers.h"
+#include "ConstantFactory.h"
 
 #define APIMinVersionRequirement 300
 
@@ -144,9 +145,11 @@ bool DBConnectionImpl::connect() {
         if(asynTask_) {
             SmartPointer<DBConnection> newConn = new DBConnection(false, false);
             newConn->connect(hostName_, port_, userId_, pwd_);
-            requiredVersion =newConn->run("getRequiredAPIVersion()");
+            vector<ConstantSP> args;
+            requiredVersion =newConn->run("getRequiredAPIVersion", args);
         }else{
-            requiredVersion = run("getRequiredAPIVersion()");
+            vector<ConstantSP> args;
+            requiredVersion = run("getRequiredAPIVersion", args);
         }
     }
     catch(...){
@@ -198,23 +201,23 @@ ConstantSP DBConnectionImpl::run(const string& funcName, vector<ConstantSP>& arg
 py::object DBConnectionImpl::runPy(
     const string &script, int priority,
     int parallelism, int fetchSize, bool clearMemory,
-    bool pickleTableToList, bool disableDecimal
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema
 ) {
     vector<ConstantSP> args;
     return runPy(
         script, "script", args, priority, parallelism,
-        fetchSize, clearMemory, pickleTableToList, disableDecimal
+        fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema
     );
 }
 
 py::object DBConnectionImpl::runPy(
     const string &funcName, vector<ConstantSP> &args, int priority,
     int parallelism, int fetchSize, bool clearMemory,
-    bool pickleTableToList, bool disableDecimal
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema
 ) {
     return runPy(
         funcName, "function", args, priority, parallelism,
-        fetchSize, clearMemory, pickleTableToList, disableDecimal
+        fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema
     );
 }
 
@@ -423,10 +426,32 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
     return result;
 }
 
+py::dict getTableSchema(ConstantSP result)
+{
+    TableSP ddbTbl = result;
+    py::dict column_types;
+    size_t columnSize = ddbTbl->columns();
+
+    for (size_t i = 0; i < columnSize; ++i)
+    {
+        py::str column_name = ddbTbl->getColumnName(i);
+        DATA_TYPE type = ddbTbl->getColumnType(i);
+        py::str typeString = Util::getDataTypeString(type);
+
+        py::object scale = py::none();
+        if ((type >= DT_DECIMAL32 && type <= DT_DECIMAL128) || (type >= DT_DECIMAL32_ARRAY && type <= DT_DECIMAL128_ARRAY)) {
+            scale = py::int_(ddbTbl->getColumn(i)->getExtraParamForType());
+        }
+
+        column_types[column_name] = py::make_tuple(typeString, scale);
+    }
+    return column_types;
+}
+
 py::object DBConnectionImpl::runPy(
     const string &script, const string &scriptType, vector<ConstantSP> &args,
     int priority, int parallelism, int fetchSize, bool clearMemory,
-    bool pickleTableToList, bool disableDecimal
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema
 ) {
     //RecordTime record("Db.runPy"+script);
     DLOG("runPy",script,"start argsize",args.size());
@@ -543,6 +568,10 @@ py::object DBConnectionImpl::runPy(
     }
 
     if (numObject == 0) {
+        if (withTableSchema) {
+            py::gil_scoped_acquire pgil;
+            return py::make_tuple(py::none(), py::none());
+        }
         return py::none();
     }
 
@@ -620,6 +649,15 @@ py::object DBConnectionImpl::runPy(
     py::gil_scoped_acquire pgil;
 
     converter::ToPythonOption option(pickleTableToList);
+
+    if (withTableSchema) {
+        py::object dataframe = converter::Converter::toPython_Old(result, option);
+        if (result->getForm() == DATA_FORM::DF_TABLE) {
+            return py::make_tuple(dataframe, getTableSchema(result));
+        }
+        return py::make_tuple(dataframe, py::none());
+    }
+
     return converter::Converter::toPython_Old(result, option);
 }
 

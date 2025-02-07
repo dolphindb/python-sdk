@@ -1,6 +1,6 @@
 # single
 HOST = "192.168.0.54"
-PORT = 8851
+PORT = 8848
 USER = "admin"
 PASSWD = "123456"
 # cluster

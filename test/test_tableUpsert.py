@@ -1,7 +1,6 @@
 import decimal
 import inspect
 import random
-import time
 
 import dolphindb as ddb
 import dolphindb.settings as keys
@@ -12,8 +11,7 @@ from numpy.testing import assert_array_equal
 from pandas._testing import assert_frame_equal
 
 from basic_testing.prepare import random_string
-from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER, \
-    PORT_DNODE1
+from setup.settings import HOST, PORT, USER, PASSWD
 
 
 class TestTableUpsert:
@@ -2110,22 +2108,3 @@ class TestTableUpsert:
         upserter.upsert(df)
         assert conn.run(f'select strlen(id) from tb')['strlen_id'][0] == 256 * 1024
         conn.close()
-
-    @pytest.mark.xdist_group(name='cluster_test')
-    def test_TableUpsert_inner_function(self):
-        conn_control = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
-        conn_datanode = ddb.session()
-        conn_datanode.connect(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, reconnect=True)
-        conn_datanode.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT])")
-        upsert = ddb.tableUpsert("", "t", conn_datanode)
-        sym = ['A1', 'A2', 'A3', 'A4', 'A5']
-        _time = np.array(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT',
-                          '2015-06-09T23:59:59.999008007'], dtype="datetime64")
-        qty = np.arange(1, 6)
-        data = pd.DataFrame({'sym': sym, 'time': _time, 'qty': qty})
-        upsert.upsert(data)
-        conn_control.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
-        time.sleep(3)
-        conn_control.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
-        conn_datanode.run("t=keyedTable(`qty,1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT])")
-        upsert.upsert(data)

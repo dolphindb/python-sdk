@@ -998,7 +998,7 @@ class TestTable2:
         """)
         assert_array_equal(self.conn.run("each(eqObj,t.values(),a.values())"), [True for _ in range(22)])
 
-    def test_table2_table2_dropPartition_loadtable_tmp_variable(self):
+    def test_table2_table2_dropPartition_load_table_tmp_variable(self):
         func_name = inspect.currentframe().f_code.co_name
         db_name = f"dfs://{func_name}"
         self.conn.run(f"""
@@ -1007,12 +1007,10 @@ class TestTable2:
             if(existsDatabase(dbName))
                 dropDatabase(dbName)
             db = database(dbName, VALUE, 1..5)
-            model = table(1:0, `ID`Price`Volume`ids, [INT, DOUBLE, DOUBLE, INT])
-            createPartitionedTable(db, model, tbName, `ID)
+            createPartitionedTable(db, table(1:0, `ID`Price`Volume`ids, [INT, DOUBLE, DOUBLE, INT]), tbName, `ID)
             n =5
-            data = table(take(1..5, n) as ID, rand(100.0, n) as Price, rand(100000, n) as Volume, take(0..1, n) as ids)
             PTA1_test = loadTable(dbName, tbName)
-            PTA1_test.append!(data)
+            PTA1_test.append!(table(take(1..5, n) as ID, rand(100.0, n) as Price, rand(100000, n) as Volume, take(0..1, n) as ids))
         """)
         df = pd.DataFrame({
             'ID': [1, 2, 3, 4, 5],

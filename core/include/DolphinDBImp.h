@@ -50,11 +50,11 @@ public:
     py::object runPy(
         const string& script, int priority = 4, int parallelism = 64,
         int fetchSize = 0, bool clearMemory = false,
-        bool pickleTableToList = false, bool disableDecimal = false);
+        bool pickleTableToList = false, bool disableDecimal = false, bool withTableSchema = false);
     py::object runPy(
         const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 64,
         int fetchSize = 0, bool clearMemory = false,
-        bool pickleTableToList = false, bool disableDecimal = false);
+        bool pickleTableToList = false, bool disableDecimal = false, bool withTableSchema = false);
     void setkeepAliveTime(int keepAliveTime){
         if (keepAliveTime > 0)
             keepAliveTime_ = keepAliveTime;
@@ -76,7 +76,7 @@ private:
     py::object runPy(
         const string& script, const string& scriptType, vector<ConstantSP>& args,
         int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false,
-        bool pickleTableToList = false, bool disableDecimal = false);
+        bool pickleTableToList = false, bool disableDecimal = false, bool withTableSchema = false);
     bool connect();
     void login();
 

@@ -237,7 +237,9 @@ public:
             checker[colNames[i]] = colTypes[i];
         }
         TRY
-            insertRows = partitionedTableAppender_.append(Converter::toDolphinDB_Table_fromDataFrame(table, checker));
+            auto data = Converter::toDolphinDB_Table_fromDataFrame(table, checker);
+            py::gil_scoped_release gil_release;
+            insertRows = partitionedTableAppender_.append(data);
         CATCH_EXCEPTION("<Exception> in append: ")
         return insertRows;
     }
@@ -397,7 +399,7 @@ public:
 
     py::object run(const std::string &script, const py::args &args, const py::handle &clearMemory = py::none(),
                    const py::handle &pickleTableToList = py::none(), const py::handle &priority = py::none(),
-                   const py::handle &parallelism = py::none(), const py::handle &disableDecimal = py::none()) {
+                   const py::handle &parallelism = py::none(), const py::handle &disableDecimal = py::none(), const py::handle &withTableSchema = py::none()) {
         if (enableJobCancellation_) {
             ddb::LockGuard<ddb::Mutex> LockGuard(&SessionImpl::mapMutex_);
             if (SessionImpl::runningMap_.count(this) == 0) {
@@ -470,11 +472,16 @@ public:
             disableDecimal_ = disableDecimal.cast<bool>();
         }
 
+        bool withTableSchema_ = false;
+        if (!withTableSchema.is_none()) {
+            withTableSchema_ = withTableSchema.cast<bool>();
+        }
+
         py::object result;
         if (args.empty()) {
             // script mode
             TRY result = dbConnection_.runPy(script, priority_, parallelism_, 0, clearMemory_, pickleTableToList_,
-                                             disableDecimal_);
+                                             disableDecimal_, withTableSchema_);
             CATCH_EXCEPTION("<Exception> in run: ")
         } else {
             // function mode
@@ -483,7 +490,7 @@ public:
                 ddbArgs.push_back(Converter::toDolphinDB(it));
             }
             result = dbConnection_.runPy(script, ddbArgs, priority_, parallelism_, 0, clearMemory_, pickleTableToList_,
-                                         disableDecimal_);
+                                         disableDecimal_, withTableSchema_);
             CATCH_EXCEPTION("<Exception> in run: ")
         }
         return result;
@@ -1429,7 +1436,8 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
             py::arg("pickleTableToList") = py::none(),
             py::arg("priority") = py::none(),
             py::arg("parallelism") = py::none(),
-            py::arg("disableDecimal") = py::none()
+            py::arg("disableDecimal") = py::none(),
+            py::arg("withTableSchema") = py::none()
         )
         .def("runBlock",&SessionImpl::runBlock,
             py::arg("script"),

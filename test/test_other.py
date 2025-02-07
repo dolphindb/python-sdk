@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from dolphindb.session import ddbcpp
+from dolphindb.utils import get_types_from_schema
 
 from basic_testing.prepare import DataUtils
 from basic_testing.prepare import PANDAS_VERSION
@@ -150,7 +151,7 @@ class TestOther:
             writer.addTable(tableName="tglobal")
         writer = ddb.BatchTableWriter(HOST, PORT, USER, PASSWD)
         with pytest.raises(RuntimeError,
-                           match='<Exception> in getUnwrittenData: Failed to get unwritten data. Please use addTable to add infomation of database and table first.'):
+                           match='Failed to get unwritten data. Please use addTable to add infomation of database and table first.'):
             writer.getUnwrittenData(tableName="tglobal")
 
     def test_other_DdbPythonUtil_cov(self):
@@ -299,8 +300,212 @@ class TestOther:
         assert "can't access file not in web dir." not in http_request(HOST, PORT, "/version.json")
 
     def test_other_upload_and_download(self):
-        conn=ddb.Session(HOST, PORT, USER, PASSWD)
-        conn.upload({'x':[None,np.int32(1),np.int64(2)]})
-        x=conn.run("x")
-        expect=np.array([np.nan,1.,2.],dtype='float64')
-        assert equalPlus(x,expect)
+        conn = ddb.Session(HOST, PORT, USER, PASSWD)
+        conn.upload({'x': [None, np.int32(1), np.int64(2)]})
+        x = conn.run("x")
+        expect = np.array([np.nan, 1., 2.], dtype='float64')
+        assert equalPlus(x, expect)
+
+    def test_other_get_types_from_schema(self):
+        conn = ddb.Session(HOST, PORT, USER, PASSWD)
+        schema = conn.run("""
+            schema(
+                table(
+                    array(BOOL) as bool,
+                    array(CHAR) as char,
+                    array(SHORT) as short,
+                    array(INT) as int,
+                    array(LONG) as long,
+                    array(DATE) as date,
+                    array(MONTH) as month,
+                    array(TIME) as time,
+                    array(MINUTE) as minute,
+                    array(SECOND) as second,
+                    array(DATETIME) as datetime,
+                    array(TIMESTAMP) as timestamp,
+                    array(NANOTIME) as nanotime,
+                    array(NANOTIMESTAMP) as nanotimestamp,
+                    array(FLOAT) as float,
+                    array(DOUBLE) as double,
+                    array(STRING) as string,
+                    array(UUID) as uuid,
+                    array(DATEHOUR) as datehour,
+                    array(IPADDR) as ipaddr,
+                    array(INT128) as int128,
+                    array(BLOB) as blob,
+                    array(DECIMAL32(2)) as decimal32,
+                    array(DECIMAL64(3)) as decimal64,
+                    array(DECIMAL128(4)) as decimal128,
+                    array(ANY) as any,
+                    array(BOOL[]) as bool_av,
+                    array(CHAR[]) as char_av,
+                    array(SHORT[]) as short_av,
+                    array(INT[]) as int_av,
+                    array(LONG[]) as long_av,
+                    array(DATE[]) as date_av,
+                    array(MONTH[]) as month_av,
+                    array(TIME[]) as time_av,
+                    array(MINUTE[]) as minute_av,
+                    array(SECOND[]) as second_av,
+                    array(DATETIME[]) as datetime_av,
+                    array(TIMESTAMP[]) as timestamp_av,
+                    array(NANOTIME[]) as nanotime_av,
+                    array(NANOTIMESTAMP[]) as nanotimestamp_av,
+                    array(FLOAT[]) as float_av,
+                    array(DOUBLE[]) as double_av,
+                    array(UUID[]) as uuid_av,
+                    array(DATEHOUR[]) as datehour_av,
+                    array(IPADDR[]) as ipaddr_av,
+                    array(INT128[]) as int128_av,
+                    array(DECIMAL32(2)[]) as decimal32_av,
+                    array(DECIMAL64(3)[]) as decimal64_av,
+                    array(DECIMAL128(4)[]) as decimal128_av
+                )
+            )
+        """)
+        result = get_types_from_schema(schema['colDefs'])
+        assert result['bool'] == ['BOOL', None]
+        assert result['char'] == ['CHAR', None]
+        assert result['short'] == ['SHORT', None]
+        assert result['int'] == ['INT', None]
+        assert result['long'] == ['LONG', None]
+        assert result['date'] == ['DATE', None]
+        assert result['month'] == ['MONTH', None]
+        assert result['time'] == ['TIME', None]
+        assert result['minute'] == ['MINUTE', None]
+        assert result['second'] == ['SECOND', None]
+        assert result['datetime'] == ['DATETIME', None]
+        assert result['timestamp'] == ['TIMESTAMP', None]
+        assert result['nanotime'] == ['NANOTIME', None]
+        assert result['nanotimestamp'] == ['NANOTIMESTAMP', None]
+        assert result['float'] == ['FLOAT', None]
+        assert result['double'] == ['DOUBLE', None]
+        assert result['string'] == ['STRING', None]
+        assert result['uuid'] == ['UUID', None]
+        assert result['datehour'] == ['DATEHOUR', None]
+        assert result['ipaddr'] == ['IPADDR', None]
+        assert result['int128'] == ['INT128', None]
+        assert result['blob'] == ['BLOB', None]
+        assert result['decimal32'] == ['DECIMAL32', 2]
+        assert result['decimal64'] == ['DECIMAL64', 3]
+        assert result['decimal128'] == ['DECIMAL128', 4]
+        assert result['any'] == ['ANY', None]
+        assert result['bool_av'] == ['BOOL[]', None]
+        assert result['char_av'] == ['CHAR[]', None]
+        assert result['short_av'] == ['SHORT[]', None]
+        assert result['int_av'] == ['INT[]', None]
+        assert result['long_av'] == ['LONG[]', None]
+        assert result['date_av'] == ['DATE[]', None]
+        assert result['month_av'] == ['MONTH[]', None]
+        assert result['time_av'] == ['TIME[]', None]
+        assert result['minute_av'] == ['MINUTE[]', None]
+        assert result['second_av'] == ['SECOND[]', None]
+        assert result['datetime_av'] == ['DATETIME[]', None]
+        assert result['timestamp_av'] == ['TIMESTAMP[]', None]
+        assert result['nanotime_av'] == ['NANOTIME[]', None]
+        assert result['nanotimestamp_av'] == ['NANOTIMESTAMP[]', None]
+        assert result['float_av'] == ['FLOAT[]', None]
+        assert result['double_av'] == ['DOUBLE[]', None]
+        assert result['uuid_av'] == ['UUID[]', None]
+        assert result['datehour_av'] == ['DATEHOUR[]', None]
+        assert result['ipaddr_av'] == ['IPADDR[]', None]
+        assert result['int128_av'] == ['INT128[]', None]
+        assert result['decimal32_av'] == ['DECIMAL32[]', 2]
+        assert result['decimal64_av'] == ['DECIMAL64[]', 3]
+        assert result['decimal128_av'] == ['DECIMAL128[]', 4]
+
+    def test_other_get_types_from_schema_no_extra(self):
+        conn = ddb.Session(HOST, PORT, USER, PASSWD)
+        schema = conn.run("""
+            schema(
+                table(
+                    array(BOOL) as bool,
+                    array(CHAR) as char,
+                    array(SHORT) as short,
+                    array(INT) as int,
+                    array(LONG) as long,
+                    array(DATE) as date,
+                    array(MONTH) as month,
+                    array(TIME) as time,
+                    array(MINUTE) as minute,
+                    array(SECOND) as second,
+                    array(DATETIME) as datetime,
+                    array(TIMESTAMP) as timestamp,
+                    array(NANOTIME) as nanotime,
+                    array(NANOTIMESTAMP) as nanotimestamp,
+                    array(FLOAT) as float,
+                    array(DOUBLE) as double,
+                    array(STRING) as string,
+                    array(UUID) as uuid,
+                    array(DATEHOUR) as datehour,
+                    array(IPADDR) as ipaddr,
+                    array(INT128) as int128,
+                    array(BLOB) as blob,
+                    array(ANY) as any,
+                    array(BOOL[]) as bool_av,
+                    array(CHAR[]) as char_av,
+                    array(SHORT[]) as short_av,
+                    array(INT[]) as int_av,
+                    array(LONG[]) as long_av,
+                    array(DATE[]) as date_av,
+                    array(MONTH[]) as month_av,
+                    array(TIME[]) as time_av,
+                    array(MINUTE[]) as minute_av,
+                    array(SECOND[]) as second_av,
+                    array(DATETIME[]) as datetime_av,
+                    array(TIMESTAMP[]) as timestamp_av,
+                    array(NANOTIME[]) as nanotime_av,
+                    array(NANOTIMESTAMP[]) as nanotimestamp_av,
+                    array(FLOAT[]) as float_av,
+                    array(DOUBLE[]) as double_av,
+                    array(UUID[]) as uuid_av,
+                    array(DATEHOUR[]) as datehour_av,
+                    array(IPADDR[]) as ipaddr_av,
+                    array(INT128[]) as int128_av
+                )
+            )
+        """)
+        result = get_types_from_schema(schema['colDefs'].drop(columns=["extra"]))
+        assert result['bool'] == ['BOOL', None]
+        assert result['char'] == ['CHAR', None]
+        assert result['short'] == ['SHORT', None]
+        assert result['int'] == ['INT', None]
+        assert result['long'] == ['LONG', None]
+        assert result['date'] == ['DATE', None]
+        assert result['month'] == ['MONTH', None]
+        assert result['time'] == ['TIME', None]
+        assert result['minute'] == ['MINUTE', None]
+        assert result['second'] == ['SECOND', None]
+        assert result['datetime'] == ['DATETIME', None]
+        assert result['timestamp'] == ['TIMESTAMP', None]
+        assert result['nanotime'] == ['NANOTIME', None]
+        assert result['nanotimestamp'] == ['NANOTIMESTAMP', None]
+        assert result['float'] == ['FLOAT', None]
+        assert result['double'] == ['DOUBLE', None]
+        assert result['string'] == ['STRING', None]
+        assert result['uuid'] == ['UUID', None]
+        assert result['datehour'] == ['DATEHOUR', None]
+        assert result['ipaddr'] == ['IPADDR', None]
+        assert result['int128'] == ['INT128', None]
+        assert result['blob'] == ['BLOB', None]
+        assert result['any'] == ['ANY', None]
+        assert result['bool_av'] == ['BOOL[]', None]
+        assert result['char_av'] == ['CHAR[]', None]
+        assert result['short_av'] == ['SHORT[]', None]
+        assert result['int_av'] == ['INT[]', None]
+        assert result['long_av'] == ['LONG[]', None]
+        assert result['date_av'] == ['DATE[]', None]
+        assert result['month_av'] == ['MONTH[]', None]
+        assert result['time_av'] == ['TIME[]', None]
+        assert result['minute_av'] == ['MINUTE[]', None]
+        assert result['second_av'] == ['SECOND[]', None]
+        assert result['datetime_av'] == ['DATETIME[]', None]
+        assert result['timestamp_av'] == ['TIMESTAMP[]', None]
+        assert result['nanotime_av'] == ['NANOTIME[]', None]
+        assert result['nanotimestamp_av'] == ['NANOTIMESTAMP[]', None]
+        assert result['float_av'] == ['FLOAT[]', None]
+        assert result['double_av'] == ['DOUBLE[]', None]
+        assert result['uuid_av'] == ['UUID[]', None]
+        assert result['datehour_av'] == ['DATEHOUR[]', None]
+        assert result['ipaddr_av'] == ['IPADDR[]', None]
+        assert result['int128_av'] == ['INT128[]', None]

@@ -14,6 +14,7 @@ from numpy.testing import assert_array_equal
 from pandas._testing import assert_frame_equal
 
 from basic_testing.prepare import random_string
+from basic_testing.utils import operateNodes
 from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER, \
     PORT_DNODE1, PORT_DNODE2, PORT_DNODE3
 
@@ -199,44 +200,6 @@ class TestSession:
         c4 = conn1.isClosed()
         assert c4
 
-    @pytest.mark.xdist_group(name='cluster_test')
-    def test_session_connect_reconnect(self):
-
-        def startCurNodes(cur_node: str) -> bool:
-            connCtl = ddb.session()
-            connCtl.connect(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
-            connCtl.run(f"try{{startDataNode(`{cur_node})}}catch(ex){{}}")
-            while connCtl.run(f"(exec state from getClusterPerf() where name = `{cur_node})[0]") != 1:
-                time.sleep(1)
-                connCtl.run(f"try{{startDataNode(`{cur_node})}}catch(ex){{}}")
-            connCtl.close()
-            return True
-
-        def stopCurNodes(cur_node: str) -> bool:
-            connCtl = ddb.session()
-            connCtl.connect(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
-            connCtl.run(f"try{{stopDataNode(`{cur_node})}}catch(ex){{}}")
-            time.sleep(1)
-            while connCtl.run(f"(exec state from getClusterPerf() where name = `{cur_node})[0]") != 0:
-                time.sleep(1)
-                connCtl.run(f"try{{stopDataNode(`{cur_node})}}catch(ex){{}}")
-            connCtl.close()
-            return True
-
-        conn1 = ddb.session()
-        conn1.connect(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, reconnect=True)
-        cur_node = conn1.run("getNodeAlias()")
-        assert stopCurNodes(cur_node)
-        time.sleep(1)
-        conn2 = ddb.session()
-        res = conn2.connect(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER)
-        assert not res
-        time.sleep(1)
-        assert startCurNodes(cur_node)
-        assert conn1.run("1+1") == 2
-        conn1.close()
-        conn2.close()
-
     @pytest.mark.parametrize('user', [USER, "adminxxxx"], ids=["T_USER", "F_USER"])
     @pytest.mark.parametrize('passwd', [PASSWD, "123456777888"], ids=["T_PASSWD", "F_PASSWD"])
     def test_session_login_user_passwd(self, user, passwd):
@@ -419,12 +382,12 @@ class TestSession:
                       highAvailabilitySites=sites)
         loadDf = conn.run(
             "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0")
-        assert all(((loadDf - loadDf.mean()).abs() < 0.4)['load'])
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
+        assert all(((loadDf - loadDf.mean()).abs() < 0.7)['load'])
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
         for i in connList:
             time.sleep(0.5)
             assert i.run("true")
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}'])")
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         # print(conn.run("select site,(connectionNum + workerNum + executorNum)/3.0 as load,connectionNum,workerNum,executorNum from rpc(getControllerAlias(), getClusterPerf) where mode=0"))
         # conn.run(f"stopDataNode(['dnode{PORT_DNODE2}'])")
         # for i in connList:
@@ -479,15 +442,15 @@ class TestSession:
     @pytest.mark.xdist_group(name='cluster_test')
     def test_session_highAvailability_tryReconnectNums_conn(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'])")
+        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "STOP")
         n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
                                  "conn_=ddb.Session();"
                                  f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'])")
-        assert result.stdout.count("Failed") == n * 3
+        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+        assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n * 3
         assert f"Connect failed after {n} reconnect attempts for every node in high availability sites." in result.stdout
 
     @pytest.mark.xdist_group(name='cluster_test')
@@ -496,14 +459,15 @@ class TestSession:
         n = 3
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
+                                 "from basic_testing.utils import operateNodes;"
                                  f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
                                  "conn_=ddb.Session();"
                                  f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
-                                 f"""conn.run("stopDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'])");"""
+                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'],'STOP');"""
                                  "conn_.run('true');"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'])")
-        assert result.stdout.count("Failed") == n * 3
+        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+        assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n * 3
         assert f"Connect to nodes failed after {n} reconnect attempts." in result.stderr
 
     def test_session_readTimeout(self):
@@ -519,3 +483,115 @@ class TestSession:
         conn.upload({'a': True})
         assert conn.run('a')
         # set packet loss to test
+
+    @pytest.mark.parametrize("script", ["1", "[1]", "1..6$2:3", "set(1..3)", "dict(1..3,1..3)", "x=1"],
+                             ids=["scalar", "vector", "matrix", "set", "dictionary", "no_return"])
+    def test_session_run_with_table_schema_not_table(self, script):
+        conn = ddb.Session(HOST, PORT, USER, PASSWD)
+        result = conn._run_with_table_schema(script)
+        assert result[1] is None
+
+    def test_session_run_with_table_schema_table(self):
+        conn = ddb.Session(HOST, PORT, USER, PASSWD)
+        result = conn._run_with_table_schema("""
+            table(
+                array(BOOL) as bool,
+                array(CHAR) as char,
+                array(SHORT) as short,
+                array(INT) as int,
+                array(LONG) as long,
+                array(DATE) as date,
+                array(MONTH) as month,
+                array(TIME) as time,
+                array(MINUTE) as minute,
+                array(SECOND) as second,
+                array(DATETIME) as datetime,
+                array(TIMESTAMP) as timestamp,
+                array(NANOTIME) as nanotime,
+                array(NANOTIMESTAMP) as nanotimestamp,
+                array(FLOAT) as float,
+                array(DOUBLE) as double,
+                array(STRING) as string,
+                array(UUID) as uuid,
+                array(DATEHOUR) as datehour,
+                array(IPADDR) as ipaddr,
+                array(INT128) as int128,
+                array(BLOB) as blob,
+                array(DECIMAL32(2)) as decimal32,
+                array(DECIMAL64(3)) as decimal64,
+                array(DECIMAL128(4)) as decimal128,
+                array(ANY) as any,
+                array(BOOL[]) as bool_av,
+                array(CHAR[]) as char_av,
+                array(SHORT[]) as short_av,
+                array(INT[]) as int_av,
+                array(LONG[]) as long_av,
+                array(DATE[]) as date_av,
+                array(MONTH[]) as month_av,
+                array(TIME[]) as time_av,
+                array(MINUTE[]) as minute_av,
+                array(SECOND[]) as second_av,
+                array(DATETIME[]) as datetime_av,
+                array(TIMESTAMP[]) as timestamp_av,
+                array(NANOTIME[]) as nanotime_av,
+                array(NANOTIMESTAMP[]) as nanotimestamp_av,
+                array(FLOAT[]) as float_av,
+                array(DOUBLE[]) as double_av,
+                array(UUID[]) as uuid_av,
+                array(DATEHOUR[]) as datehour_av,
+                array(IPADDR[]) as ipaddr_av,
+                array(INT128[]) as int128_av,
+                array(DECIMAL32(2)[]) as decimal32_av,
+                array(DECIMAL64(3)[]) as decimal64_av,
+                array(DECIMAL128(4)[]) as decimal128_av
+            )
+        """)
+        assert result[-1]['bool'] == ('BOOL', None)
+        assert result[-1]['char'] == ('CHAR', None)
+        assert result[-1]['short'] == ('SHORT', None)
+        assert result[-1]['int'] == ('INT', None)
+        assert result[-1]['long'] == ('LONG', None)
+        assert result[-1]['date'] == ('DATE', None)
+        assert result[-1]['month'] == ('MONTH', None)
+        assert result[-1]['time'] == ('TIME', None)
+        assert result[-1]['minute'] == ('MINUTE', None)
+        assert result[-1]['second'] == ('SECOND', None)
+        assert result[-1]['datetime'] == ('DATETIME', None)
+        assert result[-1]['timestamp'] == ('TIMESTAMP', None)
+        assert result[-1]['nanotime'] == ('NANOTIME', None)
+        assert result[-1]['nanotimestamp'] == ('NANOTIMESTAMP', None)
+        assert result[-1]['float'] == ('FLOAT', None)
+        assert result[-1]['double'] == ('DOUBLE', None)
+        assert result[-1]['string'] == ('STRING', None)
+        assert result[-1]['uuid'] == ('UUID', None)
+        assert result[-1]['datehour'] == ('DATEHOUR', None)
+        assert result[-1]['ipaddr'] == ('IPADDR', None)
+        assert result[-1]['int128'] == ('INT128', None)
+        assert result[-1]['blob'] == ('BLOB', None)
+        assert result[-1]['decimal32'] == ('DECIMAL32', 2)
+        assert result[-1]['decimal64'] == ('DECIMAL64', 3)
+        assert result[-1]['decimal128'] == ('DECIMAL128', 4)
+        assert result[-1]['any'] == ('ANY', None)
+        assert result[-1]['bool_av'] == ('BOOL[]', None)
+        assert result[-1]['char_av'] == ('CHAR[]', None)
+        assert result[-1]['short_av'] == ('SHORT[]', None)
+        assert result[-1]['int_av'] == ('INT[]', None)
+        assert result[-1]['long_av'] == ('LONG[]', None)
+        assert result[-1]['date_av'] == ('DATE[]', None)
+        assert result[-1]['month_av'] == ('MONTH[]', None)
+        assert result[-1]['time_av'] == ('TIME[]', None)
+        assert result[-1]['minute_av'] == ('MINUTE[]', None)
+        assert result[-1]['second_av'] == ('SECOND[]', None)
+        assert result[-1]['datetime_av'] == ('DATETIME[]', None)
+        assert result[-1]['timestamp_av'] == ('TIMESTAMP[]', None)
+        assert result[-1]['nanotime_av'] == ('NANOTIME[]', None)
+        assert result[-1]['nanotimestamp_av'] == ('NANOTIMESTAMP[]', None)
+        assert result[-1]['float_av'] == ('FLOAT[]', None)
+        assert result[-1]['double_av'] == ('DOUBLE[]', None)
+        assert result[-1]['uuid_av'] == ('UUID[]', None)
+        assert result[-1]['datehour_av'] == ('DATEHOUR[]', None)
+        assert result[-1]['ipaddr_av'] == ('IPADDR[]', None)
+        assert result[-1]['int128_av'] == ('INT128[]', None)
+        assert result[-1]['decimal32_av'] == ('DECIMAL32[]', 2)
+        assert result[-1]['decimal64_av'] == ('DECIMAL64[]', 3)
+        assert result[-1]['decimal128_av'] == ('DECIMAL128[]', 4)

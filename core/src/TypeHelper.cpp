@@ -61,17 +61,63 @@ Type createType(const py::handle &data) {
         // change int to Type
         type = std::make_pair(static_cast<HELPER_TYPE>(py::cast<int>(data)), EXPARAM_DEFAULT);
     }
+    else if (CHECK_INS(data, py_str_)) {
+        // change str to Type
+        std::string type_name = py::cast<std::string>(data);
+        HELPER_TYPE datatype = static_cast<HELPER_TYPE>(Util::getDataType(type_name));
+        type = std::make_pair(datatype, EXPARAM_DEFAULT);
+    }
     else if (CHECK_INS(data, py_list_)) {
-        // change [int, int] to Type
         py::list tmplist = py::reinterpret_borrow<py::list>(data);
-        if (tmplist.size() <=0 || tmplist.size() > 2)
-            throw ConversionException("Conversion failed. Specify a valid type.");
-        HELPER_TYPE datatype = static_cast<HELPER_TYPE>(py::cast<int>(tmplist[0]));
-        int exparam = py::cast<int>(tmplist[1]);
-        type = std::make_pair(datatype, exparam);
+        size_t list_size = tmplist.size();
+
+        if (list_size == 1) {
+            // change [int] to Type
+            if (CHECK_INS(tmplist[0], py_int_)) {
+                HELPER_TYPE datatype = static_cast<HELPER_TYPE>(py::cast<int>(tmplist[0]));
+                type = std::make_pair(datatype, EXPARAM_DEFAULT);
+            }
+            // change [str] to Type
+            else if (CHECK_INS(tmplist[0], py_str_)) {
+                std::string type_name = py::cast<std::string>(tmplist[0]);
+                HELPER_TYPE datatype = static_cast<HELPER_TYPE>(Util::getDataType(type_name));
+                type = std::make_pair(datatype, EXPARAM_DEFAULT);
+            }
+            else {
+                throw ConversionException("Conversion failed. The first element of the list must be of type int or str.");
+            }
+        }
+        else if (list_size == 2) {
+            // change [int, int], [str, int], [int, None], [str, None] to Type
+            HELPER_TYPE datatype;
+            if (CHECK_INS(tmplist[0], py_int_)) {
+                datatype = static_cast<HELPER_TYPE>(py::cast<int>(tmplist[0]));
+            }
+            else if (CHECK_INS(tmplist[0], py_str_)) {
+                std::string type_name = py::cast<std::string>(tmplist[0]);
+                datatype = static_cast<HELPER_TYPE>(Util::getDataType(type_name));
+            }
+            else {
+                throw ConversionException("Conversion failed. The first element of the list must be of type int or str.");
+            }
+
+            int exparam = EXPARAM_DEFAULT;
+            if (!tmplist[1].is_none()) {
+                if (CHECK_INS(tmplist[1], py_int_)) {
+                    exparam = py::cast<int>(tmplist[1]);
+                }
+                else {
+                    throw ConversionException("Conversion failed. The second element of the list must be of type int or None.");
+                }
+            }
+            type = std::make_pair(datatype, exparam);
+        }
+        else {
+            throw ConversionException("Conversion failed. List must contain exactly 1 or 2 elements.");
+        }
     }
     else {
-        throw ConversionException("Conversion failed. Specify a valid type.");
+        throw ConversionException("Conversion failed. Specify a int, str, or list type.");
     }
     return type;
 }
