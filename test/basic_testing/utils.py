@@ -153,7 +153,7 @@ def assertPlus(data):
 #         else:
 #             sleep(0.5)
 
-def operateNodes(conn,nodes,operate):
+def operateNodes(conn, nodes, operate):
     conn.run("""
         def check_nodes(state_,nodes){
             return all(exec state==state_ from rpc(getControllerAlias(),getClusterPerf) where name in nodes)

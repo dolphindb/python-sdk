@@ -84,12 +84,10 @@ class TestSubscribeStreamDeserializer(object):
             'DECIMAL128': 'object',
         }
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(1000:0,`time`sym`blob`dataType,[TIMESTAMP,SYMBOL,BLOB,{dataType}{"(2)" if "DECIMAL" in dataType else ""}]) as `{func_name};
@@ -161,12 +159,10 @@ class TestSubscribeStreamDeserializer(object):
     def test_streamDeserializer_array_vector(self, dataType):
         func_name = inspect.currentframe().f_code.co_name + f'_{dataType}'
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(1000:0,`time`sym`blob`dataType,[TIMESTAMP,SYMBOL,BLOB,{dataType}{"(2)" if "DECIMAL" in dataType else ""}[]]) as `{func_name};

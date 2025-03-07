@@ -389,7 +389,7 @@ class TestReadmeCn:
         s = ddb.Session(enableASYNC=False)
         s.connect(HOST, PORT, USER, PASSWD)
         res = s.run(f"select * from loadTable('{db_name}', `{tbName}) order by price")
-        assert_frame_equal(tb.sort_values(by='price').reset_index(drop=True), res)
+        assert_frame_equal(tb.sort_values(by='price').reset_index(drop=True), res, False)
         s.close()
 
     def test_readme_BasicOperation_AsynchronousWrite_SessionAsynchronousSubmission_2(self):

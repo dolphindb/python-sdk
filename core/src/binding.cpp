@@ -581,7 +581,7 @@ public:
     }
 
     void subscribe(const string &host, const int &port, py::object handler, const string &tableName, const string &actionName,
-                        const long long &offset, const bool &resub, py::array filter,const string &userName,const string &password,
+                        const long long &offset, const bool &resub, py::object filter,const string &userName,const string &password,
                         StreamDeserializer &streamDeserializer,
                         const std::vector<std::string> backupSites = std::vector<std::string>(),
                         int resubTimeout = 100, bool subOnce = false) {
@@ -599,7 +599,17 @@ public:
             }
             handler(row);
         };
-        ddb::VectorSP ddbFilter = filter.size() ? Converter::toDolphinDB(filter) : nullptr;
+
+        ddb::VectorSP ddbFilter;
+        if (py::isinstance<py::array>(filter)) {
+            py::array arr_filter = py::cast<py::array>(filter);
+            ddbFilter = arr_filter.size() ? Converter::toDolphinDB(arr_filter) : nullptr;
+        } else if (py::isinstance<py::str>(filter)) {
+            std::string strFilter = py::str(filter);
+            ddb::ConstantSP ddbStrFilter = new ddb::String(strFilter);
+            ddbFilter = (ddb::VectorSP)ddbStrFilter;
+        }
+
         TRY
         vector<ddb::ThreadSP> threads;
         if(subscriber_.isNull() == false){
@@ -615,7 +625,7 @@ public:
     }
 
     // FIXME: not thread safe
-    void subscribeBatch(string &host,int port, py::object handler,string &tableName,string &actionName,long long offset, bool resub, py::array filter,
+    void subscribeBatch(string &host,int port, py::object handler,string &tableName,string &actionName,long long offset, bool resub, py::object filter,
             const bool & msgAsTable, int batchSize, double throttle,const string &userName,const string &password,StreamDeserializer &streamDeserializer,
             const std::vector<std::string> backupSites = std::vector<std::string>(),
             int resubTimeout = 100, bool subOnce = false) {
@@ -653,7 +663,17 @@ public:
                 handler(pyMsg);
             }
         };
-        ddb::VectorSP ddbFilter = filter.size() ? Converter::toDolphinDB(filter) : nullptr;
+
+        ddb::VectorSP ddbFilter;
+        if (py::isinstance<py::array>(filter)) {
+            py::array arr_filter = py::cast<py::array>(filter);
+            ddbFilter = arr_filter.size() ? Converter::toDolphinDB(arr_filter) : nullptr;
+        } else if (py::isinstance<py::str>(filter)) {
+            std::string strFilter = py::str(filter);
+            ddb::ConstantSP ddbStrFilter = new ddb::String(strFilter);
+            ddbFilter = (ddb::VectorSP)ddbStrFilter;
+        }
+
         TRY
         vector<ddb::ThreadSP> threads;
         ddb::ThreadSP thread = subscriber_->subscribe(host, port, ddbHandler, tableName, actionName, offset, resub, ddbFilter, false, 

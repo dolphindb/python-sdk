@@ -20,7 +20,7 @@ from .database import Database
 from .utils import month
 from . import cep, io, logger
 
-__version__ = "3.0.2.3"
+__version__ = "3.0.2.4"
 
 name = "dolphindb"
 

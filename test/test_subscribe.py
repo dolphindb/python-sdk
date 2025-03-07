@@ -162,12 +162,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         self.df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -197,15 +195,6 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         with pytest.raises(TypeError):
             conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, "fsd", userName=USER, password=PASSWD)
-        conn1.close()
-
-    def test_subscribe_error_filter(self):
-        conn1 = ddb.session()
-        conn1.connect(HOST, PORT, USER, PASSWD)
-        listenPort = getListenPort()
-        conn1.enableStreaming(listenPort)
-        with pytest.raises(TypeError):
-            conn1.subscribe(HOST, PORT, self.handler, "test", "action", 0, False, "dfs, userName=USER, password=PASSWD")
         conn1.close()
 
     def test_subscribe_error_msgAsTable_string(self):
@@ -286,12 +275,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -316,12 +303,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -358,12 +343,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -378,12 +361,10 @@ class TestSubscribe:
         assert counter.wait_s(20)
         assert_frame_equal(df, conn1.run(f"select * from {func_name}"))
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
         """
         conn1.run(script)
@@ -407,12 +388,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -426,12 +405,10 @@ class TestSubscribe:
                         password=PASSWD)
         assert counter.wait_s(20)
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
         """
         conn1.run(script)
@@ -454,12 +431,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price", "id"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE, INT]) as {func_name}
@@ -477,6 +452,36 @@ class TestSubscribe:
         conn1.unsubscribe(HOST, PORT, func_name, "action")
         conn1.close()
 
+    def test_subscribe_filter_lambda(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn1 = ddb.session()
+        conn1.connect(HOST, PORT, USER, PASSWD)
+        listenPort = getListenPort()
+        conn1.enableStreaming(listenPort)
+        df = pd.DataFrame(columns=["time", "sym", "price", "id"])
+        script = f"""
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
+            }}
+            try{{dropStreamTable(`{func_name})}}catch(ex){{}}
+            share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE, INT]) as {func_name}
+            setStreamTableFilterColumn({func_name}, `sym)
+            insert into {func_name} values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0, int(1..10))
+        """
+        conn1.run(script)
+        counter = CountBatchDownLatch(1)
+        counter.reset(2)
+        conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False,
+                        "msg -> select * from msg where sym=`000905",
+                        userName=USER, password=PASSWD)
+        assert counter.wait_s(20)
+        df["id"] = df["id"].astype(np.int32)
+        assert_frame_equal(df, conn1.run(f"select * from {func_name} where sym=`000905"))
+        conn1.unsubscribe(HOST, PORT, func_name, "action")
+        conn1.close()
+
     def test_subscribe_double_array_vector_msgAsTable_False(self):
         func_name = inspect.currentframe().f_code.co_name
         conn1 = ddb.session()
@@ -485,12 +490,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["symbolv", "doublev"])
         script = f'''
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`symbolv`doublev, [SYMBOL, DOUBLE[]]) as {func_name}
@@ -519,12 +522,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         self.df = pd.DataFrame(columns=["symbolv", "doublev"])
         script = f'''
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`symbolv`doublev, [SYMBOL, DOUBLE]) as {func_name}
@@ -552,12 +553,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["symbolv", "doublev"])
         script = f'''
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`trades_doublev)}}catch(ex){{}}
             share streamTable(10000:0,`symbolv`doublev, [SYMBOL, DOUBLE]) as {func_name}
@@ -586,12 +585,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["symbolv", "doublev"])
         script = f'''
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`symbolv`doublev, [SYMBOL, DOUBLE]) as {func_name}
@@ -620,12 +617,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         self.df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f'''
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -719,12 +714,10 @@ class TestSubscribe:
         df1 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "price2", "table"])
         df2 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "table"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as {func_name}
@@ -754,12 +747,10 @@ class TestSubscribe:
         df1 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "price2", "table"])
         df2 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "table"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as {func_name}
@@ -797,12 +788,10 @@ class TestSubscribe:
         df1 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "price2", "table"])
         df2 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "table"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as {func_name}
@@ -841,12 +830,10 @@ class TestSubscribe:
         df1 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "price2", "table"])
         df2 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "table"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as {func_name}
@@ -881,12 +868,10 @@ class TestSubscribe:
         df1 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "price2", "table"])
         df2 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "table"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as {func_name}
@@ -922,12 +907,10 @@ class TestSubscribe:
         df1 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "price2", "table"])
         df2 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "table"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as {func_name}
@@ -967,12 +950,10 @@ class TestSubscribe:
         df1 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "price2", "table"])
         df2 = pd.DataFrame(columns=["datetimev", "timestampv", "sym", "price1", "table"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as {func_name}
@@ -1012,12 +993,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -1046,12 +1025,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -1080,12 +1057,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -1114,12 +1089,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -1156,12 +1129,10 @@ class TestSubscribe:
         conn1.enableStreaming(listenPort)
         df = pd.DataFrame(columns=["time", "sym", "price"])
         script = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
@@ -1483,8 +1454,15 @@ class TestSubscribe:
 
             return inner
 
+        def wait_until(count):
+            while True:
+                if len(df) < count:
+                    sleep(0.5)
+                else:
+                    break
+
         df = pd.DataFrame(columns=['a', 'b'])
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE1}'])")
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
         conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), func_name, "test", resub=True,
                        backupSites=[f"{HOST_CLUSTER}:{PORT_DNODE2}", f"{HOST_CLUSTER}:{PORT_DNODE3}"], userName=USER,
                        password=PASSWD)
@@ -1495,11 +1473,10 @@ class TestSubscribe:
             conn2.run(sql)
         for sql in conn3_insert:
             conn3.run(sql)
-        sleep(3)
-        conn.run(f"stopDataNode(['dnode{PORT_DNODE2}'])")
-        sleep(6)
-        conn.run(f"startDataNode(['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}'])")
-        sleep(6)
+        wait_until(10)
+        operateNodes(conn, [f'dnode{PORT_DNODE2}'], "STOP")
+        wait_until(20)
+        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}'], "START")
         conn.unsubscribe(HOST_CLUSTER, PORT_DNODE1, func_name, "test")
         df_expect = pd.DataFrame({
             'a': [i for i in range(1, 21)],

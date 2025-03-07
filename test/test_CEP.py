@@ -45,12 +45,10 @@ class TestCep(object):
 
         func_name = inspect.currentframe().f_code.co_name
         scripts = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}_input){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamEngine(`{func_name}_serOutput)}} catch(ex) {{}}
             try{{dropStreamEngine(`{func_name}_cep1)}} catch(ex) {{}}
@@ -148,12 +146,10 @@ class TestCep(object):
 
         func_name = inspect.currentframe().f_code.co_name
         scripts = f"""
-            all_pubTables = getStreamingStat().pubTables
-            for(pubTables in all_pubTables){{
-                if (pubTables.tableName==`{func_name}_input){{
-                    stopPublishTable(pubTables.subscriber.split(":")[0],int(pubTables.subscriber.split(":")[1]),pubTables.tableName,pubTables.actions)
-                    break
-                }}
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
             }}
             try{{dropStreamEngine(`{func_name}_serOutput)}} catch(ex) {{}}
             try{{dropStreamEngine(`{func_name}_cep1)}} catch(ex) {{}}

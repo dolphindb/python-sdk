@@ -65,3 +65,9 @@ before-build = [
 before-all = [
     "(if exist build rmdir /s /q build)",
 ]
+before-build = [
+    "python --version",
+    "python -m pip config set global.index-url --site http://mirrors.aliyun.com/pypi/simple/",
+    "python -m pip config set global.trusted-host mirrors.aliyun.com",
+    "python -m pip install --upgrade pip --trusted-host mirrors.aliyun.com"
+]

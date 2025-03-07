@@ -3395,13 +3395,13 @@ Converter::toNumpy_Vector(const ConstantSP &data, const ToPythonOption &option, 
         VectorEnumNumeric<char>(data, &Vector::getBoolConst, [&](const char *pbuf, INDEX startIndex, INDEX size) -> bool {
             for (INDEX i = 0, index = startIndex; i < size; ++i, ++index) {
                 if (UNLIKELY(pbuf[i] == CHAR_MIN)) {
-                    ptr[i] = pyNone;
+                    ptr[index] = pyNone;
                 }
                 else {
                     if (pbuf[i] != 0)
-                        ptr[i] = pyTrue;
+                        ptr[index] = pyTrue;
                     else
-                        ptr[i] = pyFalse;
+                        ptr[index] = pyFalse;
                 }
             }
             return true;
