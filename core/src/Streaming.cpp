@@ -31,15 +31,15 @@ int startWSA() {
     wVersionRequested = MAKEWORD(2, 2);
     err = WSAStartup(wVersionRequested, &wsaData);
     if (err != 0) {
-        LOG_INFO("WSAStartup failed with error:", err);
+        LOG_ERR("WSAStartup failed with error:", err);
         return 1;
     }
     if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2) {
-        LOG_INFO("Could not find a usable version of Winsock.dll");
+        LOG_ERR("Could not find a usable version of Winsock.dll");
         WSACleanup();
         return 1;
     } else
-        LOG_INFO("The Winsock 2.2 dll was found okay");
+        LOG_ERR("The Winsock 2.2 dll was found okay");
     return 0;
 }
 }  // namespace
@@ -1194,7 +1194,7 @@ string StreamingClientImpl::subscribeInternal(DBConnection &conn, SubscribeInfo 
 	info.attributes = colNames;
 
 	if (isListenMode() == false) {
-		std::shared_ptr<DBConnection> activeConn = std::make_shared<DBConnection>(false, false, 30, false, false, true);
+		std::shared_ptr<DBConnection> activeConn = std::make_shared<DBConnection>(false, false, 30, false, PARSER_TYPE::PARSER_DOLPHINDB, true);
 		if (!activeConn->connect(info.host, info.port, "", "", "", false, vector<string>(), 30)) {
 			throw RuntimeException("Failed to connect to server: " + info.host + " " + std::to_string(info.port));
 		}
@@ -1616,7 +1616,7 @@ ThreadSP EventClient::subscribe(const string& host, int port, const EventMessage
             eventTypes.clear();
             attributes.clear();
             if(!eventHandler_.deserializeEvent(msg, eventTypes, attributes, errorInfo)){
-                LOG_INFO("deserialize fail", errorInfo.errorInfo);
+                LOG_ERR("deserialize fail", errorInfo.errorInfo);
                 continue;
             }
             unsigned rowSize = eventTypes.size();

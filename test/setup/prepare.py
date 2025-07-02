@@ -7059,39 +7059,39 @@ def get_Table_arrayVetcor(*args, n=100, typeTable="table", isShare=False, **kwar
         testTypeTable = "share_" + typeTable
 
     shareScrips = """
-        share table_bool_0 as share_table_bool_0
+        share_table_bool_0 = table_bool_0
 
-        share table_char_0 as share_table_char_0
+        share_table_char_0 = table_char_0 
 
-        share table_short_0 as share_table_short_0
+        share_table_short_0 =  table_short_0 
 
-        share table_int_0 as share_table_int_0
+        share_table_int_0 = table_int_0 
 
-        share table_long_0 as share_table_long_0
+        share_table_long_0 = table_long_0 
 
-        share table_date_0 as share_table_date_0
+        share_table_date_0 = table_date_0  
 
-        share table_month_0 as share_table_month_0
+        share_table_month_0 = table_month_0 
 
-        share table_time_0 as share_table_time_0
+        share_table_time_0 = table_time_0  
 
-        share table_minute_0 as share_table_minute_0
+        share_table_minute_0 = table_minute_0 
 
-        share table_second_0 as share_table_second_0
+        share_table_second_0 = table_second_0 
 
-        share table_datetime_0 as share_table_datetime_0
+        share_table_datetime_0 = table_datetime_0 
 
-        share table_timestamp_0 as share_table_timestamp_0
+        share_table_timestamp_0 = table_timestamp_0  
 
-        share table_nanotime_0 as share_table_nanotime_0
+        share_table_nanotime_0 = table_nanotime_0  
 
-        share table_nanotimestamp_0 as share_table_nanotimestamp_0
+        share_table_nanotimestamp_0 = table_nanotimestamp_0  
 
-        share table_float_0 as share_table_float_0
+        share_table_float_0 = table_float_0  
 
-        share table_double_0 as share_table_double_0
+        share_table_double_0 = table_double_0  
 
-        share table_datehour_0 as share_table_datehour_0
+        share_table_datehour_0 = table_datehour_0  
     """.replace("table", typeTable)
 
     pythons = {DATATYPE.DT_VOID: {

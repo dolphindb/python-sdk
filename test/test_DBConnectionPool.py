@@ -987,6 +987,7 @@ class TestDBConnectionPool:
             loop.run_until_complete(asyncio.gather(*[pool.run('print', data)]))
         pool.shutDown()
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_loadBalance(self):
         pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 60, "admin", "123456", loadBalance=True)
@@ -996,6 +997,7 @@ class TestDBConnectionPool:
         assert all(((loadDf - loadDf.mean()).abs() < 0.7)['load'])
         pool.shutDown()
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_reconnect(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
@@ -1006,6 +1008,7 @@ class TestDBConnectionPool:
         pool.shutDown()
         conn.close()
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_highAvailability(self):
         pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 30, USER_CLUSTER, PASSWD_CLUSTER, highAvailability=True)
@@ -1033,6 +1036,7 @@ class TestDBConnectionPool:
         assert result.stdout.count("Failed") == n
         assert f"Connect to {HOST}:56789 failed after {n} reconnect attempts." in result.stdout
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_tryReconnectNums_run(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
@@ -1049,6 +1053,7 @@ class TestDBConnectionPool:
         assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n
         assert f"Connect to {HOST_CLUSTER}:{PORT_DNODE1} failed after {n} reconnect attempts." in result.stdout
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_DBConnectionPool_highAvailability_tryReconnectNums(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
@@ -1057,7 +1062,7 @@ class TestDBConnectionPool:
                                  "import dolphindb as ddb;"
                                  "from basic_testing.utils import operateNodes;"
                                  f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
-                                 f"pool=ddb.DBConnectionPool('{HOST}', {PORT_DNODE1}, 1, '{USER_CLUSTER}', '{PASSWD_CLUSTER}', reConnect=True, highAvailability=True, tryReconnectNums={n});"
+                                 f"pool=ddb.DBConnectionPool('{HOST_CLUSTER}', {PORT_DNODE1}, 1, '{USER_CLUSTER}', '{PASSWD_CLUSTER}', reConnect=True, highAvailability=True, tryReconnectNums={n});"
                                  f"""operateNodes(conn,['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'],'STOP');"""
                                  "pool.runTaskAsync('1+1').result();"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')

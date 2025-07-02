@@ -54,8 +54,6 @@ public:
 
 class Logger {
 public:
-    Logger(): minLevel_(LevelInfo), enableStdout_(true), filePath_("") {}
-    ~Logger() {}
     enum Level {
         LevelDebug = spdlog::level::debug,
         LevelInfo = spdlog::level::info,
@@ -63,6 +61,9 @@ public:
         LevelError = spdlog::level::err,
         LevelCount,
     };
+    Logger(): minLevel_(LevelWarn), enableStdout_(true), filePath_("") {}
+    Logger(Logger::Level minLevel): minLevel_(minLevel), enableStdout_(true), filePath_("") {}
+    ~Logger() {}
     template<typename... TArgs>
     bool Info(TArgs... args) {
         std::string text;

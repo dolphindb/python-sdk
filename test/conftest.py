@@ -4,16 +4,16 @@ import dolphindb as ddb
 import pytest
 from _pytest.outcomes import Skipped
 
-from basic_testing.prepare import PYTHON_VERSION
+from basic_testing.prepare import PYTHON_VERSION, FREE_THREADING
 from setup.settings import HOST_REPORT, PORT_REPORT, USER_REPORT, PASSWD_REPORT, REPORT
 
 if REPORT:
     conn = ddb.Session(HOST_REPORT, PORT_REPORT, USER_REPORT, PASSWD_REPORT)
 
     DATABASE_NAME = "dfs://py_report"
-    TABLE_NAME = f"{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}".lower()
-    SHARE_TABLE = f"py_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}".lower()
-    SHARE_DICT = f"py_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}_dict".lower()
+    TABLE_NAME = f"{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}{'t' if FREE_THREADING else ''}".lower()
+    SHARE_TABLE = f"py_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}{'t' if FREE_THREADING else ''}".lower()
+    SHARE_DICT = f"py_{platform.system()}_{platform.machine()}_{PYTHON_VERSION[0]}{PYTHON_VERSION[1]}{'t' if FREE_THREADING else ''}_dict".lower()
 
 
     @pytest.fixture(scope="session", autouse=True)

@@ -7,16 +7,19 @@ Package: session package.
 import asyncio
 import platform
 import re
+import sys
 import warnings
 from concurrent.futures import Future
 from datetime import date, datetime
 from threading import Lock, Thread
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from dolphindb._core import DolphinDBRuntime
-from dolphindb.database import Database
-from dolphindb.settings import (
+from ._hints import (
+    Any, Callable, Dict, List, Literal, Optional, Tuple, Union,
+)
+from ._core import DolphinDBRuntime
+from .database import Database
+from .settings import (
     DDB_EPSILON,
     PROTOCOL_ARROW,
     PROTOCOL_DDB,
@@ -24,12 +27,31 @@ from dolphindb.settings import (
     PROTOCOL_PICKLE,
     default_protocol,
     SqlStd,
+    ParserType,
 )
-from dolphindb.table import Table
-from dolphindb.utils import _generate_dbname, _generate_tablename, month
+from .table import Table
+from .utils import _generate_dbname, _generate_tablename, month
 from pandas import DataFrame
 
 ddbcpp = DolphinDBRuntime()._ddbcpp
+
+
+def _helper_check_parser(parser, python: bool = False):
+    if parser == ParserType.Default:
+        parser = ParserType.Python if python else ParserType.DolphinDB
+    elif python:
+        raise RuntimeError("The parameter parser must not be specified when python=true")
+
+    if not isinstance(parser, ParserType):
+        if isinstance(parser, int):
+            parser = ParserType(parser)
+        else:
+            parser = ParserType.parse_from_str(parser)
+
+    if parser == ParserType.Default:
+        parser = ParserType.DolphinDB
+
+    return parser
 
 
 class DBConnectionPool(object):
@@ -48,7 +70,6 @@ class DBConnectionPool(object):
         highAvailability : whether to enable high availability. True means enabled, otherwise False. Defaults to False.
         compress : whether to enable compression. True means enabled, otherwise False. Defaults to False.
         reConnect : whether to enable reconnection. True means enabled, otherwise False. Defaults to False.
-        enablePickle : whether to enable the Pickle protocol. Defaults to False.
         python : whether to enable the Python parser. True means enabled, otherwise False. Defaults to False.
         protocol : the data transmission protocol. Defaults to PROTOCOL_DEFAULT, which is equivalant to PROTOCOL_DDB.
 
@@ -56,6 +77,7 @@ class DBConnectionPool(object):
         show_output : whether to display the output of print statements in the script after execution. Defaults to True.
         sqlStd: an enum specifying the syntax to parse input SQL scripts. Three parsing syntaxes are supported: DolphinDB (default), Oracle, and MySQL.
         tryReconnectNums: the number of reconnection attempts when reconnection is enabled. If high availability mode is on, it will retry tryReconnectNums times for each node. None means unlimited reconnection attempts. Defaults to None.
+        parser: the type of parser used by the server when parsing scripts. Available options: "dolphindb", "python", "kdb". Defaults to ParserType.Default, which is equivalant to "dolphindb".
 
     Note:
         If the parameter python is True, the script is parsed in Python rather than DolphinDB language.
@@ -77,6 +99,7 @@ class DBConnectionPool(object):
         show_output: bool = True,
         sqlStd: SqlStd = SqlStd.DolphinDB,
         tryReconnectNums: Optional[int] = None,
+        parser: Union[ParserType, Literal["dolphindb", "python", "kdb"]] = ParserType.Default,
     ):
         """Constructor of DBConnectionPool, including the number of threads, load balancing, high availability, reconnection, compression and Pickle protocol."""
         userid = userid if userid is not None else ""
@@ -94,8 +117,20 @@ class DBConnectionPool(object):
         if protocol == PROTOCOL_ARROW:
             __import__("pyarrow")
 
+        if protocol == PROTOCOL_PICKLE:
+            warnings.warn(
+                "The use of PROTOCOL_PICKLE has been deprecated and removed in Python 3.13. "
+                "Please migrate to an alternative protocol or serialization method.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            if sys.version_info.minor >= 13:
+                protocol = default_protocol
+
         if tryReconnectNums is None:
             tryReconnectNums = -1
+
+        parser = _helper_check_parser(parser, python)
 
         self.mutex = Lock()
         self.pool = ddbcpp.dbConnectionPoolImpl(
@@ -108,7 +143,7 @@ class DBConnectionPool(object):
             highAvailability,
             compress,
             reConnect,
-            python,
+            parser.value,
             protocol,
             show_output,
             sqlStd.value,
@@ -374,6 +409,7 @@ class Session(object):
     Kwargs:
         show_output : whether to display the output of print statements in the script after execution. Defaults to True.
         sqlStd: an enum specifying the syntax to parse input SQL scripts. Three parsing syntaxes are supported: DolphinDB (default), Oracle, and MySQL.
+        parser: the type of parser used by the server when parsing scripts. Available options: "dolphindb", "python", "kdb". Defaults to ParserType.Default, which is equivalant to "dolphindb".
 
     Note:
         set enableSSL =True to enable encrypted communication. It's also required to configure enableHTTPS =true in the server.
@@ -386,7 +422,12 @@ class Session(object):
         userid: Optional[str] = "", password: Optional[str] = "", enableSSL: bool = False,
         enableASYNC: bool = False, keepAliveTime: int = 30, enableChunkGranularityConfig: bool = False,
         compress: bool = False, enablePickle: Optional[bool] = None, protocol: int = PROTOCOL_DEFAULT,
-        python: bool = False, *, enableASYN=None, show_output: bool = True, sqlStd: SqlStd = SqlStd.DolphinDB,
+        python: bool = False,
+        *,
+        enableASYN=None,
+        show_output: bool = True,
+        sqlStd: SqlStd = SqlStd.DolphinDB,
+        parser: Union[ParserType, Literal["dolphindb", "python", "kdb"]] = ParserType.Default,
     ):
         """Constructor of Session, inluding OpenSSL encryption, asynchronous mode, TCP detection, block granularity matching, compression, Pickle protocol."""
         if enableASYN is not None:
@@ -409,7 +450,19 @@ class Session(object):
         if protocol == PROTOCOL_ARROW:
             __import__("pyarrow")
 
-        self.cpp = ddbcpp.sessionimpl(enableSSL, enableASYNC, keepAliveTime, compress, python, protocol, show_output, sqlStd.value)
+        if protocol == PROTOCOL_PICKLE:
+            warnings.warn(
+                "The use of PROTOCOL_PICKLE has been deprecated and removed in Python 3.13. "
+                "Please migrate to an alternative protocol or serialization method.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            if sys.version_info.minor >= 13:
+                protocol = default_protocol
+
+        parser = _helper_check_parser(parser, python)
+
+        self.cpp = ddbcpp.sessionimpl(enableSSL, enableASYNC, keepAliveTime, compress, parser.value, protocol, show_output, sqlStd.value)
         self.host = host
         self.port = port
         self.userid = userid
@@ -1703,9 +1756,10 @@ class MultithreadedTableWriter(object):
                         For a partitioned table, it must be the partitioning column; for a stream table, it must be a column name; for a dimension table, the parameter does not work.
         compressMethods : a list of the compression methods used for each column. If unspecified, the columns are not compressed. Defaults to []. 
                             The compression methods include: "LZ4": LZ4 algorithm; "DELTA": Delta-of-delta encoding.
-        mode : The write mode. It can be Append (default) or Upsert. Defaults to "".
-        modeOption : The parameters of function upsert!. It only takes effect when mode is Upsert. Defaults to [].
+        mode : the write mode. It can be Append (default) or Upsert. Defaults to "".
+        modeOption : the parameters of function upsert!. It only takes effect when mode is Upsert. Defaults to [].
         reconnect : whether to enable reconnection. True means enabled, otherwise False. Defaults to True.
+        enableStreamTableTimestamp: whether to insert data into a stream table with timestamp attached by `setStreamTableTimestamp` function. True means enabled, otherwise False. Defaults to False.
     """
     def __init__(
         self, host: str, port: int, userId: str, password: str,
@@ -1713,13 +1767,15 @@ class MultithreadedTableWriter(object):
         enableHighAvailability: bool = False, highAvailabilitySites: List[str] = [],
         batchSize: int = 1, throttle: float = 1.0, threadCount: int = 1,
         partitionCol: str = "", compressMethods: List[str] = [],
-        mode: str = "", modeOption: List[str] = [], *, reconnect: bool = True
+        mode: str = "", modeOption: List[str] = [],
+        *,
+        reconnect: bool = True, enableStreamTableTimestamp: bool = False,
     ):
         """Constructor of MultithreadedTableWriter"""
         self.writer = ddbcpp.multithreadedTableWriter(
             host, port, userId, password, dbPath, tableName, useSSL,
             enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount,
-            partitionCol, compressMethods, mode, modeOption, reconnect
+            partitionCol, compressMethods, mode, modeOption, reconnect, enableStreamTableTimestamp
         )
 
     def getStatus(self) -> MultithreadedTableWriterStatus:

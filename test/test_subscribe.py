@@ -1277,6 +1277,7 @@ class TestSubscribe:
             assert res[i] == list(ex_df.iloc[i])
         conn1.close()
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_subscribe_backupSites(self):
         func_name = inspect.currentframe().f_code.co_name
@@ -1356,6 +1357,7 @@ class TestSubscribe:
         })
         assert_frame_equal(df, df_expect, check_dtype=False)
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_subscribe_backupSites_subOnce(self):
         func_name = inspect.currentframe().f_code.co_name
@@ -1433,6 +1435,7 @@ class TestSubscribe:
         conn.unsubscribe(HOST_CLUSTER, PORT_DNODE1, func_name, "test")
         assert_frame_equal(df, df_expect, check_dtype=False)
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_subscribe_backupSites_already_stopped(self):
         func_name = inspect.currentframe().f_code.co_name
@@ -1509,6 +1512,7 @@ class TestSubscribe:
             conn.subscribe(HOST_CLUSTER, PORT, handler(df), func_name, "test", backupSites=[1], userName=USER,
                            password=PASSWD)
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_subscribe_backupSites_format_error(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
@@ -1526,6 +1530,7 @@ class TestSubscribe:
             conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), "st", "test",
                            backupSites=[f"{HOST_CLUSTER}{PORT_DNODE2}"], userName=USER, password=PASSWD)
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_subscribe_backupSites_port_gt_65535(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)

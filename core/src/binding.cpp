@@ -101,9 +101,9 @@ void signal_handler_fun(int signum);
 class DBConnectionPoolImpl {
 public:
     DBConnectionPoolImpl(const std::string& hostName, int port, int threadNum = 10, const std::string& userId = "", const std::string& password = "",
-            bool loadBalance = false, bool highAvailability = false, bool compress = false, bool reConnect = false, bool python = false,
+            bool loadBalance = false, bool highAvailability = false, bool compress = false, bool reConnect = false, int parser = ddb::PARSER_TYPE::PARSER_DOLPHINDB,
             int protocol = ddb::PROTOCOL_PICKLE, bool show_output = true, int sqlStd = 0, int tryReconnectNums = -1)
-            :dbConnectionPool_(hostName, port, threadNum, userId, password,loadBalance,highAvailability,compress,reConnect,python,ddb::PROTOCOL(protocol),show_output, sqlStd, tryReconnectNums),
+            :dbConnectionPool_(hostName, port, threadNum, userId, password,loadBalance,highAvailability,compress,reConnect,(ddb::PARSER_TYPE)parser,ddb::PROTOCOL(protocol),show_output, sqlStd, tryReconnectNums),
                 host_(hostName), port_(port), threadNum_(threadNum), userId_(userId), password_(password) {}
     ~DBConnectionPoolImpl() {}
     py::object run(const std::string &script, int taskId, const py::args &args,
@@ -298,9 +298,9 @@ private:
 // FIXME: not thread safe
 class SessionImpl {
 public:
-    SessionImpl(bool enableSSL=false, bool enableASYN=false, int keepAliveTime=7200, bool compress=false, bool python=false, int protocol=ddb::PROTOCOL_DDB, bool show_output=true, int sqlStd=0)
+    SessionImpl(bool enableSSL=false, bool enableASYN=false, int keepAliveTime=7200, bool compress=false, int parser=ddb::PARSER_TYPE::PARSER_DOLPHINDB, int protocol=ddb::PROTOCOL_DDB, bool show_output=true, int sqlStd=0)
         : host_(), port_(-1), userId_(), password_(), encrypted_(true),
-            dbConnection_(enableSSL,enableASYN, keepAliveTime, compress, python, false, sqlStd), nullValuePolicy_([](ddb::VectorSP) {}), subscriber_(nullptr),subscriberPool_(nullptr),keepAliveTime_(keepAliveTime) {
+            dbConnection_(enableSSL,enableASYN, keepAliveTime, compress, (ddb::PARSER_TYPE)parser, false, sqlStd), nullValuePolicy_([](ddb::VectorSP) {}), subscriber_(nullptr),subscriberPool_(nullptr),keepAliveTime_(keepAliveTime) {
                 dbConnection_.setProtocol(ddb::PROTOCOL(protocol));
                 dbConnection_.setShowOutput(show_output);
             }
@@ -809,7 +809,7 @@ void signal_handler_fun(int signum) {
         SessionImpl::isSigint_ = true;
 
         for (auto &item : SessionImpl::runningMap_) {
-            SessionImpl *session = new SessionImpl(false, false, 7200, false, false, ddb::PROTOCOL_DDB);
+            SessionImpl *session = new SessionImpl(false, false, 7200, false, ddb::PARSER_TYPE::PARSER_DOLPHINDB, ddb::PROTOCOL_DDB);
             session->connect(item.first->host_, item.first->port_, item.first->userId_, item.first->password_);
             string id = item.first->getSessionId();
             ddb::ConstantSP jobs = session->runcpp("string(exec rootJobId from getConsoleJobs() where sessionId = "+ id + ")");
@@ -954,14 +954,15 @@ public:
                                 const py::list &highAvailabilitySites = py::list(0),
                                 int batchSize = 1, float throttle = 0.01f,int threadCount = 1, const string& partitionCol ="",
                                 const py::list &compressMethods = py::list(0),
-                                const string &mode = "", const py::list &modeOption = py::list(0), bool reconnect = true){
+                                const string &mode = "", const py::list &modeOption = py::list(0), bool reconnect = true,
+                                bool enableStreamTableTimestamp = false){
         TRY
             writer_ = new ddb::MultithreadedTableWriter(host, port, userId, password,
                                 dbPath, tableName, useSSL,
                                 enableHighAvailability, pylist2Stringvector(highAvailabilitySites).get(),
                                 batchSize,throttle,threadCount,partitionCol,
                                 pylist2Compressvector(compressMethods).get(),
-                                pymode2Mtwmode(mode), pymodelist2Vector(modeOption).get(), reconnect);
+                                pymode2Mtwmode(mode), pymodelist2Vector(modeOption).get(), reconnect, enableStreamTableTimestamp);
         CATCH_EXCEPTION("<Exception> in MultithreadedTableWriter: ")
     }
     ~MultithreadedTableWriter(){}
@@ -1425,7 +1426,7 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
     m.add_object("default_logger", py::cast(dolphindb::DLogger::defaultLogger_));
 
     py::class_<DBConnectionPoolImpl>(m, "dbConnectionPoolImpl")
-        .def(py::init<const std::string &,int,int,const std::string &,const std::string &,bool, bool, bool, bool, bool, int, bool, int, int>())
+        .def(py::init<const std::string &,int,int,const std::string &,const std::string &,bool, bool, bool, bool, int, int, bool, int, int>())
         .def("run", &DBConnectionPoolImpl::run,
             py::arg("script"),
             py::arg("taskId"),
@@ -1442,7 +1443,7 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
         .def("getSessionId",&DBConnectionPoolImpl::getSessionId);
 
     py::class_<SessionImpl>(m, "sessionimpl")
-        .def(py::init<bool,bool,int,bool,bool,int,bool, int>())
+        .def(py::init<bool,bool,int,bool,int,int,bool, int>())
         .def("connect", &SessionImpl::connect)
         .def("login", &SessionImpl::login)
         .def("getInitScript", &SessionImpl::getInitScript)
@@ -1517,7 +1518,7 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
     py::class_<MultithreadedTableWriter>(m, "multithreadedTableWriter")
         .def(py::init<const std::string &, int, const std::string &, const std::string &,const std::string &, const std::string &,
                 bool, bool,const py::list &,int, float,int, const std::string&,const py::list &,
-                const string &, const py::list &, bool>())
+                const string &, const py::list &, bool, bool>())
         .def("getStatus", &MultithreadedTableWriter::getStatus)
         .def("getUnwrittenData", &MultithreadedTableWriter::getUnwrittenData)
         .def("insert", &MultithreadedTableWriter::insert)

@@ -634,15 +634,15 @@ void Socket::showCerts(SSL *ssl) {
     cert = SSL_get_peer_certificate(ssl); /* get the server's certificate */
     if ( cert != NULL ){
         line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
-        LOG_INFO("Server certificates: ", line);
+        LOG_WARN("Server certificates: ", line);
         delete [] line;
         line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
-        LOG_INFO("Issuer:", line);
+        LOG_WARN("Issuer:", line);
         delete [] line;
         X509_free(cert);
     }
     else
-        LOG_INFO("Info: No client certificates configured.");
+        LOG_WARN("Info: No client certificates configured.");
 }
 
 UdpSocket::UdpSocket(int port) : port_(port), remotePort_(-1){

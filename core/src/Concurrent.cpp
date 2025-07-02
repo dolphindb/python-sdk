@@ -471,12 +471,12 @@ void Thread::start(){
 #ifdef WINDOWS
 	thread_=CreateThread(NULL,0,(LPTHREAD_START_ROUTINE) startFunc,this,0,&threadId_);
 	if(thread_==0){
-		LOG_INFO("Failed to create thread with error code",GetLastError());
+		LOG_ERR("Failed to create thread with error code",GetLastError());
 	}
 #else
 	int ret=pthread_create(&thread_, &attr_, startFunc, this);
 	if(ret!=0){
-		LOG_INFO("Failed to create thread with return value:", ret);
+		LOG_ERR("Failed to create thread with return value:", ret);
 	}
 #endif
 }

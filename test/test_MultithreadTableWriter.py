@@ -15,7 +15,7 @@ from basic_testing.prepare import random_string
 from basic_testing.utils import operateNodes
 from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER, \
     PORT_DNODE1
-
+from packaging import version
 
 class TestMultithreadTableWriter:
     conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=False)
@@ -1782,6 +1782,241 @@ class TestMultithreadTableWriter:
         assert id == ex_id
         assert x == ex_x
 
+    def test_multithreadTableWriterTest_memoryTable_setStreamTableTimestamp(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+            tmp = table(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP])
+            share tmp as `{func_name}
+            setStreamTableTimestamp({func_name}, `timestamp)
+        """
+        with pytest.raises(RuntimeError,match="must be a stream table"):
+            self.conn.run(script_Stream_Table)
+
+    def test_multithreadTableWriterTest_memoryTable_enableStreamTableTimestamp_True(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+            tmp = table(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP])
+            share tmp as `{func_name}
+        """
+        self.conn.run(script_Stream_Table)
+        writer = ddb.MultithreadedTableWriter(
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id", enableStreamTableTimestamp=True)
+        threads = []
+        for i in range(1):
+            threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
+        first = self.conn.run(f"select count(*) from {func_name}")
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join()
+        writer.waitForThreadCompletion()
+        last = self.conn.run(f"select count(*) from {func_name}")
+        cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
+        assert last["count"][0] - first["count"][0] == 0
+        assert cnt_timestamp["count_timestamp"][0] == 0
+
+    def test_multithreadTableWriterTest_streamTable_setStreamTableTimestamp_NotTemporalColumn(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+            tmp = streamTable(1000:0, `id`x, [LONG, INT])
+            share tmp as `{func_name}
+            setStreamTableTimestamp({func_name}, `x)
+        """
+        with pytest.raises(RuntimeError,match=" x must be a temporal column"):
+            self.conn.run(script_Stream_Table)
+
+    def test_multithreadTableWriterTest_streamTable_setStreamTableTimestamp_NotLastColumn(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+            tmp = streamTable(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP])
+            share tmp as `{func_name}
+            setStreamTableTimestamp({func_name}, `x)
+        """
+        with pytest.raises(RuntimeError,match="must be the last column of the table"):
+            self.conn.run(script_Stream_Table)
+
+    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_True_setStreamTableTimestamp(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+               tmp = streamTable(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP])
+               share tmp as `{func_name}
+               setStreamTableTimestamp({func_name}, `timestamp)
+           """
+        self.conn.run(script_Stream_Table)
+        writer = ddb.MultithreadedTableWriter(
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id",
+            enableStreamTableTimestamp=True)
+        threads = []
+        for i in range(10):
+            threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
+        first = self.conn.run(f"select count(*) from {func_name}")
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join()
+        writer.waitForThreadCompletion()
+        last = self.conn.run(f"select count(*) from {func_name}")
+        cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
+        assert last["count"][0] - first["count"][0] == 3000
+        assert cnt_timestamp["count_timestamp"][0] == 3000
+
+    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_False_setStreamTableTimestamp(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+             tmp = streamTable(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP])
+             share tmp as `{func_name}
+             setStreamTableTimestamp({func_name}, `timestamp)
+         """
+        self.conn.run(script_Stream_Table)
+        writer = ddb.MultithreadedTableWriter(
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id",
+            enableStreamTableTimestamp=False)
+        threads = []
+        for i in range(10):
+            threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
+        first = self.conn.run(f"select count(*) from {func_name}")
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join()
+        writer.waitForThreadCompletion()
+        last = self.conn.run(f"select count(*) from {func_name}")
+        cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
+        server_ver = version.parse(self.conn.run("version();").split()[0])
+        if (server_ver >= version.parse("2.00.15") and server_ver <version.parse("3.00.0")) or (server_ver >= version.parse("3.00.3")):
+            assert last["count"][0] - first["count"][0] == 3000
+            assert cnt_timestamp["count_timestamp"][0] == 3000
+        else:
+            assert last["count"][0] - first["count"][0] == 0
+    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_Default_setStreamTableTimestamp(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+            tmp = streamTable(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP])
+            share tmp as `{func_name}
+            setStreamTableTimestamp({func_name}, `timestamp)
+        """
+        self.conn.run(script_Stream_Table)
+        writer = ddb.MultithreadedTableWriter(
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id")
+        threads = []
+        for i in range(10):
+            threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
+        first = self.conn.run(f"select count(*) from {func_name}")
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join()
+        writer.waitForThreadCompletion()
+        last = self.conn.run(f"select count(*) from {func_name}")
+        cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
+        server_ver=version.parse(self.conn.run("version();").split()[0])
+        if (server_ver >= version.parse("2.00.15") and server_ver <version.parse("3.00.0")) or (server_ver >= version.parse("3.00.3")):
+            assert last["count"][0] - first["count"][0] == 3000
+            assert cnt_timestamp["count_timestamp"][0] == 3000
+        else:
+            assert last["count"][0] - first["count"][0] == 0
+
+    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_True_NotSetStreamTableTimestamp(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+            tmp = streamTable(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP])
+            share tmp as `{func_name}
+        """
+        self.conn.run(script_Stream_Table)
+        writer = ddb.MultithreadedTableWriter(
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id", enableStreamTableTimestamp=True)
+        threads = []
+        for i in range(10):
+            threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
+        first = self.conn.run(f"select count(*) from {func_name}")
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join()
+        writer.waitForThreadCompletion()
+        last = self.conn.run(f"select count(*) from {func_name}")
+        cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
+        server_ver=version.parse(self.conn.run("version();").split()[0])
+        if (server_ver >= version.parse("2.00.15") and server_ver <version.parse("3.00.0")) or (server_ver >= version.parse("3.00.3")):
+            assert last["count"][0] - first["count"][0] == 0
+            assert cnt_timestamp["count_timestamp"][0] == 0
+        else:
+            assert last["count"][0] - first["count"][0] == 3000
+            assert cnt_timestamp["count_timestamp"][0] == 0
+    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_False_NotSetStreamTableTimestamp_fail(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+            tmp = streamTable(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP]) 
+            share tmp as `{func_name}
+        """
+        self.conn.run(script_Stream_Table)
+        writer = ddb.MultithreadedTableWriter(
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id", enableStreamTableTimestamp=False)
+        threads = []
+        for i in range(10):
+            threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
+        first = self.conn.run(f"select count(*) from {func_name}")
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join()
+        writer.waitForThreadCompletion()
+        last = self.conn.run(f"select count(*) from {func_name}")
+        cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
+        assert last["count"][0] - first["count"][0] == 0
+        assert cnt_timestamp["count_timestamp"][0] == 0
+    def test_multithreadTableWriterTest_streamTable_thread_enableStreamTableTimestamp_defult_NotSetStreamTableTimestamp_fail(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+            tmp = streamTable(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP])  
+            share tmp as `{func_name}
+        """
+        self.conn.run(script_Stream_Table)
+        writer = ddb.MultithreadedTableWriter(
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id")
+        threads = []
+        for i in range(10):
+            threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
+        first = self.conn.run(f"select count(*) from {func_name}")
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join()
+        writer.waitForThreadCompletion()
+        last = self.conn.run(f"select count(*) from {func_name}")
+        assert first["count"][0] == 0
+        assert last["count"][0] == 0
+
+    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_defult_NotSetStreamTableTimestamp_success(self):
+        func_name = inspect.currentframe().f_code.co_name
+        script_Stream_Table = f"""
+            tmp = streamTable(1000:0, `id`x, [LONG, TIMESTAMP])  
+            share tmp as `{func_name}
+        """
+        self.conn.run(script_Stream_Table)
+        writer = ddb.MultithreadedTableWriter(
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id")
+        threads = []
+        for i in range(10):
+            threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
+        first = self.conn.run(f"select count(*) from {func_name}")
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join()
+        writer.waitForThreadCompletion()
+        last = self.conn.run(f"select count(*) from {func_name}")
+        assert first["count"][0] == 0
+        assert last["count"][0] == 3000
+
     def test_multithreadTableWriterTest_DFS_HASH(self):
         func_name = inspect.currentframe().f_code.co_name
         db_name = f"dfs://{func_name}"
@@ -3177,6 +3412,7 @@ class TestMultithreadTableWriter:
         assert self.conn.run(f'select strlen(id) from tb')['strlen_id'][0] == 256 * 1024
         del mtw
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_multithreadTableWriter_reconnect_false(self):
         func_name = inspect.currentframe().f_code.co_name
@@ -3193,6 +3429,7 @@ class TestMultithreadTableWriter:
         status = mtw.getStatus()
         assert status.hasError()
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_multithreadTableWriter_reconnect_true(self):
         func_name = inspect.currentframe().f_code.co_name

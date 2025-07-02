@@ -1,5 +1,7 @@
 from enum import Enum
 
+from ._hints import Literal
+
 FORM_NUM = 9
 # DATA FORM
 DF_SCALAR = 0
@@ -255,6 +257,24 @@ class SqlStd(Enum):
     DolphinDB = 0
     Oracle = 1
     MySQL = 2
+
+
+class ParserType(Enum):
+    Default = 0
+    DolphinDB = 1
+    Python = 2
+    Kdb = 3
+
+    @classmethod
+    def parse_from_str(cls, s: Literal["dolphindb", "python", "kdb"]):
+        if s == "dolphindb":
+            return ParserType.DolphinDB
+        elif s == "python":
+            return ParserType.Python
+        elif s == "kdb":
+            return ParserType.Kdb
+        else:
+            return ParserType.DolphinDB
 
 
 def getCategory(data_type):

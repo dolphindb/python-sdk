@@ -12,11 +12,11 @@
 namespace dolphindb {
 
 DdbInit DBConnectionImpl::ddbInit_;
-DBConnectionImpl::DBConnectionImpl(bool sslEnable, bool asynTask, int keepAliveTime, bool compress, bool python, bool isReverseStreaming, int sqlStd)
+DBConnectionImpl::DBConnectionImpl(bool sslEnable, bool asynTask, int keepAliveTime, bool compress, PARSER_TYPE parser, bool isReverseStreaming, int sqlStd)
 		: port_(0), encrypted_(false), isConnected_(false), littleEndian_(Util::isLittleEndian()), 
 		sslEnable_(sslEnable),asynTask_(asynTask), keepAliveTime_(keepAliveTime), compress_(compress),
-		python_(python), protocol_(PROTOCOL_DDB), msg_(true), isReverseStreaming_(isReverseStreaming),
-        sqlStd_(sqlStd), readTimeout_(-1), writeTimeout_(-1), logger_(std::make_shared<Logger>()) {
+		parser_(parser), protocol_(PROTOCOL_DDB), msg_(true), isReverseStreaming_(isReverseStreaming),
+        sqlStd_(sqlStd), readTimeout_(-1), writeTimeout_(-1), logger_(std::make_shared<Logger>(Logger::Level::LevelInfo)) {
     logger_->init(false);
 }
 
@@ -38,7 +38,7 @@ void DBConnectionImpl::close() {
 
 bool DBConnectionImpl::connect(const string& hostName, int port, const string& userId,
         const string& password, bool sslEnable,bool asynTask, int keepAliveTime, bool compress,
-        bool python, int readTimeout, int writeTimeout) {
+        PARSER_TYPE parser, int readTimeout, int writeTimeout) {
     hostName_ = hostName;
     port_ = port;
     userId_ = userId;
@@ -50,7 +50,7 @@ bool DBConnectionImpl::connect(const string& hostName, int port, const string& u
         keepAliveTime_ = keepAliveTime;
     }
     compress_ = compress;
-    python_ = python;
+    parser_ = parser;
     if (readTimeout > 0) {
         readTimeout_ = readTimeout ;
     }
@@ -164,7 +164,7 @@ bool DBConnectionImpl::connect() {
             throw IOException("Required C++ API version at least "  + std::to_string(apiVersion) + ". Current C++ API version is "+ std::to_string(APIMinVersionRequirement) +". Please update DolphinDB C++ API. ");
         }
         if(requiredVersion->size() >= 2 && requiredVersion->get(1)->getString() != ""){
-            LOG_INFO(requiredVersion->get(1)->getString());
+            LOG_WARN(requiredVersion->get(1)->getString());
         }
     }
     return true;
@@ -271,8 +271,11 @@ long DBConnectionImpl::generateRequestFlag(bool clearSessionMemory, bool disable
     else {
         throw RuntimeException("unsupport PROTOCOL Type: " + std::to_string(protocol_));
     }
-    if (python_) {
+    if (parser_ == PARSER_TYPE::PARSER_PYTHON) {
         flag += 2048;
+    }
+    else if (parser_ == PARSER_TYPE::PARSER_KDB) {
+        flag += 4096;
     }
     if (isReverseStreaming_) {
         flag += 131072;
@@ -476,7 +479,7 @@ py::object DBConnectionImpl::runPy(
     long flag = generateRequestFlag(clearMemory, false, pickleTableToList, disableDecimal);
     DLOG("runPy flag: ", flag);
     DLOG("protocol: ", protocol_, " pickleTableToList: ", pickleTableToList);
-    DLOG("compress: ", compress_, " python: ", python_, " disableDecimal: ", disableDecimal);
+    DLOG("compress: ", compress_, " parser: ", parser_, " disableDecimal: ", disableDecimal);
     out.append(" / " + std::to_string(flag) + "_1_" + std::to_string(priority) + "_" + std::to_string(parallelism));
     if(fetchSize > 0)
         out.append("__" + std::to_string(fetchSize));
@@ -596,6 +599,7 @@ py::object DBConnectionImpl::runPy(
         }
         if (protocol_ == PROTOCOL_PICKLE) {
             py::gil_scoped_acquire pgil;
+#if (PY_MINOR_VERSION >= 6) && (PY_MINOR_VERSION <= 12)
             DLOG("runPy pickle",retFlag);
             std::unique_ptr<PickleUnmarshall> unmarshall(new PickleUnmarshall(in));
             if (!unmarshall->start(retFlag, true, ret)) {
@@ -623,6 +627,9 @@ py::object DBConnectionImpl::runPy(
             py::object res = py::handle(result).cast<py::object>();
             res.dec_ref();
             return res;
+#else
+            return py::none();
+#endif
         }
     }
     ConstantSP result;

@@ -3,7 +3,7 @@ import pytest
 from numpy.testing import assert_almost_equal, assert_array_almost_equal, assert_array_equal, assert_equal
 from pandas._testing import assert_frame_equal
 
-from basic_testing.utils import equalPlus
+from basic_testing.prepare import PYTHON_VERSION, NUMPY_VERSION
 from setup.prepare import DATATYPE, get_Scalar, get_ArrayVector, get_Dictionary, get_Matrix, get_Pair, get_Set, \
     get_Table, get_Table_arrayVetcor, get_Vector
 from setup.settings import HOST, PORT, USER, PASSWD
@@ -105,6 +105,10 @@ class TestDownload:
     @pytest.mark.parametrize('table_type', ['table'], ids=['table'])
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
     def test_download_Table(self, table_type, data_type, pickle, compress, isShare):
+        if PYTHON_VERSION >= (3, 13) and pickle:
+            pytest.skip("pickle not support when python version >= 3.13")
+        elif pickle and NUMPY_VERSION > (2,):
+            pytest.skip("pickle not support numpy 2.0")
         tmp_s, tmp_p = get_Table(typeTable=table_type, types=data_type, ishare=isShare, names="download")
         conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
         conn.run(tmp_s)
@@ -137,15 +141,30 @@ class TestDownload:
         conn.close()
 
     @pytest.mark.parametrize('data_type', DATATYPE, ids=[x.name for x in DATATYPE])
-    @pytest.mark.parametrize('pickle', [False, False], ids=["EnPickle", "UnPickle"])
-    @pytest.mark.parametrize('compress', [False, False], ids=["EnCompress", "UnCompress"])
+    @pytest.mark.parametrize('pickle', [True, False], ids=["EnPickle", "UnPickle"])
+    @pytest.mark.parametrize('compress', [True, False], ids=["EnCompress", "UnCompress"])
     @pytest.mark.parametrize('typeTable', ["table", "streamTable"], ids=["table", "streamTable"])
-    @pytest.mark.parametrize('isShare', [False, True], ids=["EnShare", "UnShare"])
+    @pytest.mark.parametrize('isShare', [True, False], ids=["EnShare", "UnShare"])
     def test_download_tableArrayVector(self, data_type, pickle, compress, typeTable, isShare):
         tmp_s, tmp_p = get_Table_arrayVetcor(types=data_type, n=100, typeTable=typeTable, isShare=isShare,
                                              names="download")
         conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=pickle, compress=compress)
         conn.run(tmp_s)
         for s, p in tmp_p:
-            assert equalPlus(conn.run(s), p)
+            if pickle and data_type in (
+                    DATATYPE.DT_DATE,
+                    DATATYPE.DT_MONTH,
+                    DATATYPE.DT_TIME,
+                    DATATYPE.DT_MINUTE,
+                    DATATYPE.DT_SECOND,
+                    DATATYPE.DT_DATETIME,
+                    DATATYPE.DT_TIMESTAMP,
+                    DATATYPE.DT_NANOTIME,
+                    DATATYPE.DT_NANOTIMESTAMP,
+                    DATATYPE.DT_DATEHOUR
+            ):
+                for i in p:
+                    for index, j in enumerate(p[i]):
+                        p.loc[index, i] = j.astype("datetime64[ns]")
+            assert_frame_equal(conn.run(s), p)
         conn.close()

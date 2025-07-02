@@ -5,6 +5,8 @@
 #ifndef __PICKLE_H
 #define __PICKLE_H
 #include "Python.h"
+
+#if (PY_MINOR_VERSION >= 6) && (PY_MINOR_VERSION <= 12)
 #include "DolphinDB.h"
 #include "Logger.h"
 #include "SysIO.h"
@@ -111,5 +113,11 @@ namespace dolphindb{
         Py_ssize_t frameLen_;
     };
 }; //end of namespace dolphindb
+
+#else
+/**
+ * Unsupport PROTOCOL_PICKLE for Python 3.13 or newer
+ */
+#endif // PY_MINOR_VERSION >= 13
 
 #endif //__PICKLE_H

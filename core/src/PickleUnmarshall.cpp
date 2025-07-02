@@ -1,4 +1,7 @@
 #include "Python.h"
+
+#if (PY_MINOR_VERSION >= 6) && (PY_MINOR_VERSION <= 12)
+
 #include "Pickle.h"
 #include "structmember.h"
 #include "ScalarImp.h"
@@ -71,8 +74,9 @@ std::string PyType2String(PyObject *obj)
 }
 
 namespace ddb = dolphindb;
-int Ddb_PyObject_LookupAttr(PyObject *, PyObject *, PyObject **);
-int Ddb_PyObject_LookupAttrId(PyObject *, struct _Py_Identifier *, PyObject **);
+
+#if (PY_MINOR_VERSION >=7) && (PY_MINOR_VERSION <= 11)
+
 int Ddb_PyArg_UnpackStackOrTuple(
     PyObject *const *args,
     Py_ssize_t nargs,
@@ -80,7 +84,55 @@ int Ddb_PyArg_UnpackStackOrTuple(
     Py_ssize_t min,
     Py_ssize_t max,
     PyObject **pmodule_name,
-    PyObject **pglobal_name);
+    PyObject **pglobal_name){
+    return _PyArg_UnpackStack(args, nargs, name,
+                        2, 2,
+                        pmodule_name, pglobal_name);
+}
+
+int Ddb_PyObject_LookupAttrId(PyObject *self, struct _Py_Identifier *pyid, PyObject **pAttrValue){
+    return _PyObject_LookupAttrId(self,pyid, pAttrValue);
+}
+
+int Ddb_PyObject_LookupAttr(PyObject *self, PyObject *name, PyObject **pAttrValue){
+    return _PyObject_LookupAttr(self, name, pAttrValue);
+}
+
+
+#elif (PY_MINOR_VERSION == 6) || (PY_MINOR_VERSION == 12)
+int Ddb_PyObject_LookupAttrId(PyObject *self, struct _Py_Identifier *pyid, PyObject **pAttrValue){
+	*pAttrValue = _PyObject_GetAttrId(self, pyid);
+	if (*pAttrValue == NULL) {
+		if (!PyErr_ExceptionMatches(PyExc_AttributeError)) {
+			return -1;
+		}
+		PyErr_Clear();
+	}
+	return 0;
+}
+
+int Ddb_PyObject_LookupAttr(PyObject *self, PyObject *name, PyObject **pAttrValue){
+    *pAttrValue = PyObject_GetAttr(self, name);
+    return 0;
+}
+
+int Ddb_PyArg_UnpackStackOrTuple(
+    PyObject *const *args,
+    Py_ssize_t nargs,
+    const char *name,
+    Py_ssize_t min,
+    Py_ssize_t max,
+    PyObject **pmodule_name,
+    PyObject **pglobal_name){
+    return PyArg_UnpackTuple((PyObject*)args, name,
+                        2, 2,
+                        pmodule_name, pglobal_name);
+}
+#else
+/**
+ * Unsupport PROTOCOL_PICKLE for Python 3.13 or newer
+ */
+#endif
 
 // Python3.6 doesn't define PyDict_GET_SIZE, define it now
 #ifndef PyDict_GET_SIZE
@@ -4306,3 +4358,8 @@ namespace dolphindb
         Py_DECREF(unpickler_);
     }
 };
+#else
+/**
+ * Unsupport PROTOCOL_PICKLE for Python 3.13 or newer
+ */
+#endif

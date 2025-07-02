@@ -26,7 +26,6 @@
 #include "Logger.h"
 #include "Domain.h"
 #include "DBConnectionPoolImpl.h"
-#include "Pickle.h"
 #include "DdbPythonUtil.h"
 #include "Wrappers.h"
 #include "pybind11/numpy.h"
@@ -97,9 +96,9 @@ ConstantSP Constant::getColumnLabel() const {
 
 
 
-DBConnection::DBConnection(bool enableSSL, bool asynTask, int keepAliveTime, bool compress, bool python, bool isReverseStreaming, int sqlStd) :
-	conn_(new DBConnectionImpl(enableSSL, asynTask, keepAliveTime, compress, python, isReverseStreaming, sqlStd)), uid_(""), pwd_(""), ha_(false),
-		enableSSL_(enableSSL), asynTask_(asynTask), compress_(compress), python_(python), nodes_({}), protocol_(PROTOCOL_DDB),
+DBConnection::DBConnection(bool enableSSL, bool asynTask, int keepAliveTime, bool compress, PARSER_TYPE parser, bool isReverseStreaming, int sqlStd) :
+	conn_(new DBConnectionImpl(enableSSL, asynTask, keepAliveTime, compress, parser, isReverseStreaming, sqlStd)), uid_(""), pwd_(""), ha_(false),
+		enableSSL_(enableSSL), asynTask_(asynTask), compress_(compress), parser_(parser), nodes_({}), protocol_(PROTOCOL_DDB),
 		lastConnNodeIndex_(0), reconnect_(false), closed_(true), msg_(true), tryReconnectNums_(-1) {
 }
 
@@ -224,7 +223,7 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 					}
 					//node is out of highAvailabilitySites
 					if (pexistNode == NULL) {
-						LOG_INFO("Site", nodeHost, ":", nodePort,"is not in cluster.");
+						LOG_WARN("Site", nodeHost, ":", nodePort,"is not in cluster.");
 						continue;
 					}
 				}
@@ -287,12 +286,14 @@ bool DBConnection::connected() {
 }
 
 bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
-	DLOG("Connect to", hostName, ":", port);
+	LOG_DEBUG("Attempting to connect to", hostName, ":", port);
 	//int attempt = 0;
 	while (closed_ == false) {
 		try {
-			return conn_->connect(hostName, port, uid_, pwd_, enableSSL_, asynTask_, keepAliveTime, compress_, python_);
-		}
+			bool re = conn_->connect(hostName, port, uid_, pwd_, enableSSL_, asynTask_, keepAliveTime, compress_, parser_);
+            if (re) LOG_INFO("Connect to", hostName, ":", port, "with session id:", conn_->getSessionId());
+            return re;
+        }
 		catch (IOException& e) {
 			if (connected()) {
 				ExceptionType type = parseException(e.what(), hostName, port);
@@ -302,7 +303,7 @@ bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
 					else if (type == ET_NODENOTAVAIL)
 						return false;
 					else { //UNKNOW
-						LOG_ERR("Connect", hostName, ":", port, "failed, exception message:", e.what());
+						LOG_ERR("Connect to", hostName, ":", port, "failed, exception message:", e.what());
 						return false;
 						//throw;
 					}
@@ -324,7 +325,7 @@ DBConnection::ExceptionType DBConnection::parseException(const string &msg, stri
 		index = msg.find(">");
 		string ipport = msg.substr(index + 1);
 		parseIpPort(ipport,host,port);
-		LOG_INFO("Got NotLeaderException, switch to leader node [",host,":",port,"] to run script");
+		LOG_WARN("Got NotLeaderException, switch to leader node [",host,":",port,"] to run script");
 		return ET_NEWLEADER;
 	}
 	else {
@@ -344,13 +345,14 @@ DBConnection::ExceptionType DBConnection::parseException(const string &msg, stri
 	}
 }
 
-void DBConnection::switchDataNode(const string &host, int port) {
+void DBConnection::switchDataNode(const string &host, int port, bool reconnect) {
     int attempt = 0;
     bool connected = false;
     while (closed_ == false && connected == false && (tryReconnectNums_ < 0 || attempt < tryReconnectNums_)){
         if (!host.empty()) {
             if (connectNode(host, port)) {
                 connected = true;
+                if (reconnect) LOG_WARN("Reconnect to", host, ":", port, "with session id:", conn_->getSessionId());
                 break;
             }
         }
@@ -362,6 +364,7 @@ void DBConnection::switchDataNode(const string &host, int port) {
             if (!host.empty() && nodes_[lastConnNodeIndex_].hostName == host && port == nodes_[lastConnNodeIndex_].port) continue;
             if (connectNode(nodes_[lastConnNodeIndex_].hostName, nodes_[lastConnNodeIndex_].port)) {
                 connected = true;
+                if (reconnect) LOG_WARN("Reconnect to", nodes_[lastConnNodeIndex_].hostName, ":", nodes_[lastConnNodeIndex_].port, "with session id:", conn_->getSessionId());
                 break;
             }
         }
@@ -447,10 +450,10 @@ py::object DBConnection::runPy(
                 	parseException(e.what(), host, port);
                 }
                 if (!ha_) {
-                    switchDataNode(nodes_.back().hostName, nodes_.back().port);
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
                 }
                 else {
-                    switchDataNode(host, port);
+                    switchDataNode(host, port, true);
                 }
             }
         }
@@ -682,8 +685,8 @@ void BlockReader::skipAll(){
 
 
 DBConnectionPool::DBConnectionPool(const string& hostName, int port, int threadNum, const string& userId, const string& password,
-				bool loadBalance, bool highAvailability, bool compress, bool reConnect, bool python, PROTOCOL protocol, bool showOutput, int sqlStd, int tryReconnectNums)
-    : pool_(new DBConnectionPoolImpl(hostName, port, threadNum, userId, password, loadBalance, highAvailability, compress,reConnect,python,protocol,showOutput, sqlStd, tryReconnectNums))
+				bool loadBalance, bool highAvailability, bool compress, bool reConnect, PARSER_TYPE parser, PROTOCOL protocol, bool showOutput, int sqlStd, int tryReconnectNums)
+    : pool_(new DBConnectionPoolImpl(hostName, port, threadNum, userId, password, loadBalance, highAvailability, compress,reConnect,parser,protocol,showOutput, sqlStd, tryReconnectNums))
 {}
 DBConnectionPool::~DBConnectionPool(){}
 void DBConnectionPool::run(const string& script, int identity, int priority, int parallelism, int fetchSize, bool clearMemory){

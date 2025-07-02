@@ -125,6 +125,7 @@ void Logger::setFilePath(const std::string &path) {
     auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path);
     filelogger_ = std::make_shared<spdlog::logger>("dolphindb_api_file", file_sink);
     _set_formatter(filelogger_, useFormatter_);
+    SetMinLevel(minLevel_);
 }
 
 void Logger::addSink(py::handle pysink) {

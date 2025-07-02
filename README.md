@@ -7,10 +7,10 @@ A C++ boosted API for Python, built on Pybind11.
 To use DolphinDB Python SDK, you'll need:
 
 - Python:
-  - CPython: version 3.6 and newer
+  - CPython: version 3.8 and newer
 - DolphinDB Server
 - Packages:
-  - NumPy: version 1.18 and newer, but earlier than 2.0
+  - NumPy: version 1.18 and newer
   - pandas: version 1.0.0 and newer, but not version 1.3.0
   - future
   - packaging

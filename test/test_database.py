@@ -352,6 +352,48 @@ class TestDatabase:
         assert conn1.existsTable(f"dfs://{func_name}_db_list", "db_l_tab")
         conn1.close()
 
+    def test_database_createDimensionTable_compressMethods(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD)
+        func_name = inspect.currentframe().f_code.co_name
+        conn1.run(f"""
+            if(existsDatabase("dfs://{func_name}_db_value")){{dropDatabase("dfs://{func_name}_db_value")}};
+            if(existsDatabase("dfs://{func_name}_db_range")){{dropDatabase("dfs://{func_name}_db_range")}};
+            if(existsDatabase("dfs://{func_name}_db_combo")){{dropDatabase("dfs://{func_name}_db_combo")}};
+            if(existsDatabase("dfs://{func_name}_db_hash")){{dropDatabase("dfs://{func_name}_db_hash")}};
+            if(existsDatabase("dfs://{func_name}_db_list")){{dropDatabase("dfs://{func_name}_db_list")}};
+        """)
+        dates = np.array(pd.date_range(start='2000-01-01', end='2000-01-03', freq="D"), dtype="datetime64[D]")
+        ids = [1, 2, 3]
+        db_v = conn1.database(dbName="db_value", partitionType=keys.VALUE, partitions=dates,
+                              dbPath=f"dfs://{func_name}_db_value")
+        db_r = conn1.database(dbName="db_range", partitionType=keys.RANGE, partitions=ids,
+                              dbPath=f"dfs://{func_name}_db_range")
+        db_c = conn1.database(dbName="db_combo", partitionType=keys.COMPO, partitions=[db_v, db_r],
+                              dbPath=f"dfs://{func_name}_db_combo")
+        db_h = conn1.database(dbName="db_hash", partitionType=keys.HASH, partitions=[keys.DT_INT, 3],
+                              dbPath=f"dfs://{func_name}_db_hash")
+        # db_s = conn1.database(dbName="db_seq",partitionType=keys.SEQ,partitions=[1])
+        db_l = conn1.database(dbName="db_list", partitionType=keys.LIST, partitions=ids,
+                              dbPath=f"dfs://{func_name}_db_list")
+        t = conn1.table(data=conn1.run("table(100:0, `col1`col2`col3, [SYMBOL,INT,DATE])"))
+        # db_s_tab = db_s.createDimensionTable(table=t, tableName="db_s_tab",sortColumns="col2")
+        db_v.createDimensionTable(table=t, tableName="db_v_tab",
+                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+        db_r.createDimensionTable(table=t, tableName="db_r_tab",
+                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+        db_c.createDimensionTable(table=t, tableName="db_c_tab",
+                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+        db_h.createDimensionTable(table=t, tableName="db_h_tab",
+                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+        db_l.createDimensionTable(table=t, tableName="db_l_tab",
+                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+        assert conn1.existsTable(f"dfs://{func_name}_db_value", "db_v_tab")
+        assert conn1.existsTable(f"dfs://{func_name}_db_range", "db_r_tab")
+        assert conn1.existsTable(f"dfs://{func_name}_db_combo", "db_c_tab")
+        assert conn1.existsTable(f"dfs://{func_name}_db_hash", "db_h_tab")
+        assert conn1.existsTable(f"dfs://{func_name}_db_list", "db_l_tab")
+        conn1.close()
+
     def test_database_createPartitionedTable_keepDuplicates(self):
         conn1 = ddb.session(HOST, PORT, USER, PASSWD)
         func_name = inspect.currentframe().f_code.co_name
@@ -421,6 +463,39 @@ class TestDatabase:
             ['a', 'b', 'c', 'd'])
         conn1.close()
 
+    def test_database_createDimensionTable_keepDuplicates(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD)
+        func_name = inspect.currentframe().f_code.co_name
+        conn1.run(f"""
+            if(existsDatabase("dfs://{func_name}_db_value")){{dropDatabase("dfs://{func_name}_db_value")}};
+        """)
+        dates = np.array(pd.date_range(start='2000-01-01', end='2000-01-05', freq="D"), dtype="datetime64[D]")
+        db_v = conn1.database(dbName="db_value", partitionType=keys.VALUE, partitions=dates,
+                              dbPath=f"dfs://{func_name}_db_value",
+                              engine="TSDB")
+        conn1.run(
+            "t0=table(100:0, `col1`col2`col3, [SYMBOL,INT,DATE]);tableInsert(t0,`a`b`c`d, 1 2 2 4, [2000.01.01,2000.01.02,2000.01.02,2000.01.04])")
+        t = conn1.table(data='t0')
+        # db_s_tab = db_s.createDimensionTable(table=t, tableName="db_s_tab",sortColumns="col2")
+        db_v.createDimensionTable(table=t, tableName="db_v_tab", sortColumns=["col3", "col2"], keepDuplicates="LAST")
+        db_v.createDimensionTable(table=t, tableName="db_v_tab2", sortColumns=["col3", "col2"], keepDuplicates="FIRST")
+        db_v.createDimensionTable(table=t, tableName="db_v_tab3", sortColumns=["col3", "col2"], keepDuplicates="ALL")
+        conn1.run(f"""
+            tableInsert(loadTable("dfs://{func_name}_db_value","db_v_tab"), t0);
+            tableInsert(loadTable("dfs://{func_name}_db_value","db_v_tab2"), t0);
+            tableInsert(loadTable("dfs://{func_name}_db_value","db_v_tab3"), t0);
+        """)
+        assert_array_equal(
+            conn1.run(f"""select * from loadTable("dfs://{func_name}_db_value","db_v_tab")""")["col1"].values,
+            ['a', 'c', 'd'])
+        assert_array_equal(
+            conn1.run(f"""select * from loadTable("dfs://{func_name}_db_value","db_v_tab2")""")["col1"].values,
+            ['a', 'b', 'd'])
+        assert_array_equal(
+            conn1.run(f"""select * from loadTable("dfs://{func_name}_db_value","db_v_tab3")""")["col1"].values,
+            ['a', 'b', 'c', 'd'])
+        conn1.close()
+
     def test_database_createPartitionedTable_softDelete(self):
         conn1 = ddb.session(HOST, PORT, USER, PASSWD)
         func_name = inspect.currentframe().f_code.co_name
@@ -458,6 +533,29 @@ class TestDatabase:
             "t0=table(100:0, `col1`col2`col3, [SYMBOL,INT,DATE]);tableInsert(t0,`a`b`c`d, 1 2 2 4, [2000.01.01,2000.01.02,2000.01.02,2000.01.04])")
         t = conn1.table(data='t0')
         db_v.createTable(table=t, tableName="db_v_tab", sortColumns=["col3", "col2"], keepDuplicates="LAST",
+                         softDelete=True)
+        conn1.run(f"""
+            tableInsert(loadTable("dfs://{func_name}_db_value","db_v_tab"), t0);
+        """)
+        assert_array_equal(
+            conn1.run(f"""select * from loadTable("dfs://{func_name}_db_value","db_v_tab")""")["col1"].values,
+            ['a', 'c', 'd'])
+        conn1.close()
+
+    def test_database_createDimensionTable_softDelete(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD)
+        func_name = inspect.currentframe().f_code.co_name
+        conn1.run(f"""
+            if(existsDatabase("dfs://{func_name}_db_value")){{dropDatabase("dfs://{func_name}_db_value")}};
+        """)
+        dates = np.array(pd.date_range(start='2000-01-01', end='2000-01-05', freq="D"), dtype="datetime64[D]")
+        db_v = conn1.database(dbName="db_value", partitionType=keys.VALUE, partitions=dates,
+                              dbPath=f"dfs://{func_name}_db_value",
+                              engine="TSDB")
+        conn1.run(
+            "t0=table(100:0, `col1`col2`col3, [SYMBOL,INT,DATE]);tableInsert(t0,`a`b`c`d, 1 2 2 4, [2000.01.01,2000.01.02,2000.01.02,2000.01.04])")
+        t = conn1.table(data='t0')
+        db_v.createDimensionTable(table=t, tableName="db_v_tab", sortColumns=["col3", "col2"], keepDuplicates="LAST",
                          softDelete=True)
         conn1.run(f"""
             tableInsert(loadTable("dfs://{func_name}_db_value","db_v_tab"), t0);
@@ -515,6 +613,60 @@ class TestDatabase:
         t = conn1.table(
             data=conn1.run("table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3)"))
         db.createTable(table=t, tableName="pt", primaryKey='col1', indexes={"col2": "bloomfilter"}).append(t)
+        assert_frame_equal(conn1.run(f"select * from loadTable('dfs://{func_name}_db_example', 'pt')"), pd.DataFrame({
+            'col1': np.array(['APPL', 'GOOGLE', 'PDD', 'TESLA']),
+            'col2': np.array([1, 3, 4, 2], dtype=np.int32),
+            'col3': np.array(['2022-01-01', '2022-01-03', '2022-01-04', '2022-01-02'], dtype='datetime64[ns]')}))
+        conn1.close()
+
+    def test_database_createDimensionTable_OLAP(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD)
+        ids = [1, 2, 3]
+        func_name = inspect.currentframe().f_code.co_name
+        conn1.run(
+            f"if(existsDatabase('dfs://{func_name}_db_example')){{dropDatabase('dfs://{func_name}_db_example')}};")
+        db = conn1.database(dbName="db_value", partitionType=keys.VALUE, partitions=ids,
+                            dbPath=f"dfs://{func_name}_db_example",
+                            engine="OLAP")
+        t = conn1.table(
+            data=conn1.run("table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3)"))
+        db.createDimensionTable(table=t, tableName="pt").append(t)
+        assert_frame_equal(conn1.run(f"select * from loadTable('dfs://{func_name}_db_example', 'pt')"), pd.DataFrame({
+            'col1': np.array(['APPL', 'TESLA', 'GOOGLE', 'PDD']),
+            'col2': np.array([1, 2, 3, 4], dtype=np.int32),
+            'col3': np.array(['2022-01-01', '2022-01-02', '2022-01-03', '2022-01-04'], dtype='datetime64[ns]')}))
+        conn1.close()
+
+    def test_database_createDimensionTable_TSDB(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD)
+        ids = [1, 2, 3]
+        func_name = inspect.currentframe().f_code.co_name
+        conn1.run(
+            f"if(existsDatabase('dfs://{func_name}_db_example')){{dropDatabase('dfs://{func_name}_db_example')}};")
+        db = conn1.database(dbName="db_value", partitionType=keys.VALUE, partitions=ids,
+                            dbPath=f"dfs://{func_name}_db_example",
+                            engine="TSDB")
+        t = conn1.table(
+            data=conn1.run("table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3)"))
+        db.createDimensionTable(table=t, tableName="pt", sortColumns='col2').append(t)
+        assert_frame_equal(conn1.run(f"select * from loadTable('dfs://{func_name}_db_example', 'pt')"), pd.DataFrame({
+            'col1': np.array(['APPL', 'TESLA', 'GOOGLE', 'PDD']),
+            'col2': np.array([1, 2, 3, 4], dtype=np.int32),
+            'col3': np.array(['2022-01-01', '2022-01-02', '2022-01-03', '2022-01-04'], dtype='datetime64[ns]')}))
+        conn1.close()
+
+    def test_database_createDimensionTable_PKEY(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD)
+        ids = [1, 2, 3]
+        func_name = inspect.currentframe().f_code.co_name
+        conn1.run(
+            f"if(existsDatabase('dfs://{func_name}_db_example')){{dropDatabase('dfs://{func_name}_db_example')}};")
+        db = conn1.database(dbName="db_value", partitionType=keys.VALUE, partitions=ids,
+                            dbPath=f"dfs://{func_name}_db_example",
+                            engine="PKEY")
+        t = conn1.table(
+            data=conn1.run("table(`APPL`TESLA`GOOGLE`PDD as col1, 1 2 3 4 as col2, 2022.01.01..2022.01.04 as col3)"))
+        db.createDimensionTable(table=t, tableName="pt", primaryKey='col1', indexes={"col2": "bloomfilter"}).append(t)
         assert_frame_equal(conn1.run(f"select * from loadTable('dfs://{func_name}_db_example', 'pt')"), pd.DataFrame({
             'col1': np.array(['APPL', 'GOOGLE', 'PDD', 'TESLA']),
             'col2': np.array([1, 3, 4, 2], dtype=np.int32),

@@ -6,18 +6,32 @@ import string
 from decimal import Decimal
 from importlib.util import find_spec
 from uuid import UUID
+import sys
 
 import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
+from packaging import version
 
 if find_spec("pyarrow") is not None:
     import pyarrow as pa
 
     PYARROW_VERSION = tuple(int(i) for i in pa.__version__.split('.'))
 
-PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
+NUMPY_VERSION = tuple(int(i) for i in np.__version__.split('.'))
+# PANDAS_VERSION = tuple(int(i) for i in pd.__version__.split('.'))
+PANDAS_VERSION_ORIGIN = version.parse(pd.__version__)
+PANDAS_VERSION = tuple(
+    int(part)
+    for part in str(PANDAS_VERSION_ORIGIN.base_version).split('.')[:3]
+    if part.isdigit()
+)
+
 PYTHON_VERSION = tuple(int(i) for i in platform.python_version().split('.'))
+if hasattr(sys, "_is_gil_enabled"):
+    FREE_THREADING = not sys._is_gil_enabled()
+else:
+    FREE_THREADING = False
 
 
 def random_string(length):

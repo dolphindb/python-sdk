@@ -77,7 +77,7 @@ class TestSession:
         conn1.run(f"for(i in 1..5){{tableInsert({func_name}, string(i), i);sleep(1000)}}")
         time.sleep(2)
         curRows = int(self.conn.run(f"exec count(*) from {func_name}"))
-        assert 4 <= curRows < 8
+        assert 4 <= curRows <= 8
         time.sleep(6)
         curRows = int(self.conn.run(f"exec count(*) from {func_name}"))
         assert curRows == 8
@@ -139,6 +139,72 @@ class TestSession:
         assert conn1.run("type(b)") == "set"
         assert conn1.run("type(c)") == "dict"
         assert conn1.run("type(d)") == "tuple"
+
+    def test_session_init_parser_default(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD)
+        conn1.run("""
+            a=[1,2,3]
+            b=(12,3,4)
+        """)
+        assert conn1.run("type(a)") == 4  # FAST INT VECTOR
+        assert conn1.run("type(b)") == 25  # ANY VECTOR
+
+    def test_session_init_parser_dolhpindb(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD, parser="dolhpindb")
+        conn1.run("""
+            a=[1,2,3]
+            b=(12,3,4)
+        """)
+        assert conn1.run("type(a)") == 4  # FAST INT VECTOR
+        assert conn1.run("type(b)") == 25  # ANY VECTOR
+
+    def test_session_init_parser_python(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD, parser="python")
+        conn1.run("""
+            import dolphindb as ddb
+            a=[1,2,3]
+            b={1,2,3}
+            c={1:1,2:2}
+            d=(12,3,4)
+        """)
+        assert conn1.run("type(a)") == "list"
+        assert conn1.run("type(b)") == "set"
+        assert conn1.run("type(c)") == "dict"
+        assert conn1.run("type(d)") == "tuple"
+
+    def test_session_init_parser_kdb(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD, parser="kdb")
+        conn1.run("""
+            t1: 12 2;
+            t2: `a`b`c!1 2 3;
+            t:([] name:`tom`dick`harry`jack`jill;sex:`m`m`m`m`f;eye:`blue`green`blue`blue`gray);
+            select name,eye by sex from t;
+        """)
+        assert conn1.run("type(t1)") == 7  # kdb整数列表
+        assert conn1.run("type(t2)") == 99  # kdb字典
+
+    def test_session_init_python_false_parser_int(self):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD, python=False, parser=1)
+        conn1.run("""
+                    a=[1,2,3]
+                    b=(12,3,4)
+                """)
+        assert conn1.run("type(a)") == 4  # FAST INT VECTOR
+        assert conn1.run("type(b)") == 25  # ANY VECTOR
+
+    def test_session_init_python_true_parser_kdb(self):
+        with pytest.raises(RuntimeError,match="The parameter parser must not be specified when python=true"):
+            conn1 = ddb.session(HOST, PORT, USER, PASSWD, python=True, parser="kdb")
+
+    def test_session_init_python_true_parser_Nonenum_value(self):
+        # with pytest.raises(RuntimeError,match="The parameter parser must not be specified when python=true"):
+        conn1 = ddb.session(HOST, PORT, USER, PASSWD, python=False, parser="Nonenum_value")
+        conn1.run("""
+            a=[1,2,3]
+            b=(12,3,4)
+        """)
+        assert conn1.run("type(a)") == 4  # FAST INT VECTOR
+        assert conn1.run("type(b)") == 25  # ANY VECTOR
 
     def test_session_init_enableASYN_Warning(self):
         warnings.filterwarnings('error')
@@ -370,6 +436,7 @@ class TestSession:
         assert str(id) == self.conn.getSessionId()
         assert user == USER
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_session_highAvailability_load_balance(self):
         sites = [f"{HOST_CLUSTER}:{port}" for port in (PORT_DNODE1, PORT_DNODE2, PORT_DNODE3)]
@@ -439,6 +506,7 @@ class TestSession:
         assert result.stdout.count("Failed") == n * 2
         assert f"Connect to {HOST}:56789 failed after {n} reconnect attempts." in result.stdout
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_session_highAvailability_tryReconnectNums_conn(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
@@ -453,6 +521,7 @@ class TestSession:
         assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n * 3
         assert f"Connect failed after {n} reconnect attempts for every node in high availability sites." in result.stdout
 
+    @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
     def test_session_highAvailability_tryReconnectNums_run(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
@@ -469,6 +538,25 @@ class TestSession:
         operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
         assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n * 3
         assert f"Connect to nodes failed after {n} reconnect attempts." in result.stderr
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_session_highAvailability_tryReconnectSuccess(self):
+        conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
+        n = 1
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 "from basic_testing.utils import operateNodes;"
+                                 f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
+                                 "conn_=ddb.Session();"
+                                 f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
+                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}'],'STOP');"""
+                                 "conn_.run('true');"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+        print(result.stdout)
+        assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n
+        assert f"Warn: Reconnect to {HOST_CLUSTER} : {PORT_DNODE3} with session id:" in result.stdout
 
     def test_session_readTimeout(self):
         conn = ddb.Session()

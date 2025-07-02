@@ -1,205 +1,191 @@
-cmake_minimum_required(VERSION 3.15.1) # Cannot be lower than 3.15, otherwise python cannot be found correctly
-message("CMAKE VERSION: ${CMAKE_VERSION}")
-message("CMAKE PATH: ${CMAKE_COMMAND}")
-project(dolphindbcpp)
+cmake_minimum_required(VERSION 3.15.1)
+project(dolphindbcpp LANGUAGES CXX)
+
 set(MODULE_NAME _dolphindbcpp)
-
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+
+
+# ============================================================================
+# Compiler Flags
+# ============================================================================
 if(MSVC)
-    # set(ENV{PATH} "$ENV{VIRTUAL_ENV}/Scripts;$ENV{PATH}")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_DEBUG} /O2 /d2FH4-")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi /Od")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /d2FH4-")
+    set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} /Zi /Od")
 else()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+    set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 endif()
 
-# find openssl
+
+# ============================================================================
+# Dependencies: OpenSSL
+# ============================================================================
+
+# Use OPENSSL_ROOT_DIR if provided
 if(DEFINED ENV{OPENSSL_ROOT_DIR})
-    set(OPENSSL_ROOT_DIR $ENV{OPENSSL_ROOT_DIR})
+    set(OPENSSL_ROOT_DIR "$ENV{OPENSSL_ROOT_DIR}" CACHE PATH "OpenSSL root directory")
+    message(STATUS "Using OPENSSL_ROOT_DIR from environment: ${OPENSSL_ROOT_DIR}")
+
+# Otherwise, use Conda's environment if available
+elseif(DEFINED ENV{CONDA_PREFIX})
+    set(OPENSSL_ROOT_DIR "$ENV{CONDA_PREFIX}" CACHE PATH "OpenSSL root directory from Conda")
+    message(STATUS "Using OpenSSL from Conda environment: ${OPENSSL_ROOT_DIR}")
 endif()
-file(TO_CMAKE_PATH ${OPENSSL_ROOT_DIR} OPENSSL_ROOT_DIR)
-message(STATUS "[OPENSSL_ROOT_DIR ${OPENSSL_ROOT_DIR}]")
-set(OPENSSL_USE_STATIC_LIBS TRUE)
+
+# Always set CMAKE_PREFIX_PATH to help find_package()
+if(DEFINED OPENSSL_ROOT_DIR)
+    list(APPEND CMAKE_PREFIX_PATH "${OPENSSL_ROOT_DIR}")
+endif()
+
+if(MSVC)
+set(OPENSSL_MSVC_STATIC_RT TRUE)
+endif()
+
 find_package(OpenSSL 1.0.2 REQUIRED)
-if(OPENSSL_VERSION VERSION_LESS "1.0.2" OR OPENSSL_VERSION VERSION_GREATER "1.1.1")
-    message(ERROR "Need OpenSSL [1.0.2 - 1.1.1], ${OPENSSL_VERSION} is unavailable!")
-    message(ERROR "You can add OPENSSL_ROOT_DIR=<openssl> to environment")
-endif()
-message(STATUS "[openssl ${OPENSSL_VERSION}]")
+message(STATUS "OpenSSL version: ${OPENSSL_VERSION}")
+message(STATUS "OpenSSL root dir: ${OPENSSL_ROOT_DIR}")
 
-# find python3
-function(which_python PYCMD PYPATH)
-    execute_process(COMMAND which ${PYCMD} OUTPUT_VARIABLE P)
-    string(REGEX MATCH "^(/.*)\n" P "${P}")
-    file(TO_CMAKE_PATH ${CMAKE_MATCH_1} P)
-    set(${PYPATH} ${P} PARENT_SCOPE)
-endfunction(which_python)
+set(OPENSSL_USE_STATIC_LIBS TRUE)
 
-function(python_version PYCMD VA VB VC)
-    execute_process(COMMAND ${PYCMD} --version OUTPUT_VARIABLE Python_VERSION)
-    string(REGEX MATCH "^Python ([0-9]+)\\.([0-9]+)\\.([0-9]+)\n$" Python_VERSION ${Python_VERSION})
-    set(${VA} ${CMAKE_MATCH_1} PARENT_SCOPE)
-    set(${VB} ${CMAKE_MATCH_2} PARENT_SCOPE)
-    set(${VC} ${CMAKE_MATCH_3} PARENT_SCOPE)
-endfunction(python_version)
 
-set(PYCMD python)
-python_version(${PYCMD} VA VB VC)
-if(VA STREQUAL "2")
-    set(PYCMD python3)
-    python_version(${PYCMD} VA VB VC)
-endif()
-
+# ============================================================================
+# Dependencies: Python + pybind11
+# ============================================================================
 if(WIN32)
-    find_package(Python ${VA}.${VB} EXACT REQUIRED COMPONENTS Interpreter Development)
-    message(STATUS "[python ${Python_VERSION}]")
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
+        set (Python3_FIND_ABI "OFF" "ANY" "OFF" "ANY")
+    endif()
+    find_package(Python REQUIRED COMPONENTS Interpreter Development)
 else()
-    which_python(${PYCMD} PYPATH)
-    set(PYTHON_EXECUTABLE ${PYPATH})
-    message(STATUS "[python executable ${PYPATH}]")
+    execute_process(COMMAND which python3 OUTPUT_VARIABLE PYTHON_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(Python_EXECUTABLE ${PYTHON_PATH})
 endif()
 
-message(STATUS "[Python Found: ${Python_FOUND}]")
-message(STATUS "[Python Include PATH: ${Python_INCLUDE_DIRS}]")
-message(STATUS "[Python Executable PATH: ${Python_EXECUTABLE}]")
-message(STATUS "[Python Lib PATH: ${Python_LIBRARY}]")
+message(STATUS "Python: ${Python_EXECUTABLE}")
+message(STATUS "Python include: ${Python_INCLUDE_DIRS}")
+message(STATUS "Python libraries: ${Python_LIBRARIES}")
 
-# find pybind11
-execute_process(COMMAND pybind11-config --cmakedir OUTPUT_VARIABLE pybind11_DIR)
-file(TO_CMAKE_PATH ${pybind11_DIR} pybind11_DIR)
-string(REGEX REPLACE "\n$" "" pybind11_DIR ${pybind11_DIR})
+
+# pybind11 from config mode
+execute_process(COMMAND pybind11-config --cmakedir OUTPUT_VARIABLE pybind11_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+file(TO_CMAKE_PATH "${pybind11_DIR}" pybind11_DIR)
 find_package(pybind11 CONFIG REQUIRED)
-message(STATUS "[pybind11 ${pybind11_VERSION}]")
+message(STATUS "pybind11 version: ${pybind11_VERSION}")
 
 
-# add src to pybind11 module
-aux_source_directory(core/src SRC)
-
-# add thirdpartys to src
-aux_source_directory(core/thirdparty/abseil/src ABSL_SRC)
+# ============================================================================
+# Source files
+# ============================================================================
+file(GLOB_RECURSE SRC core/src/*.cpp)
+file(GLOB_RECURSE ABSL_SRC core/thirdparty/abseil/src/*.cpp)
 list(APPEND SRC ${ABSL_SRC})
 
-message("SRC: ${SRC}")
+
+# ============================================================================
+# Build pybind11 module
+# ============================================================================
 pybind11_add_module(${MODULE_NAME} ${SRC})
 
-# definitions
+target_include_directories(${MODULE_NAME}
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/core/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/core/thirdparty/abseil/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/core/thirdparty/spdlog/include
+        ${Python_INCLUDE_DIRS}
+)
+
 target_compile_definitions(${MODULE_NAME}
-    PUBLIC MODULE_NAME=${MODULE_NAME}
-    PUBLIC NDEBUG
-    PUBLIC LOGGING_LEVEL_1
-    PUBLIC _hypot=hypot
-)
-
-# include-dirs
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/thirdparty/abseil/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/thirdparty/spdlog/include
-    ${OPENSSL_INCLUDE_DIR}
-    ${Python_INCLUDE_DIRS}
-)
-
-# lib-dirs
-target_link_directories(${MODULE_NAME}
-    PUBLIC ${Python_LIBRARY_DIRS}
-)
-
-# lib-files
-target_link_libraries(${MODULE_NAME} PUBLIC
-    ${OPENSSL_LIBRARIES}
+    PUBLIC
+        MODULE_NAME=${MODULE_NAME}
+        NDEBUG
+        LOGGING_LEVEL_1
+        _hypot=hypot
 )
 
 if(WIN32)
-    # definitions
-    target_compile_definitions(${MODULE_NAME}
-        PUBLIC WINDOWS
-        PUBLIC MS_WIN64
-    )
+target_include_directories(${MODULE_NAME}
+    PRIVATE
+        ${OPENSSL_INCLUDE_DIR}
+)
+target_link_directories(${MODULE_NAME}
+    PUBLIC
+        ${Python_LIBRARY_DIRS}
+        ${OPENSSL_LIBRARIES}
+)
+endif()
+
+
+
+
+# ============================================================================
+# Platform-specific settings
+# ============================================================================
+if(WIN32)
+    target_compile_definitions(${MODULE_NAME} PRIVATE WINDOWS MS_WIN64)
 
     if(MINGW)
-        # mingw static link "libgcc_s_seh-1.dll" "libstdc++-6.dll" "libwinpthread-1.dll"
         set(CMAKE_CXX_STANDARD_LIBRARIES "-static -static-libgcc -static-libstdc++ ${CMAKE_CXX_STANDARD_LIBRARIES}")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
-        message(STATUS "cxx libraries: " ${CMAKE_CXX_STANDARD_LIBRARIES})
-        message(STATUS "linker flags: " ${CMAKE_EXE_LINKER_FLAGS})
-
-        target_link_libraries(${MODULE_NAME} PUBLIC
-            C:/Windows/System32/ws2_32.dll
-        )
-
+        target_link_libraries(${MODULE_NAME} PRIVATE ws2_32)
     elseif(MSVC)
-        target_compile_definitions(${MODULE_NAME}
-            PUBLIC WIN32_LEAN_AND_MEAN
-            PUBLIC _WINSOCK_DEPRECATED_NO_WARNINGS
-            PUBLIC _CRT_SECURE_NO_WARNINGS
-            PUBLIC NOMINMAX
-            PUBLIC _WINDOWS
-            PUBLIC _USRDLL
-            PUBLIC FMT_UNICODE=0
+        target_compile_definitions(${MODULE_NAME} PUBLIC
+            WIN32_LEAN_AND_MEAN _WINSOCK_DEPRECATED_NO_WARNINGS _CRT_SECURE_NO_WARNINGS
+            NOMINMAX _WINDOWS _USRDLL FMT_UNICODE=0
         )
-
         get_filename_component(OPENSSL_ROOT_DIR ${OPENSSL_INCLUDE_DIR} DIRECTORY)
         target_link_directories(${MODULE_NAME}
-            PUBLIC "${OPENSSL_ROOT_DIR}/lib64"
-            PUBLIC "${OPENSSL_ROOT_DIR}/lib"
+            PUBLIC 
+                "${OPENSSL_ROOT_DIR}/lib64"
+                "${OPENSSL_ROOT_DIR}/lib"
         )
-
-        target_link_libraries(${MODULE_NAME} PUBLIC
-            ws2_32
-            libcryptoMT
-            libsslMT
-            advapi32             # needed by openssl static lib
-            user32               # needed by openssl static lib
-            crypt32              # needed by openssl static lib
+        target_compile_options(${MODULE_NAME} PRIVATE /MP /Zc:__cplusplus /utf-8)
+        target_link_libraries(${MODULE_NAME}
+            PRIVATE
+                ws2_32
+                libcryptoMT
+                libsslMT
+                advapi32             # needed by openssl static lib
+                user32               # needed by openssl static lib
+                crypt32              # needed by openssl static lib
         )
-
-    else()
-        message(FATAL_ERROR "Unsupported Compiler")
     endif()
 
 elseif(APPLE)
-    # uuid
-    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -undefined dynamic_lookup")
-    if(NOT DEFINED ENV{UUID_ROOT_DIR})
-        message(SEND_ERROR "NOT DEFINED LIBUUID_PATH")
-        message(SEND_ERROR "You can brew install util_linux or brew install e2fsprogs")
-        message(SEND_ERROR "Then add UUID_ROOT_DIR=<util_linux/e2fsprogs> to environment")
-        message(FATAL_ERROR "NOT DEFINED LIBUUID_PATH")
+    find_package(UUID REQUIRED)
+
+    if(NOT UUID_FOUND)
+        message(FATAL_ERROR "UUID_ROOT_DIR not defined. You can install uuid via Homebrew:\n"
+            "  brew install util-linux\n"
+            "  export UUID_ROOT_DIR=$(brew --prefix util-linux)")
     endif()
-    target_include_directories(${MODULE_NAME} PUBLIC $ENV{UUID_ROOT_DIR}/include)
-    target_link_directories(${MODULE_NAME} PUBLIC $ENV{UUID_ROOT_DIR}/lib)
 
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mmacosx-version-min=10.13")
-    # definitions
-    target_compile_definitions(${MODULE_NAME}
-        PUBLIC MAC
+    target_compile_definitions(${MODULE_NAME} PUBLIC MAC)
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
+            OpenSSL::SSL
+            OpenSSL::Crypto
+            ${Python_LIBRARIES}
     )
-
-    # lib-files
-    target_link_libraries(${MODULE_NAME} PUBLIC
-        uuid    
-        pthread
-        dl
-    )
+    target_link_libraries(${MODULE_NAME} PRIVATE UUID::UUID_STATIC pthread dl)
 
 elseif(UNIX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsigned-char")
-    # definitions
-    target_compile_definitions(${MODULE_NAME}
-        PUBLIC LINUX
-        PUBLIC GLIBCXX_USE_CXX11_ABI=0
+    target_compile_options(${MODULE_NAME} PRIVATE -fsigned-char)
+    target_compile_definitions(${MODULE_NAME} PRIVATE LINUX GLIBCXX_USE_CXX11_ABI=0)
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
+            OpenSSL::SSL
+            OpenSSL::Crypto
+            ${Python_LIBRARIES}
     )
-
-    # lib-files
-    target_link_libraries(${MODULE_NAME} PUBLIC
-        uuid
-        rt
-    )
-
-else()
-    message(FATAL_ERROR "Unsupported Platform")
+    target_link_libraries(${MODULE_NAME} PRIVATE uuid rt pthread)
 endif()
 
+
+# ============================================================================
+# Clean up MSVC flags
+# ============================================================================
 string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")

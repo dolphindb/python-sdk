@@ -1138,6 +1138,6 @@ class TestReadmeCn:
         t1 = s.table(data="t1")
         t2 = s.table(data="t2")
         res = t1.merge_cross(t2).toDF()
-        ex = s.run("select * from cj((select year from t1) as lt,(select Ticker from t2) as rt)")
+        ex = s.run("select * from cj((select year from t1) as lt,(select Ticker from t2) as rt) order by Ticker desc")
         assert_frame_equal(res, ex)
         s.close()

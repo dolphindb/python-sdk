@@ -1,0 +1,2 @@
+recursive-include dolphindb *.py *.pyi *.so
+recursive-include dolphindb/_core *.py *.pyi *.so

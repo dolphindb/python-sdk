@@ -1373,7 +1373,7 @@ void appendStringtoVector(VectorSP &ddbVec, const py::array &pyVec, size_t size,
                     }
                     else {
                         if (PyErr_Occurred()) PyErr_Clear();
-                        LOG_INFO("Cannot parse string as UTF-8 string.");
+                        LOG_ERR("Cannot parse string as UTF-8 string.");
                         strs[addstrindex].clear();
                     }
                 }

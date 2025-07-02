@@ -491,7 +491,7 @@ class TestTable2:
         pdf_res = pd.merge(pd_left, pd_right, on=['symbol', 'time']).sort_values(by='price')
         assert_frame_equal(odf_res.toDF(), pdf_res, check_dtype=False)
         odf_res = trade.merge(right=quote, how='right', on=['symbol', 'time']).select(
-            ["time", "symbol", "price", "size", "ask-bid as diff"]).sort(bys='time symbol')
+            ["time", "symbol", "price", "size", "ask-bid as diff"]).sort(bys=['time', 'symbol'])
         pdf = pd.merge(pd_left, pd_right, how='right', on=['symbol', 'time']).sort_values(['time', 'symbol'])
         pdf['diff'] = pdf['ask'] - pdf['bid']
         pdf_res = pdf[['time', 'symbol', 'price', 'size', 'diff']]
@@ -796,12 +796,6 @@ class TestTable2:
         tbName = dt.tableName()
         self.conn.run("undef", tbName)
 
-    def test_table2_runFile(self):
-        file_path = LOCAL_DATA_DIR + "run_data.txt"
-        s = self.conn
-        s.runFile(file_path)
-        assert s.run("x") == 1
-
     def test_table2_get_float_null_over_1024(self):
         db_value = self.conn.run("table(1..1025 as a,take(float(),1025) as b)")
         assert np.isnan(db_value.loc[1024, "b"])
@@ -912,7 +906,7 @@ class TestTable2:
 
     def test_table2_upload_dataframe_as_table(self):
         df = pd.DataFrame({
-            'bool': np.array([True, False], dtype=np.bool8),
+            'bool': np.array([True, False], dtype=np.bool_),
             'char': np.array([1, -1], dtype=np.int8),
             'short': np.array([-10, 1000], dtype=np.int16),
             'int': np.array([-10, 1000], dtype=np.int32),

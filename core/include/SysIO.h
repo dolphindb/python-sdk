@@ -95,7 +95,7 @@ private:
 private:
 	string host_;
 	int port_;
-	SOCKET handle_;
+	SOCKET handle_{INVALID_SOCKET};
 	bool blocking_;
 	bool autoClose_;
 	bool enableSSL_;

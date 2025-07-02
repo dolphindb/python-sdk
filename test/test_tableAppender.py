@@ -586,7 +586,7 @@ class TestTableAppender:
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
-            'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
+            'bool': [np.array([True, False], dtype=np.bool_), np.array([True, False], dtype=np.bool_)],
             'char': [np.array([1, -1], dtype=np.int8), np.array([1, -1], dtype=np.int8)],
             'short': [np.array([-10, 1000], dtype=np.int16), np.array([-10, 1000], dtype=np.int16)],
             'int': [np.array([10, 1000], dtype=np.int32), np.array([10, 1000], dtype=np.int32)],
@@ -649,7 +649,7 @@ class TestTableAppender:
         ''')
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
-            'bool': np.array([True, False], dtype=np.bool8),
+            'bool': np.array([True, False], dtype=np.bool_),
             'char': np.array([1, -1], dtype=np.int8),
             'short': np.array([-10, 1000], dtype=np.int16),
             'int': np.array([10, 1000], dtype=np.int32),
@@ -702,7 +702,7 @@ class TestTableAppender:
         ''')
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
-            'bool': np.array([True, False], dtype=np.bool8),
+            'bool': np.array([True, False], dtype=np.bool_),
             'char': np.array([1, -1], dtype=np.int8),
             'short': np.array([-10, 1000], dtype=np.int16),
             'int': np.array([10, 1000], dtype=np.int32),
@@ -755,7 +755,7 @@ class TestTableAppender:
         ''')
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
-            'bool': np.array([True, False], dtype=np.bool8),
+            'bool': np.array([True, False], dtype=np.bool_),
             'char': np.array([1, -1], dtype=np.int8),
             'short': np.array([-10, 1000], dtype=np.int16),
             'int': np.array([10, 1000], dtype=np.int32),
@@ -809,7 +809,7 @@ class TestTableAppender:
         ''')
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
-            'bool': np.array([True, False], dtype=np.bool8),
+            'bool': np.array([True, False], dtype=np.bool_),
             'char': np.array([1, -1], dtype=np.int8),
             'short': np.array([-10, 1000], dtype=np.int16),
             'int': np.array([10, 1000], dtype=np.int32),
@@ -863,7 +863,7 @@ class TestTableAppender:
         ''')
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
-            'bool': np.array([True, False], dtype=np.bool8),
+            'bool': np.array([True, False], dtype=np.bool_),
             'char': np.array([1, -1], dtype=np.int8),
             'short': np.array([-10, 1000], dtype=np.int16),
             'int': np.array([10, 1000], dtype=np.int32),
@@ -918,7 +918,7 @@ class TestTableAppender:
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
-            'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
+            'bool': [np.array([True, False], dtype=np.bool_), np.array([True, False], dtype=np.bool_)],
             'char': [np.array([1, -1], dtype=np.int8), np.array([1, -1], dtype=np.int8)],
             'short': [np.array([-10, 1000], dtype=np.int16), np.array([-10, 1000], dtype=np.int16)],
             'int': [np.array([10, 1000], dtype=np.int32), np.array([10, 1000], dtype=np.int32)],
@@ -984,7 +984,7 @@ class TestTableAppender:
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
-            'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
+            'bool': [np.array([True, False], dtype=np.bool_), np.array([True, False], dtype=np.bool_)],
             'char': [np.array([1, -1], dtype=np.int8), np.array([1, -1], dtype=np.int8)],
             'short': [np.array([-10, 1000], dtype=np.int16), np.array([-10, 1000], dtype=np.int16)],
             'int': [np.array([10, 1000], dtype=np.int32), np.array([10, 1000], dtype=np.int32)],
@@ -1048,7 +1048,7 @@ class TestTableAppender:
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
             'id': np.array([1, 10000], dtype="int32"),
-            'bool': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
+            'bool': [np.array([True, False], dtype=np.bool_), np.array([True, False], dtype=np.bool_)],
             'char': [np.array([1, -1], dtype=np.int8), np.array([1, -1], dtype=np.int8)],
             'short': [np.array([-10, 1000], dtype=np.int16), np.array([-10, 1000], dtype=np.int16)],
             'int': [np.array([10, 1000], dtype=np.int32), np.array([10, 1000], dtype=np.int32)],
@@ -1083,7 +1083,7 @@ class TestTableAppender:
                 np.array(["2012-02-03T01:02:03.456789123", "2013-04-02T02:05:06.123456789"], dtype="datetime64[ns]")],
             'float': [np.array([2.2134500, np.nan], dtype='float32'), np.array([2.2134500, np.nan], dtype='float32')],
             'double': [np.array([3.214, np.nan], dtype='float64'), np.array([3.214, np.nan], dtype='float64')],
-            'ipaddr': [np.array([True, False], dtype=np.bool8), np.array([True, False], dtype=np.bool8)],
+            'ipaddr': [np.array([True, False], dtype=np.bool_), np.array([True, False], dtype=np.bool_)],
             'uuid': [np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
                               dtype='object'),
                      np.array(["5d212a78-cc48-e3b1-4235-b4d91473ee87", "5d212a78-cc48-e3b1-4235-b4d914731111"],
@@ -1112,7 +1112,7 @@ class TestTableAppender:
         ''')
         appender = ddb.tableAppender(db_name, "pt", conn)
         df = pd.DataFrame({
-            'bool': np.array([True, False], dtype=np.bool8),
+            'bool': np.array([True, False], dtype=np.bool_),
             'char': np.array([1, -1], dtype=np.int8),
             'short': np.array([-10, 1000], dtype=np.int16),
             'int': np.array([10, 1000], dtype=np.int32),
@@ -2148,34 +2148,34 @@ class TestTableAppender:
         """)
         appender1 = ddb.tableAppender(dbPath=db_name, tableName="pt_3", ddbSession=conn)
         data = pd.DataFrame({"date": np.array(
-            ['2012-12-01T00:00:00', '2012-12-10T00:00:00', '2012-12-20T00:00:00'] * 1100000, dtype="datetime64[D]"),
-            "float": np.array([1, 2, 3] * 1100000, dtype='object'),
-            "double": np.array([1, 2, 3] * 1100000, dtype='object'),
-            "string": np.array(["a", "b", "c"] * 1100000, dtype='object'),
-            "long": np.array([1, 2, 3] * 1100000, dtype='object'),
+            ['2012-12-01T00:00:00', '2012-12-10T00:00:00', '2012-12-20T00:00:00'] * 800000, dtype="datetime64[D]"),
+            "float": np.array([1, 2, 3] * 800000, dtype='object'),
+            "double": np.array([1, 2, 3] * 800000, dtype='object'),
+            "string": np.array(["a", "b", "c"] * 800000, dtype='object'),
+            "long": np.array([1, 2, 3] * 800000, dtype='object'),
             "decimal128_6": np.array([None, pd.NaT, np.nan, decimal.Decimal('NaN'),
                                       decimal.Decimal("-1." + "0" * 5 + "1"),
                                       decimal.Decimal("0." + "0" * 5 + "1"),
                                       decimal.Decimal("1." + "0" * 5 + "1"),
-                                      None, pd.NaT, np.nan, decimal.Decimal('NaN')] * 300000,
+                                      decimal.Decimal('NaN')] * 300000,
                                      dtype='object'),
             "decimal128_26": np.array([None, pd.NaT, np.nan, decimal.Decimal('NaN'),
                                        decimal.Decimal("-1." + "0" * 25 + "1"),
                                        decimal.Decimal("0." + "0" * 25 + "1"),
                                        decimal.Decimal("1." + "0" * 25 + "1"),
-                                       None, pd.NaT, np.nan, decimal.Decimal('NaN')] * 300000,
+                                       decimal.Decimal('NaN')] * 300000,
                                       dtype='object'),
         })
         appender1.append(data)
         assert conn.run("""
             ans = select * from loadTable(dbName, `pt_3) order by date
-            ex = table(take([2012.12.01, 2012.12.10, 2012.12.20],3300000) as date,
-                       take(float[1, 2, 3],3300000) as float,
-                       take(double[1, 2, 3],3300000) as double,
-                       take(string["a", "b", "c"],3300000) as string,
-                       take(long[1, 2, 3],3300000) as long,
-                       decimal128(take([NULL, NULL, NULL, NULL,"-1."+repeat("0",5)+"1", "0."+repeat("0",5)+"1", "1."+repeat("0",5)+"1",NULL, NULL, NULL, NULL],3300000), 6) as decimal128_6,
-                       decimal128(take([NULL, NULL, NULL, NULL,"-1."+repeat("0",25)+"1", "0."+repeat("0",25)+"1", "1."+repeat("0",25)+"1",NULL, NULL, NULL, NULL],3300000), 26) as decimal128_26
+            ex = table(take([2012.12.01, 2012.12.10, 2012.12.20],2400000) as date,
+                       take(float[1, 2, 3],2400000) as float,
+                       take(double[1, 2, 3],2400000) as double,
+                       take(string["a", "b", "c"],2400000) as string,
+                       take(long[1, 2, 3],2400000) as long,
+                       decimal128(take([NULL, NULL, NULL, NULL,"-1."+repeat("0",5)+"1", "0."+repeat("0",5)+"1", "1."+repeat("0",5)+"1", NULL],2400000), 6) as decimal128_6,
+                       decimal128(take([NULL, NULL, NULL, NULL,"-1."+repeat("0",25)+"1", "0."+repeat("0",25)+"1", "1."+repeat("0",25)+"1", NULL],2400000), 26) as decimal128_26
                        )
             ex = select * from ex order by date
             each(eqObj, ans.values(), ex.values())

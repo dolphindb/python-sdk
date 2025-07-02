@@ -5,12 +5,12 @@
 namespace dolphindb {
 
 DBConnectionPoolImpl::DBConnectionPoolImpl(const string& hostName, int port, int threadNum, const string& userId, const string& password,
-	bool loadBalance, bool highAvailability, bool compress,bool reConnect, bool python, PROTOCOL protocol, bool show_output, int sqlStd, int tryReconnectNums) :shutDownFlag_(
+	bool loadBalance, bool highAvailability, bool compress,bool reConnect, PARSER_TYPE parser, PROTOCOL protocol, bool show_output, int sqlStd, int tryReconnectNums) :shutDownFlag_(
         false), queue_(new SynchronizedQueue<Task>){
     latch_ = new CountDownLatch(threadNum);
     if(!loadBalance){
         for(int i = 0 ;i < threadNum; i++){
-            SmartPointer<DBConnection> conn = new DBConnection(false, false, 7200, compress, python, false, sqlStd);
+            SmartPointer<DBConnection> conn = new DBConnection(false, false, 7200, compress, parser, false, sqlStd);
             conn->setProtocol(protocol);
             conn->setShowOutput(show_output);
 			bool ret = conn->connect(hostName, port, userId, password, "", highAvailability, {},7200, reConnect, tryReconnectNums);
@@ -23,7 +23,7 @@ DBConnectionPoolImpl::DBConnectionPoolImpl(const string& hostName, int port, int
         }
     }
     else{
-        SmartPointer<DBConnection> entryPoint = new DBConnection(false, false, 7200, compress, python, false, sqlStd);
+        SmartPointer<DBConnection> entryPoint = new DBConnection(false, false, 7200, compress, parser, false, sqlStd);
         bool ret = entryPoint->connect(hostName, port, userId, password, "", highAvailability, {},7200, reConnect, tryReconnectNums);
         if(!ret)
            throw IOException("Failed to connect to " + hostName + ":" + std::to_string(port));
@@ -40,7 +40,7 @@ DBConnectionPoolImpl::DBConnectionPoolImpl(const string& hostName, int port, int
             ports[i] = std::atoi(fields.substr(p + 1, fields.size()).data());
         }
         for(int i = 0 ;i < threadNum; i++){
-            SmartPointer<DBConnection> conn = new DBConnection(false, false, 7200, compress, python, false, sqlStd);
+            SmartPointer<DBConnection> conn = new DBConnection(false, false, 7200, compress, parser, false, sqlStd);
             conn->setProtocol(protocol);
             conn->setShowOutput(show_output);
             string &curhost = hosts[i % nodeCount];

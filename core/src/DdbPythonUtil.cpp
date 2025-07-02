@@ -28,6 +28,7 @@ namespace dolphindb {
 
 
 py::object DdbPythonUtil::loadPickleFile(const std::string &filepath){
+#if (PY_MINOR_VERSION <= 6) && (PY_MINOR_VERSION >= 12)
     py::dict statusDict;
     string shortFilePath=filepath+"_s";
     FILE *pf;
@@ -93,6 +94,15 @@ py::object DdbPythonUtil::loadPickleFile(const std::string &filepath){
     py::object res = py::handle(result).cast<py::object>();
     res.dec_ref();
     return res;
+#else
+    /**
+    * Unsupport PROTOCOL_PICKLE for Python 3.13 or newer
+    */
+    throw RuntimeException(
+        "The use of PROTOCOL_PICKLE has been deprecated and removed in Python 3.13. "
+        "Please migrate to an alternative protocol or serialization method."
+    );
+#endif
 }
 
 PytoDdbRowPool::PytoDdbRowPool(MultithreadedTableWriter &writer)
@@ -225,9 +235,11 @@ void PytoDdbRowPool::convertLoop(){
                     failedRows_.push(convertRows[ni]);
                 }
             }
-            for (size_t ni = 0; ni < insertRows.size(); ++ni) {
+            {
                 py::gil_scoped_acquire gil;
-                delete convertRows[ni];                                     // must delete it in GIL lock
+                for (size_t ni = 0; ni < insertRows.size(); ++ni) {
+                    delete convertRows[ni];                                     // must delete it in GIL lock
+                }
             }
             DLOG("convert end ",insertRows.size(),failedRows_.size(),"/",rows_.size());
             convertingCount_ = 0;

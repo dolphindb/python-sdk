@@ -75,7 +75,7 @@ using converter::CHILD_VECTOR_OPTION;
 
 class EXPORT_DECL DBConnection {
 public:
-	DBConnection(bool enableSSL = false, bool asyncTask = false, int keepAliveTime = 7200, bool compress = false, bool python = false, bool isReverseStreaming = false, int sqlStd = 0);
+	DBConnection(bool enableSSL = false, bool asyncTask = false, int keepAliveTime = 7200, bool compress = false, PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB, bool isReverseStreaming = false, int sqlStd = 0);
 	virtual ~DBConnection();
 	DBConnection(DBConnection&& oth);
 	DBConnection& operator=(DBConnection&& oth);
@@ -163,7 +163,7 @@ private:
 		ET_NEWLEADER = 2,
 		ET_NODENOTAVAIL = 3,
 	};
-    void switchDataNode(const string &host = "", int port = -1);
+    void switchDataNode(const string &host = "", int port = -1, bool reconnect = false);
 	bool connectNode(string hostName, int port, int keepAliveTime = -1);
     bool connected();
 	//0 - ignored exception, eg : other data node not avail;
@@ -197,7 +197,7 @@ private:
     bool compress_;
 	vector<Node> nodes_;
 	int lastConnNodeIndex_;
-	bool python_;
+	PARSER_TYPE parser_;
 	PROTOCOL protocol_;
 	bool reconnect_, closed_;
 	bool msg_;
@@ -226,7 +226,7 @@ private:
 class EXPORT_DECL DBConnectionPool{
 public:
     DBConnectionPool(const string& hostName, int port, int threadNum = 10, const string& userId = "", const string& password = "",
-		bool loadBalance = false, bool highAvailability = false, bool compress = false, bool reConnect = false, bool python = false,
+		bool loadBalance = false, bool highAvailability = false, bool compress = false, bool reConnect = false, PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB,
 		PROTOCOL protocol = PROTOCOL_DDB, bool showOutput = true, int sqlStd = 0, int tryReconnectNums = -1);
 	virtual ~DBConnectionPool();
 	

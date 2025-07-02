@@ -24,9 +24,9 @@ public:
 
 class DBConnectionImpl {
 public:
-    DBConnectionImpl(bool sslEnable = false, bool asynTask = false, int keepAliveTime = 7200, bool compress = false, bool python = false, bool isReverseStreaming = false, int sqlStd = 0);
+    DBConnectionImpl(bool sslEnable = false, bool asynTask = false, int keepAliveTime = 7200, bool compress = false, PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB, bool isReverseStreaming = false, int sqlStd = 0);
     ~DBConnectionImpl();
-    bool connect(const string& hostName, int port, const string& userId = "", const string& password = "",bool sslEnable = false, bool asynTask = false, int keepAliveTime = -1, bool compress= false, bool python = false, int readTimeout = -1, int writeTimeout = -1);
+    bool connect(const string& hostName, int port, const string& userId = "", const string& password = "",bool sslEnable = false, bool asynTask = false, int keepAliveTime = -1, bool compress= false, PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB, int readTimeout = -1, int writeTimeout = -1);
     void login(const string& userId, const string& password, bool enableEncryption);
     ConstantSP run(const string& script, int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false);
     ConstantSP run(const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false);
@@ -94,7 +94,7 @@ private:
     bool asynTask_;
     int keepAliveTime_;
     bool compress_;
-    bool python_;
+    PARSER_TYPE parser_;
     PROTOCOL protocol_;
     bool msg_;
     static DdbInit ddbInit_;

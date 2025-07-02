@@ -8,20 +8,44 @@
 
 namespace dolphindb {
 
+
+bool checkSetStreamTableTimstamp(DBConnectionSP pConn, const std::string& dbName, const std::string& tableName, bool enableStreamTableTimestamp, std::string& col) {
+    try {
+        pConn->run("funcByName(\"getStreamTableTimestamp\");");
+    }
+    catch (IOException &e) {
+        return enableStreamTableTimestamp;
+    }
+    if (dbName.empty() && !tableName.empty()) {
+        try {
+            ConstantSP res = pConn->run("getStreamTableTimestamp(" + tableName + ")");
+            col = res->getString();
+            return !col.empty();
+        }
+        catch (IOException& e) {
+            return false;
+        }
+    }
+    else {
+        return false;
+    }
+}
+
 MultithreadedTableWriter::MultithreadedTableWriter(const std::string& hostName, int port, const std::string& userId, const std::string& password,
 										const string& dbName, const string& tableName, bool useSSL,
 										bool enableHighAvailability, const vector<string> *pHighAvailabilitySites,
 										int batchSize, float throttle, int threadCount, const string& partitionCol,
 										const vector<COMPRESS_METHOD> *pCompressMethods, MultithreadedTableWriter::Mode mode,
-                                        vector<string> *pModeOption, bool reconnect):
+                                        vector<string> *pModeOption, bool reconnect, bool enableStreamTableTimestamp):
                         dbName_(dbName),
                         tableName_(tableName),
                         batchSize_(batchSize),
                         throttleMilsecond_(throttle*1000),
 						exited_(false),
-                        hasError_(false)
-                        ,pytoDdb_(new PytoDdbRowPool(*this))
-                        ,mode_(mode)
+                        hasError_(false),
+                        pytoDdb_(new PytoDdbRowPool(*this)),
+                        mode_(mode),
+                        enableStreamTableTimestamp_(enableStreamTableTimestamp)
                         {
     if(threadCount < 1){
         throw RuntimeException("The parameter threadCount must be greater than or equal to 1");
@@ -79,24 +103,30 @@ MultithreadedTableWriter::MultithreadedTableWriter(const std::string& hostName, 
 
     ConstantSP colDefsTypeInt = colDefs->getColumn("typeInt");
     size_t columnSize = colDefs->size();
+    bool dropLast = false;
+    std::string timestampColumn = "";
+    if (checkSetStreamTableTimstamp(pConn, dbName_, tableName_, enableStreamTableTimestamp_, timestampColumn)) {
+        if (timestampColumn.empty()) dropLast = true;
+        columnSize = columnSize - 1;
+    }
+
     if (compressMethods_.size() > 0 && compressMethods_.size() != columnSize) {
         throw RuntimeException("The number of elements in parameter compressMethods does not match the column size " + std::to_string(columnSize));
     }
-    colExtras_.resize(columnSize);
-    int colIndex = colDefs->getColumnIndex("extra");
-    if (colIndex >= 0) {
-        ConstantSP colExtra = colDefs->getColumn(colIndex);
-        for (int i = 0; i < static_cast<int>(colExtras_.size()); i++) {
-            colExtras_[i] = colExtra->getInt(i);
-        }
-    }
-
+    colExtras_.reserve(columnSize);
     ConstantSP colDefsName = colDefs->getColumn("name");
     ConstantSP colDefsTypeString = colDefs->getColumn("typeString");
-    for (INDEX i = 0; i < static_cast<INDEX>(columnSize); i++) {
-        colNames_.push_back(colDefsName->getString(i));
+    ConstantSP colExtra;
+    int colIndex = colDefs->getColumnIndex("extra");
+    if (colIndex >= 0) colExtra = colDefs->getColumn(colIndex);
+
+    for (INDEX i = 0; i < static_cast<INDEX>(dropLast ? columnSize : colDefs->size()); i++) {
+        std::string colName = colDefsName->getString(i);
+        if (colName == timestampColumn) continue;
+        colNames_.push_back(colName);
         colTypes_.push_back(static_cast<DATA_TYPE>(colDefsTypeInt->getInt(i)));
         colTypeString_.push_back(colDefsTypeString->getString(i));
+        if (colIndex >= 0) colExtras_.push_back(colExtra->getInt(i));
     }
     if (threadCount > 1) {//Only multithread need partition col info
         if (isPartionedTable_) {

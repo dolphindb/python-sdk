@@ -63,7 +63,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarBoolMonitor{{
+            class EventScalarBoolMonitor:CEPMonitor{{
                 def EventScalarBoolMonitor(){{}}
                 def updateEventScalarBool(event){{
                     insert into {func_name}_eventTest values(event.s_bool,event.eventTime)
@@ -164,7 +164,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarCharMonitor{{
+            class EventScalarCharMonitor:CEPMonitor{{
                 def EventScalarCharMonitor(){{}}
                 def updateEventScalarChar(event){{
                     insert into {func_name}_eventTest values(event.s_char,event.eventTime)
@@ -269,7 +269,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarShortMonitor{{
+            class EventScalarShortMonitor:CEPMonitor{{
                 def EventScalarShortMonitor(){{}}
                 def updateEventScalarShort(event){{
                     insert into {func_name}_eventTest values(event.s_short,event.eventTime)
@@ -374,7 +374,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarIntMonitor{{
+            class EventScalarIntMonitor:CEPMonitor{{
                 def EventScalarIntMonitor(){{}}
                 def updateEventScalarInt(event){{
                     insert into {func_name}_eventTest values(event.s_int,event.eventTime)
@@ -478,7 +478,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarLongMonitor{{
+            class EventScalarLongMonitor:CEPMonitor{{
                 def EventScalarLongMonitor(){{}}
                 def updateEventScalarLong(event){{
                     insert into {func_name}_eventTest values(event.s_long,event.eventTime)
@@ -587,7 +587,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarDateMonitor{{
+            class EventScalarDateMonitor:CEPMonitor{{
                 def EventScalarDateMonitor(){{}}
                 def updateEventScalarDate(event){{
                     insert into {func_name}_eventTest values(event.s_date,event.eventTime)
@@ -691,7 +691,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarMonthMonitor{{
+            class EventScalarMonthMonitor:CEPMonitor{{
                 def EventScalarMonthMonitor(){{}}
                 def updateEventScalarMonth(event){{
                     insert into {func_name}_eventTest values(event.s_month,event.eventTime)
@@ -795,7 +795,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarTimeMonitor{{
+            class EventScalarTimeMonitor:CEPMonitor{{
                 def EventScalarTimeMonitor(){{}}
                 def updateEventScalarTime(event){{
                     insert into {func_name}_eventTest values(event.s_time,event.eventTime)
@@ -899,7 +899,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarMinuteMonitor{{
+            class EventScalarMinuteMonitor:CEPMonitor{{
                 def EventScalarMinuteMonitor(){{}}
                 def updateEventScalarMinute(event){{
                     insert into {func_name}_eventTest values(event.s_minute,event.eventTime)
@@ -1003,7 +1003,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarSecondMonitor{{
+            class EventScalarSecondMonitor:CEPMonitor{{
                 def EventScalarSecondMonitor(){{}}
                 def updateEventScalarSecond(event){{
                     insert into {func_name}_eventTest values(event.s_second,event.eventTime)
@@ -1107,7 +1107,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarDatetimeMonitor{{
+            class EventScalarDatetimeMonitor:CEPMonitor{{
                 def EventScalarDatetimeMonitor(){{}}
                 def updateEventScalarDatetime(event){{
                     insert into {func_name}_eventTest values(event.s_datetime,event.eventTime)
@@ -1212,7 +1212,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarTimestampMonitor{{
+            class EventScalarTimestampMonitor:CEPMonitor{{
                 def EventScalarTimestampMonitor(){{}}
                 def updateEventScalarTimestamp(event){{
                     insert into {func_name}_eventTest values(event.s_timestamp,event.eventTime)
@@ -1317,7 +1317,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarNanotimeMonitor{{
+            class EventScalarNanotimeMonitor:CEPMonitor{{
                 def EventScalarNanotimeMonitor(){{}}
                 def updateEventScalarNanotime(event){{
                     insert into {func_name}_eventTest values(event.s_nanotime,event.eventTime)
@@ -1422,7 +1422,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarNanotimestampMonitor{{
+            class EventScalarNanotimestampMonitor:CEPMonitor{{
                 def EventScalarNanotimestampMonitor(){{}}
                 def updateEventScalarNanotimestamp(event){{
                     insert into {func_name}_eventTest values(event.s_nanotimestamp,event.eventTime)
@@ -1529,7 +1529,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarDatehourMonitor{{
+            class EventScalarDatehourMonitor:CEPMonitor{{
                 def EventScalarDatehourMonitor(){{}}
                 def updateEventScalarDatehour(event){{
                     insert into {func_name}_eventTest values(event.s_datehour,event.eventTime)
@@ -1632,7 +1632,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarFloatMonitor{{
+            class EventScalarFloatMonitor:CEPMonitor{{
                 def EventScalarFloatMonitor(){{}}
                 def updateEventScalarFloat(event){{
                     insert into {func_name}_eventTest values(event.s_float,event.eventTime)
@@ -1743,7 +1743,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarDoubleMonitor{{
+            class EventScalarDoubleMonitor:CEPMonitor{{
                 def EventScalarDoubleMonitor(){{}}
                 def updateEventScalarDouble(event){{
                     insert into {func_name}_eventTest values(event.s_double,event.eventTime)
@@ -1853,7 +1853,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarStringMonitor{{
+            class EventScalarStringMonitor:CEPMonitor{{
                 def EventScalarStringMonitor(){{}}
                 def updateEventScalarString(event){{
                     insert into {func_name}_eventTest values(event.s_string,event.eventTime)
@@ -1956,7 +1956,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarBlobMonitor{{
+            class EventScalarBlobMonitor:CEPMonitor{{
                 def EventScalarBlobMonitor(){{}}
                 def updateEventScalarBlob(event){{
                     insert into {func_name}_eventTest values(event.s_blob,event.eventTime)
@@ -2067,7 +2067,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarInt128Monitor{{
+            class EventScalarInt128Monitor:CEPMonitor{{
                 def EventScalarInt128Monitor(){{}}
                 def updateEventScalarInt128(event){{
                     insert into {func_name}_eventTest values(event.s_int128,event.eventTime)
@@ -2171,7 +2171,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarUuidMonitor{{
+            class EventScalarUuidMonitor:CEPMonitor{{
                 def EventScalarUuidMonitor(){{}}
                 def updateEventScalarUuid(event){{
                     insert into {func_name}_eventTest values(event.s_uuid,event.eventTime)
@@ -2275,7 +2275,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarIpaddrMonitor{{
+            class EventScalarIpaddrMonitor:CEPMonitor{{
                 def EventScalarIpaddrMonitor(){{}}
                 def updateEventScalarIpaddr(event){{
                     insert into {func_name}_eventTest values(event.s_ipaddr,event.eventTime)
@@ -2377,7 +2377,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarDecimal32Monitor{{
+            class EventScalarDecimal32Monitor:CEPMonitor{{
                 def EventScalarDecimal32Monitor(){{}}
                 def updateEventScalarDecimal32(event){{
                     insert into {func_name}_eventTest values(event.s_decimal32_4,event.eventTime)
@@ -2482,7 +2482,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarDecimal64Monitor{{
+            class EventScalarDecimal64Monitor:CEPMonitor{{
                 def EventScalarDecimal64Monitor(){{}}
                 def updateEventScalarDecimal64(event){{
                     insert into {func_name}_eventTest values(event.s_decimal64_12,event.eventTime)
@@ -2588,7 +2588,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventScalarDecimal128Monitor{{
+            class EventScalarDecimal128Monitor:CEPMonitor{{
                 def EventScalarDecimal128Monitor(){{}}
                 def updateEventScalarDecimal128(event){{
                     insert into {func_name}_eventTest values(event.s_decimal128_26,event.eventTime)
@@ -2696,7 +2696,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorBoolMonitor{{
+            class EventVectorBoolMonitor:CEPMonitor{{
                 def EventVectorBoolMonitor(){{}}
                 def updateEventVectorBool(event){{
                     insert into {func_name}_eventTest values([event.v_bool],event.eventTime)
@@ -2872,7 +2872,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorCharMonitor{{
+            class EventVectorCharMonitor:CEPMonitor{{
                 def EventVectorCharMonitor(){{}}
                 def updateEventVectorChar(event){{
                     insert into {func_name}_eventTest values([event.v_char],event.eventTime)
@@ -3050,7 +3050,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorShortMonitor{{
+            class EventVectorShortMonitor:CEPMonitor{{
                 def EventVectorShortMonitor(){{}}
                 def updateEventVectorShort(event){{
                     insert into {func_name}_eventTest values([event.v_short],event.eventTime)
@@ -3230,7 +3230,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorIntMonitor{{
+            class EventVectorIntMonitor:CEPMonitor{{
                 def EventVectorIntMonitor(){{}}
                 def updateEventVectorInt(event){{
                     insert into {func_name}_eventTest values([event.v_int],event.eventTime)
@@ -3409,7 +3409,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorLongMonitor{{
+            class EventVectorLongMonitor:CEPMonitor{{
                 def EventVectorLongMonitor(){{}}
                 def updateEventVectorLong(event){{
                     insert into {func_name}_eventTest values([event.v_long],event.eventTime)
@@ -3589,7 +3589,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorDateMonitor{{
+            class EventVectorDateMonitor:CEPMonitor{{
                 def EventVectorDateMonitor(){{}}
                 def updateEventVectorDate(event){{
                     insert into {func_name}_eventTest values([event.v_date],event.eventTime)
@@ -3754,7 +3754,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorMonthMonitor{{
+            class EventVectorMonthMonitor:CEPMonitor{{
                 def EventVectorMonthMonitor(){{}}
                 def updateEventVectorMonth(event){{
                     insert into {func_name}_eventTest values([event.v_month],event.eventTime)
@@ -3919,7 +3919,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorTimeMonitor{{
+            class EventVectorTimeMonitor:CEPMonitor{{
                 def EventVectorTimeMonitor(){{}}
                 def updateEventVectorTime(event){{
                     insert into {func_name}_eventTest values([event.v_time],event.eventTime)
@@ -4084,7 +4084,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorMinuteMonitor{{
+            class EventVectorMinuteMonitor:CEPMonitor{{
                 def EventVectorMinuteMonitor(){{}}
                 def updateEventVectorMinute(event){{
                     insert into {func_name}_eventTest values([event.v_minute],event.eventTime)
@@ -4249,7 +4249,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorSecondMonitor{{
+            class EventVectorSecondMonitor:CEPMonitor{{
                 def EventVectorSecondMonitor(){{}}
                 def updateEventVectorSecond(event){{
                     insert into {func_name}_eventTest values([event.v_second],event.eventTime)
@@ -4414,7 +4414,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorDatetimeMonitor{{
+            class EventVectorDatetimeMonitor:CEPMonitor{{
                 def EventVectorDatetimeMonitor(){{}}
                 def updateEventVectorDatetime(event){{
                     insert into {func_name}_eventTest values([event.v_datetime],event.eventTime)
@@ -4579,7 +4579,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorTimestampMonitor{{
+            class EventVectorTimestampMonitor:CEPMonitor{{
                 def EventVectorTimestampMonitor(){{}}
                 def updateEventVectorTimestamp(event){{
                     insert into {func_name}_eventTest values([event.v_timestamp],event.eventTime)
@@ -4744,7 +4744,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorNanotimeMonitor{{
+            class EventVectorNanotimeMonitor:CEPMonitor{{
                 def EventVectorNanotimeMonitor(){{}}
                 def updateEventVectorNanotime(event){{
                     insert into {func_name}_eventTest values([event.v_nanotime],event.eventTime)
@@ -4909,7 +4909,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorNanotimestampMonitor{{
+            class EventVectorNanotimestampMonitor:CEPMonitor{{
                 def EventVectorNanotimestampMonitor(){{}}
                 def updateEventVectorNanotimestamp(event){{
                     insert into {func_name}_eventTest values([event.v_nanotimestamp],event.eventTime)
@@ -5086,7 +5086,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorDatehourMonitor{{
+            class EventVectorDatehourMonitor:CEPMonitor{{
                 def EventVectorDatehourMonitor(){{}}
                 def updateEventVectorDatehour(event){{
                     insert into {func_name}_eventTest values([event.v_datehour],event.eventTime)
@@ -5251,7 +5251,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorFloatMonitor{{
+            class EventVectorFloatMonitor:CEPMonitor{{
                 def EventVectorFloatMonitor(){{}}
                 def updateEventVectorFloat(event){{
                     insert into {func_name}_eventTest values([event.v_float],event.eventTime)
@@ -5461,7 +5461,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorDoubleMonitor{{
+            class EventVectorDoubleMonitor:CEPMonitor{{
                 def EventVectorDoubleMonitor(){{}}
                 def updateEventVectorDouble(event){{
                     insert into {func_name}_eventTest values([event.v_double],event.eventTime)
@@ -5684,7 +5684,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorStringMonitor{{
+            class EventVectorStringMonitor:CEPMonitor{{
                 def EventVectorStringMonitor(){{}}
                 def updateEventVectorString(event){{
                     //insert into {func_name}_eventTest values([event.v_string],event.eventTime)
@@ -5843,7 +5843,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorBlobMonitor{{
+            class EventVectorBlobMonitor:CEPMonitor{{
                 def EventVectorBlobMonitor(){{}}
                 def updateEventVectorBlob(event){{
                     insert into {func_name}_eventTest values(event.v_blob[0],event.eventTime)
@@ -6005,7 +6005,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorSymbolMonitor{{
+            class EventVectorSymbolMonitor:CEPMonitor{{
                 def EventVectorSymbolMonitor(){{}}
                 def updateEventVectorSymbol(event){{
                     insert into {func_name}_eventTest values(typestr(event.v_symbol))
@@ -6139,7 +6139,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorInt128Monitor{{
+            class EventVectorInt128Monitor:CEPMonitor{{
                 def EventVectorInt128Monitor(){{}}
                 def updateEventVectorInt128(event){{
                     insert into {func_name}_eventTest values([event.v_int128],event.eventTime)
@@ -6316,7 +6316,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorUuidMonitor{{
+            class EventVectorUuidMonitor:CEPMonitor{{
                 def EventVectorUuidMonitor(){{}}
                 def updateEventVectorUuid(event){{
                     insert into {func_name}_eventTest values([event.v_uuid],event.eventTime)
@@ -6502,7 +6502,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorIpaddrMonitor{{
+            class EventVectorIpaddrMonitor:CEPMonitor{{
                 def EventVectorIpaddrMonitor(){{}}
                 def updateEventVectorIpaddr(event){{
                     insert into {func_name}_eventTest values([event.v_ipaddr],event.eventTime)
@@ -6656,7 +6656,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorDecimal32Monitor{{
+            class EventVectorDecimal32Monitor:CEPMonitor{{
                 def EventVectorDecimal32Monitor(){{}}
                 def updateEventVectorDecimal32(event){{
                     insert into {func_name}_eventTest values([event.v_decimal32_4],event.eventTime)
@@ -6818,7 +6818,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorDecimal64Monitor{{
+            class EventVectorDecimal64Monitor:CEPMonitor{{
                 def EventVectorDecimal64Monitor(){{}}
                 def updateEventVectorDecimal64(event){{
                     insert into {func_name}_eventTest values([event.v_decimal64_12],event.eventTime)
@@ -6980,7 +6980,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorDecimal128Monitor{{
+            class EventVectorDecimal128Monitor:CEPMonitor{{
                 def EventVectorDecimal128Monitor(){{}}
                 def updateEventVectorDecimal128(event){{
                     insert into {func_name}_eventTest values([event.v_decimal128_26],event.eventTime)
@@ -7304,7 +7304,7 @@ class TestCep(object):
                 }}
             }}
 
-            class EventAllTypeMonitor{{
+            class EventAllTypeMonitor:CEPMonitor{{
                 def EventAllTypeMonitor(){{}}
                 def updateEventAllType(event){{
                     emitEvent(event)
@@ -7415,7 +7415,7 @@ class TestCep(object):
                     eventTime2=now()
                 }}
             }}
-            class EventMonitor{{
+            class EventMonitor:CEPMonitor{{
                 def EventMonitor(){{}}
                 def updateEvent(event){{
                     emitEvent(event)
@@ -7509,7 +7509,7 @@ class TestCep(object):
                 }}
             }}
             
-            class EventTestMonitor{{
+            class EventTestMonitor:CEPMonitor{{
                 def EventTestMonitor(){{}}
                 def updateEventTest(event){{
                     emitEvent(event)
@@ -7592,7 +7592,7 @@ class TestCep(object):
                     eventTime=now()
                 }}
             }}
-            class EventVectorIntMonitor{{
+            class EventVectorIntMonitor:CEPMonitor{{
                 def EventVectorIntMonitor(){{}}
                 def updateEventVectorInt(event){{
                     insert into {func_name}_eventTest values([event.v_int],event.eventTime)

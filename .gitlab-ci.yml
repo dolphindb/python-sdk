@@ -1,16 +1,23 @@
 stages:
-  - build
+  - build-v1
+  - build-v2
 
-build-Linux-x86_64-job:
-  stage: build
+linux:x86_64:
+  stage: build-v2
+  needs: []
+  variables:
+    CIBW_BUILD: "*cp38* *cp39* *cp310* *cp311* *cp312* *cp313*"
+    CIBW_ENABLE: cpython-freethreading
   script:
     - echo "VARIABLES:"
+    - echo $CIBW_BUILD
+    - echo $CIBW_ENABLE
     - echo $CI_CUS_LINUX_X86_PYTHON_PATH
     - echo $PATH
     - pwd
     - echo "COMPILE:"
-    - $CI_CUS_LINUX_X86_PYTHON_PATH -m pip install cibuildwheel==2.15.0
-    - $CI_CUS_LINUX_X86_PYTHON_PATH -m cibuildwheel --platform linux --output-dir wheelhouse
+    - $CI_CUS_LINUX_X86_PYTHON_PATH -m pip install cibuildwheel==2.22.0
+    - CIBW_MANYLINUX_X86_64_IMAGE="manylinux2014_x86_64:$DOCKER_TAG_V2" $CI_CUS_LINUX_X86_PYTHON_PATH -m cibuildwheel --platform linux --output-dir wheelhouse
   artifacts:
     name: "$CI_PROJECT_NAME-$CI_JOB_NAME"
     paths:
@@ -23,16 +30,22 @@ build-Linux-x86_64-job:
     - when: manual
       allow_failure: false
 
-build-Linux-arm64-job:
-  stage: build
+linux:arm64:
+  stage: build-v2
+  needs: []
+  variables:
+    CIBW_BUILD: "*cp38* *cp39* *cp310* *cp311* *cp312* *cp313*"
+    CIBW_ENABLE: cpython-freethreading
   script:
     - echo "VARIABLES:"
+    - echo $CIBW_BUILD
+    - echo $CIBW_ENABLE
     - echo $CI_CUS_LINUX_ARM_PYTHON_PATH
     - echo $PATH
     - pwd
     - echo "COMPILE:"
-    - $CI_CUS_LINUX_ARM_PYTHON_PATH -m pip install cibuildwheel==2.15.0
-    - $CI_CUS_LINUX_ARM_PYTHON_PATH -m cibuildwheel --platform linux --output-dir wheelhouse
+    - $CI_CUS_LINUX_ARM_PYTHON_PATH -m pip install cibuildwheel==2.22.0
+    - CIBW_MANYLINUX_AARCH64_IMAGE="manylinux2014_aarch64:$DOCKER_TAG_V2" $CI_CUS_LINUX_ARM_PYTHON_PATH -m cibuildwheel --platform linux --output-dir wheelhouse
   artifacts:
     name: "$CI_PROJECT_NAME-$CI_JOB_NAME"
     paths:
@@ -45,10 +58,16 @@ build-Linux-arm64-job:
     - when: manual
       allow_failure: false
 
-build-Windows-amd64-job:
-  stage: build
+win:amd64:
+  stage: build-v2
+  needs: []
+  variables:
+    CIBW_BUILD: "*cp38* *cp39* *cp310* *cp311* *cp312* *cp313*"
+    CIBW_ENABLE: cpython-freethreading
   script:
     - echo "VARIABLES:"
+    - echo $CIBW_BUILD
+    - echo $CIBW_ENABLE
     - echo $CI_CUS_WINDOWS_OPENSSL_PATH
     - echo $CI_CUS_WINDOWS_PYTHON_PATH
     - echo $CI_CUS_WINDOWS_VS_PATH
@@ -60,7 +79,7 @@ build-Windows-amd64-job:
     - echo $env:CIBW_ENVIRONMENT_WINDOWS
     - echo $env:path
     - echo "COMPILE:"
-    - python -m pip install cibuildwheel==2.17.0
+    - python -m pip install cibuildwheel==2.22.0
     - python -m cibuildwheel --platform windows --output-dir wheelhouse
   artifacts:
     name: "$CI_PROJECT_NAME-$CI_JOB_NAME"
@@ -74,11 +93,132 @@ build-Windows-amd64-job:
     - when: manual
       allow_failure: false
 
-build-MacOS-universal2-job:       # This job runs in the build stage, which runs first.
-  stage: build
+mac:universal2:       # This job runs in the build stage, which runs first.
+  stage: build-v2
+  needs: []
   variables:
+    CIBW_BUILD: "*cp38* *cp39* *cp310* *cp311* *cp312* *cp313*"
+    CIBW_ENABLE: cpython-freethreading
   script:
     - echo "VARIABLES:"
+    - echo $CIBW_BUILD
+    - echo $CIBW_ENABLE
+    - echo $CI_CUS_MACOS_UNIVERSAL2_PYTHON_PATH
+    - echo $CI_CUS_MACOS_UNIVERSAL2_OPENSSL_PATH
+    - echo $CI_CUS_MACOS_UNIVERSAL2_UUID_PATH
+    - echo $PATH
+    - pwd
+    - echo "COMPILE:"
+    - $CI_CUS_MACOS_UNIVERSAL2_PYTHON_PATH -m pip install cibuildwheel==2.22.0
+    - CIBW_ENVIRONMENT="OPENSSL_ROOT_DIR=$CI_CUS_MACOS_UNIVERSAL2_OPENSSL_PATH UUID_ROOT_DIR=$CI_CUS_MACOS_UNIVERSAL2_UUID_PATH MACOSX_DEPLOYMENT_TARGET=10.13" $CI_CUS_MACOS_UNIVERSAL2_PYTHON_PATH -m cibuildwheel --platform macos --arch x86_64 --output-dir wheelhouse
+    - CIBW_ENVIRONMENT="OPENSSL_ROOT_DIR=$CI_CUS_MACOS_UNIVERSAL2_OPENSSL_PATH UUID_ROOT_DIR=$CI_CUS_MACOS_UNIVERSAL2_UUID_PATH MACOSX_DEPLOYMENT_TARGET=11.0" $CI_CUS_MACOS_UNIVERSAL2_PYTHON_PATH -m cibuildwheel --platform macos --arch arm64 --output-dir wheelhouse
+  artifacts:
+    name: "$CI_PROJECT_NAME-$CI_JOB_NAME"
+    paths:
+      - wheelhouse/
+  tags:
+    - MacOS-universal2
+  rules:
+    - if: $CI_PIPELINE_TRIGGERED == "true"
+      allow_failure: false
+    - when: manual
+      allow_failure: false
+
+linux:x86_64:v1:
+  stage: build-v1
+  variables:
+    CIBW_BUILD: "*cp36* *cp37*"
+    CIBW_PROJECT_REQUIRES_PYTHON: ">=3.6"
+  script:
+    - echo "VARIABLES:"
+    - echo $CIBW_BUILD
+    - echo $CI_CUS_LINUX_X86_PYTHON_PATH
+    - echo $PATH
+    - echo $DOCKER_TAG_V1
+    - pwd
+    - echo "COMPILE:"
+    - $CI_CUS_LINUX_X86_PYTHON_PATH -m pip install cibuildwheel==2.15.0
+    - CIBW_ENVIRONMENT="PYTHON_REQUIRES='>=3.6'" CIBW_MANYLINUX_X86_64_IMAGE="manylinux2014_x86_64:$DOCKER_TAG_V1" $CI_CUS_LINUX_X86_PYTHON_PATH -m cibuildwheel --platform linux --output-dir wheelhouse
+  artifacts:
+    name: "$CI_PROJECT_NAME-$CI_JOB_NAME"
+    paths:
+      - wheelhouse/
+  tags:
+    - Linux-x86_64
+  rules:
+    - if: $CI_PIPELINE_TRIGGERED == "true"
+      allow_failure: false
+    - when: manual
+      allow_failure: false
+
+linux:arm64:v1:
+  stage: build-v1
+  variables:
+    CIBW_BUILD: "*cp37*"
+    CIBW_PROJECT_REQUIRES_PYTHON: ">=3.6"
+  script:
+    - echo "VARIABLES:"
+    - echo $CIBW_BUILD
+    - echo $CI_CUS_LINUX_ARM_PYTHON_PATH
+    - echo $PATH
+    - echo $DOCKER_TAG_V1
+    - pwd
+    - echo "COMPILE:"
+    - $CI_CUS_LINUX_ARM_PYTHON_PATH -m pip install cibuildwheel==2.15.0
+    - CIBW_ENVIRONMENT="PYTHON_REQUIRES='>=3.6'" CIBW_MANYLINUX_AARCH64_IMAGE="manylinux2014_aarch64:$DOCKER_TAG_V1" $CI_CUS_LINUX_ARM_PYTHON_PATH -m cibuildwheel --platform linux --output-dir wheelhouse
+  artifacts:
+    name: "$CI_PROJECT_NAME-$CI_JOB_NAME"
+    paths:
+      - wheelhouse/
+  tags:
+    - Linux-arm64
+  rules:
+    - if: $CI_PIPELINE_TRIGGERED == "true"
+      allow_failure: false
+    - when: manual
+      allow_failure: false
+
+win:amd64:v1:
+  stage: build-v1
+  variables:
+    CIBW_BUILD: "*cp36* *cp37*"
+    CIBW_PROJECT_REQUIRES_PYTHON: ">=3.6"
+  script:
+    - echo "VARIABLES:"
+    - echo $CIBW_BUILD
+    - echo $CI_CUS_WINDOWS_OPENSSL_PATH
+    - echo $CI_CUS_WINDOWS_PYTHON_PATH
+    - echo $CI_CUS_WINDOWS_VS_PATH
+    - echo $CI_CUS_WINDOWS_CMAKE_PATH
+    - pwd
+    - echo "PREPARE:"
+    - $env:path="$CI_CUS_WINDOWS_PYTHON_PATH;$CI_CUS_WINDOWS_PYTHON_PATH/Scripts;$CI_CUS_WINDOWS_CMAKE_PATH;$env:path"
+    - $env:CIBW_ENVIRONMENT_WINDOWS="PYTHON_REQUIRES='>=3.6' OPENSSL_ROOT_DIR=`"$CI_CUS_WINDOWS_OPENSSL_PATH`""
+    - echo $env:CIBW_ENVIRONMENT_WINDOWS
+    - echo $env:path
+    - echo "COMPILE:"
+    - python -m pip install cibuildwheel==2.22.0
+    - python -m cibuildwheel --platform windows --output-dir wheelhouse
+  artifacts:
+    name: "$CI_PROJECT_NAME-$CI_JOB_NAME"
+    paths:
+      - wheelhouse/
+  tags:
+    - Windows-amd64
+  rules:
+    - if: $CI_PIPELINE_TRIGGERED == "true"
+      allow_failure: false
+    - when: manual
+      allow_failure: false
+
+mac:universal2:v1:
+  stage: build-v1
+  variables:
+    CIBW_BUILD: "*cp36* *cp37*"
+    CIBW_PROJECT_REQUIRES_PYTHON: ">=3.6"
+  script:
+    - echo "VARIABLES:"
+    - echo $CIBW_BUILD
     - echo $CI_CUS_MACOS_UNIVERSAL2_PYTHON_PATH
     - echo $CI_CUS_MACOS_UNIVERSAL2_OPENSSL_PATH
     - echo $CI_CUS_MACOS_UNIVERSAL2_UUID_PATH
@@ -86,7 +226,7 @@ build-MacOS-universal2-job:       # This job runs in the build stage, which runs
     - pwd
     - echo "COMPILE:"
     - $CI_CUS_MACOS_UNIVERSAL2_PYTHON_PATH -m pip install cibuildwheel==2.15.0
-    - CIBW_ENVIRONMENT="OPENSSL_ROOT_DIR=$CI_CUS_MACOS_UNIVERSAL2_OPENSSL_PATH UUID_ROOT_DIR=$CI_CUS_MACOS_UNIVERSAL2_UUID_PATH" $CI_CUS_MACOS_UNIVERSAL2_PYTHON_PATH -m cibuildwheel --platform macos --output-dir wheelhouse
+    - CIBW_ENVIRONMENT="PYTHON_REQUIRES='>=3.6' OPENSSL_ROOT_DIR=$CI_CUS_MACOS_UNIVERSAL2_OPENSSL_PATH UUID_ROOT_DIR=$CI_CUS_MACOS_UNIVERSAL2_UUID_PATH MACOSX_DEPLOYMENT_TARGET=10.13" $CI_CUS_MACOS_UNIVERSAL2_PYTHON_PATH -m cibuildwheel --platform macos --arch x86_64 --output-dir wheelhouse
   artifacts:
     name: "$CI_PROJECT_NAME-$CI_JOB_NAME"
     paths:

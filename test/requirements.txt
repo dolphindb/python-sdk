@@ -1,7 +1,7 @@
-dolphindb
 numpy
 pandas
 pyarrow
 pytest
 pytest-xdist
+pytest-html
 statsmodels

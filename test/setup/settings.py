@@ -20,7 +20,7 @@ REMOTE_WORK_DIR = "/opt/downloads/test/"
 DATA_DIR = '/opt/downloads/data/'
 LOCAL_DATA_DIR = "C:/Users/jianbo.shi/Downloads/data/"
 # report
-REPORT = True
+REPORT = False
 HOST_REPORT = "192.168.100.26"
 PORT_REPORT = 35999
 USER_REPORT = "admin"

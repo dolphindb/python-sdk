@@ -52,7 +52,7 @@ public:
                             const string& dbPath, const string& tableName, bool useSSL, bool enableHighAvailability = false, const vector<string> *pHighAvailabilitySites = nullptr,
 							int batchSize = 1, float throttle = 0.01f,int threadCount = 1, const string& partitionCol ="",
 							const vector<COMPRESS_METHOD> *pCompressMethods = nullptr, Mode mode = M_Append,
-                            vector<string> *pModeOption = nullptr, bool reconnect = true);
+                            vector<string> *pModeOption = nullptr, bool reconnect = true, bool enableStreamTableTimstamp = false);
 
     virtual ~MultithreadedTableWriter();
 
@@ -163,6 +163,7 @@ private:
     friend class PytoDdbRowPool;
     PytoDdbRowPool *pytoDdb_;
     Mode mode_;
+    bool enableStreamTableTimestamp_;
 public:
     PytoDdbRowPool * getPytoDdb(){ return pytoDdb_;}
 };

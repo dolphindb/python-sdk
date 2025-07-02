@@ -22,7 +22,7 @@ class Database(object):
     def _getDbName(self):
         return self.__dbName
 
-    def createTable(
+    def createDimensionTable(
         self, table: Table, tableName: str,
         sortColumns: Union[str, List[str]] = None,
         *,
@@ -96,6 +96,8 @@ class Database(object):
 
         self.__session.run(runstr)
         return self.__session.loadTable(ctHandle)
+
+    createTable = createDimensionTable
 
     def createPartitionedTable(
             self, table: Table, tableName: str, partitionColumns: Union[str, List[str]],
