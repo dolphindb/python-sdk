@@ -5,10 +5,10 @@
 
 namespace dolphindb {
 class DBConnection;
-class AsynWorker: public Runnable {
+class EXPORT_DECL AsyncWorker: public Runnable {
 public:
     using Task = DBConnectionPoolImpl::Task;
-    AsynWorker(DBConnectionPoolImpl& pool, CountDownLatchSP latch, const SmartPointer<DBConnection>& conn,
+    AsyncWorker(DBConnectionPoolImpl& pool, CountDownLatchSP latch, const SmartPointer<DBConnection>& conn,
                const SmartPointer<SynchronizedQueue<Task>>& queue, TaskStatusMgmt& status,
                const string& hostName, int port, const string& userId , const string& password)
             : pool_(pool), latch_(latch), conn_(conn), queue_(queue),taskStatus_(status),

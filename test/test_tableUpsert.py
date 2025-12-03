@@ -1456,7 +1456,7 @@ class TestTableUpsert:
         import warnings
         warnings.filterwarnings('error')
         try:
-            pt = ddb.tableUpsert(tableName="t", ddbSession=conn)
+            pt = ddb.tableUpsert(table_name="t", conn=conn)
             pt.upsert(df)
             del pt
         except Warning:
@@ -1554,7 +1554,7 @@ class TestTableUpsert:
             ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
             for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
-            all(res)
+            all(all(res))
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['INT', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
@@ -1639,7 +1639,7 @@ class TestTableUpsert:
             ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
             for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
-            all(res)
+            all(all(res))
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['INT', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
@@ -1662,7 +1662,7 @@ class TestTableUpsert:
             conn.close()
             tu.upsert(df)
         except RuntimeError as e:
-            assert "Session has been closed." in str(e)
+            assert "DBConnection has been closed." in str(e)
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         tu = ddb.TableUpserter(tableName=f"{func_name}_share_t", ddbSession=conn, keyColNames=['a'])
         del conn

@@ -2,6 +2,7 @@
 #include "Concurrent.h"
 #include "ConstantMarshall.h"
 #include "Exceptions.h"
+#include "Types.h"
 #include "Util.h"
 #include "TableImp.h"
 #include "ScalarImp.h"
@@ -39,7 +40,7 @@ int startWSA() {
         WSACleanup();
         return 1;
     } else
-        LOG_ERR("The Winsock 2.2 dll was found okay");
+        LOG_INFO("The Winsock 2.2 dll was found okay");
     return 0;
 }
 }  // namespace
@@ -276,7 +277,11 @@ void StreamDeserializer::create(DBConnection &conn) {
 	DictionarySP schema;
 	for (auto &one : sym2tableName_) {
 		if (one.second.first.empty()) {
-			schema = conn.run("schema(" + one.second.second + ")");
+            if (one.second.second.find(".orca_table.") != std::string::npos) {
+                schema = conn.run("useOrcaStreamTable(\"" + one.second.second + "\", schema)");
+            } else {
+                schema = conn.run("schema(" + one.second.second + ")");
+            }
 		}
 		else {
 			schema = conn.run(std::string("schema(loadTable(\"") + one.second.first + "\",\"" + one.second.second + "\"))");
@@ -433,7 +438,7 @@ class StreamingClientImpl {
 		SocketSP socket;
 		ActivePublisherSP publisher;
 	};
-	
+
     struct KeepAliveAttr {
         int enabled = 1;             // default = 1 enabled
         int idleTime = 30;           // default = 30s idle time will trigger detection
@@ -745,14 +750,14 @@ void StreamingClientImpl::checkServerVersion(std::string host, int port, const s
             index++;
         }
     }
-     
+
     vector<ConstantSP> args;
     auto versionStr = conn.run("version", args)->getString();
     auto _ = Util::split(Util::split(versionStr, ' ')[0], '.');
     auto v0 = std::stoi(_[0]);
     auto v1 = std::stoi(_[1]);
     auto v2 = std::stoi(_[2]);
-    
+
     if (v0 == 3 || (v0 == 2 && v1 == 0 && v2 >= 9) || (v0 == 2 && v1 == 10)) {
         //server only support reverse connection
         if(listeningPort_ != 0){
@@ -971,7 +976,7 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
     string topicMsg;
     vector<string> topics;
 	vector<string> symbols;
-	
+
     while (isExit() == false) {
         if (ret != OK) {  // blocking mode, ret won't be NODATA
 			DLOG("parseMessage exit with error",ret);
@@ -1034,7 +1039,14 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
             previousDataFormFlag = flag;
         }
 
-        unmarshall->start(flag, true, ret);
+        try {
+            unmarshall->start(flag, true, ret);
+        }
+        catch (const std::exception &e) {
+            LOG_ERR("[ERROR] Exception during parseMessage: ", e.what(), ", stopping this parse thread.");
+            ret = OTHERERR;
+            continue;
+        }
         if (ret != OK) continue;
 
         ConstantSP obj = unmarshall->getConstant();
@@ -1141,7 +1153,7 @@ void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP p
 			break;
         }
     }
-	
+
 	parseSocketThread_.removeItem([&](const SocketThread &socketthread) {
 		if (socketthread.socket == in->getSocket()){
 			gcSocketThread_.push(socketthread);
@@ -1412,7 +1424,7 @@ ThreadSP ThreadedClient::subscribe(string host, int port, const MessageBatchHand
     }
     int throttleTime;
     if(batchSize <= 0){
-        throttleTime = 0; 
+        throttleTime = 0;
     }else{
         throttleTime = std::max(1, (int)(throttle * 1000));
     }
@@ -1444,7 +1456,7 @@ ThreadSP ThreadedClient::subscribe(string host, int port, const MessageBatchHand
 						}
 					}
 				}
-				
+
 			}
 		}
 		catch(exception &e) {
@@ -1456,7 +1468,7 @@ ThreadSP ThreadedClient::subscribe(string host, int port, const MessageBatchHand
 	} else {
 		impl_->addHandleThread(info.queue, thread);
 	}
-	
+
 	thread->start();
     return thread;
 }
@@ -1670,7 +1682,7 @@ void MessageTableQueue::push(const std::vector<string>& colLabels, const Constan
 		// empty_.notifyAll();
 	}else{
 		// bool empty = false;
-		// if(size_ == 0) empty=true; 
+		// if(size_ == 0) empty=true;
 		for (INDEX colIndex = 0; colIndex < colSize_; ++colIndex) {
 			((Vector*)(messageTable_->getColumn(colIndex).get()))->append(cols[colIndex]);
 		}

@@ -55,7 +55,7 @@ namespace dolphindb {
 
 class DBConnectionImpl;
 class BlockReader;
-class Domain; 
+class Domain;
 class DBConnectionPoolImpl;
 class PartitionedTableAppender;
 class DBConnection;
@@ -85,8 +85,11 @@ public:
 	 * will be performed along with connecting. If one would send userId and password in encrypted mode,
 	 * please use the login function for authentication separately.
 	 */
-	bool connect(const string& hostName, int port, const string& userId = "", const string& password = "", const string& initialScript = "",
-		bool highAvailability = false, const vector<string>& highAvailabilitySites = vector<string>(), int keepAliveTime=7200, bool reconnect = false, int tryReconnectNums = -1, int readTimeout = -1, int writeTimeout = -1);
+    bool connect(const string &hostName, int port, const string &userId = "", const string &password = "",
+                 const string &initialScript = "", bool highAvailability = false,
+                 const vector<string> &highAvailabilitySites = vector<string>(), int keepAliveTime = 7200,
+                 bool reconnect = false, int tryReconnectNums = -1, int readTimeout = -1, int writeTimeout = -1,
+                 bool usePublicName = false);
 
 	/**
 	 * Log onto the DolphinDB server using the given userId and password. If the parameter enableEncryption
@@ -148,6 +151,11 @@ public:
 	void setKeepAliveTime(int keepAliveTime);
 	void setTimeout(int readTimeout, int writeTimeout);
 	const string getSessionId() const;
+	const string getHostName() const;
+    const int getPort() const;
+    const string getUserId() const;
+    const string getPassword() const;
+    bool isClosed() const;
 	void setProtocol(PROTOCOL protocol);
 	void setShowOutput(bool flag);
 	std::shared_ptr<Logger> getMsgLogger();
@@ -227,17 +235,17 @@ class EXPORT_DECL DBConnectionPool{
 public:
     DBConnectionPool(const string& hostName, int port, int threadNum = 10, const string& userId = "", const string& password = "",
 		bool loadBalance = false, bool highAvailability = false, bool compress = false, bool reConnect = false, PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB,
-		PROTOCOL protocol = PROTOCOL_DDB, bool showOutput = true, int sqlStd = 0, int tryReconnectNums = -1);
+		PROTOCOL protocol = PROTOCOL_DDB, bool showOutput = true, int sqlStd = 0, int tryReconnectNums = -1, bool usePublicName = false);
 	virtual ~DBConnectionPool();
-	
+
 	void run(const string& script, int identity, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false);
-	
+
 	void run(const string& functionName, const vector<ConstantSP>& args, int identity, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false);
-    
+
 	bool isFinished(int identity);
 
     ConstantSP getData(int identity);
-	
+
     void shutDown();
 
     bool isShutDown();
@@ -259,7 +267,7 @@ public:
 private:
 	// SmartPointer<DBConnectionPoolImpl> pool_;
 	std::shared_ptr<DBConnectionPoolImpl> pool_;
-	friend class PartitionedTableAppender; 
+	friend class PartitionedTableAppender;
 
 };
 

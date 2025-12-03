@@ -1,385 +1,37 @@
-"""Session
-Package: session package.
-        including classes Session, DBConnectionPool, BatchTableWriter, MultithreadedTableWriter
-"""
-
-
-import asyncio
-import platform
 import re
-import sys
-import warnings
-from concurrent.futures import Future
 from datetime import date, datetime
-from threading import Lock, Thread
 
 import numpy as np
 from ._hints import (
-    Any, Callable, Dict, List, Literal, Optional, Tuple, Union,
+    Callable, List, Literal, Optional, Union, ParserType, SqlStd
 )
 from ._core import DolphinDBRuntime
 from .database import Database
 from .settings import (
-    DDB_EPSILON,
-    PROTOCOL_ARROW,
     PROTOCOL_DDB,
     PROTOCOL_DEFAULT,
     PROTOCOL_PICKLE,
     default_protocol,
-    SqlStd,
-    ParserType,
 )
 from .table import Table
-from .utils import _generate_dbname, _generate_tablename, month
-from pandas import DataFrame
+from .utils import (
+    _generate_dbname, _generate_tablename, month,
+    _helper_check_parser, hash_bucket,
+    convert_datetime64, convert_database,
+    params_deprecated,
+)
+from .connection import DBConnection
+from .streaming import (
+    ThreadedStreamingClientConfig, ThreadedClient,
+    ThreadPooledStreamingClientConfig, ThreadPooledClient,
+    StreamDeserializer, DEFAULT_ACTION_NAME,
+)
+from .global_config import enable_job_cancellation, tcp
 
 ddbcpp = DolphinDBRuntime()._ddbcpp
 
 
-def _helper_check_parser(parser, python: bool = False):
-    if parser == ParserType.Default:
-        parser = ParserType.Python if python else ParserType.DolphinDB
-    elif python:
-        raise RuntimeError("The parameter parser must not be specified when python=true")
-
-    if not isinstance(parser, ParserType):
-        if isinstance(parser, int):
-            parser = ParserType(parser)
-        else:
-            parser = ParserType.parse_from_str(parser)
-
-    if parser == ParserType.Default:
-        parser = ParserType.DolphinDB
-
-    return parser
-
-
-class DBConnectionPool(object):
-    """DBConnectionPool is the connection pool object where multiple threads can be created to execute scripts in parallel and improve task efficiency.
-
-    Note:
-        To improve efficiency, methods such as run of class DBConnectionPool are packaged into coroutine functions in python.
-
-    Args:
-        host : server address. It can be IP address, domain, or LAN hostname, etc.
-        port : port name.
-        threadNum : number of threads. Defaults to 10.
-        userid : username. Defaults to None.
-        password : password. Defaults to None.
-        loadBalance : whether to enable load balancing. True means enabled (the connections will be distributed evenly across the cluster), otherwise False. Defaults to False.
-        highAvailability : whether to enable high availability. True means enabled, otherwise False. Defaults to False.
-        compress : whether to enable compression. True means enabled, otherwise False. Defaults to False.
-        reConnect : whether to enable reconnection. True means enabled, otherwise False. Defaults to False.
-        python : whether to enable the Python parser. True means enabled, otherwise False. Defaults to False.
-        protocol : the data transmission protocol. Defaults to PROTOCOL_DEFAULT, which is equivalant to PROTOCOL_DDB.
-
-    Kwargs:
-        show_output : whether to display the output of print statements in the script after execution. Defaults to True.
-        sqlStd: an enum specifying the syntax to parse input SQL scripts. Three parsing syntaxes are supported: DolphinDB (default), Oracle, and MySQL.
-        tryReconnectNums: the number of reconnection attempts when reconnection is enabled. If high availability mode is on, it will retry tryReconnectNums times for each node. None means unlimited reconnection attempts. Defaults to None.
-        parser: the type of parser used by the server when parsing scripts. Available options: "dolphindb", "python", "kdb". Defaults to ParserType.Default, which is equivalant to "dolphindb".
-
-    Note:
-        If the parameter python is True, the script is parsed in Python rather than DolphinDB language.
-    """
-    def __init__(
-        self,
-        host: str,
-        port: int,
-        threadNum: int = 10,
-        userid: str = None,
-        password: str = None,
-        loadBalance: bool = False,
-        highAvailability: bool = False,
-        compress: bool = False,
-        reConnect: bool = False,
-        python: bool = False,
-        protocol: int = PROTOCOL_DEFAULT,
-        *,
-        show_output: bool = True,
-        sqlStd: SqlStd = SqlStd.DolphinDB,
-        tryReconnectNums: Optional[int] = None,
-        parser: Union[ParserType, Literal["dolphindb", "python", "kdb"]] = ParserType.Default,
-    ):
-        """Constructor of DBConnectionPool, including the number of threads, load balancing, high availability, reconnection, compression and Pickle protocol."""
-        userid = userid if userid is not None else ""
-        password = password if password is not None else ""
-
-        if protocol == PROTOCOL_DEFAULT:
-            protocol = default_protocol
-
-        if protocol not in [PROTOCOL_DEFAULT, PROTOCOL_DDB, PROTOCOL_PICKLE, PROTOCOL_ARROW]:
-            raise RuntimeError(f"Protocol {protocol} is not supported. ")
-
-        if protocol == PROTOCOL_ARROW and compress:
-            raise RuntimeError("The Arrow protocol does not support compression.")
-
-        if protocol == PROTOCOL_ARROW:
-            __import__("pyarrow")
-
-        if protocol == PROTOCOL_PICKLE:
-            warnings.warn(
-                "The use of PROTOCOL_PICKLE has been deprecated and removed in Python 3.13. "
-                "Please migrate to an alternative protocol or serialization method.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if sys.version_info.minor >= 13:
-                protocol = default_protocol
-
-        if tryReconnectNums is None:
-            tryReconnectNums = -1
-
-        parser = _helper_check_parser(parser, python)
-
-        self.mutex = Lock()
-        self.pool = ddbcpp.dbConnectionPoolImpl(
-            host,
-            port,
-            threadNum,
-            userid,
-            password,
-            loadBalance,
-            highAvailability,
-            compress,
-            reConnect,
-            parser.value,
-            protocol,
-            show_output,
-            sqlStd.value,
-            tryReconnectNums,
-        )
-        self.host = host
-        self.port = port
-        self.userid = userid
-        self.password = password
-        self.taskId = 0
-        self.loop = None
-        self.thread = None
-        self.protocol = protocol
-        self.shutdown_flag = False
-
-    def __del__(self):
-        if hasattr(self, "pool") and self.pool is not None:
-            self.shutDown()
-
-    async def run(
-        self,
-        script: str,
-        *args,
-        clearMemory: Optional[bool] = None,
-        pickleTableToList: Optional[bool] = None,
-        priority: Optional[int] = None,
-        parallelism: Optional[int] = None,
-        disableDecimal: Optional[bool] = None,
-    ):
-        """Coroutine function.
-
-        Pass the script to the connection pool to call the thread execution with the run method.
-
-        Args:
-            script : DolphinDB script to be executed.
-            args : arguments to be passed to the function.
-
-        Note:
-            args is only required when script is the function name.
-
-        Kwargs:
-            clearMemory : whether to release variables after queries. True means to release, otherwise False. Defaults to True.
-            pickleTableToList : whether to convert table to list or DataFrame. True: to list, False: to DataFrame. Defaults to False.
-            priority : a job priority system with 10 priority levels (0 to 9), allocating thread resources to high-priority jobs and using round-robin allocation for jobs of the same priority. Defaults to 4.
-            parallelism : parallelism determines the maximum number of threads to execute a job's tasks simultaneously on a data node; the system optimizes resource utilization by allocating all available threads to a job if there's only one job running and multiple local executors are available. Defaults to 64.
-            disableDecimal: whether to convert decimal to double in the result table. True: convert to double, False: return as is. Defaults to False.
-
-        Returns:
-            execution result.
-
-        Note:
-            When setting pickleTableToList=True and enablePickle=True, if the table contains array vectors, it will be converted to a NumPy 2d array.
-            If the length of each row is different, the execution fails.
-        """
-        if clearMemory is None:
-            clearMemory = True
-        if priority is not None:
-            if not isinstance(priority, int) or priority > 9 or priority < 0:
-                raise RuntimeError("priority must be an integer from 0 to 9")
-        if parallelism is not None:
-            if not isinstance(parallelism, int) or parallelism <= 0:
-                raise RuntimeError("parallelism must be an integer greater than 0")
-
-        self.mutex.acquire()
-        self.taskId = self.taskId + 1
-        tid = self.taskId
-        self.mutex.release()
-        self.pool.run(
-            script,
-            tid,
-            *args,
-            clearMemory=clearMemory,
-            pickleTableToList=pickleTableToList,
-            priority=priority,
-            parallelism=parallelism,
-            disableDecimal=disableDecimal,
-        )
-        while True:
-            isFinished = self.pool.isFinished(tid)
-            if isFinished == 0:
-                await asyncio.sleep(0.01)
-            else:
-                return self.pool.getData(tid)
-
-    def addTask(self, script: str, taskId: int, *args, **kwargs):
-        """Add a task and specify the task ID to execute the script.
-
-        Args:
-            script : script to be executed.
-            taskId : the task ID.
-            args : arguments to be passed to the function.
-
-        Note:
-            args is only required when script is the function name.
-
-        Kwargs:
-            clearMemory : whether to release variables after queries. True means to release, otherwise False. Defaults to True.
-
-        Returns:
-            execution result.
-        """
-        return self.pool.run(script, taskId, *args, **kwargs)
-
-    def isFinished(self, taskId: int) -> bool:
-        """Get the completion status of the specified task.
-
-        Args:
-            taskId : the task ID.
-
-        Returns:
-            True if the task is finished, otherwise False.
-        """
-        return self.pool.isFinished(taskId)
-
-    def getData(self, taskId: int):
-        """Get data of the specified task.
-
-        Args:
-            taskId : the task ID.
-
-        Returns:
-            data of the task.
-
-        Note:
-            For each task, the data can only be obtained once and will be cleared immediately after the data is obtained.
-        """
-        return self.pool.getData(taskId)
-
-    def __start_thread_loop(self, loop):
-        asyncio.set_event_loop(loop)
-        loop.run_forever()
-
-    def startLoop(self):
-        """Create and start an event loop.
-
-        Raises:
-            the event loop has been created.
-        """
-        if self.loop is not None:
-            raise RuntimeError("Event loop is already started!")
-        self.loop = asyncio.new_event_loop()
-        self.thread = Thread(target=self.__start_thread_loop, args=(self.loop,))
-        self.thread.setDaemon(True)
-        self.thread.start()
-
-    async def stopLoop(self):
-        """Stop the event loop."""
-        await asyncio.sleep(0.01)
-        self.loop.stop()
-
-    def runTaskAsync(self, script: str, *args, **kwargs) -> Future:
-        """Execute script tasks asynchronously.
-
-        Args:
-            script : script to be executed.
-            args : arguments to be passed to the function.
-
-        Kwargs:
-            clearMemory : whether to release variables after queries. True means to release, otherwise False. Defaults to True.
-
-        Returns:
-            concurrent.futures.Future object for receiving data.
-        """
-        if self.loop is None:
-            self.startLoop()
-        task = asyncio.run_coroutine_threadsafe(self.run(script, *args, **kwargs), self.loop)
-        return task
-
-    def runTaskAsyn(self, script: str, *args, **kwargs) -> Future:
-        """Execute script tasks asynchronously.
-
-        Deprecated:
-            Please use runTaskAsync instead of runTaskAsyn.
-
-        Args:
-            script : script to be executed.
-            args : arguments to be passed to the function.
-
-        Kwargs:
-            clearMemory : whether to release variables after queries. True means to release, otherwise False. Defaults to True.
-
-        Returns:
-            concurrent.futures.Future object for receiving data.
-        """
-        warnings.warn("Please use runTaskAsync instead of runTaskAsyn.", DeprecationWarning, stacklevel=2)
-        return self.runTaskAsync(script, *args, **kwargs)
-
-    def shutDown(self):
-        """Close the DBConnectionPool, stop the event loop and terminate all asynchronous tasks."""
-        with self.mutex:
-            if self.shutdown_flag:
-                return
-            self.shutdown_flag = True
-        self.host = None
-        self.port = None
-        if self.loop is not None:
-            asyncio.run_coroutine_threadsafe(self.stopLoop(), self.loop)
-            self.thread.join()
-            if self.loop.is_running():
-                self.loop.stop()
-            else:
-                self.loop.close()
-        if self.pool is not None:
-            self.pool.shutDown()
-            self.pool = None
-        self.loop = None
-        self.thread = None
-
-    def getSessionId(self) -> List[str]:
-        """Obtain Session ID of all sessions.
-
-        Returns:
-            list of thread ID.
-        """
-        return self.pool.getSessionId()
-
-    def is_shutdown(self) -> bool:
-        with self.mutex:
-            return self.shutdown_flag
-
-
-class streamDeserializer(object):
-    """Deserializer stream blob in multistreamingtable reply.
-
-    Args:
-        sym2table : a dict object indicating the corresponding relationship between the unique identifiers of the tables and the table objects.
-        session : a Session object. Defaults to None.
-    """
-    def __init__(self, sym2table: Dict[str, Union[List[str], str]], session=None):
-        """Constructor of streamDeserializer."""
-        self.cpp = ddbcpp.streamDeserializer(sym2table)
-        if session is not None:
-            self.cpp.setSession(session.cpp)
-
-
-class Session(object):
+class Session(DBConnection):
     """Session is the connection object to execute scripts.
 
     Args:
@@ -417,6 +69,7 @@ class Session(object):
     Note:
         set enableASYNC =True to enable asynchronous mode and the communication with the server can only be done through the session.run method. As there is no return value, it is suitable for asynchronous writes.
     """
+    @params_deprecated(params={"enableASYN": "enableASYNC"})
     def __init__(
         self, host: Optional[str] = None, port: Optional[int] = None,
         userid: Optional[str] = "", password: Optional[str] = "", enableSSL: bool = False,
@@ -432,7 +85,6 @@ class Session(object):
         """Constructor of Session, inluding OpenSSL encryption, asynchronous mode, TCP detection, block granularity matching, compression, Pickle protocol."""
         if enableASYN is not None:
             enableASYNC = enableASYN
-            warnings.warn("Please use enableASYNC instead of enableASYN.", DeprecationWarning, stacklevel=2)
 
         if protocol == PROTOCOL_DEFAULT:
             protocol = PROTOCOL_PICKLE if enablePickle else PROTOCOL_DDB
@@ -441,44 +93,19 @@ class Session(object):
         elif enablePickle:
             raise RuntimeError("When enablePickle=true, the parameter protocol must not be specified. ")
 
-        if protocol not in [PROTOCOL_DEFAULT, PROTOCOL_DDB, PROTOCOL_PICKLE, PROTOCOL_ARROW]:
-            raise RuntimeError(f"Protocol {protocol} is not supported. ")
-
-        if protocol == PROTOCOL_ARROW and compress:
-            raise RuntimeError("The Arrow protocol does not support compression.")
-
-        if protocol == PROTOCOL_ARROW:
-            __import__("pyarrow")
-
-        if protocol == PROTOCOL_PICKLE:
-            warnings.warn(
-                "The use of PROTOCOL_PICKLE has been deprecated and removed in Python 3.13. "
-                "Please migrate to an alternative protocol or serialization method.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if sys.version_info.minor >= 13:
-                protocol = default_protocol
-
-        parser = _helper_check_parser(parser, python)
-
-        self.cpp = ddbcpp.sessionimpl(enableSSL, enableASYNC, keepAliveTime, compress, parser.value, protocol, show_output, sqlStd.value)
-        self.host = host
-        self.port = port
-        self.userid = userid
-        self.password = password
-        self.mutex = Lock()
-        self.enableEncryption = True
+        super().__init__(config={
+            'enable_ssl': enableSSL,
+            'enable_async': enableASYNC,
+            'compress': compress,
+            'parser': _helper_check_parser(parser, python),
+            'protocol': protocol,
+            'show_output': show_output,
+            'sql_std': sqlStd,
+        })
+        self.keep_alive_time = keepAliveTime
         self.enableChunkGranularityConfig = enableChunkGranularityConfig
-        self.enablePickle = enablePickle
-        self.protocol = protocol
-        if self.host is not None and self.port is not None:
+        if host is not None and port is not None:
             self.connect(host, port, userid, password, keepAliveTime=keepAliveTime)
-        self.msg_logger = self.cpp.msg_logger
-
-    def __del__(self):
-        if hasattr(self, "cpp"):
-            self.cpp.close()
 
     def connect(
         self, host: str, port: int, userid: str = None, password: str = None, startup: str = None,
@@ -510,10 +137,8 @@ class Session(object):
         Returns:
             whether the connection is established. True if established, otherwise False.
         """
-        if highAvailabilitySites is None:
-            highAvailabilitySites = []
         if keepAliveTime is None:
-            keepAliveTime = -1
+            keepAliveTime = self.keep_alive_time
         if userid is None:
             userid = ""
         if password is None:
@@ -521,27 +146,20 @@ class Session(object):
         if startup is None:
             startup = ""
 
-        if tryReconnectNums is None:
-            tryReconnectNums = -1
-
-        if readTimeout is None:
-            readTimeout = -1
-        else:
-            readTimeout = int(readTimeout * 1000)
-
-        if writeTimeout is None:
-            writeTimeout = -1
-        else:
-            writeTimeout = int(writeTimeout * 1000)
-
-        if self.cpp.connect(host, port, userid, password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect, tryReconnectNums, readTimeout, writeTimeout):
-            self.host = host
-            self.port = port
-            self.userid = userid
-            self.password = password
-            return True
-        else:
-            return False
+        return super().connect(config={
+            'host': host,
+            'port': port,
+            'userid': userid,
+            'password': password,
+            'startup': startup,
+            'enable_high_availability': highAvailability,
+            'high_availability_sites': highAvailabilitySites,
+            'keep_alive_time': keepAliveTime,
+            'reconnect': reconnect,
+            'try_reconnect_nums': tryReconnectNums,
+            'read_timeout': readTimeout,
+            'write_timeout': writeTimeout,
+        })
 
     def login(self, userid: str, password: str, enableEncryption: bool = True):
         """Manually log in to the server.
@@ -554,20 +172,7 @@ class Session(object):
         Note:
             Specify the userid and password in the connect() method to log in automatically.
         """
-        self.mutex.acquire()
-        try:
-            self.userid = userid
-            self.password = password
-            self.enableEncryption = enableEncryption
-            self.cpp.login(userid, password, enableEncryption)
-        finally:
-            self.mutex.release()
-
-    def close(self):
-        """Close Session connection."""
-        self.host = None
-        self.port = None
-        self.cpp.close()
+        super().login(userid, password, enableEncryption)
 
     def isClosed(self) -> bool:
         """Check if the current Session has been closed.
@@ -575,7 +180,7 @@ class Session(object):
         Returns:
             bool: True if closed, otherwise False.
         """
-        return self.host is None
+        return self.is_closed
 
     def upload(self, nameObjectDict):
         """Upload Python objects to DolphinDB server.
@@ -589,7 +194,7 @@ class Session(object):
         Note:
             A pandas DataFrame corresponds to DolphinDB table.
         """
-        return self.cpp.upload(nameObjectDict)
+        return super().upload(nameObjectDict)
 
     def run(
         self,
@@ -628,32 +233,26 @@ class Session(object):
         Note:
             When setting pickleTableToList=True and enablePickle=True, if the table contains array vectors, it will be converted to a NumPy 2d array. If the length of each row is different, the execution fails.
         """
-        if priority is not None:
-            if not isinstance(priority, int) or priority > 9 or priority < 0:
-                raise RuntimeError("priority must be an integer from 0 to 9")
-        if parallelism is not None:
-            if not isinstance(parallelism, int) or parallelism <= 0:
-                raise RuntimeError("parallelism must be an integer greater than 0")
-
-        if fetchSize is not None:
-            return BlockReader(
-                self.cpp.runBlock(
-                    script,
-                    clearMemory=clearMemory,
-                    fetchSize=fetchSize,
-                    priority=priority,
-                    parallelism=parallelism,
-                )
+        if args:
+            return self.call(
+                script,
+                *args,
+                clear_memory=clearMemory,
+                table_to_list=pickleTableToList,
+                priority=priority,
+                parallelism=parallelism,
+                disable_decimal=disableDecimal,
             )
-        return self.cpp.run(
-            script,
-            *args,
-            clearMemory=clearMemory,
-            pickleTableToList=pickleTableToList,
-            priority=priority,
-            parallelism=parallelism,
-            disableDecimal=disableDecimal,
-        )
+        else:
+            return self.exec(
+                script,
+                clear_memory=clearMemory,
+                table_to_list=pickleTableToList,
+                priority=priority,
+                parallelism=parallelism,
+                fetch_size=fetchSize,
+                disable_decimal=disableDecimal,
+            )
 
     def _run_with_table_schema(
         self,
@@ -665,23 +264,26 @@ class Session(object):
         parallelism: Optional[int] = None,
         disableDecimal: Optional[bool] = None,
     ):
-        if priority is not None:
-            if not isinstance(priority, int) or priority > 9 or priority < 0:
-                raise RuntimeError("priority must be an integer from 0 to 9")
-        if parallelism is not None:
-            if not isinstance(parallelism, int) or parallelism <= 0:
-                raise RuntimeError("parallelism must be an integer greater than 0")
-
-        return self.cpp.run(
-            script,
-            *args,
-            clearMemory=clearMemory,
-            pickleTableToList=pickleTableToList,
-            priority=priority,
-            parallelism=parallelism,
-            disableDecimal=disableDecimal,
-            withTableSchema=True
-        )
+        if args:
+            return self._call_with_table_schema(
+                script,
+                *args,
+                clearMemory=clearMemory,
+                table_to_list=pickleTableToList,
+                priority=priority,
+                parallelism=parallelism,
+                disable_decimal=disableDecimal,
+            )
+        else:
+            return self._exec_with_table_schema(
+                script,
+                *args,
+                clear_memory=clearMemory,
+                table_to_list=pickleTableToList,
+                priority=priority,
+                parallelism=parallelism,
+                disable_decimal=disableDecimal,
+            )
 
     def runFile(self, filepath: str, *args, **kwargs):
         """Execute script.
@@ -713,7 +315,7 @@ class Session(object):
         Returns:
             Session ID.
         """
-        return self.cpp.getSessionId()
+        return self.session_id
 
     def enableStreaming(self, port: int = 0, threadCount: int = 1) -> None:
         """Enable streaming.
@@ -723,17 +325,30 @@ class Session(object):
             threadCount : the number of threads. Defaults to 1.
 
         Note:
-            If the server you're connecting to supports transferring subscribed data using the connection initiated by the subsriber, 
+            If the server you're connecting to supports transferring subscribed data using the connection initiated by the subsriber,
             do not specify this port. Otherwise, the port must be specified.
 
         """
-        self.cpp.enableStreaming(port, threadCount)
+        if hasattr(self, 'client') and self.client is not None:
+            raise RuntimeError("streaming is already enabled")
+        if threadCount <= 1:
+            self.client = ThreadedClient(
+                config=ThreadedStreamingClientConfig(port=port),
+            )
+        else:
+            self.client = ThreadPooledClient(
+                config=ThreadPooledStreamingClientConfig(port=port, thread_count=threadCount),
+            )
+
+    def _check_streaming_enabled(self):
+        if not hasattr(self, 'client'):
+            raise RuntimeError("streaming is not enabled.")
 
     def subscribe(
         self, host: str, port: int, handler: Callable, tableName: str, actionName: str = None,
         offset: int = -1, resub: bool = False, filter=None,
         msgAsTable: bool = False, batchSize: int = 0, throttle: float = 1.0,
-        userName: str = None, password: str = None, streamDeserializer: Optional["streamDeserializer"] = None,
+        userName: str = None, password: str = None, streamDeserializer: Optional["StreamDeserializer"] = None,
         backupSites: List[str] = None, resubscribeInterval: int = 100, subOnce: bool = False,
         *, resubTimeout: Optional[int] = None,
     ) -> None:
@@ -766,53 +381,30 @@ class Session(object):
         Note:
             `resubTimeout` has been renamed to `resubscribeInterval`. Please update your code to use `resubscribeInterval` instead.
         """
-        if not isinstance(msgAsTable, bool):
-            raise TypeError("msgAsTable must be a bool.")
-        if not isinstance(batchSize, int):
-            raise TypeError("batchSize must be a int.")
-        if not isinstance(throttle, float) and not isinstance(throttle, int):
-            raise TypeError("throttle must be a float or a int.")
-        if throttle <= DDB_EPSILON:
-            raise ValueError("throttle must be greater than 0.")
-        if filter is None:
-            filter = np.array([], dtype='int64')
-        if actionName is None:
-            actionName = ""
-        if userName is None:
-            userName = ""
-        if password is None:
-            password = ""
-        sd = None
-        if streamDeserializer is None:
-            sd = ddbcpp.streamDeserializer({})
-        else:
-            sd = streamDeserializer.cpp
-        if backupSites is None:
-            backupSites = []
-        if not isinstance(backupSites, list):
-            raise TypeError("backupSites must be a list of str.")
-        for site in backupSites:
-            if not isinstance(site, str):
-                raise TypeError("backupSites must be a list of str.")
         if resubTimeout is not None:
             raise ValueError("Please use resubscibeInterval instead of resubTimeout.")
-        if not isinstance(resubscribeInterval, int):
-            raise TypeError("resubscribeInterval must be an int.")
-        if not isinstance(subOnce, bool):
-            raise TypeError("subOnce must be a bool.")
-        if batchSize > 0:
-            self.cpp.subscribeBatch(
-                host, port, handler, tableName, actionName,
-                offset, resub, filter, msgAsTable, batchSize, throttle,
-                userName, password, sd, backupSites, resubscribeInterval, subOnce
-            )
-        else:
-            if msgAsTable:
-                raise ValueError("msgAsTable must be False when batchSize is 0")
-            self.cpp.subscribe(
-                host, port, handler, tableName, actionName,
-                offset, resub, filter, userName, password, sd, backupSites, resubscribeInterval, subOnce
-            )
+        self._check_streaming_enabled()
+        if actionName is None:
+            actionName = DEFAULT_ACTION_NAME
+        self.client.subscribe(config={
+            'host': host,
+            'port': port,
+            'handler': handler,
+            'table_name': tableName,
+            'action_name': actionName,
+            'offset': offset,
+            'resub': resub,
+            'filter': filter,
+            'msg_as_table': msgAsTable,
+            'batch_size': batchSize,
+            'throttle': throttle,
+            'userid': userName,
+            'password': password,
+            'stream_deserializer': streamDeserializer,
+            'backup_sites': backupSites,
+            'resubscribe_interval': resubscribeInterval,
+            'sub_once': subOnce,
+        })
 
     def unsubscribe(self, host: str, port: int, tableName: str, actionName: str = None) -> None:
         """Unsubscribe.
@@ -823,9 +415,8 @@ class Session(object):
             tableName : name of the published table.
             actionName : name of the subscription task. Defaults to None.
         """
-        if actionName is None:
-            actionName = ""
-        self.cpp.unsubscribe(host, port, tableName, actionName)
+        self._check_streaming_enabled()
+        self.client.unsubscribe(host, port, tableName, actionName)
 
     def getSubscriptionTopics(self) -> List[str]:
         """Get all subscription topics.
@@ -833,7 +424,8 @@ class Session(object):
         Returns:
             a list of all subscription topics in the format of "host/port/tableName/actionName".
         """
-        return self.cpp.getSubscriptionTopics()
+        self._check_streaming_enabled()
+        return self.client.topic_strs
 
     def getInitScript(self) -> str:
         """Get the init script of the Session.
@@ -841,7 +433,7 @@ class Session(object):
         Returns:
             string of the init script.
         """
-        return self.cpp.getInitScript()
+        return self.startup
 
     def setInitScript(self, script: str) -> None:
         """Set up init script of the Session.
@@ -849,7 +441,7 @@ class Session(object):
         Args:
             string of the init script.
         """
-        self.cpp.setInitScript(script)
+        self.startup = script
 
     def saveTable(self, tbl: Table, dbPath: str) -> bool:
         """Save the table.
@@ -1090,7 +682,7 @@ class Session(object):
         elif partition_type == Database:
             partition_str = self.convertDatabase(partitions)
 
-        elif type(partitions) == np.ndarray and (partition_type == np.ndarray or partition_type == list):
+        elif isinstance(partitions, np.ndarray) and (partition_type == np.ndarray or partition_type == list):
             dataType = type(partitions[0][0])
             partition_str = '['
             for partition in partitions:
@@ -1245,10 +837,7 @@ class Session(object):
         This method is not recommended in multithreaded mode. In multithreaded mode, make sure the main process of signal is imported before you call this method.
 
         """
-        if platform.system() == "Linux":
-            ddbcpp.sessionimpl.enableJobCancellation()
-        else:
-            raise RuntimeError("This method is only supported on Linux.")
+        enable_job_cancellation()
 
     @classmethod
     def setTimeout(cls, timeout: float) -> None:
@@ -1257,23 +846,7 @@ class Session(object):
         Args:
             timeout : corresponds to the TCP_USER_TIMEOUT option. Specify the value in units of seconds.
         """
-        ddbcpp.sessionimpl.setTimeout(timeout)
-
-    def nullValueToZero(self) -> None:
-        """Convert all NULL values to 0.
-
-        Deprecated:
-            this method will be deleted in a future version.
-        """
-        self.cpp.nullValueToZero()
-
-    def nullValueToNan(self) -> None:
-        """Convert all NULL values to NumPy NaN.
-
-        Deprecated:
-            this method will be delete in a future version.
-        """
-        self.cpp.nullValueToNan()
+        tcp.set_timeout(timeout)
 
     def hashBucket(self, obj, nBucket: int):
         """Hash map, which maps DolphinDB objects into hash buckets of size nBucket.
@@ -1285,552 +858,10 @@ class Session(object):
         Returns:
             hash of the DolphinDB object.
         """
-        if not isinstance(nBucket, int) or nBucket <= 0:
-            raise ValueError("nBucket must be a positive integer")
-        return self.cpp.hashBucket(obj, nBucket)
+        return hash_bucket(obj, nBucket)
 
     def convertDatetime64(self, datetime64List):
-        length = len(str(datetime64List[0]))
-        # date and month
-        if length == 10 or length == 7:
-            listStr = '['
-            for dt64 in datetime64List:
-                s = str(dt64).replace('-', '.')
-                if len(str(dt64)) == 7:
-                    s += 'M'
-                listStr += s + ','
-            listStr = listStr.rstrip(',')
-            listStr += ']'
-        else:
-            listStr = 'datehour(['
-            for dt64 in datetime64List:
-                s = str(dt64).replace('-', '.').replace('T', ' ')
-                ldt = len(str(dt64))
-                if ldt == 13:
-                    s += ':00:00'
-                elif ldt == 16:
-                    s += ':00'
-                listStr += s + ','
-            listStr = listStr.rstrip(',')
-            listStr += '])'
-        return listStr
+        return convert_datetime64(datetime64List)
 
     def convertDatabase(self, databaseList):
-        listStr = '['
-        for db in databaseList:
-            listStr += db._getDbName()
-            listStr += ','
-        listStr = listStr.rstrip(',')
-        listStr += ']'
-        return listStr
-
-    def _loadPickleFile(self, filePath):
-        return self.cpp.loadPickleFile(filePath)
-
-    def _printPerformance(self):
-        self.cpp.printPerformance()
-
-
-class BlockReader(object):
-    """Read in blocks.
-
-    Specify the paramter fetchSize for method Session.run and it returns a BlockReader object to read in blocks.
-
-    Args:
-        blockReader : dolphindbcpp object.
-    """
-    def __init__(self, blockReader):
-        """Constructor of BlockReader."""
-        self.block = blockReader
-
-    def read(self):
-        """Read a piece of data.
-
-        Returns:
-            execution result of a script.
-        """
-        return self.block.read()
-
-    def hasNext(self) -> bool:
-        """Check if there is data to be read.
-
-        Returns:
-            True if there is still data not read, otherwise False.
-        """
-        return self.block.hasNext()
-
-    def skipAll(self):
-        """Skip subsequent data.
-
-        Note:
-            When reading data in blocks, if not all blocks are read, please call the skipAll method to abort the reading before executing the subsequent code.
-            Otherwise, data will be stuck in the socket buffer and the deserialization of the subsequent data will fail.
-        """
-        self.block.skipAll()
-
-
-class PartitionedTableAppender(object):
-    """Class for writes to DolphinDB DFS tables.
-
-    Args:
-        dbPath : DFS database path. Defaults to None.
-        tableName : name of a DFS table. Defaults to None.
-        partitionColName : partitioning column. Defaults to None.
-        dbConnectionPool : connection pool. Defaults to None.
-
-    Note:
-        DolphinDB does not allow multiple writers to write data to the same partition at the same time, so when the client writes data in parallel with multiple threads, please ensure that each thread writes to a different partition.
-        The python API provides PartitionedTableAppender, an easy way to automatically split data writes by partition.
-    """
-    def __init__(
-        self, dbPath: str = None, tableName: str = None,
-        partitionColName: str = None, dbConnectionPool: DBConnectionPool = None
-    ):
-        """Constructor of PartitionedTableAppender."""
-        if dbPath is None:
-            dbPath = ""
-        if tableName is None:
-            tableName = ""
-        if partitionColName is None:
-            partitionColName = ""
-        if not isinstance(dbConnectionPool, DBConnectionPool):
-            raise Exception("dbConnectionPool must be a dolphindb DBConnectionPool!")
-        self.appender = ddbcpp.partitionedTableAppender(dbPath, tableName, partitionColName, dbConnectionPool.pool)
-        self.pool = dbConnectionPool
-
-    def append(self, table: DataFrame) -> int:
-        """Append data.
-
-        Args:
-            table : data to be written.
-
-        Returns:
-            number of rows written.
-        """
-        if self.pool.is_shutdown():
-            raise RuntimeError("DBConnectionPool has been shut down.")
-        return self.appender.append(table)
-
-
-class TableAppender(object):
-    """Class of table appender.
-
-    As the only temporal data type in Python pandas is datetime64, all temporal columns of a DataFrame are converted into nanotimestamp type after uploaded to DolphinDB.
-    Each time we use tableInsert or insert into to append a DataFrame with a temporal column to an in-memory table or DFS table, we need to conduct a data type conversion for the time column.
-    For automatic data type conversion, Python API offers tableAppender object.
-
-    Args:
-        dbPath : the path of a DFS database. Leave it unspecified for in-memory tables. Defaults to None.
-        tableName : table name. Defaults to None.
-        ddbSession : a Session connected to DolphinDB server. Defaults to None.
-        action : the action when appending. Now only supports "fitColumnType", indicating to convert the data type of temporal column. Defaults to "fitColumnType".
-    """
-    def __init__(self, dbPath: str = None, tableName: str = None, ddbSession: Session = None, action: str = "fitColumnType"):
-        """Constructor of tableAppender"""
-        if dbPath is None:
-            dbPath = ""
-        if tableName is None:
-            tableName = ""
-        if not isinstance(ddbSession, Session):
-            raise Exception("ddbSession must be a dolphindb Session!")
-        if action == "fitColumnType":
-            self.tableappender = ddbcpp.autoFitTableAppender(dbPath, tableName, ddbSession.cpp)
-            self.sess = ddbSession
-        else:
-            raise Exception("other action not supported yet!")
-
-    def append(self, table: DataFrame) -> int:
-        """Append data.
-
-        Args:
-            table : data to be written.
-
-        Returns:
-            number of rows written.
-        """
-        if self.sess.isClosed():
-            raise RuntimeError("Session has been closed.")
-        return self.tableappender.append(table)
-
-
-class TableUpserter(object):
-    """Class of table upserter.
-
-    Args:
-        dbPath : the path of a DFS database. Leave it unspecified for in-memory tables. Defaults to None.
-        tableName : table name. Defaults to None.
-        ddbSession : a Session connected to DolphinDB server. Defaults to None.
-        ignoreNull : if set to true, for the NULL values in the new data, the correponding elements in the table are not updated. Defaults to False.
-        keyColNames : key column names. For a DFS table, the columns specified by this parameter are considrd as key columns. Defaults to [].
-        sortColumns : sort column names. All data in the updated partition will be sorted according to the specified column. Defaults to [].
-    """
-    def __init__(
-        self, dbPath: str = None, tableName: str = None,
-        ddbSession: Session = None, ignoreNull: bool = False,
-        keyColNames: List[str] = [], sortColumns: List[str] = []
-    ):
-        """Constructor of tableUpsert."""
-        if dbPath is None:
-            dbPath = ""
-        if tableName is None:
-            tableName = ""
-        if not isinstance(ddbSession, Session):
-            raise Exception("ddbSession must be a dolphindb Session!")
-        self.tableupserter = ddbcpp.autoFitTableUpsert(dbPath, tableName, ddbSession.cpp, ignoreNull, keyColNames, sortColumns)
-        self.sess = ddbSession
-
-    def __del__(self):
-        self.tableupserter = None
-
-    def upsert(self, table: DataFrame):
-        """upsert data.
-
-        Args:
-            table : data to be written.
-        """
-        if self.sess.isClosed():
-            raise RuntimeError("Session has been closed.")
-        self.tableupserter.upsert(table)
-
-
-class BatchTableWriter(object):
-    """Class of batch writer for asynchronous batched writes.
-
-    Support batched writes to in-memory table and distributed table.
-
-    Args:
-        host : server address.
-        port : port name.
-        userid : username. Defaults to None.
-        password : password. Defaults to None.
-        acquireLock : whether to acquire a lock in the Python API, True (default) means to acquire a lock. Defaults to True.
-
-    Note:
-        It's required to acquire the lock for concurrent API calls
-    """
-    def __init__(
-        self, host: str, port: int,
-        userid: str = None, password: str = None,
-        acquireLock: bool = True
-    ):
-        """Constructor of BatchTableWriter"""
-        if userid is None:
-            userid = ""
-        if password is None:
-            password = ""
-        self.writer = ddbcpp.batchTableWriter(host, port, userid, password, acquireLock)
-
-    def addTable(
-        self, dbPath: str = None, tableName: str = None,
-        partitioned: bool = True
-    ) -> None:
-        """Add a table to be written to.
-
-        Args:
-            dbPath : the database path for a disk table; leave it empty for an in-memory table. Defaults to None.
-            tableName : table name. Defaults to None.
-            partitioned : whether is a partitioned table. True indicates a partitioned table. Defaults to True.
-
-        Note:
-            If the table is a non-partitioned table on disk, it's required to set partitioned=False.
-        """
-        if dbPath is None:
-            dbPath = ""
-        if tableName is None:
-            tableName = ""
-        self.writer.addTable(dbPath, tableName, partitioned)
-
-    def getStatus(self, dbPath: str = None, tableName: str = None) -> Tuple[int, bool, bool]:
-        """Get the current write status.
-
-        Args:
-            dbPath : database name. Defaults to None.
-            tableName : table name. Defaults to None.
-
-        Returns:
-            Tuple[int, bool, bool]: indicating the depth of the current writing queue, whether the current table is being removed (True if being removed), and whether the background thread exits due to an error (True if exits due to an error).
-        """
-        if dbPath is None:
-            dbPath = ""
-        if tableName is None:
-            tableName = ""
-        return self.writer.getStatus(dbPath, tableName)
-
-    def getAllStatus(self) -> DataFrame:
-        """Get the status of all tables except for the removed ones.
-
-        Returns:
-        | DatabaseName | TableName | WriteQueueDepth | sentRows | Removing | Finished |
-        | :----------- | :-------- | :-------------- | :------- | :------- | :------- |
-        | 0            | tglobal   | 0               | 5        | False    | False    |
-        """
-        return self.writer.getAllStatus()
-
-    def getUnwrittenData(self, dbPath: str = None, tableName: str = None) -> DataFrame:
-        """Obtain unwritten data. The method is mainly used to obtain the remaining unwritten data if an error occurs when writing.
-
-        Args:
-            dbPath : database name. Defaults to None.
-            tableName : table name. Defaults to None.
-
-        Returns:
-            DataFrame of unwritten data.
-        """
-        if dbPath is None:
-            dbPath = ""
-        if tableName is None:
-            tableName = ""
-        return self.writer.getUnwrittenData(dbPath, tableName)
-
-    def removeTable(self, dbPath: str = None, tableName: str = None) -> None:
-        """Release the resources occupied by the table added by the addTable method. The first time the method is called, it returns if the thread has exited.
-
-        Args:
-            dbPath : database name. Defaults to None.
-            tableName : table name. Defaults to None.
-        """
-        if dbPath is None:
-            dbPath = ""
-        if tableName is None:
-            tableName = ""
-        self.writer.removeTable(dbPath, tableName)
-
-    def insert(self, dbPath: str = None, tableName: str = None, *args):
-        """Insert a single row of data
-
-        Args:
-            dbPath : database name. Defaults to None.
-            tableName : table name. Defaults to None.
-            args : variable-length argument, indicating a row of data to be inserted.
-        """
-        if dbPath is None:
-            dbPath = ""
-        if tableName is None:
-            tableName = ""
-        self.writer.insert(dbPath, tableName, *args)
-
-
-class ErrorCodeInfo(object):
-    """MTW error codes and messages.
-
-    Args:
-        errorCode : error code. Defaults to None.
-        errorInfo : error information. Defaults to None.
-    """
-    def __init__(self, errorCode=None, errorInfo=None):
-        """Constructor of ErrorCodeInfo."""
-        self.errorCode = errorCode
-        self.errorInfo = errorInfo
-
-    def __repr__(self):
-        errorCodeText = ""
-        if self.hasError():
-            errorCodeText = self.errorCode
-        else:
-            errorCodeText = None
-        outStr = "errorCode: %s\n" % errorCodeText
-        outStr += " errorInfo: %s\n" % self.errorInfo
-        outStr += object.__repr__(self)
-        return outStr
-
-    def hasError(self) -> bool:
-        """Check if an error has occurred.
-
-        Returns:
-            True if an error occurred, otherwise False.
-        """
-        return self.errorCode is not None and len(self.errorCode) > 0
-
-    def succeed(self) -> bool:
-        """Check if data has been written successfully.
-
-        Returns:
-            True if the write is successful, otherwise False.
-        """
-        return self.errorCode is None or len(self.errorCode) < 1
-
-
-class MultithreadedTableWriterThreadStatus(object):
-    """Get the status of MTW.
-
-    Args:
-        threadId: thread ID.
-
-    Attribute:
-        threadId : thread ID.
-        sentRows : number of sent rows.
-        unsentRows : number of rows to be sent.
-        sendFailedRows : number of rows failed to be sent.
-
-    """
-    def __init__(self, threadId: int = None):
-        """Constructor of MultithreadedTableWriterThreadStatus."""
-        self.threadId = threadId
-        self.sentRows = None
-        self.unsentRows = None
-        self.sendFailedRows = None
-
-
-class MultithreadedTableWriterStatus(ErrorCodeInfo):
-    """The status information of MTW.
-
-    Attribute:
-        isExiting : whether the threads are exiting.
-        sentRows : number of sent rows.
-        unsentRows : number of rows to be sent.
-        sendFailedRows : number of rows failed to be sent.
-        threadStatus : a list of the thread status.
-    """
-    def __init__(self):
-        """Constructor of MultithreadedTableWriterStatus."""
-        self.isExiting = None
-        self.sentRows = None
-        self.unsentRows = None
-        self.sendFailedRows = None
-        self.threadStatus = []
-
-    def update(self, statusDict):
-        threadStatusDict = statusDict["threadStatus"]
-        del statusDict["threadStatus"]
-        self.__dict__.update(statusDict)
-        for oneThreadStatusDict in threadStatusDict:
-            oneThreadStatus = MultithreadedTableWriterThreadStatus()
-            oneThreadStatus.__dict__.update(oneThreadStatusDict)
-            self.threadStatus.append(oneThreadStatus)
-
-    def __repr__(self):
-        errorCodeText = ""
-        if self.hasError():
-            errorCodeText = self.errorCode
-        else:
-            errorCodeText = None
-        outStr = "%-14s: %s\n" % ("errorCode", errorCodeText)
-        if self.errorInfo is not None:
-            outStr += " %-14s: %s\n" % ("errorInfo", self.errorInfo)
-        if self.isExiting is not None:
-            outStr += " %-14s: %s\n" % ("isExiting", self.isExiting)
-        if self.sentRows is not None:
-            outStr += " %-14s: %s\n" % ("sentRows", self.sentRows)
-        if self.unsentRows is not None:
-            outStr += " %-14s: %s\n" % ("unsentRows", self.unsentRows)
-        if self.sendFailedRows is not None:
-            outStr += " %-14s: %s\n" % ("sendFailedRows", self.sendFailedRows)
-        if self.threadStatus is not None:
-            outStr += " %-14s: \n" % "threadStatus"
-            outStr += " \tthreadId\tsentRows\tunsentRows\tsendFailedRows\n"
-            for thread in self.threadStatus:
-                outStr += "\t"
-                if thread.threadId is not None:
-                    outStr += "%8d" % thread.threadId
-                outStr += "\t"
-                if thread.sentRows is not None:
-                    outStr += "%8d" % thread.sentRows
-                outStr += "\t"
-                if thread.unsentRows is not None:
-                    outStr += "%10d" % thread.unsentRows
-                outStr += "\t"
-                if thread.sendFailedRows is not None:
-                    outStr += "%14d" % thread.sendFailedRows
-                outStr += "\n"
-        outStr += object.__repr__(self)
-        return outStr
-
-
-class MultithreadedTableWriter(object):
-    """A multi-threaded writer is an ungrade of BatchTableWriter with support for multi-threaded concurrent writes.
-
-    Args:
-        host : host name.
-        port : port number.
-        userId : username.
-        password : password.
-        dbPath : the DFS database path or in-memory table name.
-        tableName : the DFS table name. Leave it unspecified for an in-memory table.
-        useSSL : whether to enable SSL. Defaults to False.
-        enableHighAvailability : whether to enable high availability. Defaults to False.
-        highAvailabilitySites : a list of "ip:port" of all available nodes. Defaults to [].
-        batchSize : the number of messages in batch processing. Defaults to 1.
-        throttle : the waiting time (in seconds) before the server processes the incoming data if the number of data written from the client does not reach batchSize. Defaults to 1.
-        threadCount : the number of working threads to be created. Defaults to 1.
-        partitionCol : a string indicating the partitioning column, the default is an empty string. The parameter only takes effect when threadCount>1. Defaults to "".
-                        For a partitioned table, it must be the partitioning column; for a stream table, it must be a column name; for a dimension table, the parameter does not work.
-        compressMethods : a list of the compression methods used for each column. If unspecified, the columns are not compressed. Defaults to []. 
-                            The compression methods include: "LZ4": LZ4 algorithm; "DELTA": Delta-of-delta encoding.
-        mode : the write mode. It can be Append (default) or Upsert. Defaults to "".
-        modeOption : the parameters of function upsert!. It only takes effect when mode is Upsert. Defaults to [].
-        reconnect : whether to enable reconnection. True means enabled, otherwise False. Defaults to True.
-        enableStreamTableTimestamp: whether to insert data into a stream table with timestamp attached by `setStreamTableTimestamp` function. True means enabled, otherwise False. Defaults to False.
-    """
-    def __init__(
-        self, host: str, port: int, userId: str, password: str,
-        dbPath: str, tableName: str, useSSL: bool = False,
-        enableHighAvailability: bool = False, highAvailabilitySites: List[str] = [],
-        batchSize: int = 1, throttle: float = 1.0, threadCount: int = 1,
-        partitionCol: str = "", compressMethods: List[str] = [],
-        mode: str = "", modeOption: List[str] = [],
-        *,
-        reconnect: bool = True, enableStreamTableTimestamp: bool = False,
-    ):
-        """Constructor of MultithreadedTableWriter"""
-        self.writer = ddbcpp.multithreadedTableWriter(
-            host, port, userId, password, dbPath, tableName, useSSL,
-            enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount,
-            partitionCol, compressMethods, mode, modeOption, reconnect, enableStreamTableTimestamp
-        )
-
-    def getStatus(self) -> MultithreadedTableWriterStatus:
-        """Get the current writer status and return a MultithreadedTableWriterStatus object.
-
-        Returns:
-            MultithreadedTableWriterStatus object.
-        """
-        status = MultithreadedTableWriterStatus()
-        status.update(self.writer.getStatus())
-        return status
-
-    def getUnwrittenData(self) -> List[List[Any]]:
-        """Get unwritten data.
-
-        The obtained data can be passed as an argument to method insertUnwrittenData.
-
-        Returns:
-            a nested list where each element is a record.
-        """
-        return self.writer.getUnwrittenData()
-
-    def insert(self, *args) -> ErrorCodeInfo:
-        """Insert a single row of data.
-
-        Args:
-            args : variable-length argument, indicating a row of data to be inserted.
-
-        Returns:
-            a ErrorCodeInfo object.
-        """
-        errorCodeInfo = ErrorCodeInfo()
-        errorCodeInfo.__dict__.update(self.writer.insert(*args))
-        return errorCodeInfo
-
-    def insertUnwrittenData(self, unwrittenData) -> ErrorCodeInfo:
-        """Insert unwritten data.
-
-        The result is in the same format as insert.
-        The difference is that insertUnwrittenData can insert multiple records at a time.
-
-        Args:
-            unwrittenData : the data that has not been written to the server. You can obtain the object with method getUnwrittenData.
-
-        Returns:
-            ErrorCodeInfo object
-        """
-        errorCodeInfo = ErrorCodeInfo()
-        errorCodeInfo.__dict__.update(self.writer.insertUnwrittenData(unwrittenData))
-        return errorCodeInfo
-
-    def waitForThreadCompletion(self) -> None:
-        """Wait until all working threads complete their tasks.
-
-        After calling the method, MultithreadedTableWriter will wait until all working threads complete their tasks.
-
-        """
-        self.writer.waitForThreadCompletion()
+        return convert_database(databaseList)

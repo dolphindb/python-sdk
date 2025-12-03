@@ -1,41 +1,110 @@
-from .session import Session
-from .session import Session as session
-from .session import DBConnectionPool
-from .session import BlockReader
-from .session import PartitionedTableAppender
-from .session import TableAppender
-from .session import TableAppender as tableAppender
-from .session import TableUpserter
-from .session import TableUpserter as tableUpsert
-from .session import BatchTableWriter
-from .session import MultithreadedTableWriter
-from .session import MultithreadedTableWriterStatus
-from .session import MultithreadedTableWriterThreadStatus
-from .session import streamDeserializer
-from .table import Table, TableUpdate, TableDelete, TableGroupby, TablePivotBy, TableContextby, Counter
-from .table import wavg, wsum, covar, corr, count, max, min, sum, sum2, size, avg, std, prod, var, first, last
-from .table import eachPre, cumsum, cumprod, cummax, cummin
-from .vector import Vector, FilterCond
+from . import cep, io, logger, global_config
+from .appender import (
+    PartitionedTableAppender,
+    AutoFitTableAppender,
+    TableAppender,
+    TableAppender as tableAppender,
+    AutoFitTableUpserter,
+    TableUpserter,
+    TableUpserter as tableUpsert,
+)
+from .connection_pool import (
+    DBConnectionPool,
+    SimpleDBConnectionPool,
+    SimpleDBConnectionPoolConfig,
+)
 from .database import Database
+from .config import (
+    ConnectionSetting,
+    ConnectionConfig,
+)
+from .connection import (
+    BlockReader,
+    DBConnection,
+)
+from .session import (
+    Session,
+    Session as session,
+)
+from .streaming import (
+    StreamDeserializer,
+    StreamDeserializer as streamDeserializer,
+    StreamingClient,
+    StreamingClientConfig,
+    SubscriptionConfig,
+    ThreadedClient,
+    ThreadedStreamingClientConfig,
+    ThreadPooledClient,
+    ThreadPooledStreamingClientConfig,
+)
+from .table import (
+    Counter,
+    Table,
+    TableContextby,
+    TableDelete,
+    TableGroupby,
+    TablePivotBy,
+    TableUpdate,
+    avg,
+    corr,
+    count,
+    covar,
+    cummax,
+    cummin,
+    cumprod,
+    cumsum,
+    eachPre,
+    first,
+    last,
+    max,
+    min,
+    prod,
+    size,
+    std,
+    sum,
+    sum2,
+    var,
+    wavg,
+    wsum,
+)
 from .utils import month
-from . import cep, io, logger
+from .vector import FilterCond, Vector
+from .writer import (
+    BatchTableWriter,
+    MultithreadedTableWriter,
+    MultithreadedTableWriterStatus,
+    MultithreadedTableWriterThreadStatus,
+)
 
-__version__ = "3.0.3.0"
+__version__ = "3.0.4.0"
 
 name = "dolphindb"
 
 __all__ = [
     "Session", "session",
+    "DBConnection",
+    "ConnectionSetting",
+    "ConnectionConfig",
     "DBConnectionPool",
+    "SimpleDBConnectionPool",
+    "SimpleDBConnectionPoolConfig",
     "BlockReader",
     "PartitionedTableAppender",
-    "TableAppender", "tableAppender",
-    "TableUpserter", "tableUpsert",
+    "AutoFitTableAppender", "TableAppender", "tableAppender",
+    "AutoFitTableUpserter", "TableUpserter", "tableUpsert",
     "BatchTableWriter",
     "MultithreadedTableWriter",
     "MultithreadedTableWriterStatus",
     "MultithreadedTableWriterThreadStatus",
+    "StreamDeserializer",
     "streamDeserializer",
+    "StreamingClient",
+    "StreamingClientConfig",
+    "SubscriptionConfig",
+    "ThreadedClient",
+    "ThreadedStreamingClientConfig",
+    "ThreadPooledClient",
+    "ThreadPooledStreamingClientConfig",
     "Table",
     "TableUpdate",
     "TableDelete",
@@ -53,6 +122,7 @@ __all__ = [
     "cep",
     "io",
     "logger",
+    "global_config",
 
     "wavg",
     "wsum",

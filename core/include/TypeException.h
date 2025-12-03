@@ -14,17 +14,17 @@ using dolphindb::RuntimeException;
 namespace pybind_dolphindb {
 
 
-class BindBaseException {
+class EXPORT_DECL BindBaseException {
 
 };
 
-class BindException : public BindBaseException, public RuntimeException {
+class EXPORT_DECL BindException : public BindBaseException, public RuntimeException {
 public:
     BindException(const std::string &errMsg) : RuntimeException(errMsg) {}
 };
 
 
-class ConversionException : public BindException {
+class EXPORT_DECL ConversionException : public BindException {
 public:
     ConversionException(const std::string &errMsg) : BindException(errMsg) {}
 };

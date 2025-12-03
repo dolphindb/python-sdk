@@ -16,7 +16,7 @@
 namespace dolphindb {
 
 template<class T>
-class AbstractSet : public Set {
+class EXPORT_DECL AbstractSet : public Set {
 public:
 	AbstractSet(DATA_TYPE type, INDEX capacity = 0) : type_(type), category_(Util::getCategory(type_)){
 		if(capacity > 0) data_.reserve(capacity);
@@ -75,7 +75,7 @@ protected:
 	std::unordered_set<T> data_;
 };
 
-class CharSet : public AbstractSet<char> {
+class EXPORT_DECL CharSet : public AbstractSet<char> {
 public:
 	CharSet(INDEX capacity = 0) : AbstractSet<char>(DT_CHAR, capacity){}
 	CharSet(const std::unordered_set<char>& data) : AbstractSet<char>(DT_CHAR, data){}
@@ -91,7 +91,7 @@ public:
 	bool manipulate(const ConstantSP& value, bool deletion);
 };
 
-class ShortSet : public AbstractSet<short> {
+class EXPORT_DECL ShortSet : public AbstractSet<short> {
 public:
 	ShortSet(INDEX capacity = 0) : AbstractSet<short>(DT_SHORT, capacity){}
 	ShortSet(const std::unordered_set<short>& data) : AbstractSet<short>(DT_SHORT, data){}
@@ -107,7 +107,7 @@ public:
 	bool manipulate(const ConstantSP& value, bool deletion);
 };
 
-class IntSet : public AbstractSet<int> {
+class EXPORT_DECL IntSet : public AbstractSet<int> {
 public:
 	IntSet(DATA_TYPE type = DT_INT, INDEX capacity = 0) : AbstractSet<int>(type, capacity){}
 	IntSet(DATA_TYPE type, const std::unordered_set<int>& data) : AbstractSet<int>(type, data){}
@@ -123,7 +123,7 @@ public:
 	bool manipulate(const ConstantSP& value, bool deletion);
 };
 
-class LongSet : public AbstractSet<long long> {
+class EXPORT_DECL LongSet : public AbstractSet<long long> {
 public:
 	LongSet(DATA_TYPE type = DT_LONG, INDEX capacity = 0) : AbstractSet<long long>(type, capacity){}
 	LongSet(DATA_TYPE type, const std::unordered_set<long long>& data) : AbstractSet<long long>(type, data){}
@@ -139,7 +139,7 @@ public:
 	bool manipulate(const ConstantSP& value, bool deletion);
 };
 
-class FloatSet : public AbstractSet<float> {
+class EXPORT_DECL FloatSet : public AbstractSet<float> {
 public:
 	FloatSet(INDEX capacity = 0) : AbstractSet<float>(DT_FLOAT, capacity){}
 	FloatSet(const std::unordered_set<float>& data) : AbstractSet<float>(DT_FLOAT, data){}
@@ -155,7 +155,7 @@ public:
 	bool manipulate(const ConstantSP& value, bool deletion);
 };
 
-class DoubleSet : public AbstractSet<double> {
+class EXPORT_DECL DoubleSet : public AbstractSet<double> {
 public:
 	DoubleSet(INDEX capacity = 0) : AbstractSet<double>(DT_DOUBLE, capacity){}
 	DoubleSet(const std::unordered_set<double>& data) : AbstractSet<double>(DT_DOUBLE, data){}
@@ -171,7 +171,7 @@ public:
 	bool manipulate(const ConstantSP& value, bool deletion);
 };
 
-class StringSet : public AbstractSet<std::string> {
+class EXPORT_DECL StringSet : public AbstractSet<std::string> {
 public:
 	StringSet(INDEX capacity = 0, bool isBlob = false, bool isSymbol = false)
 		: AbstractSet<std::string>(isBlob ? DT_BLOB : isSymbol ? DT_SYMBOL : DT_STRING, capacity), isBlob_(isBlob), isSymbol_(isSymbol){}
@@ -192,7 +192,7 @@ private:
 	bool isSymbol_;
 };
 
-class Int128Set : public AbstractSet<Guid> {
+class EXPORT_DECL Int128Set : public AbstractSet<Guid> {
 public:
 	Int128Set(DATA_TYPE type = DT_INT128, INDEX capacity = 0) : AbstractSet<Guid>(type, capacity){}
 	Int128Set(DATA_TYPE type, const std::unordered_set<Guid>& data) : AbstractSet<Guid>(type, data){}

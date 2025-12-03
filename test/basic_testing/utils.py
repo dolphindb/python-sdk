@@ -1,4 +1,5 @@
 import math
+import re
 from decimal import Decimal
 from time import sleep
 
@@ -165,7 +166,7 @@ def operateNodes(conn, nodes, operate):
                         startDataNode(nodes)
                     }catch(ex){}
                     try {
-                        result = rpc(i,check_nodes,1,nodes)
+                        result = rpc(i,check_nodes,1,[i])
                     } catch (ex) {
                         sleep(500)
                         continue
@@ -193,3 +194,12 @@ def operateNodes(conn, nodes, operate):
                 sleep(0.5)
     else:
         conn.run("check_nodes_start", nodes)
+    sleep(3)
+
+
+def get_dolphindb_version(session):
+    version_str = session.run("version()")
+    match = re.search(r'(\d+)\.(\d+)\.(\d+)', version_str)
+    if match:
+        return tuple(map(int, match.groups()))
+    return (0, 0, 0)

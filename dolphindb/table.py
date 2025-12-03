@@ -2,12 +2,12 @@ import copy
 import inspect
 import re
 import threading
-from typing import Any, List, Optional, Tuple, Type, Union
+from ._hints import Any, List, Optional, Tuple, Union
 
 import numpy as np
-from dolphindb.settings import get_verbose
-from dolphindb.utils import _generate_tablename, _getFuncName, _isVariableCandidate
-from dolphindb.vector import FilterCond, Vector
+from .settings import get_verbose
+from .utils import _generate_tablename, _getFuncName, _isVariableCandidate
+from .vector import FilterCond, Vector
 from pandas import DataFrame
 
 
@@ -566,7 +566,7 @@ class Table(object):
         """Specify parameters for limit.
 
         Args:
-            num : when used with the contextby clause, the limit clause can use a negative integer to select a limited number of records in the end of each group. 
+            num : when used with the contextby clause, the limit clause can use a negative integer to select a limited number of records in the end of each group.
                   In all other cases the limit clause can only use positive integers.
                   Can pass in [x, y] to select data from row x to row y.
 
@@ -723,7 +723,7 @@ class Table(object):
         | left  | https://dolphindb.com/help/SQLStatements/TableJoiners/leftjoin.html  |
         | right | https://dolphindb.com/help/SQLStatements/TableJoiners/leftjoin.html  |
         | outer | https://dolphindb.com/help/SQLStatements/TableJoiners/fulljoin.html  |
-        | ineer | https://dolphindb.com/help/SQLStatements/TableJoiners/equaljoin.html |   
+        | ineer | https://dolphindb.com/help/SQLStatements/TableJoiners/equaljoin.html |
             on : the columns to join on. If the column names are different in two tables, use the left_on and right_on parameters. Defaults to None.
             left_on : the column to join on from the left table. Defaults to None.
             right_on : the column to join on from the right table. Defaults to None.
@@ -1264,7 +1264,7 @@ class Table(object):
             list: the query result in the form of a list. The length of the list is same as the rows of the Table.
 
         Note:
-            If the table contains columns of array vectors, the system will try to convert them to NumPy 2D arrays. 
+            If the table contains columns of array vectors, the system will try to convert them to NumPy 2D arrays.
             The conversion will fail if the rows in the array vector are different.
         """
         self._init_schema()
@@ -2058,7 +2058,7 @@ class TableContextby(object):
         """Specify parameters for limit.
 
         Args:
-            num : when used with the contextby clause, the limit clause can use a negative integer to select a limited number of records in the end of each group. 
+            num : when used with the contextby clause, the limit clause can use a negative integer to select a limited number of records in the end of each group.
                   In all other cases the limit clause can only use positive integers.
                   Can pass in [x, y] to select data from row x to row y.
 

@@ -8,3 +8,4 @@
 /.vscode/
 /.python-version
 **/__pycache__/*
+/.cache/

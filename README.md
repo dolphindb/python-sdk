@@ -14,6 +14,7 @@ To use DolphinDB Python SDK, you'll need:
   - pandas: version 1.0.0 and newer, but not version 1.3.0
   - future
   - packaging
+  - pydantic: version 2.0 and newer
 - Extension Packages:
   - PyArrow: version 9.0.0 and newer
 

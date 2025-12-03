@@ -1189,7 +1189,7 @@ class TestTableAppender:
         import warnings
         warnings.filterwarnings('error')
         try:
-            pt = ddb.tableAppender(tableName="t", ddbSession=conn)
+            pt = ddb.tableAppender(table_name="t", conn=conn)
             pt.append(df)
             del pt
         except Warning:
@@ -1287,7 +1287,7 @@ class TestTableAppender:
             ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
             for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
-            all(res)
+            all(all(res))
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['INT', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
@@ -1372,7 +1372,7 @@ class TestTableAppender:
             ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
             for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
-            all(res)
+            all(all(res))
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['INT', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
@@ -1394,7 +1394,7 @@ class TestTableAppender:
             conn.close()
             pt.append(df)
         except RuntimeError as e:
-            assert "Session has been closed" in str(e)
+            assert "DBConnection has been closed" in str(e)
         conn = ddb.session(HOST, PORT, USER, PASSWD)
         pt = ddb.tableAppender(tableName=f"{func_name}_share_t", ddbSession=conn)
         del conn

@@ -7,6 +7,7 @@ from _pytest.outcomes import Skipped
 from basic_testing.prepare import PYTHON_VERSION, FREE_THREADING
 from setup.settings import HOST_REPORT, PORT_REPORT, USER_REPORT, PASSWD_REPORT, REPORT
 
+
 if REPORT:
     conn = ddb.Session(HOST_REPORT, PORT_REPORT, USER_REPORT, PASSWD_REPORT)
 
@@ -20,7 +21,7 @@ if REPORT:
     def create_share_table(request):
         worker_id = request.config.workerinput['workerid'].lower()
         conn.run(
-            f"share table([]$STRING as worker_id,[]$STRING as case_name,[]$STRING as case_result,[]$BLOB as case_info,[]$BLOB as case_trace,[]$DOUBLE as case_time) as {SHARE_TABLE}_{worker_id}",
+            f"share table([]$STRING as worker_id,[]$STRING as case_name,[]$STRING as case_result,[]$BLOB as case_info,[]$BLOB as case_trace,[]$DOUBLE as case_time,[]$TIMESTAMP as run_time) as {SHARE_TABLE}_{worker_id}",
             priority=1)
         if worker_id == "gw0":
             conn.run(f"""
@@ -87,11 +88,11 @@ if REPORT:
         if call.when == "setup":
             if hasattr(call.excinfo, 'type') and call.excinfo.type is Skipped:
                 conn.run(
-                    f"insert into {SHARE_TABLE}_{worker_id} values(\"{worker_id}\",\"{item.name}\",\"skipped\",\"\",\"\",0)",
+                    f"insert into {SHARE_TABLE}_{worker_id} values(\"{worker_id}\",\"{item.name}\",\"skipped\",\"\",\"\",0,now())",
                     priority=1)
             else:
                 conn.run(
-                    f"insert into {SHARE_TABLE}_{worker_id} values(\"{worker_id}\",\"{item.name}\",\"running\",\"\",\"\",0)",
+                    f"insert into {SHARE_TABLE}_{worker_id} values(\"{worker_id}\",\"{item.name}\",\"running\",\"\",\"\",0,now())",
                     priority=1)
         elif call.when == "call":
             if call.excinfo is None:

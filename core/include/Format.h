@@ -12,12 +12,13 @@
 #include <vector>
 
 #include "Types.h"
+#include "Exports.h"
 
 using namespace std;
 
 namespace dolphindb {
 
-class TemporalFormat {
+class EXPORT_DECL TemporalFormat {
 public:
     TemporalFormat(const string& format);
     string format(long long nowtime, DATA_TYPE dtype) const;
@@ -49,7 +50,7 @@ private:
     static const char* monthName[12];
 };
 
-class NumberFormat {
+class EXPORT_DECL NumberFormat {
 public:
     NumberFormat(const string& format);
     string format(double x) const;
@@ -78,7 +79,7 @@ private:
 	static const double epsilon_;
 };
 
-class DecimalFormat {
+class EXPORT_DECL DecimalFormat {
 public:
 	DecimalFormat(const string& format);
 	~DecimalFormat();

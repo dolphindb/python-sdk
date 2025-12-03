@@ -1,6 +1,7 @@
 import asyncio
 import decimal
 import inspect
+import os
 import random
 import subprocess
 import sys
@@ -992,9 +993,9 @@ class TestDBConnectionPool:
     def test_DBConnectionPool_loadBalance(self):
         pool = ddb.DBConnectionPool(HOST_CLUSTER, PORT_DNODE1, 60, "admin", "123456", loadBalance=True)
         loadDf = pool.runTaskAsync(
-            "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0").result()
-        print(loadDf)
-        assert all(((loadDf - loadDf.mean()).abs() < 0.7)['load'])
+            "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0 or mode=4").result()
+        relative_diff = (loadDf - loadDf.mean()).abs() / loadDf.mean()
+        assert all(relative_diff['load'] < 0.03)
         pool.shutDown()
 
     @pytest.mark.CLUSTER
@@ -1069,3 +1070,46 @@ class TestDBConnectionPool:
         operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
         assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n * 4
         assert f"Connect to nodes failed after {n} reconnect attempts." in result.stdout
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    @pytest.mark.parametrize("loadBalance,highAvailability,usePublicName,expect", [
+        (True, True, True, True),
+        (True, True, False, False),
+        (True, False, True, True),
+        (True, False, False, False),
+        (False, True, True, False),
+        (False, True, False, False),
+        (False, False, True, False),
+        (False, False, False, False),
+    ])
+    def test_DBConnectionPool_loadBalance_ha_usePublicName_parametrized(self, loadBalance, highAvailability,
+                                                                        usePublicName, expect):
+        if not os.getenv("PUBLIC_NAME", None) and usePublicName:
+            pytest.skip()
+
+        if expect:
+            with pytest.raises(RuntimeError, match="test_fail"):
+                ddb.DBConnectionPool(
+                    HOST_CLUSTER,
+                    PORT_DNODE2,
+                    5,
+                    USER_CLUSTER,
+                    PASSWD_CLUSTER,
+                    loadBalance=loadBalance,
+                    highAvailability=highAvailability,
+                    tryReconnectNums=1,
+                    usePublicName=usePublicName
+                )
+        else:
+            ddb.DBConnectionPool(
+                HOST_CLUSTER,
+                PORT_DNODE2,
+                5,
+                USER_CLUSTER,
+                PASSWD_CLUSTER,
+                loadBalance=loadBalance,
+                highAvailability=highAvailability,
+                tryReconnectNums=1,
+                usePublicName=usePublicName
+            )

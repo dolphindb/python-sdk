@@ -15,7 +15,7 @@ namespace py = pybind11;
 namespace dolphindb {
 
 
-class identifier {
+class EXPORT_DECL identifier {
 public:
     identifier(const std::string &name): name_(name) {}
     const std::string & get_identifier() const { return name_; }
@@ -24,7 +24,7 @@ private:
 };
 
 
-class custom_sink : public spdlog::sinks::base_sink<std::mutex>, public identifier {
+class EXPORT_DECL custom_sink : public spdlog::sinks::base_sink<std::mutex>, public identifier {
 public:
     custom_sink(const std::string &name)
     : spdlog::sinks::base_sink<std::mutex>(), identifier(name) {}
@@ -38,7 +38,7 @@ protected:
 };
 
 
-class py_custom_sink : public custom_sink {
+class EXPORT_DECL py_custom_sink : public custom_sink {
 public:
     py_custom_sink(const std::string &name): custom_sink(name) {}
 
@@ -52,7 +52,7 @@ public:
 };
 
 
-class Logger {
+class EXPORT_DECL Logger {
 public:
     enum Level {
         LevelDebug = spdlog::level::debug,
@@ -161,7 +161,7 @@ private:
 };
 
 
-class LogMessage {
+class EXPORT_DECL LogMessage {
 public:
     Logger::Level level_;
     std::string msg_;
@@ -199,7 +199,7 @@ public:
     static void SetMinLevel(Level level) { defaultLogger_->SetMinLevel((Logger::Level)level); }
     static Level GetMinLevel(){ return (DLogger::Level)defaultLogger_->GetMinLevel(); }
 
-    static void init(); 
+    static void init();
 
     static std::shared_ptr<Logger> defaultLogger_;
 };

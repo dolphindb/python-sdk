@@ -231,7 +231,7 @@ class TestSubscribeReverse:
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`boolv`charv`shortv`intv`longv`datev`monthv`timev`minutev`secondv`datetimev`nanotimev`timestampv`nanotimestampv`stringv`doublev`boolav`charav`shortav`intav`longav`dateav`monthav`timeav`minuteav`secondav`datetimeav`nanotimeav`timestampav`nanotimestampav`doubleav, [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, NANOTIME, TIMESTAMP, NANOTIMESTAMP, STRING, DOUBLE, BOOL[], CHAR[], SHORT[], INT[], LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], NANOTIME[], TIMESTAMP[], NANOTIMESTAMP[], DOUBLE[]]) as {func_name}
-            setStreamTableFilterColumn({func_name}, `boolv)
+            setStreamTableFilterColumn({func_name}, `charv)
             boolav = array(BOOL[], 0, 10).append!(take([[true],[true, NULL, false]], 10))
             charav = array(CHAR[], 0, 10).append!(take([[1.0,2.0],[2,3, NULL]], 10))
             shortav = array(SHORT[], 0, 10).append!(take([[1],[2,3, NULL]], 10))
@@ -308,7 +308,7 @@ class TestSubscribeReverse:
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`boolv`charv`shortv`intv`longv`datev`monthv`timev`minutev`secondv`datetimev`nanotimev`timestampv`nanotimestampv`stringv`doublev`boolav`charav`shortav`intav`longav`dateav`monthav`timeav`minuteav`secondav`datetimeav`nanotimeav`timestampav`nanotimestampav`doubleav, [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, NANOTIME, TIMESTAMP, NANOTIMESTAMP, STRING, DOUBLE, BOOL[], CHAR[], SHORT[], INT[], LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], NANOTIME[], TIMESTAMP[], NANOTIMESTAMP[], DOUBLE[]]) as {func_name}
-            setStreamTableFilterColumn({func_name}, `boolv)
+            setStreamTableFilterColumn({func_name}, `charv)
             boolav = array(BOOL[], 0, 10).append!(take([[true],[true, NULL, false]], 1))
             charav = array(CHAR[], 0, 10).append!(take([[1.0,2.0],[2,3, NULL]], 1))
             shortav = array(SHORT[], 0, 10).append!(take([[1],[2,3, NULL]], 1))
@@ -454,7 +454,7 @@ class TestSubscribeReverse:
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`boolv`charv`shortv`intv`longv`datev`monthv`timev`minutev`secondv`datetimev`nanotimev`timestampv`nanotimestampv`stringv`doublev`boolav`charav`shortav`intav`longav`dateav`monthav`timeav`minuteav`secondav`datetimeav`nanotimeav`timestampav`nanotimestampav`doubleav, [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, NANOTIME, TIMESTAMP, NANOTIMESTAMP, STRING, DOUBLE, BOOL[], CHAR[], SHORT[], INT[], LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], NANOTIME[], TIMESTAMP[], NANOTIMESTAMP[], DOUBLE[]]) as {func_name}
-            setStreamTableFilterColumn({func_name}, `boolv)
+            setStreamTableFilterColumn({func_name}, `charv)
             boolav = array(BOOL[], 0, 10).append!(take([[true],[true, NULL, false]], 10))
             charav = array(CHAR[], 0, 10).append!(take([[1.0,2.0],[2,3, NULL]], 10))
             shortav = array(SHORT[], 0, 10).append!(take([[1],[2,3, NULL]], 10))
@@ -523,7 +523,7 @@ class TestSubscribeReverse:
             }}
             try{{dropStreamTable(`{func_name})}}catch(ex){{}}
             share streamTable(10000:0,`boolv`charv`shortv`intv`longv`datev`monthv`timev`minutev`secondv`datetimev`nanotimev`timestampv`nanotimestampv`stringv`doublev`boolav`charav`shortav`intav`longav`dateav`monthav`timeav`minuteav`secondav`datetimeav`nanotimeav`timestampav`nanotimestampav`doubleav, [BOOL, CHAR, SHORT, INT, LONG, DATE, MONTH, TIME, MINUTE, SECOND, DATETIME, NANOTIME, TIMESTAMP, NANOTIMESTAMP, STRING, DOUBLE, BOOL[], CHAR[], SHORT[], INT[], LONG[], DATE[], MONTH[], TIME[], MINUTE[], SECOND[], DATETIME[], NANOTIME[], TIMESTAMP[], NANOTIMESTAMP[], DOUBLE[]]) as {func_name}
-            setStreamTableFilterColumn({func_name}, `boolv)
+            setStreamTableFilterColumn({func_name}, `charv)
             boolav = array(BOOL[], 0, 10).append!(take([[true],[true, NULL, false]], 1))
             charav = array(CHAR[], 0, 10).append!(take([[1.0,2.0],[2,3, NULL]], 1))
             shortav = array(SHORT[], 0, 10).append!(take([[1],[2,3, NULL]], 1))

@@ -1,6 +1,7 @@
-from dolphindb._core import DolphinDBRuntime
-from dolphindb import Session
-from dolphindb.typing import _DATA_FORM
+from ._core import DolphinDBRuntime
+from .connection import DBConnection
+from .typing import _DATA_FORM
+from .streaming import StreamingClient
 
 from typing import List, Optional, Callable, Union
 
@@ -135,14 +136,14 @@ class EventSender:
     """
     def __init__(
         self,
-        ddbSession: Session,
+        ddbSession: DBConnection,
         tableName: str,
         eventSchema: List[_EventMeta],
         eventTimeFields: Optional[Union[List[str], str]] = None,
         commonFields: Optional[List[str]] = None,
     ) -> None:
-        if not isinstance(ddbSession, Session):
-            raise TypeError("ddbSession must be a dolphindb Session.")
+        if not isinstance(ddbSession, DBConnection):
+            raise TypeError("ddbSession must be a dolphindb DBConnection.")
         if not isinstance(tableName, str):
             raise TypeError("tableName must be a str.")
         if not isinstance(eventSchema, list):
@@ -190,7 +191,7 @@ class EventSender:
         self.sender.sendEvent(event)
 
 
-class EventClient:
+class EventClient(StreamingClient):
     """Event subscription client.
 
     Args:
@@ -245,7 +246,7 @@ class EventClient:
         for elm in commonFields:
             if not isinstance(elm, str):
                 raise TypeError("commonFields must be a str or a list of str.")
-        self.client = ddbcpp.EventClient(eventSchema, eventTimeFields, commonFields)
+        self._cpp = ddbcpp.EventClient(eventSchema, eventTimeFields, commonFields)
 
     def subscribe(
         self,
@@ -278,7 +279,7 @@ class EventClient:
             userName = ""
         if password is None:
             password = ""
-        self.client.subscribe(
+        self._cpp.subscribe(
             host,
             port,
             handler,
@@ -290,26 +291,13 @@ class EventClient:
             password,
         )
 
-    def unsubscribe(self, host: str, port: int, tableName: str, actionName: str = None):
-        """Unsubscribe.
-
-        Args:
-            host : server address. It can be IP address, domain, or LAN hostname, etc.
-            port : port name.
-            tableName : name of the published table.
-            actionName : name of the subscription task. Defaults to None.
-        """
-        if actionName is None:
-            actionName = ""
-        self.client.unsubscribe(host, port, tableName, actionName)
-
     def getSubscriptionTopics(self):
         """Get all subscription topics.
 
         Returns:
             a list of all subscription topics in the format of "host/port/tableName/actionName".
         """
-        return self.client.getSubscriptionTopics()
+        return self.topic_strs
 
 
 __all__ = [

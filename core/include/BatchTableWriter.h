@@ -1,17 +1,20 @@
-#ifndef BATCHTABLEWRITER_H_
-#define BATCHTABLEWRITER_H_
+#pragma once
+
+/**
+    * BatchTableWriter.h
+    *
+    *  Deprecated
+*/
 
 #include "Exports.h"
 #include "Concurrent.h"
 #include "Types.h"
 #include "Exceptions.h"
 #include "Constant.h"
-#include "Dictionary.h"
 #include "Table.h"
 #include <unordered_map>
 #include <string>
 #include <vector>
-#include <memory>
 #include <functional>
 #include <tuple>
 #include <cassert>
@@ -178,5 +181,4 @@ private:
 };
 
 
-};
-#endif /* BATCHTABLEWRITER_H_ */
+} // namespace dolphindb

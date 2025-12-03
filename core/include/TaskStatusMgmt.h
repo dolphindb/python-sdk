@@ -8,7 +8,7 @@ namespace py = pybind11;
 
 namespace dolphindb {
 
-class TaskStatusMgmt{
+class EXPORT_DECL TaskStatusMgmt{
 public:
     enum TASK_STAGE{WAITING, FINISHED, ERRORED};
     struct Result{

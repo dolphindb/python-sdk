@@ -1,6 +1,4 @@
 #pragma once
-#ifndef COMPRESSION_H_
-#define COMPRESSION_H_
 
 #include "Types.h"
 #include "SysIO.h"
@@ -63,5 +61,4 @@ private:
 	static const int maxCompressedSize_;
 };
 
-};//dolphindb
-#endif//COMPRESSION_H_
+} // namespace dolphindb

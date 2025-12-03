@@ -378,15 +378,15 @@ class TestDatabase:
         t = conn1.table(data=conn1.run("table(100:0, `col1`col2`col3, [SYMBOL,INT,DATE])"))
         # db_s_tab = db_s.createDimensionTable(table=t, tableName="db_s_tab",sortColumns="col2")
         db_v.createDimensionTable(table=t, tableName="db_v_tab",
-                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+                                  compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
         db_r.createDimensionTable(table=t, tableName="db_r_tab",
-                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+                                  compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
         db_c.createDimensionTable(table=t, tableName="db_c_tab",
-                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+                                  compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
         db_h.createDimensionTable(table=t, tableName="db_h_tab",
-                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+                                  compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
         db_l.createDimensionTable(table=t, tableName="db_l_tab",
-                         compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
+                                  compressMethods={"col1": "lz4", "col2": "delta", "col3": "delta"})
         assert conn1.existsTable(f"dfs://{func_name}_db_value", "db_v_tab")
         assert conn1.existsTable(f"dfs://{func_name}_db_range", "db_r_tab")
         assert conn1.existsTable(f"dfs://{func_name}_db_combo", "db_c_tab")
@@ -556,7 +556,7 @@ class TestDatabase:
             "t0=table(100:0, `col1`col2`col3, [SYMBOL,INT,DATE]);tableInsert(t0,`a`b`c`d, 1 2 2 4, [2000.01.01,2000.01.02,2000.01.02,2000.01.04])")
         t = conn1.table(data='t0')
         db_v.createDimensionTable(table=t, tableName="db_v_tab", sortColumns=["col3", "col2"], keepDuplicates="LAST",
-                         softDelete=True)
+                                  softDelete=True)
         conn1.run(f"""
             tableInsert(loadTable("dfs://{func_name}_db_value","db_v_tab"), t0);
         """)
@@ -848,7 +848,7 @@ class TestDatabase:
         dfsDBName = f"dfs://{func_name}"
         if conn1.existsDatabase(dfsDBName):
             conn1.dropDatabase(dfsDBName)
-        months = np.array(pd.date_range(start='2012-01', end='2012-10', freq="M"), dtype="datetime64[M]")
+        months = np.array(pd.date_range(start='2012-01', end='2012-10', freq="ME"), dtype="datetime64[M]")
         db = conn1.database('db', partitionType=keys.VALUE, partitions=months, dbPath=dfsDBName)
         assert conn1.existsDatabase(dfsDBName)
         dct = {

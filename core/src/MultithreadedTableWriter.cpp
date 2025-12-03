@@ -4,7 +4,7 @@
 #include "Logger.h"
 #include "DolphinDB.h"
 #include <thread>
-#include "DdbPythonUtil.h"
+#include "PytoDdbRowPool.h"
 
 namespace dolphindb {
 
@@ -31,22 +31,15 @@ bool checkSetStreamTableTimstamp(DBConnectionSP pConn, const std::string& dbName
     }
 }
 
-MultithreadedTableWriter::MultithreadedTableWriter(const std::string& hostName, int port, const std::string& userId, const std::string& password,
-										const string& dbName, const string& tableName, bool useSSL,
-										bool enableHighAvailability, const vector<string> *pHighAvailabilitySites,
-										int batchSize, float throttle, int threadCount, const string& partitionCol,
-										const vector<COMPRESS_METHOD> *pCompressMethods, MultithreadedTableWriter::Mode mode,
-                                        vector<string> *pModeOption, bool reconnect, bool enableStreamTableTimestamp):
-                        dbName_(dbName),
-                        tableName_(tableName),
-                        batchSize_(batchSize),
-                        throttleMilsecond_(throttle*1000),
-						exited_(false),
-                        hasError_(false),
-                        pytoDdb_(new PytoDdbRowPool(*this)),
-                        mode_(mode),
-                        enableStreamTableTimestamp_(enableStreamTableTimestamp)
-                        {
+MultithreadedTableWriter::MultithreadedTableWriter(
+    const std::string &hostName, int port, const std::string &userId, const std::string &password, const string &dbName,
+    const string &tableName, bool useSSL, bool enableHighAvailability, const vector<string> *pHighAvailabilitySites,
+    int batchSize, float throttle, int threadCount, const string &partitionCol,
+    const vector<COMPRESS_METHOD> *pCompressMethods, MultithreadedTableWriter::Mode mode, vector<string> *pModeOption,
+    bool reconnect, bool enableStreamTableTimestamp, int tryReconnectNums, bool usePublicName)
+    : dbName_(dbName), tableName_(tableName), batchSize_(batchSize), throttleMilsecond_(throttle * 1000),
+      exited_(false), hasError_(false), pytoDdb_(new PytoDdbRowPool(*this)), mode_(mode),
+      enableStreamTableTimestamp_(enableStreamTableTimestamp) {
     if(threadCount < 1){
         throw RuntimeException("The parameter threadCount must be greater than or equal to 1");
     }
@@ -75,14 +68,20 @@ MultithreadedTableWriter::MultithreadedTableWriter(const std::string& hostName, 
     if (pHighAvailabilitySites != nullptr) {
         highAvailabilitySites.assign(pHighAvailabilitySites->begin(), pHighAvailabilitySites->end());
     }
-    bool ret = pConn->connect(hostName, port, userId, password, "", enableHighAvailability, highAvailabilitySites, 30);
+    bool ret = pConn->connect(hostName, port, userId, password, "", enableHighAvailability, highAvailabilitySites, 30,
+                              false, -1, -1, -1, usePublicName);
     if (!ret) {
         throw RuntimeException("Failed to connect to server " + hostName + ":" + std::to_string(port));
     }
 
     DictionarySP schema;
     if (dbName.empty()) {
-        schema = pConn->run("schema(" + tableName + ")");
+        if (tableName.find(".orca_table.") != std::string::npos) {
+            schema = pConn->run("useOrcaStreamTable(\"" + tableName + "\", schema)");
+        }
+        else {
+            schema = pConn->run("schema(" + tableName + ")");
+        }
     }
     else {
         schema = pConn->run(std::string("schema(loadTable(\"") + dbName + "\",\"" + tableName + "\"))");
@@ -188,6 +187,12 @@ MultithreadedTableWriter::MultithreadedTableWriter(const std::string& hostName, 
     if (mode == M_Append) {
         if (dbName_.empty()) {//memory table
             scriptTableInsert_ = std::move(std::string("tableInsert{") + tableName_ + "}");
+            if (tableName.find(".orca_table.") != std::string::npos) {
+                scriptTableInsert_ = std::move("tableInsert{loadOrcaStreamTable(\"" + tableName + "\")}");
+            }
+            else {
+                scriptTableInsert_ = std::move(std::string("tableInsert{") + tableName_ + "}");
+            }
         }
         else if (isPartionedTable_) {//partitioned table
             scriptTableInsert_ = std::move(std::string("tableInsert{loadTable(\"") + dbName_ + "\",\"" + tableName_ + "\")}");
@@ -227,7 +232,9 @@ MultithreadedTableWriter::MultithreadedTableWriter(const std::string& hostName, 
         writerThread.idleSem.release();
 
         writerThread.conn = new DBConnection(useSSL, false, keepAliveTime, isCompress);
-        if (writerThread.conn->connect(hostName, port, userId, password, "", enableHighAvailability, highAvailabilitySites, 30, reconnect) == false) {
+        if (writerThread.conn->connect(hostName, port, userId, password, "", enableHighAvailability,
+                                       highAvailabilitySites, 30, reconnect, tryReconnectNums, -1, -1,
+                                       usePublicName) == false) {
             throw RuntimeException("Failed to connect to server " + hostName + ":" + std::to_string(port));
         }
 

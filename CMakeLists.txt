@@ -4,6 +4,7 @@ project(dolphindbcpp LANGUAGES CXX)
 set(MODULE_NAME _dolphindbcpp)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -138,7 +139,7 @@ if(WIN32)
         )
         get_filename_component(OPENSSL_ROOT_DIR ${OPENSSL_INCLUDE_DIR} DIRECTORY)
         target_link_directories(${MODULE_NAME}
-            PUBLIC 
+            PUBLIC
                 "${OPENSSL_ROOT_DIR}/lib64"
                 "${OPENSSL_ROOT_DIR}/lib"
         )

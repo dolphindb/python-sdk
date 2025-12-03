@@ -1,9 +1,9 @@
 from typing import Dict, List, Union
 
-from dolphindb.table import Table
-from dolphindb.utils import _generate_tablename
-from dolphindb.utils import _convertToString, _convertToStringOrStringVector
-from dolphindb.utils import _convertToDict, _convertToBool, _convertToConstant
+from .table import Table
+from .utils import _generate_tablename
+from .utils import _convertToString, _convertToStringOrStringVector
+from .utils import _convertToDict, _convertToBool, _convertToConstant
 
 
 class Database(object):

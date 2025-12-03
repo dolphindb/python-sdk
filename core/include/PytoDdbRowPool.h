@@ -2,31 +2,14 @@
 #define DdbUtil_H_
 #include "DolphinDB.h"
 #include "Concurrent.h"
+#include "Exports.h"
 #include "MultithreadedTableWriter.h"
 
 #include "pybind11/numpy.h"
 
-#ifdef _MSC_VER
-	#ifdef _USRDLL	
-		#define EXPORT_DECL _declspec(dllexport)
-	#else
-		#define EXPORT_DECL __declspec(dllimport)
-	#endif
-#else
-    #define EXPORT_DECL
-#endif
-
 namespace dolphindb {
 
-class EXPORT_DECL DdbPythonUtil{
-public:
-    static py::object loadPickleFile(const std::string &filepath);
-
-protected:
-    friend class PytoDdbRowPool;
-};
-
-class HIDEVISIBILITY PytoDdbRowPool{
+class EXPORT_DECL PytoDdbRowPool{
 public:
     PytoDdbRowPool(MultithreadedTableWriter &writer);
     ~PytoDdbRowPool();

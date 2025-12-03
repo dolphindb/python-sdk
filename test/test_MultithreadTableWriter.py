@@ -1,6 +1,9 @@
+import os
 import decimal
 import inspect
 import re
+import subprocess
+import sys
 import threading
 import time
 
@@ -9,13 +12,15 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_array_equal
+from packaging import version
 from pandas._testing import assert_frame_equal
 
 from basic_testing.prepare import random_string
+from basic_testing.utils import get_dolphindb_version
 from basic_testing.utils import operateNodes
 from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER, \
-    PORT_DNODE1
-from packaging import version
+    PORT_DNODE1, PORT_DNODE2, PORT_DNODE3
+
 
 class TestMultithreadTableWriter:
     conn = ddb.session(HOST, PORT, USER, PASSWD, enablePickle=False)
@@ -138,6 +143,13 @@ class TestMultithreadTableWriter:
                 break
 
     def insert_Stream_Table(self, writer, id):
+        for i in range(130):
+            res = writer.insert(i, i)
+            if res.hasError():
+                print("error code ", res.errorCode, res.errorInfo)
+                break
+
+    def insert_Orca_Table(self, writer, id):
         for i in range(130):
             res = writer.insert(i, i)
             if res.hasError():
@@ -387,6 +399,37 @@ class TestMultithreadTableWriter:
             if res.hasError():
                 print("error code ", res.errorCode, res.errorInfo)
                 break
+
+    def execute_script_orca_table(self, session, graph_name="orca"):
+
+        version_str = session.run("version()")
+
+        match = re.search(r'(\d+)\.(\d+)\.(\d+)', version_str)
+        if match:
+            major, minor, patch = map(int, match.groups())
+            is_new_version = (major > 3) or (major == 3 and minor > 0) or (major == 3 and minor == 0 and patch >= 4)
+        else:
+            is_new_version = True
+
+        if is_new_version:
+            source_call = 'g.source("trades", ["id", "x"], [LONG, INT])'
+        else:
+            source_call = 'g.source("trades", 1000:0, ["id", "x"], [LONG, INT])'
+
+        script = f"""
+                if (existsCatalog("{graph_name}")) {{
+                    dropCatalog("{graph_name}")
+                }}
+                go
+                createCatalog("{graph_name}")
+                go
+                use catalog {graph_name}
+                g = createStreamGraph('engine')
+                {source_call}   
+                g.submit()
+                """
+
+        return session.run(script)
 
     def test_multithreadTableWriterTest_error_mode(self):
         func_name = inspect.currentframe().f_code.co_name
@@ -1782,6 +1825,37 @@ class TestMultithreadTableWriter:
         assert id == ex_id
         assert x == ex_x
 
+    def test_multithreadTableWriterTest_orca_Table_multi_thread(self):
+        version = get_dolphindb_version(self.conn)
+        if version < (3, 0, 4):
+            pytest.skip(f"Orca test requires DolphinDB 300.4+, current version: {version}")
+        self.execute_script_orca_table(self.conn)
+        writer = ddb.MultithreadedTableWriter(
+            HOST, PORT, USER, PASSWD, "", "orca.orca_table.trades", False, False, [], 100, 0.1, 10, "id")
+        threads = []
+        for i in range(10):
+            threads.append(threading.Thread(target=self.insert_Orca_Table, args=(writer, i,)))
+        first = self.conn.run("select count(*) from orca.orca_table.trades")
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join()
+        writer.waitForThreadCompletion()
+        last = self.conn.run("select count(*) from orca.orca_table.trades")
+        assert last["count"][0] - first["count"][0] == 1300
+        re = self.conn.run("select * from orca.orca_table.trades")
+        id = re["id"].to_list()
+        id.sort()
+        x = re["x"].to_list()
+        x.sort()
+        ex_id = list(range(130)) * 10
+        ex_id.sort()
+        ex_x = list(range(130)) * 10
+        ex_x.sort()
+        assert id == ex_id
+        assert x == ex_x
+
     def test_multithreadTableWriterTest_memoryTable_setStreamTableTimestamp(self):
         func_name = inspect.currentframe().f_code.co_name
         script_Stream_Table = f"""
@@ -1789,7 +1863,7 @@ class TestMultithreadTableWriter:
             share tmp as `{func_name}
             setStreamTableTimestamp({func_name}, `timestamp)
         """
-        with pytest.raises(RuntimeError,match="must be a stream table"):
+        with pytest.raises(RuntimeError, match="must be a stream table"):
             self.conn.run(script_Stream_Table)
 
     def test_multithreadTableWriterTest_memoryTable_enableStreamTableTimestamp_True(self):
@@ -1800,7 +1874,8 @@ class TestMultithreadTableWriter:
         """
         self.conn.run(script_Stream_Table)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id", enableStreamTableTimestamp=True)
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id",
+            enableStreamTableTimestamp=True)
         threads = []
         for i in range(1):
             threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
@@ -1823,7 +1898,7 @@ class TestMultithreadTableWriter:
             share tmp as `{func_name}
             setStreamTableTimestamp({func_name}, `x)
         """
-        with pytest.raises(RuntimeError,match=" x must be a temporal column"):
+        with pytest.raises(RuntimeError, match=" x must be a temporal column"):
             self.conn.run(script_Stream_Table)
 
     def test_multithreadTableWriterTest_streamTable_setStreamTableTimestamp_NotLastColumn(self):
@@ -1833,7 +1908,7 @@ class TestMultithreadTableWriter:
             share tmp as `{func_name}
             setStreamTableTimestamp({func_name}, `x)
         """
-        with pytest.raises(RuntimeError,match="must be the last column of the table"):
+        with pytest.raises(RuntimeError, match="must be the last column of the table"):
             self.conn.run(script_Stream_Table)
 
     def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_True_setStreamTableTimestamp(self):
@@ -1886,11 +1961,13 @@ class TestMultithreadTableWriter:
         last = self.conn.run(f"select count(*) from {func_name}")
         cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
         server_ver = version.parse(self.conn.run("version();").split()[0])
-        if (server_ver >= version.parse("2.00.15") and server_ver <version.parse("3.00.0")) or (server_ver >= version.parse("3.00.3")):
+        if (server_ver >= version.parse("2.00.15") and server_ver < version.parse("3.00.0")) or (
+                server_ver >= version.parse("3.00.3")):
             assert last["count"][0] - first["count"][0] == 3000
             assert cnt_timestamp["count_timestamp"][0] == 3000
         else:
             assert last["count"][0] - first["count"][0] == 0
+
     def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_Default_setStreamTableTimestamp(self):
         func_name = inspect.currentframe().f_code.co_name
         script_Stream_Table = f"""
@@ -1913,8 +1990,9 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         last = self.conn.run(f"select count(*) from {func_name}")
         cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
-        server_ver=version.parse(self.conn.run("version();").split()[0])
-        if (server_ver >= version.parse("2.00.15") and server_ver <version.parse("3.00.0")) or (server_ver >= version.parse("3.00.3")):
+        server_ver = version.parse(self.conn.run("version();").split()[0])
+        if (server_ver >= version.parse("2.00.15") and server_ver < version.parse("3.00.0")) or (
+                server_ver >= version.parse("3.00.3")):
             assert last["count"][0] - first["count"][0] == 3000
             assert cnt_timestamp["count_timestamp"][0] == 3000
         else:
@@ -1928,7 +2006,8 @@ class TestMultithreadTableWriter:
         """
         self.conn.run(script_Stream_Table)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id", enableStreamTableTimestamp=True)
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id",
+            enableStreamTableTimestamp=True)
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
@@ -1941,14 +2020,17 @@ class TestMultithreadTableWriter:
         writer.waitForThreadCompletion()
         last = self.conn.run(f"select count(*) from {func_name}")
         cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
-        server_ver=version.parse(self.conn.run("version();").split()[0])
-        if (server_ver >= version.parse("2.00.15") and server_ver <version.parse("3.00.0")) or (server_ver >= version.parse("3.00.3")):
+        server_ver = version.parse(self.conn.run("version();").split()[0])
+        if (server_ver >= version.parse("2.00.15") and server_ver < version.parse("3.00.0")) or (
+                server_ver >= version.parse("3.00.3")):
             assert last["count"][0] - first["count"][0] == 0
             assert cnt_timestamp["count_timestamp"][0] == 0
         else:
             assert last["count"][0] - first["count"][0] == 3000
             assert cnt_timestamp["count_timestamp"][0] == 0
-    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_False_NotSetStreamTableTimestamp_fail(self):
+
+    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_False_NotSetStreamTableTimestamp_fail(
+            self):
         func_name = inspect.currentframe().f_code.co_name
         script_Stream_Table = f"""
             tmp = streamTable(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP]) 
@@ -1956,7 +2038,8 @@ class TestMultithreadTableWriter:
         """
         self.conn.run(script_Stream_Table)
         writer = ddb.MultithreadedTableWriter(
-            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id", enableStreamTableTimestamp=False)
+            HOST, PORT, USER, PASSWD, "", func_name, False, False, [], 100, 0.1, 1, "id",
+            enableStreamTableTimestamp=False)
         threads = []
         for i in range(10):
             threads.append(threading.Thread(target=self.insert_datetime, args=(writer, i,)))
@@ -1971,7 +2054,9 @@ class TestMultithreadTableWriter:
         cnt_timestamp = self.conn.run(f"select count(timestamp) from {func_name}")
         assert last["count"][0] - first["count"][0] == 0
         assert cnt_timestamp["count_timestamp"][0] == 0
-    def test_multithreadTableWriterTest_streamTable_thread_enableStreamTableTimestamp_defult_NotSetStreamTableTimestamp_fail(self):
+
+    def test_multithreadTableWriterTest_streamTable_thread_enableStreamTableTimestamp_defult_NotSetStreamTableTimestamp_fail(
+            self):
         func_name = inspect.currentframe().f_code.co_name
         script_Stream_Table = f"""
             tmp = streamTable(1000:0, `id`x`timestamp, [LONG, TIMESTAMP, TIMESTAMP])  
@@ -1994,7 +2079,8 @@ class TestMultithreadTableWriter:
         assert first["count"][0] == 0
         assert last["count"][0] == 0
 
-    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_defult_NotSetStreamTableTimestamp_success(self):
+    def test_multithreadTableWriterTest_streamTable_enableStreamTableTimestamp_defult_NotSetStreamTableTimestamp_success(
+            self):
         func_name = inspect.currentframe().f_code.co_name
         script_Stream_Table = f"""
             tmp = streamTable(1000:0, `id`x, [LONG, TIMESTAMP])  
@@ -3453,3 +3539,57 @@ class TestMultithreadTableWriter:
         mtw.waitForThreadCompletion()
         status = mtw.getStatus()
         assert not status.hasError()
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    @pytest.mark.parametrize("enableHighAvailability", [True, False])
+    def test_multithreadTableWriter_reconnect_combinations_parametrized(self, enableHighAvailability):
+        func_name = f"{inspect.currentframe().f_code.co_name}_{enableHighAvailability}"
+        if not os.getenv("PUBLIC_NAME", None):
+            pytest.skip()
+        conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_ = ddb.Session(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_.run(f"share streamTable(100:0,[`str],[BLOB]) as {func_name}")
+        mtw = ddb.MultithreadedTableWriter(
+            HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER,
+            "", func_name, threadCount=1,
+            enableHighAvailability=enableHighAvailability,
+            usePublicName=True,
+            tryReconnectNums=1
+        )
+        operateNodes(conn, [f'dnode{PORT_DNODE2}',f'dnode{PORT_DNODE3}'], "STOP")
+        mtw.insert("test")
+        operateNodes(conn, [f'dnode{PORT_DNODE2}',f'dnode{PORT_DNODE3}'], "START")
+        mtw.waitForThreadCompletion()
+        status = mtw.getStatus()
+        assert not status.hasError()
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_multithreadTableWriter_tryReconnectNums(self):
+        func_name = inspect.currentframe().f_code.co_name
+        db_name = f"dfs://{func_name}"
+        n = 3
+        conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_ = ddb.Session(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_.run(f"""
+            if(existsDatabase("{db_name}")){{
+                dropDatabase("{db_name}")
+            }}
+            tab=table(100:0,[`id,`test],[BLOB,STRING])
+            db=database("{db_name}",VALUE,["0","1","2"],engine=`TSDB)
+            tb=db.createPartitionedTable(tab,"{func_name}",`test,sortColumns=`test)
+        """)
+        result = subprocess.run([sys.executable, '-c',
+                                 "import dolphindb as ddb;"
+                                 "from basic_testing.utils import operateNodes;"
+                                 "from time import sleep;"
+                                 f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
+                                 f"mtw=ddb.MultithreadedTableWriter('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}','{db_name}','{func_name}',tryReconnectNums={n});"
+                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}'],'STOP');"""
+                                 "mtw.insert('test','test');"
+                                 "mtw.waitForThreadCompletion()"
+                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        assert result.stdout.count("Failed to connect") + result.stdout.count("DataNodeNotAvail") == n
+        assert f"Connect to nodes failed after {n} reconnect attempts." in result.stdout
+        operateNodes(conn, [f'dnode{PORT_DNODE1}'], 'START')

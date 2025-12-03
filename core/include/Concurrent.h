@@ -213,7 +213,7 @@ private:
 };
 
 template<class T>
-class TryRWLockGuard{
+class EXPORT_DECL TryRWLockGuard{
 public:
 	TryRWLockGuard(T* res, bool exclusive, bool acquireLock = true):res_(res), exclusive_(exclusive), locked_(false){
 		if(acquireLock){
@@ -255,7 +255,7 @@ private:
 
 
 template<class T>
-class Future {
+class EXPORT_DECL Future {
 public:
 	Future(): latch_(1) {}
 	//Wait till the result is ready or the specified milliseconds timeout. Return whether the result is ready.
@@ -268,9 +268,9 @@ public:
 		latch_.countDown();
 	}
 	//Get the value as promised. Blocked if the result is not ready.
-	T get() { 
+	T get() {
 		latch_.wait();
-		return val_; 
+		return val_;
 	}
 private:
 	CountDownLatch latch_;
@@ -319,7 +319,7 @@ private:
 };
 
 template<class T>
-class BoundedBlockingQueue{
+class EXPORT_DECL BoundedBlockingQueue{
 public:
 	BoundedBlockingQueue(size_t maxItems) : capacity_(maxItems), size_(0), head_(0), tail_(0){
 		buf_ = new T[maxItems];
@@ -368,7 +368,7 @@ private:
 };
 
 template<class T>
-class SynchronizedQueue{
+class EXPORT_DECL SynchronizedQueue{
 public:
 	SynchronizedQueue(){}
 	void push(const T& item){
@@ -646,7 +646,7 @@ private:
     ConditionalVariable full_;
     ConditionalVariable empty_;
     ConditionalVariable batch_;
-    
+
 };
 
 };

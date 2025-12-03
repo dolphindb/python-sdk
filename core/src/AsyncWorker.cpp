@@ -1,9 +1,9 @@
-#include "AsynWorker.h"
+#include "AsyncWorker.h"
 #include "DolphinDB.h"
 #include "ScalarImp.h"
 
 namespace dolphindb {
-void AsynWorker::run() {
+void AsyncWorker::run() {
     while(true) {
         if(pool_.isShutDown()){
             conn_->close();

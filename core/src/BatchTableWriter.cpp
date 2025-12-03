@@ -1,6 +1,6 @@
 #include "BatchTableWriter.h"
-#include "ScalarImp.h"
 #include "DolphinDB.h"
+
 namespace dolphindb{
 
 BatchTableWriter::BatchTableWriter(const std::string& hostName, int port, const std::string& userId, const std::string& password, bool acquireLock):

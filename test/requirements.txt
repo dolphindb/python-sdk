@@ -5,3 +5,4 @@ pytest
 pytest-xdist
 pytest-html
 statsmodels
+pydantic

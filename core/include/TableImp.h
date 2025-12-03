@@ -13,7 +13,7 @@
 #include "Table.h"
 namespace dolphindb {
 
-class AbstractTable : public Table {
+class EXPORT_DECL AbstractTable : public Table {
 public:
 	AbstractTable(const SmartPointer<std::vector<string>>& colNames);
 	AbstractTable(const SmartPointer<std::vector<string>>& colNames, SmartPointer<std::unordered_map<string,int>> colMap);
@@ -77,7 +77,7 @@ protected:
 };
 
 
-class BasicTable: public AbstractTable{
+class EXPORT_DECL BasicTable: public AbstractTable{
 public:
 	BasicTable(const std::vector<ConstantSP>& cols, const std::vector<string>& colNames, const std::vector<int>& keys);
 	BasicTable(const std::vector<ConstantSP>& cols, const std::vector<string>& colNames);

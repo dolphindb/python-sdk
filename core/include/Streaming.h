@@ -34,15 +34,15 @@ public:
 		symbol_ = msg.symbol_;
 		return *this;
 	}
-	const string& getSymbol() { return symbol_; }
+	const string& getSymbol() const { return symbol_; }
 private:
 	string symbol_;
 };
 
 
-class MessageTableQueue {
+class EXPORT_DECL MessageTableQueue {
 public:
-	MessageTableQueue(size_t maxItems, size_t batchSize_) 
+	MessageTableQueue(size_t maxItems, size_t batchSize_)
 		: capacity_(maxItems), batchSize_(batchSize_), size_(0), exitflag_(false) {}
 	~MessageTableQueue(){}
 	int size();
@@ -98,7 +98,7 @@ private:
 };
 typedef SmartPointer<StreamDeserializer> StreamDeserializerSP;
 
-struct SubscribeInfo {
+struct EXPORT_DECL SubscribeInfo {
 	SubscribeInfo()
 		: 	ID("INVALID"),
 			host("INVAILD"),
@@ -182,7 +182,7 @@ struct SubscribeInfo {
 	string userName, password;
 	StreamDeserializerSP streamDeserializer;
 	SocketSP socket;
-	
+
 	vector<ThreadSP> handleThread;
 	vector<pair<string, int>> availableSites;
 	int currentSiteIndex;

@@ -61,7 +61,7 @@ class TestConcurrent:
             pt=db.createPartitionedTable(t,'pt','c1', sortColumns=`c1`c3, keepDuplicates=ALL)
         """)
 
-        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, True)
+        pool = ddb.DBConnectionPool(HOST, PORT, 8, USER, PASSWD, False)
         s = f"""
             t=table(rand(1..100,1) as c1, rand(`a`b`c`d`e`f`g, 1) as c2, rand(timestamp(10001..10100), 1) as c3)
             loadTable('{dbpath}', `{tab}).append!(t)

@@ -351,7 +351,7 @@ class TestUpload:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({"tab": df})
-        assert conn.run(r"res = bool([]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};all(res)")
+        assert conn.run(r"res = bool([]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};all(all(res))")
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'FLOAT',
@@ -540,7 +540,7 @@ class TestUpload:
             'cdecimal128': keys.DT_DECIMAL128
         }
         conn.upload({"tab": df})
-        assert conn.run(r"res = bool([]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};all(res)")
+        assert conn.run(r"res = bool([]);for(i in 0:tab.columns()){res.append!(tab.column(i).isNull())};all(all(res))")
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
                     'SECOND', 'DATETIME', 'TIMESTAMP', 'NANOTIME', 'NANOTIMESTAMP', 'FLOAT',

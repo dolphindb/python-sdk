@@ -27,11 +27,13 @@ public:
         bool pickleTableToList = false;
         bool disableDecimal = false;
     };
-    
-    DBConnectionPoolImpl(const string& hostName, int port, int threadNum = 10, const string& userId = "", const string& password = "",
-        bool loadBalance = true, bool highAvailability = true, bool compress = false, bool reConnect = false,
-        PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB, PROTOCOL protocol = PROTOCOL_DDB, bool show_output = true, int sqlStd = 0, int tryReconnectNums = -1);
-    
+
+    DBConnectionPoolImpl(const string &hostName, int port, int threadNum = 10, const string &userId = "",
+                         const string &password = "", bool loadBalance = true, bool highAvailability = true,
+                         bool compress = false, bool reConnect = false,
+                         PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB, PROTOCOL protocol = PROTOCOL_DDB,
+                         bool show_output = true, int sqlStd = 0, int tryReconnectNums = -1, bool usePublicName = false);
+
     ~DBConnectionPoolImpl(){
         shutDown();
         Task emptyTask;
@@ -98,7 +100,7 @@ public:
         ));
         taskStatus_.setResult(identity, TaskStatusMgmt::Result());
     }
-    
+
     py::object getPyData(int identity){
         return taskStatus_.getPyData(identity);
     }
@@ -110,7 +112,7 @@ public:
         }
         return sessionIds_;
     }
-    
+
 private:
     std::atomic<bool> shutDownFlag_;
     CountDownLatchSP latch_;

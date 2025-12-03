@@ -2,7 +2,7 @@
 #include "DolphinDB.h"
 #include "Logger.h"
 #include "ConstantMarshall.h"
-#include "DdbPythonUtil.h"
+#include "PytoDdbRowPool.h"
 #include "Pickle.h"
 #include "Wrappers.h"
 #include "ConstantFactory.h"
@@ -13,7 +13,7 @@ namespace dolphindb {
 
 DdbInit DBConnectionImpl::ddbInit_;
 DBConnectionImpl::DBConnectionImpl(bool sslEnable, bool asynTask, int keepAliveTime, bool compress, PARSER_TYPE parser, bool isReverseStreaming, int sqlStd)
-		: port_(0), encrypted_(false), isConnected_(false), littleEndian_(Util::isLittleEndian()), 
+		: port_(0), encrypted_(false), isConnected_(false), littleEndian_(Util::isLittleEndian()),
 		sslEnable_(sslEnable),asynTask_(asynTask), keepAliveTime_(keepAliveTime), compress_(compress),
 		parser_(parser), protocol_(PROTOCOL_DDB), msg_(true), isReverseStreaming_(isReverseStreaming),
         sqlStd_(sqlStd), readTimeout_(-1), writeTimeout_(-1), logger_(std::make_shared<Logger>(Logger::Level::LevelInfo)) {
@@ -140,7 +140,7 @@ bool DBConnectionImpl::connect() {
     }
 
     ConstantSP requiredVersion;
-    
+
     try {
         if(asynTask_) {
             SmartPointer<DBConnection> newConn = new DBConnection(false, false);
@@ -256,7 +256,7 @@ long DBConnectionImpl::generateRequestFlag(bool clearSessionMemory, bool disable
     if (protocol_ == PROTOCOL_DDB || disableprotocol) {
         if (compress_)
             flag += 64;
-    } 
+    }
     else if (protocol_ == PROTOCOL_PICKLE) {
         DLOG("pickle",pickleTableToList?"toList":"");
         flag += 8;
@@ -273,8 +273,7 @@ long DBConnectionImpl::generateRequestFlag(bool clearSessionMemory, bool disable
     }
     if (parser_ == PARSER_TYPE::PARSER_PYTHON) {
         flag += 2048;
-    }
-    else if (parser_ == PARSER_TYPE::PARSER_KDB) {
+    } else if (parser_ == PARSER_TYPE::PARSER_KDB) {
         flag += 4096;
     }
     if (isReverseStreaming_) {
@@ -354,11 +353,11 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
             throw IOException("Couldn't send script/function to the remote host because the connection has been closed, IO error type " + std::to_string(ret));
         }
     }
-    
+
     if(asynTask_)
         return new Void();
     DLOG("run1",script,"read");
-    
+
     if (littleEndian_ != (char)Util::isLittleEndian())
         inputStream_->enableReverseIntegerByteOrder();
 
@@ -398,17 +397,22 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
     if (numObject == 0) {
         return new Void();
     }
-    
+
     short flag;
     if ((ret = inputStream_->readShort(flag)) != OK) {
         close();
         throw IOException("Failed to read object flag from the socket with IO error type " + std::to_string(ret));
     }
-    
+
     DATA_FORM form = static_cast<DATA_FORM>(flag >> 8);
     DATA_TYPE type = static_cast<DATA_TYPE >(flag & 0xff);
-    if(fetchSize > 0 && form == DF_VECTOR && type == DT_ANY)
+    if (fetchSize > 0) {
+        if (form != DF_VECTOR || type != DT_ANY) {
+            close();
+            throw IOException("Fetch size can only be set when executing scripts that return a table.");
+        }
         return new BlockReader(inputStream_);
+    }
     ConstantUnmarshallFactory factory(inputStream_);
     ConstantUnmarshall* unmarshall = factory.getConstantUnmarshall(form);
     if(unmarshall == NULL){
@@ -565,7 +569,7 @@ py::object DBConnectionImpl::runPy(
         close();
         throw IOException("Failed to read response message from the socket with IO error type " + std::to_string(ret));
     }
-    
+
     if (line != "OK") {
         throw IOException("Server response: '" + line + "' script: '" + script + "'");
     }

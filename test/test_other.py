@@ -15,7 +15,6 @@ import dolphindb as ddb
 import numpy as np
 import pandas as pd
 import pytest
-from dolphindb.session import ddbcpp
 from dolphindb.utils import get_types_from_schema
 
 from basic_testing.prepare import DataUtils
@@ -25,6 +24,9 @@ from setup.settings import HOST, PORT, USER, PASSWD
 
 if find_spec("pyarrow") is not None:
     import pyarrow as pa
+from dolphindb._core import DolphinDBRuntime
+
+ddbcpp = DolphinDBRuntime()._ddbcpp
 
 ddbcpp.init()
 
@@ -94,10 +96,10 @@ class TestOther:
         conn.setTimeout(10)
 
         # nullValueToZero
-        conn.nullValueToZero()
+        # conn.nullValueToZero()
 
         # nullValueToNan
-        conn.nullValueToNan()
+        # conn.nullValueToNan()
 
         with pytest.raises(RuntimeError, match='non-string key in upload dictionary is not allowed'):
             conn.upload({
@@ -126,7 +128,7 @@ class TestOther:
         print(conn.hashBucket([1, 2, 3], 4))
 
         # printPerformance
-        conn._printPerformance()
+        # conn._printPerformance()
 
         # enableJobCancellation
         ddb.Session.enableJobCancellation()

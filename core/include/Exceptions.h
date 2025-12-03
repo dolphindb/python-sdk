@@ -124,7 +124,7 @@ private:
 	const IO_ERR errCode_;
 };
 
-class DataCorruptionException: public exception {
+class EXPORT_DECL DataCorruptionException: public exception {
 public:
 	DataCorruptionException(const string& errMsg) : errMsg_("<DataCorruption>" + errMsg){}
 	virtual const char* what() const throw(){

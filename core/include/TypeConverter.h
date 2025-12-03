@@ -15,7 +15,7 @@ namespace py = pybind11;
 namespace converter {
 
 
-class PyCache {
+class EXPORT_DECL PyCache {
 public:
     // Python Environment Distinction
     bool np_above_1_20_;
@@ -127,7 +127,7 @@ public:
         py::object type = py::reinterpret_borrow<py::object>(numpy_.attr("dtype")(pname));
         return type;
     }
-    
+
 public:
     PyCache();
 };
@@ -136,7 +136,7 @@ public:
 bool checkInnerType(const py::handle &data, ConstantSP &constantsp);
 
 
-class PyObjs {
+class EXPORT_DECL PyObjs {
 public:
     static PyCache* cache_;
     static void Initialize() { if (cache_ == nullptr) cache_ = new PyCache(); }
@@ -159,7 +159,7 @@ enum ARRAY_OPTION {
 };
 
 
-struct VectorInfo {
+struct EXPORT_DECL VectorInfo {
 public:
     enum OPTION {EMPTY, COLNAME, COLID};
 public:
@@ -174,7 +174,7 @@ public:
 };
 
 
-struct ToPythonOption {
+struct EXPORT_DECL ToPythonOption {
 public:
     bool        table2List_;    // if object is table, false: convert to pandas, true: convert to list[numpy]
 public:
@@ -183,14 +183,14 @@ public:
 };
 
 
-class TableChecker : public std::map<std::string, Type> {
+class EXPORT_DECL TableChecker : public std::map<std::string, Type> {
 public:
     TableChecker() {}
     TableChecker(const py::dict &pydict);
 };
 
 
-class Converter {
+class EXPORT_DECL Converter {
 public:
     static ConstantSP toDolphinDB(const py::handle &data, const Type &type = {HT_UNK, EXPARAM_DEFAULT});
     static ConstantSP toDolphinDB_Scalar(const py::handle &data, Type type, bool checkInner=true);

@@ -5,8 +5,7 @@
  *      Author: dzhou
  */
 
-#ifndef SYSIO_H_
-#define SYSIO_H_
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -128,7 +127,7 @@ private:
 	struct sockaddr_in addrRemote_;
 };
 
-class DataBlock{
+class EXPORT_DECL DataBlock{
 public:
 	DataBlock() : buf_(nullptr), length_(0){}
 	DataBlock(char* buf, size_t length) : buf_(buf), length_(length){}
@@ -400,5 +399,4 @@ struct EXPORT_DECL FileAttributes{
 	long long lastAccessed; //epoch time in milliseconds
 };
 
-};
-#endif
+} // namespace dolphindb

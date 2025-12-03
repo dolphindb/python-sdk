@@ -1,21 +1,14 @@
-#include "DdbPythonUtil.h"
-#include <pybind11/pytypes.h>
-#include "Concurrent.h"
-#include "ConstantImp.h"
-#include "ConstantMarshall.h"
-#include "DolphinDB.h"
-#include "ScalarImp.h"
-#include "Util.h"
-#include "Pickle.h"
-#include "Set.h"
-#include "MultithreadedTableWriter.h"
-#include "Wrappers.h"
-#include "WideInteger.h"
+#include "PytoDdbRowPool.h"
 
+#include "Concurrent.h"
+#include "DolphinDB.h"
+#include "MultithreadedTableWriter.h"
 #include "TypeConverter.h"
 #include "TypeHelper.h"
+#include "Util.h"
 
-namespace ddb = dolphindb;
+#include <pybind11/pytypes.h>
+
 using namespace pybind11::literals;
 
 namespace dolphindb {
@@ -24,86 +17,6 @@ namespace dolphindb {
 #endif
 #define DLOG    //dolphindb::DLogger::Info
 
-#define RECORDTIME(name) //RecordTime _##name(name)
-
-
-py::object DdbPythonUtil::loadPickleFile(const std::string &filepath){
-#if (PY_MINOR_VERSION <= 6) && (PY_MINOR_VERSION >= 12)
-    py::dict statusDict;
-    string shortFilePath=filepath+"_s";
-    FILE *pf;
-    pf=fopen(shortFilePath.data(),"rb");
-    if(pf==NULL){
-        pf=fopen(filepath.data(),"rb");
-        if(pf==NULL){
-            statusDict["errorCode"]=-1;
-            statusDict["errorInfo"]=filepath+" can't open.";
-            return statusDict;
-        }
-        FILE *pfwrite=fopen(shortFilePath.data(),"wb");
-        if(pfwrite==NULL){
-            statusDict["errorCode"]=-1;
-            statusDict["errorInfo"]=shortFilePath+" can't open.";
-            return statusDict;
-        }
-        char buf[4096];
-        int readlen;
-        {
-            char tmp;
-            char header=0x80;
-            int version;
-            while(fread(&tmp,1,1,pf)==1){
-                while(tmp==header){
-                    if(fread(&tmp,1,1,pf)!=1)
-                        break;
-                    version=(unsigned char)tmp;
-                    DLOG(version);
-                    if(version==4){
-                        fwrite(&header,1,1,pfwrite);
-                        fwrite(&tmp,1,1,pfwrite);
-                        goto nextread;
-                    }
-                }
-            }
-        }
-    nextread:
-        while((readlen=fread(buf,1,4096,pf))>0){
-            fwrite(buf,1,readlen,pfwrite);
-        }
-        fclose(pf);
-        fclose(pfwrite);
-        pf=fopen(shortFilePath.data(),"rb");
-    }
-    if(pf==NULL){
-        statusDict["errorCode"]=-1;
-        statusDict["errorInfo"]=filepath+" can't open.";
-        return statusDict;
-    }
-    DataInputStreamSP dis=new DataInputStream(pf);
-    std::unique_ptr<PickleUnmarshall> unmarshall(new PickleUnmarshall(dis));
-    IO_ERR ret;
-    short flag=0;
-    if (!unmarshall->start(flag, true, ret)) {
-        unmarshall->reset();
-        statusDict["errorCode"]=(int)ret;
-        statusDict["errorInfo"]="unmarshall failed";
-        return statusDict;
-    }
-    PyObject * result = unmarshall->getPyObj();
-    unmarshall->reset();
-    py::object res = py::handle(result).cast<py::object>();
-    res.dec_ref();
-    return res;
-#else
-    /**
-    * Unsupport PROTOCOL_PICKLE for Python 3.13 or newer
-    */
-    throw RuntimeException(
-        "The use of PROTOCOL_PICKLE has been deprecated and removed in Python 3.13. "
-        "Please migrate to an alternative protocol or serialization method."
-    );
-#endif
-}
 
 PytoDdbRowPool::PytoDdbRowPool(MultithreadedTableWriter &writer)
                                 : writer_(writer)
@@ -116,7 +29,6 @@ PytoDdbRowPool::PytoDdbRowPool(MultithreadedTableWriter &writer)
 }
 
 PytoDdbRowPool::~PytoDdbRowPool(){
-    DLOG("~PytoDdbRowPool",rows_.size(),failedRows_.size());
     if(!rows_.empty()||!failedRows_.empty()){
         py::gil_scoped_acquire gil;
         while(!rows_.empty()){
@@ -132,7 +44,7 @@ PytoDdbRowPool::~PytoDdbRowPool(){
 
 void PytoDdbRowPool::startExit(){
     DLOG("startExit with",rows_.size(),failedRows_.size());
-    
+
     exitWhenEmpty_ = true;
     nonempty_.set();
     thread_->join();
@@ -171,7 +83,6 @@ void PytoDdbRowPool::convertLoop(){
         }
         {
             DLOG("convert start ",convertRows.size(),"/",rows_.size());
-            //RECORDTIME("rowPool:ConvertExecutor");
             vector<vector<ConstantSP>*> insertRows;
             insertRows.reserve(convertRows.size());
             vector<ConstantSP> *pDdbRow = NULL;
@@ -190,8 +101,8 @@ void PytoDdbRowPool::convertLoop(){
                         if ((int)pcolType[i] >= ARRAY_TYPE_BASE) {
                             pDdbRow->emplace_back(
                                 converter::Converter::toDolphinDB_Vector(
-                                    prow->at(i), 
-                                    converter::createType((DATA_TYPE)(pcolType[i]-ARRAY_TYPE_BASE), pcolExtra[i]), 
+                                    prow->at(i),
+                                    converter::createType((DATA_TYPE)(pcolType[i]-ARRAY_TYPE_BASE), pcolExtra[i]),
                                     CHILD_VECTOR_OPTION::NORMAL_VECTOR
                                 )
                             );
@@ -255,10 +166,10 @@ void PytoDdbRowPool::getStatus(MultithreadedTableWriter::Status &status){
     LockGuard<Mutex> guard(&mutex_);
     status.unsentRows += rows_.size() + convertingCount_;
     status.sendFailedRows += failedRows_.size();
-    
+
     threadStatus.unsentRows += rows_.size() + convertingCount_;
     threadStatus.sendFailedRows += failedRows_.size();
-    
+
     status.threadStatus.insert(status.threadStatus.begin(),threadStatus);
 }
 
@@ -280,5 +191,4 @@ void PytoDdbRowPool::getUnwrittenData(vector<vector<py::object>*> &pyData,vector
     }
 }
 
-}
-
+} // namespace dolphindb

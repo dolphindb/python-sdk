@@ -6,11 +6,15 @@
  */
 
 #include <ctime>
+#include <exception>
 #include <fstream>
 #include <istream>
 #include <stack>
 #include <regex>
+#include <vector>
+#include <pybind11/gil.h>
 #include "Concurrent.h"
+#include "Constant.h"
 #ifndef WINDOWS
 #include <uuid/uuid.h>
 #else
@@ -26,7 +30,7 @@
 #include "Logger.h"
 #include "Domain.h"
 #include "DBConnectionPoolImpl.h"
-#include "DdbPythonUtil.h"
+#include "PytoDdbRowPool.h"
 #include "Wrappers.h"
 #include "pybind11/numpy.h"
 
@@ -130,8 +134,10 @@ DBConnection::~DBConnection() {
     close();
 }
 
-bool DBConnection::connect(const string& hostName, int port, const string& userId, const string& password, const string& startup,
-                           bool ha, const vector<string>& highAvailabilitySites, int keepAliveTime, bool reconnect, int tryReconnectNums, int readTimeout, int writeTimeout) {
+bool DBConnection::connect(const string &hostName, int port, const string &userId, const string &password,
+                           const string &startup, bool ha, const vector<string> &highAvailabilitySites,
+                           int keepAliveTime, bool reconnect, int tryReconnectNums, int readTimeout, int writeTimeout,
+                           bool usePublicName) {
     ha_ = ha;
 	uid_ = userId;
 	pwd_ = password;
@@ -139,7 +145,7 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 	reconnect_ = reconnect;
 	closed_ = false;
     setKeepAliveTime(keepAliveTime);
-    setTimeout(readTimeout, writeTimeout);
+    setTimeout(readTimeout * 1000, writeTimeout * 1000);
 
     tryReconnectNums_ = (tryReconnectNums <= 0) ? -1 : tryReconnectNums;
 
@@ -161,18 +167,18 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 		TableSP table;
 		while (closed_ == false) {
             int attempt = 0;
-			while(conn_->isConnected()==false && closed_ == false) {
+            while (conn_->isConnected() == false && closed_ == false) {
                 ++attempt;
-				for (auto &one : nodes_) {
+                if (tryReconnectNums_ > 0 && attempt > tryReconnectNums_) {
+                    LOG_ERR("Connect failed after", tryReconnectNums_, "reconnect attempts for every node in high availability sites.");
+                    return false;
+                }
+                for (auto &one : nodes_) {
 					if (connectNode(one.hostName, one.port, keepAliveTime)) {
 						connectedNode = one;
 						break;
 					}
 					Thread::sleep(100);
-				}
-                if (tryReconnectNums_ > 0 && attempt >= tryReconnectNums_) {
-                    LOG_ERR("Connect failed after", tryReconnectNums_, "reconnect attempts for every node in high availability sites.");
-                    return false;
                 }
 			}
 			try {
@@ -206,11 +212,24 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 		VectorSP colmaxConnections = table->getColumn("maxConnections");
 		VectorSP colconnectionNum = table->getColumn("connectionNum");
 		VectorSP colworkerNum = table->getColumn("workerNum");
-		VectorSP colexecutorNum = table->getColumn("executorNum");
+        VectorSP colexecutorNum = table->getColumn("executorNum");
+        VectorSP colPublicName;
+        bool realUsePublicName = false;
+        if (usePublicName && table->contain("publicName")) {
+            colPublicName = table->getColumn("publicName");
+            realUsePublicName = true;
+        }
 		double load;
 		for (int i = 0; i < colMode->rows(); i++) {
-			if (colMode->getInt(i) == 0) {
-				string nodeHost = colHost->getString(i);
+            if (colMode->getInt(i) == 0) {
+                std::string nodeHost;
+                if (realUsePublicName) {
+                    nodeHost = colPublicName->getString(i);
+                    nodeHost = Util::split(nodeHost, ';')[0];
+                }
+                else {
+                    nodeHost = colHost->getString(i);
+                }
 				int nodePort = colPort->getInt(i);
 				Node *pexistNode = NULL;
 				if (!highAvailabilitySites.empty()) {
@@ -237,19 +256,19 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 					pexistNode->load = load;
 				}
 				else {
-					nodes_.push_back(Node(colHost->get(i)->getString(), colPort->get(i)->getInt(), load));
+					nodes_.push_back(Node(nodeHost, nodePort, load));
 				}
 			}
 		}
 		Node *pMinNode=NULL;
 		for (auto &one : nodes_) {
-			if (pMinNode == NULL || 
+			if (pMinNode == NULL ||
 				(one.load >= 0 && pMinNode->load > one.load)) {
 				pMinNode = &one;
 			}
 		}
-		
-		if (!pMinNode->isEqual(connectedNode)) {
+
+        if (!pMinNode->isEqual(connectedNode)) {
 			conn_->close();
 			switchDataNode(pMinNode->hostName, pMinNode->port);
 			return true;
@@ -277,72 +296,87 @@ bool DBConnection::connect(const string& hostName, int port, const string& userI
 }
 
 bool DBConnection::connected() {
+    static std::vector<ConstantSP> ddbArgs = {};
     try {
-        ConstantSP ret = conn_->run("1+1");
-        return !ret.isNull() && (ret->getInt() == 2);
+        ConstantSP ret = conn_->run("version", ddbArgs);
+        return !ret.isNull() && (!ret->isNull());
     } catch (exception&) {
         return false;
     }
 }
 
 bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
-	LOG_DEBUG("Attempting to connect to", hostName, ":", port);
-	//int attempt = 0;
-	while (closed_ == false) {
-		try {
-			bool re = conn_->connect(hostName, port, uid_, pwd_, enableSSL_, asynTask_, keepAliveTime, compress_, parser_);
-            if (re) LOG_INFO("Connect to", hostName, ":", port, "with session id:", conn_->getSessionId());
-            return re;
-        }
-		catch (IOException& e) {
-			if (connected()) {
-				ExceptionType type = parseException(e.what(), hostName, port);
-				if (type != ET_NEWLEADER) {
-					if (type == ET_IGNORE)
-						return true;
-					else if (type == ET_NODENOTAVAIL)
-						return false;
-					else { //UNKNOW
-						LOG_ERR("Connect to", hostName, ":", port, "failed, exception message:", e.what());
-						return false;
-						//throw;
-					}
-				}
-			}
-			else {
+    LOG_DEBUG("Attempting to connect to", hostName, ":", port);
+    // int attempt = 0;
+    while (closed_ == false) {
+        try {
+            bool online =
+                conn_->connect(hostName, port, uid_, pwd_, enableSSL_, asynTask_, keepAliveTime, compress_, parser_);
+            if (!online) {
+                LOG_ERR("Connect to", hostName, ":", port, "failed.");
+                return false;
+            }
+            bool inited{false};
+            try {
+                std::vector<ConstantSP> args;
+                inited = conn_->run("isNodeInitialized", args)->getBool();
+                if (inited) {
+                    LOG_INFO("Connect to", hostName, ":", port, "with session id:", conn_->getSessionId());
+                }
+            } catch (std::exception &) {
+                LOG_WARN("Server does not support initialization check. Please upgrade.");
+                inited = true;
+            }
+            return inited;
+        } catch (IOException &e) {
+            if (connected()) {
+                ExceptionType type = parseException(e.what(), hostName, port);
+                if (type != ET_NEWLEADER) {
+                    if (type == ET_IGNORE)
+                        return true;
+                    else if (type == ET_NODENOTAVAIL)
+                        return false;
+                    else { // UNKNOW
+                        LOG_ERR("Connect to", hostName, ":", port, "failed, exception message:", e.what());
+                        return false;
+                        // throw;
+                    }
+                }
+            } else {
                 LOG_ERR(e.what());
-				return false;
-			}
-		}
-		Util::sleep(100);
-	}
-	return false;
+                return false;
+            }
+            Util::sleep(100);
+        }
+    }
+    return false;
 }
 
 DBConnection::ExceptionType DBConnection::parseException(const string &msg, string &host, int &port) {
-	size_t index = msg.find("<NotLeader>");
-	if (index != string::npos) {
-		index = msg.find(">");
-		string ipport = msg.substr(index + 1);
-		parseIpPort(ipport,host,port);
-		LOG_WARN("Got NotLeaderException, switch to leader node [",host,":",port,"] to run script");
-		return ET_NEWLEADER;
-	}
-	else {
-		static string ignoreMsgs[] = { "<ChunkInTransaction>","<DataNodeNotAvail>","<DataNodeNotReady>","DFS is not enabled" };
-		static int ignoreMsgSize = sizeof(ignoreMsgs) / sizeof(string);
-		for (int i = 0; i < ignoreMsgSize; i++) {
-			index = msg.find(ignoreMsgs[i]);
-			if (index != string::npos) {
-				if (i == 0) {//case ChunkInTransaction should sleep 1 minute for transaction timeout
-					Util::sleep(10000);
-				}
-				host.clear();
-				return ET_NODENOTAVAIL;
-			}
-		}
-		return ET_UNKNOW;
-	}
+    size_t index = msg.find("<NotLeader>");
+    if (index != string::npos) {
+        index = msg.find(">");
+        string ipport = msg.substr(index + 1);
+        parseIpPort(ipport, host, port);
+        LOG_WARN("Got NotLeaderException, switch to leader node [", host, ":", port, "] to run script");
+        return ET_NEWLEADER;
+    } else {
+        static string ignoreMsgs[] = {"<ChunkInTransaction>", "<DataNodeNotAvail>",   "<DataNodeNotReady>",
+                                      "<ControllerNotReady>", "<ControllerNotAvail>", "DFS is not enabled"};
+        static int ignoreMsgSize = sizeof(ignoreMsgs) / sizeof(string);
+        for (int i = 0; i < ignoreMsgSize; i++) {
+            index = msg.find(ignoreMsgs[i]);
+            if (index != string::npos) {
+                if (i == 0) { // case ChunkInTransaction should sleep 1 minute for
+                              // transaction timeout
+                    Util::sleep(10000);
+                }
+                host.clear();
+                return ET_NODENOTAVAIL;
+            }
+        }
+        return ET_UNKNOW;
+    }
 }
 
 void DBConnection::switchDataNode(const string &host, int port, bool reconnect) {
@@ -432,7 +466,8 @@ py::object DBConnection::runPy(
         while (closed_ == false) {
             try {
                 return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
-            } catch (IOException& e) {
+            } catch (IOException &e) {
+                py::gil_scoped_release release;
                 if (extractRefId(e.what()) == "S04009") {
                     throw;
                 }
@@ -499,7 +534,11 @@ py::object DBConnection::runPy(
         while (closed_ == false) {
             try {
                 return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
-            } catch (IOException& e) {
+            } catch (IOException &e) {
+                py::gil_scoped_release release;
+                if (extractRefId(e.what()) == "S04009") {
+                    throw;
+                }
                 string host;
                 int port = 0;
                 if (connected()) {
@@ -631,8 +670,36 @@ void DBConnection::setShowOutput(bool flag) {
     conn_->setShowOutput(flag);
 }
 
-const string DBConnection::getSessionId() const {
-    return conn_->getSessionId();
+const string DBConnection::getSessionId() const { return conn_->getSessionId(); }
+
+const string DBConnection::getHostName() const {
+    std::string host;
+    int port;
+    conn_->getHostPort(host, port);
+    return host;
+}
+
+const int DBConnection::getPort() const {
+    std::string host;
+    int port;
+    conn_->getHostPort(host, port);
+    return port;
+}
+
+const string DBConnection::getUserId() const {
+    std::string uid, pwd;
+    conn_->getUserPwd(uid, pwd);
+    return uid;
+}
+
+const string DBConnection::getPassword() const {
+    std::string uid, pwd;
+    conn_->getUserPwd(uid, pwd);
+    return pwd;
+}
+
+bool DBConnection::isClosed() const {
+    return closed_;
 }
 
 std::shared_ptr<Logger> DBConnection::getMsgLogger() {
@@ -684,11 +751,16 @@ void BlockReader::skipAll(){
 
 
 
-DBConnectionPool::DBConnectionPool(const string& hostName, int port, int threadNum, const string& userId, const string& password,
-				bool loadBalance, bool highAvailability, bool compress, bool reConnect, PARSER_TYPE parser, PROTOCOL protocol, bool showOutput, int sqlStd, int tryReconnectNums)
-    : pool_(new DBConnectionPoolImpl(hostName, port, threadNum, userId, password, loadBalance, highAvailability, compress,reConnect,parser,protocol,showOutput, sqlStd, tryReconnectNums))
-{}
+DBConnectionPool::DBConnectionPool(const string &hostName, int port, int threadNum, const string &userId,
+                                   const string &password, bool loadBalance, bool highAvailability, bool compress,
+                                   bool reConnect, PARSER_TYPE parser, PROTOCOL protocol, bool showOutput, int sqlStd,
+                                   int tryReconnectNums, bool usePublicName)
+    : pool_(new DBConnectionPoolImpl(hostName, port, threadNum, userId, password, loadBalance, highAvailability,
+                                     compress, reConnect, parser, protocol, showOutput, sqlStd, tryReconnectNums,
+                                     usePublicName)) {}
+
 DBConnectionPool::~DBConnectionPool(){}
+
 void DBConnectionPool::run(const string& script, int identity, int priority, int parallelism, int fetchSize, bool clearMemory){
     if(identity < 0)
         throw RuntimeException("Invalid identity: " + std::to_string(identity) + ". Identity must be a non-negative integer.");
@@ -761,12 +833,18 @@ void PartitionedTableAppender::init(string dbUrl, string tableName, string parti
     VectorSP exparams;
     int partitionType;
     DATA_TYPE partitionColType;
-    
+
     try {
         string task;
         if(dbUrl == ""){
-            task = "schema(" + tableName+ ")";
-            appendScript_ = "tableInsert{" + tableName + "}";
+            if (tableName.find(".orca_table.") != std::string::npos) {
+                task = "useOrcaStreamTable(\"" + tableName + "\", schema)";
+                appendScript_ = "tableInsert{loadOrcaStreamTable(\"" + tableName + "\")}";
+            }
+            else {
+                task = "schema(" + tableName+ ")";
+                appendScript_ = "tableInsert{" + tableName + "}";
+            }
         }
         else{
             task = "schema(loadTable(\"" + dbUrl + "\", \"" + tableName + "\"))";
@@ -775,19 +853,19 @@ void PartitionedTableAppender::init(string dbUrl, string tableName, string parti
         if(appendFunction != ""){
             appendScript_ = appendFunction;
         }
-        
+
         pool_->run(task,identity_);
 
         while(!pool_->isFinished(identity_)){
             Util::sleep(10);
         }
-        
+
         tableInfo_ = pool_->getData(identity_);
         identity_ --;
         ConstantSP partColNames = tableInfo_->getMember("partitionColumnName");
         if(partColNames->isNull())
             throw RuntimeException("Can't find specified partition column name.");
-        
+
         if(partColNames->isScalar()){
             if(partColNames->getString() != partitionColName)
                 throw  RuntimeException("Can't find specified partition column name.");
@@ -838,11 +916,11 @@ void PartitionedTableAppender::init(string dbUrl, string tableName, string parti
             columnCategories_[i] = Util::getCategory(type);
             columnNames_[i] = colNames->getString(i);
         }
-        
+
         domain_ = Util::createDomain((PARTITION_TYPE)partitionType, partitionColType, partitionSchema);
     } catch (exception&) {
         throw;
-    } 
+    }
 }
 
 int PartitionedTableAppender::append(TableSP table){
@@ -856,7 +934,7 @@ int PartitionedTableAppender::append(TableSP table){
 		// 	table->setColumn(i, curCol);
 		// }
     }
-    
+
     for(int i=0; i<threadCount_; ++i)
         chunkIndices_[i].clear();
     vector<int> keys = domain_->getPartitionKeys(table->getColumn(partitionColumnIdx_));
@@ -876,8 +954,8 @@ int PartitionedTableAppender::append(TableSP table){
         TableSP subTable = table->getSubTable(chunkIndices_[i]);
         tasks.push_back(identity_);
         vector<ConstantSP> args = {subTable};
-        pool_->run(appendScript_, args, identity_--); 
-        
+        pool_->run(appendScript_, args, identity_--);
+
     }
     int affected = 0;
     for(auto& task : tasks){
@@ -922,14 +1000,20 @@ AutoFitTableAppender::AutoFitTableAppender(string dbUrl, string tableName, DBCon
     try {
         string task;
         if(dbUrl == ""){
-            task = "schema(" + tableName+ ")";
-            appendScript_ = "tableInsert{" + tableName + "}";
+            if (tableName.find(".orca_table.") != std::string::npos) {
+                task = "useOrcaStreamTable(\"" + tableName + "\", schema)";
+                appendScript_ = "tableInsert{loadOrcaStreamTable(\"" + tableName + "\")}";
+            }
+            else {
+                task = "schema(" + tableName+ ")";
+                appendScript_ = "tableInsert{" + tableName + "}";
+            }
         }
         else{
             task = "schema(loadTable(\"" + dbUrl + "\", \"" + tableName + "\"))";
             appendScript_ = "tableInsert{loadTable('" + dbUrl + "', '" + tableName + "')}";
         }
-        
+
         tableInfo =  conn_.run(task);
         colDefs = tableInfo->getMember("colDefs");
         cols_ = colDefs->rows();
@@ -956,16 +1040,16 @@ AutoFitTableAppender::AutoFitTableAppender(string dbUrl, string tableName, DBCon
             columnCategories_[i] = Util::getCategory(type);
             columnNames_[i] = colNames->getString(i);
         }
-        
+
     } catch (exception&) {
         throw;
-    } 
+    }
 }
 
 int AutoFitTableAppender::append(TableSP table){
     if(cols_ != table->columns())
         throw RuntimeException("The input table columns doesn't match the columns of the target table.");
-    
+
     vector<ConstantSP> columns;
     for(int i = 0; i < cols_; i++){
         VectorSP curCol = table->getColumn(i);
@@ -1085,13 +1169,13 @@ AutoFitTableUpsert::AutoFitTableUpsert(string dbUrl, string tableName, DBConnect
         upsertScript_ = defineInsertScript(conn_, dbUrl, tableName, ignoreNull, pkeyColNames, psortColumns);
     } catch (exception&) {
         throw;
-    } 
+    }
 }
 
 int AutoFitTableUpsert::upsert(TableSP table){
     if(cols_ != table->columns())
         throw RuntimeException("The input table columns doesn't match the columns of the target table.");
-    
+
     vector<ConstantSP> columns;
     for(int i = 0; i < cols_; i++){
         VectorSP curCol = table->getColumn(i);

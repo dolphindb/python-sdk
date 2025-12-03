@@ -465,7 +465,7 @@ class TestUploadNew(object):
             self.__class__.conn.upload({k: v['value']})
             assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
             if 'decimal' in k:
-                assertPlus(self.__class__.conn.run(f"string({k})==string({v['expect_value']})"))
+                assertPlus(self.__class__.conn.run(f"snippet({k})==snippet({v['expect_value']})"))
             else:
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 
@@ -476,7 +476,7 @@ class TestUploadNew(object):
             self.__class__.conn.upload({k: v['value']})
             assertPlus(self.__class__.conn.run(f"typestr({k}[`a])=={v['expect_typestr']}"))
             if 'decimal' in k:
-                assertPlus(self.__class__.conn.run(f"string({k})==string({v['expect_value']})"))
+                assertPlus(self.__class__.conn.run(f"snippet({k})==snippet({v['expect_value']})"))
             else:
                 assertPlus(self.__class__.conn.run(f"{k}=={v['expect_value']}"))
 

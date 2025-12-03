@@ -13,7 +13,7 @@
 
 namespace dolphindb {
 
-class Counter {
+class EXPORT_DECL Counter {
 public:
 	Counter(void* p): p_(p), count_(0){}
 	int addRef(){ return atomic_fetch_add(&count_,1)+1;} //atomic operation
@@ -27,7 +27,7 @@ private:
 
 
 template <class T>
-class SmartPointer {
+class EXPORT_DECL SmartPointer {
 public:
 	SmartPointer(T* p=0): counterP_(new Counter(p)){
 		counterP_->addRef();

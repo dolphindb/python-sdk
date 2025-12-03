@@ -1,7 +1,14 @@
 #include "Compress.h"
+#include "Exceptions.h"
+#include "SymbolBase.h"
+#include "SysIO.h"
+#include "Types.h"
 #include "Util.h"
+#include "Vector.h"
 #include "LZ4.h"
-#include "DolphinDB.h"
+#include "Logger.h"
+
+// NOLINTBEGIN(hicpp-signed-bitwise)
 
 const int MAX_DECOMPRESSED_SIZE = 1 << 16;
 const int MAX_COMPRESSED_SIZE = LZ4_compressBound(1 << 16);
@@ -975,4 +982,6 @@ IO_ERR CompressLZ4::encodeContent(const VectorSP &vec, const DataOutputStreamSP 
 	return OK;
 }
 
-};//dolphindb
+} // namespace dolphindb
+
+// NOLINTEND(hicpp-signed-bitwise)

@@ -34,7 +34,7 @@ ConstantSP getConstantSP_VOID();
 ConstantSP getConstantSP_DFLT();
 ConstantSP getConstantSP_NULL();
 
-class ConvertErrorInfo {
+class EXPORT_DECL ConvertErrorInfo {
 public:
     enum ErrorCode {
         EC_Ok = 0,

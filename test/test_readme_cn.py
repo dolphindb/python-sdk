@@ -382,9 +382,8 @@ class TestReadmeCn:
             'ticker': ['AAPL', 'AMZN', 'AMZN', 'A'],
             'price': [22, 3.5, 21, 26],
         })
-        time.sleep(2)
         s.run(f"append!{{loadTable('{db_name}', `{tbName})}}", tb)
-        time.sleep(3)
+        time.sleep(5)
         s.close()
         s = ddb.Session(enableASYNC=False)
         s.connect(HOST, PORT, USER, PASSWD)

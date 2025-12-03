@@ -384,7 +384,7 @@ inline Guid getNullValue<Guid>() { return Guid(); }
 template <>
 inline wide_integer::int128 getNullValue<wide_integer::int128>() { return std::numeric_limits<wide_integer::int128>::min(); }
 
-class ResultSet {
+class EXPORT_DECL ResultSet {
 public:
 	ResultSet(const TableSP &table)
 		: table_(table), position_(0)

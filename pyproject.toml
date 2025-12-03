@@ -23,7 +23,8 @@ dependencies = [
     "numpy >= 1.18.0",
     "pandas >= 1.0.0, !=1.3.0",
     "future",
-    "packaging"
+    "packaging",
+    "pydantic >= 2.0"
 ]
 classifiers = [
     "Programming Language :: Python",
@@ -57,7 +58,7 @@ config-settings = {}
 dependency-versions = "pinned"
 environment = {}
 environment-pass = []
-build-verbosity = 3
+build-verbosity = 1
 
 skip = ["*-win32", "*-manylinux_i686", "pp*", "*-musllinux*", "*cp314*"]
 

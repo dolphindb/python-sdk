@@ -14,7 +14,7 @@
 
 namespace dolphindb{
 
-class HashDomain : public Domain{
+class EXPORT_DECL HashDomain : public Domain{
 public:
     HashDomain(DATA_TYPE partitionColType, ConstantSP partitionSchema) : Domain(HASH, partitionColType){
         buckets_ = partitionSchema->getInt();
@@ -26,7 +26,7 @@ private:
     int buckets_;
 };
 
-class ListDomain : public Domain {
+class EXPORT_DECL ListDomain : public Domain {
 public:
     ListDomain(DATA_TYPE partitionColType, ConstantSP partitionSchema);
 
@@ -37,17 +37,17 @@ private:
 };
 
 
-class ValueDomain : public Domain{
+class EXPORT_DECL ValueDomain : public Domain{
 public:
 	ValueDomain(DATA_TYPE partitionColType, ConstantSP partitionSchema) : Domain(VALUE, partitionColType){}
-	
+
 	virtual vector<int> getPartitionKeys(const ConstantSP& partitionCol) const;
 };
 
-class RangeDomain : public Domain{
+class EXPORT_DECL RangeDomain : public Domain{
 public:
     RangeDomain(DATA_TYPE partitionColType, ConstantSP partitionSchema) : Domain(RANGE, partitionColType), range_(partitionSchema){ }
-	
+
 	virtual vector<int> getPartitionKeys(const ConstantSP& partitionCol) const;
 private:
     VectorSP range_;

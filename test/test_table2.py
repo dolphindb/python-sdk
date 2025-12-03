@@ -12,7 +12,7 @@ from numpy.testing import assert_almost_equal, assert_array_equal, assert_array_
 from pandas._testing import assert_frame_equal
 
 from basic_testing.prepare import random_string
-from setup.settings import HOST, PORT, USER, PASSWD, DATA_DIR, LOCAL_DATA_DIR
+from setup.settings import HOST, PORT, USER, PASSWD, DATA_DIR
 
 
 class TestTable2:

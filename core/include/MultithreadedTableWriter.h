@@ -48,11 +48,15 @@ public:
     /**
      * If fail to connect to the specified DolphinDB server, this function throw an exception.
      */
-    MultithreadedTableWriter(const std::string& host, int port, const std::string& userId, const std::string& password,
-                            const string& dbPath, const string& tableName, bool useSSL, bool enableHighAvailability = false, const vector<string> *pHighAvailabilitySites = nullptr,
-							int batchSize = 1, float throttle = 0.01f,int threadCount = 1, const string& partitionCol ="",
-							const vector<COMPRESS_METHOD> *pCompressMethods = nullptr, Mode mode = M_Append,
-                            vector<string> *pModeOption = nullptr, bool reconnect = true, bool enableStreamTableTimstamp = false);
+    MultithreadedTableWriter(const std::string &host, int port, const std::string &userId, const std::string &password,
+                             const string &dbPath, const string &tableName, bool useSSL,
+                             bool enableHighAvailability = false,
+                             const vector<string> *pHighAvailabilitySites = nullptr, int batchSize = 1,
+                             float throttle = 0.01f, int threadCount = 1, const string &partitionCol = "",
+                             const vector<COMPRESS_METHOD> *pCompressMethods = nullptr, Mode mode = M_Append,
+                             vector<string> *pModeOption = nullptr, bool reconnect = true,
+                             bool enableStreamTableTimstamp = false, int tryReconnectNums = -1,
+                             bool usePublicName = false);
 
     virtual ~MultithreadedTableWriter();
 
@@ -91,7 +95,7 @@ public:
     void getStatus(Status &status);
     void getUnwrittenData(std::vector<std::vector<ConstantSP>*> &unwrittenData);
 	bool insertUnwrittenData(std::vector<std::vector<ConstantSP>*> &records, ErrorCodeInfo &errorInfo) { return insert(records.data(), static_cast<int>(records.size()), errorInfo); }
-    
+
 	bool isExit(){ return hasError_; }
     const DATA_TYPE* getColType(){ return colTypes_.data(); }
     const int* getColExtra(){ return colExtras_.data(); }
@@ -111,7 +115,7 @@ private:
     struct WriterThread {
 		WriterThread() : nonemptySignal(false,true){}
 		SmartPointer<DBConnection> conn;
-        
+
         SynchronizedQueue<std::vector<ConstantSP>*> writeQueue;
         SynchronizedQueue<std::vector<ConstantSP>*> failedQueue;
         ThreadSP writeThread;
@@ -135,7 +139,7 @@ private:
         MultithreadedTableWriter &tableWriter_;
         WriterThread &writeThread_;
     };
-    
+
 private:
     friend class SendExecutor;
 	friend class InsertExecutor;

@@ -25,7 +25,7 @@ struct EXPORT_DECL EventSchemaEx{
     std::vector<int>    commonKeyIndex_;
 };
 
-class AttributeSerializer{
+class EXPORT_DECL AttributeSerializer{
 public:
     AttributeSerializer(int unitLen, DATA_FORM form): unitLen_(unitLen), form_(form) {}
     virtual ~AttributeSerializer() = default;
@@ -36,14 +36,14 @@ protected:
     DATA_FORM form_;
 };
 
-class FastArrayAttributeSerializer : public AttributeSerializer{
+class EXPORT_DECL FastArrayAttributeSerializer : public AttributeSerializer{
 public:
     FastArrayAttributeSerializer(int unitLen) : AttributeSerializer(unitLen, DF_VECTOR) {}
     ~FastArrayAttributeSerializer() = default;
     virtual IO_ERR serialize(const ConstantSP& attribute, DataOutputStreamSP outStream) override;
 };
 
-class ScalarAttributeSerializer : public AttributeSerializer {
+class EXPORT_DECL ScalarAttributeSerializer : public AttributeSerializer {
 public:
     ScalarAttributeSerializer(int unitLen) : AttributeSerializer(unitLen, DF_SCALAR) {buf_.resize(unitLen_);}
     ~ScalarAttributeSerializer() = default;
@@ -53,7 +53,7 @@ private:
     std::string buf_;
 };
 
-class StringScalarAttributeSerializer : public AttributeSerializer {
+class EXPORT_DECL StringScalarAttributeSerializer : public AttributeSerializer {
 public:
     StringScalarAttributeSerializer(bool isBlob) : AttributeSerializer(-1, DF_SCALAR), isBlob_(isBlob) {}
     ~StringScalarAttributeSerializer() = default;
@@ -66,12 +66,12 @@ private:
 using AttributeSerializerSP = SmartPointer<AttributeSerializer>;
 using EventSchemaExSP = SmartPointer<EventSchemaEx>;
 
-struct EventInfo{
+struct EXPORT_DECL EventInfo{
     std::vector<AttributeSerializerSP>  attributeSerializers_;
     EventSchemaExSP                     eventSchema_;
 };
 
-class EventHandler{
+class EXPORT_DECL EventHandler{
 public:
     EventHandler(const std::vector<EventSchema>& eventSchemas, const std::vector<std::string>& eventTimeKeys, const std::vector<std::string>& commonKeys);
     bool checkOutputTable(TableSP outputTable, std::string& errMsg);

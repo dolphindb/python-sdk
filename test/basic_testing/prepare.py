@@ -3,10 +3,10 @@ import platform
 import random
 import re
 import string
+import sys
 from decimal import Decimal
 from importlib.util import find_spec
 from uuid import UUID
-import sys
 
 import dolphindb.settings as keys
 import numpy as np

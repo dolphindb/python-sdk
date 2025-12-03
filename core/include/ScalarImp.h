@@ -22,7 +22,7 @@ void initFormatters();
 
 
 
-class Void: public Constant{
+class EXPORT_DECL Void: public Constant{
 public:
 	Void(bool explicitNull = false){setNothing(!explicitNull);}
 	virtual ConstantSP getInstance() const {return ConstantSP(new Void(!isNothing()));}
@@ -69,7 +69,7 @@ public:
 	virtual bool getBinary(INDEX start, int len, int unitLength, unsigned char* buf) const;
 };
 
-class Int128: public Constant{
+class EXPORT_DECL Int128: public Constant{
 public:
 	Int128();
 	Int128(const unsigned char* data);
@@ -120,7 +120,7 @@ protected:
 	};
 };
 
-class Uuid : public Int128 {
+class EXPORT_DECL Uuid : public Int128 {
 public:
 	Uuid(bool newUuid = false);
 	Uuid(const unsigned char* uuid);
@@ -135,7 +135,7 @@ public:
 	static Uuid* parseUuid(const char* str, size_t len);
 };
 
-class IPAddr : public Int128 {
+class EXPORT_DECL IPAddr : public Int128 {
 public:
 	IPAddr();
 	IPAddr(const char* ip, int len);
@@ -155,7 +155,7 @@ private:
 	static bool parseIP6(const char* str, size_t len, unsigned char* buf);
 };
 
-class String: public Constant{
+class EXPORT_DECL String: public Constant{
 public:
 	String(string val="", bool blob=false):val_(val), blob_(blob){}
 	virtual ~String(){}
@@ -225,7 +225,7 @@ private:
 };
 
 template <class T>
-class AbstractScalar: public Constant{
+class EXPORT_DECL AbstractScalar: public Constant{
 public:
 	AbstractScalar(T val=0):val_(val){}
 	virtual ~AbstractScalar(){}
@@ -453,7 +453,7 @@ protected:
 	T val_;
 };
 
-class Bool: public AbstractScalar<char>{
+class EXPORT_DECL Bool: public AbstractScalar<char>{
 public:
 	Bool(char val=0):AbstractScalar(val){}
 	virtual ~Bool(){}
@@ -480,7 +480,7 @@ public:
 	}
 };
 
-class Char: public AbstractScalar<char>{
+class EXPORT_DECL Char: public AbstractScalar<char>{
 public:
 	Char(char val=0):AbstractScalar(val){}
 	virtual ~Char(){}
@@ -500,7 +500,7 @@ public:
 	static string toString(char val);
 };
 
-class Short: public AbstractScalar<short>{
+class EXPORT_DECL Short: public AbstractScalar<short>{
 public:
 	Short(short val=0):AbstractScalar(val){}
 	virtual ~Short(){}
@@ -519,7 +519,7 @@ public:
 	static string toString(short val);
 };
 
-class Int: public AbstractScalar<int>{
+class EXPORT_DECL Int: public AbstractScalar<int>{
 public:
 	Int(int val=0):AbstractScalar(val){}
 	virtual ~Int(){}
@@ -538,7 +538,7 @@ public:
 	static string toString(int val);
 };
 
-class EnumInt : public Int {
+class EXPORT_DECL EnumInt : public Int {
 public:
 	EnumInt(const string& desc, int val):Int(val), desc_(desc){}
 	virtual ~EnumInt(){}
@@ -551,7 +551,7 @@ private:
 	string desc_;
 };
 
-class Long: public AbstractScalar<long long>{
+class EXPORT_DECL Long: public AbstractScalar<long long>{
 public:
 	Long(long long val=0):AbstractScalar(val){}
 	virtual ~Long(){}
@@ -570,7 +570,7 @@ public:
 	static string toString(long long val);
 };
 
-class Float: public AbstractScalar<float>{
+class EXPORT_DECL Float: public AbstractScalar<float>{
 public:
 	Float(float val=0):AbstractScalar(val){}
 	virtual ~Float(){}
@@ -600,7 +600,7 @@ public:
 	static string toString(float val);
 };
 
-class Double: public AbstractScalar<double>{
+class EXPORT_DECL Double: public AbstractScalar<double>{
 public:
 	Double(double val=0):AbstractScalar(val){}
 	virtual ~Double(){}
@@ -630,7 +630,7 @@ public:
 	static string toString(double val);
 };
 
-class EnumDouble : public Double {
+class EXPORT_DECL EnumDouble : public Double {
 public:
 	EnumDouble(const string& desc, double val):Double(val), desc_(desc){}
 	virtual ~EnumDouble(){}
@@ -643,14 +643,14 @@ private:
 	string desc_;
 };
 
-class TemporalScalar:public Int{
+class EXPORT_DECL TemporalScalar:public Int{
 public:
 	TemporalScalar(int val=0):Int(val){}
 	virtual ~TemporalScalar(){}
 	virtual DATA_CATEGORY getCategory() const {return TEMPORAL;}
 };
 
-class Date:public TemporalScalar{
+class EXPORT_DECL Date:public TemporalScalar{
 public:
 	Date(int val=0):TemporalScalar(val){}
 	virtual ~Date(){}
@@ -664,7 +664,7 @@ public:
 	virtual ConstantSP castTemporal(DATA_TYPE expectType);
 };
 
-class Month:public TemporalScalar{
+class EXPORT_DECL Month:public TemporalScalar{
 public:
 	Month():TemporalScalar(1999*12+11){}
 	Month(int val):TemporalScalar(val){}
@@ -679,7 +679,7 @@ public:
 	virtual ConstantSP castTemporal(DATA_TYPE expectType);
 };
 
-class Time:public TemporalScalar{
+class EXPORT_DECL Time:public TemporalScalar{
 public:
 	Time(int val=0):TemporalScalar(val){}
 	Time(int hour, int minute, int second, int milliSecond):TemporalScalar(((hour*60+minute)*60+second)*1000+milliSecond){}
@@ -694,7 +694,7 @@ public:
 	virtual ConstantSP castTemporal(DATA_TYPE expectType);
 };
 
-class NanoTime:public Long{
+class EXPORT_DECL NanoTime:public Long{
 public:
 	NanoTime(long long val=0):Long(val){}
 	NanoTime(int hour, int minute, int second, int nanoSecond):Long(((hour*60+minute)*60+second)*1000000000ll+ nanoSecond){}
@@ -710,7 +710,7 @@ public:
 	static string toString(long long val);
 };
 
-class Timestamp:public Long{
+class EXPORT_DECL Timestamp:public Long{
 public:
 	Timestamp(long long val=0):Long(val){}
 	Timestamp(int year, int month, int day,int hour, int minute, int second, int milliSecond);
@@ -725,7 +725,7 @@ public:
 	static string toString(long long val);
 };
 
-class NanoTimestamp:public Long{
+class EXPORT_DECL NanoTimestamp:public Long{
 public:
 	NanoTimestamp(long long val=0):Long(val){}
 	NanoTimestamp(int year, int month, int day,int hour, int minute, int second, int nanoSecond);
@@ -740,7 +740,7 @@ public:
 	static string toString(long long val);
 };
 
-class Minute:public TemporalScalar{
+class EXPORT_DECL Minute:public TemporalScalar{
 public:
 	Minute(int val=0):TemporalScalar(val){}
 	Minute(int hour, int minute):TemporalScalar(hour*60+minute){}
@@ -755,7 +755,7 @@ public:
 	virtual ConstantSP castTemporal(DATA_TYPE expectType);
 };
 
-class Second:public TemporalScalar{
+class EXPORT_DECL Second:public TemporalScalar{
 public:
 	Second(int val=0):TemporalScalar(val){}
 	Second(int hour, int minute,int second):TemporalScalar((hour*60+minute)*60+second){}
@@ -770,7 +770,7 @@ public:
 	virtual ConstantSP castTemporal(DATA_TYPE expectType);
 };
 
-class DateTime:public TemporalScalar{
+class EXPORT_DECL DateTime:public TemporalScalar{
 public:
 	DateTime(int val=0):TemporalScalar(val){}
 	DateTime(int year, int month, int day, int hour, int minute,int second);
@@ -784,7 +784,7 @@ public:
 	virtual ConstantSP castTemporal(DATA_TYPE expectType);
 };
 
-class DateHour:public TemporalScalar{
+class EXPORT_DECL DateHour:public TemporalScalar{
 public:
     DateHour(int val=0):TemporalScalar(val){}
     DateHour(int year, int month, int day, int hour);

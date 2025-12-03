@@ -2221,7 +2221,7 @@ class TestPartitionedTableAppender:
             ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
             for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
-            all(res)
+            all(all(res))
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['INT', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',
@@ -2308,7 +2308,7 @@ class TestPartitionedTableAppender:
             ex_tab = select * from loadTable("{db_name}", "pt");
             res = bool([]);
             for(i in 1:tab.columns()){{res.append!(ex_tab.column(i).isNull())}};
-            all(res)
+            all(all(res))
         """)
         schema = conn.run("schema(tab).colDefs[`typeString]")
         ex_types = ['INT', 'BOOL', 'CHAR', 'SHORT', 'INT', 'LONG', 'DATE', 'MONTH', 'TIME', 'MINUTE',

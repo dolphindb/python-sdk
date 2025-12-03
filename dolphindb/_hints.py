@@ -8,6 +8,10 @@ from typing import (
     Optional,
     Tuple,
     Union,
+    Set,
+    TypeVar,
+    Generic,
+    Type,
 )
 
 if sys.version_info >= (3, 8):
@@ -15,14 +19,23 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal
 
+from .settings import ParserType, SqlStd
+
 
 __all__ = [
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Union,
+    "Any",
+    "Callable",
+    "Dict",
+    "List",
+    "Literal",
+    "Optional",
+    "Tuple",
+    "Union",
+    "Set",
+    "TypeVar",
+    "Generic",
+    "Type",
+
+    "ParserType",
+    "SqlStd",
 ]

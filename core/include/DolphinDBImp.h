@@ -3,13 +3,13 @@
 #include "ConstantImp.h"
 #include <string>
 #include "pybind11/pybind11.h"
-#include "DdbPythonUtil.h"
+#include "PytoDdbRowPool.h"
 
 namespace py = pybind11;
 
 namespace dolphindb {
 
-class DdbInit {
+class EXPORT_DECL DdbInit {
 public:
     DdbInit() {
     #ifdef WINDOWS
@@ -22,7 +22,7 @@ public:
     }
 };
 
-class DBConnectionImpl {
+class EXPORT_DECL DBConnectionImpl {
 public:
     DBConnectionImpl(bool sslEnable = false, bool asynTask = false, int keepAliveTime = 7200, bool compress = false, PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB, bool isReverseStreaming = false, int sqlStd = 0);
     ~DBConnectionImpl();
@@ -34,8 +34,14 @@ public:
     ConstantSP upload(vector<string>& names, vector<ConstantSP>& objs);
     void close();
     bool isConnected() { return isConnected_; }
-    void getHostPort(string &host, int &port) { host = hostName_; port = port_; }
-
+    void getHostPort(string &host, int &port) {
+        host = hostName_;
+        port = port_;
+    }
+    void getUserPwd(string &user, string &pwd) {
+        user = userId_;
+        pwd = pwd_;
+    }
     void setProtocol(PROTOCOL protocol) {
         protocol_ = protocol;
         if (protocol_ == PROTOCOL_ARROW) {
