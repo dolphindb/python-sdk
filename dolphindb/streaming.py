@@ -179,7 +179,7 @@ class ThreadedClient(StreamingClient):
     def subscribe(
         self,
         host: str,
-        port: str,
+        port: int,
         handler: Callable,
         table_name: str,
         action_name: str = DEFAULT_ACTION_NAME,
@@ -209,7 +209,7 @@ class ThreadedClient(StreamingClient):
     def subscribe(
         self,
         host: str = None,
-        port: str = None,
+        port: int = None,
         handler: Callable = None,
         table_name: str = None,
         action_name: str = None,
@@ -251,7 +251,7 @@ class ThreadPooledClient(StreamingClient):
     def subscribe(
         self,
         host: str,
-        port: str,
+        port: int,
         handler: Callable,
         table_name: str,
         action_name: str = DEFAULT_ACTION_NAME,
@@ -281,7 +281,7 @@ class ThreadPooledClient(StreamingClient):
     def subscribe(
         self,
         host: str = None,
-        port: str = None,
+        port: int = None,
         handler: Callable = None,
         table_name: str = None,
         action_name: str = None,

@@ -112,7 +112,7 @@ namespace dolphindb{
         Py_ssize_t frameIdx_;
         Py_ssize_t frameLen_;
     };
-}; //end of namespace dolphindb
+} //end of namespace dolphindb
 
 #else
 /**

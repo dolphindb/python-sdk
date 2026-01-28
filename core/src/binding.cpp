@@ -64,11 +64,6 @@ using converter::Type;
 #define UNLIKELY(x) (x)
 #endif
 
-#ifdef DLOG
-    #undef DLOG
-#endif
-#define DLOG        // ddb::DLogger::Info
-
 #ifndef MAC
     #define TRY                     try {
 
@@ -317,7 +312,7 @@ public:
 
     const std::string get_host_name() { return dbConnection_.getHostName(); }
 
-    const int get_port() { return dbConnection_.getPort(); }
+    int get_port() { return dbConnection_.getPort(); }
 
     const std::string get_user_id() { return dbConnection_.getUserId(); }
 
@@ -765,7 +760,7 @@ ddb::Mutex PyDBConnection::mapMutex_ = ddb::Mutex();
 std::map<PyDBConnection*, int> PyDBConnection::runningMap_ = {};
 
 
-void signal_handler_fun(int signum) {
+void signal_handler_fun(int  /*signum*/) {
     ddb::LockGuard<ddb::Mutex> LockGuard(&PyDBConnection::sigintMutex_);
     if(!PyDBConnection::isSigint_) {
         PyDBConnection::isSigint_ = true;
@@ -1160,7 +1155,7 @@ public:
         for (int i = 0; i < len; ++i) {
             py::setattr(event, scheme_.fieldNames_[i].c_str(), Converter::toPython_Old(attrs[i]));
         }
-        return std::move(event);
+        return event;
     }
     ddb::EventSchema scheme() {
         return scheme_;
@@ -1367,7 +1362,7 @@ public:
         py::object handler = config["handler"];
 
         if (batch_size > 0) {
-            ddb::MessageBatchHandler ddbHanlder = [handler, this, batch_size, msg_as_table,
+            ddb::MessageBatchHandler ddbHanlder = [handler, msg_as_table,
                                                    has_stream_deser](const std::vector<ddb::Message> &msgs) {
                 // handle GIL
                 py::gil_scoped_acquire acquire;
@@ -1402,7 +1397,7 @@ public:
             if (msg_as_table) {
                 throw py::value_error("msg_as_table must be False when batch_size is 0");
             }
-            ddb::MessageHandler ddbHanlder = [handler, this, has_stream_deser](const ddb::Message &msg) {
+            ddb::MessageHandler ddbHanlder = [handler, has_stream_deser](const ddb::Message &msg) {
                 // handle GIL
                 py::gil_scoped_acquire acquire;
                 py::list row = Converter::toPython_Old(msg);
@@ -1460,7 +1455,7 @@ public:
         const std::string passWord = py::cast<std::string>(config["password"]);
         const std::string topic = concatTopic(host, port, tableName, actionName);
         const int batch_size = py::cast<int>(config["batch_size"]);
-        const double throttle = py::cast<double>(config["throttle"]);
+        // const double throttle = py::cast<double>(config["throttle"]);
         const long long offset = py::cast<long long>(config["offset"]);
         const bool resub = py::cast<bool>(config["resub"]);
         const bool msg_as_table = py::cast<bool>(config["msg_as_table"]);
@@ -1493,7 +1488,7 @@ public:
         if (msg_as_table) {
             throw py::value_error("msg_as_table must be False when batch_size is 0");
         }
-        ddb::MessageHandler ddbHanlder = [handler, this, has_stream_deser](const ddb::Message &msg) {
+        ddb::MessageHandler ddbHanlder = [handler, has_stream_deser](const ddb::Message &msg) {
             // handle GIL
             py::gil_scoped_acquire acquire;
             py::list row = Converter::toPython_Old(msg);
@@ -1537,7 +1532,7 @@ public:
         }
         client_ = new ddb::EventClient(schemes, eventTimeKeys, commonKeys);
     }
-    ~PyEventClient() {
+    ~PyEventClient() override {
         clearAllSubscribeImpl([this](std::string host, int port, std::string tableName, std::string actionName) {
             this->client_->unsubscribe(host, port, tableName, actionName);
         });

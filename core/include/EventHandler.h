@@ -39,15 +39,15 @@ protected:
 class EXPORT_DECL FastArrayAttributeSerializer : public AttributeSerializer{
 public:
     FastArrayAttributeSerializer(int unitLen) : AttributeSerializer(unitLen, DF_VECTOR) {}
-    ~FastArrayAttributeSerializer() = default;
-    virtual IO_ERR serialize(const ConstantSP& attribute, DataOutputStreamSP outStream) override;
+    ~FastArrayAttributeSerializer() override = default;
+    IO_ERR serialize(const ConstantSP& attribute, DataOutputStreamSP outStream) override;
 };
 
 class EXPORT_DECL ScalarAttributeSerializer : public AttributeSerializer {
 public:
     ScalarAttributeSerializer(int unitLen) : AttributeSerializer(unitLen, DF_SCALAR) {buf_.resize(unitLen_);}
-    ~ScalarAttributeSerializer() = default;
-    virtual IO_ERR serialize(const ConstantSP& attribute, DataOutputStreamSP outStream) override;
+    ~ScalarAttributeSerializer() override = default;
+    IO_ERR serialize(const ConstantSP& attribute, DataOutputStreamSP outStream) override;
 
 private:
     std::string buf_;
@@ -56,8 +56,8 @@ private:
 class EXPORT_DECL StringScalarAttributeSerializer : public AttributeSerializer {
 public:
     StringScalarAttributeSerializer(bool isBlob) : AttributeSerializer(-1, DF_SCALAR), isBlob_(isBlob) {}
-    ~StringScalarAttributeSerializer() = default;
-    virtual IO_ERR serialize(const ConstantSP& attribute, DataOutputStreamSP outStream) override;
+    ~StringScalarAttributeSerializer() override = default;
+    IO_ERR serialize(const ConstantSP& attribute, DataOutputStreamSP outStream) override;
 
 private:
     bool isBlob_;

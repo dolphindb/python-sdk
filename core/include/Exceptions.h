@@ -20,8 +20,8 @@ namespace dolphindb {
 class EXPORT_DECL IncompatibleTypeException: public exception{
 public:
 	IncompatibleTypeException(DATA_TYPE expected, DATA_TYPE actual);
-	virtual ~IncompatibleTypeException() throw(){}
-	virtual const char* what() const throw() { return errMsg_.c_str();}
+	~IncompatibleTypeException() throw() override{}
+	const char* what() const throw() override { return errMsg_.c_str();}
 	DATA_TYPE expectedType(){return expected_;}
 	DATA_TYPE actualType(){return actual_;}
 private:
@@ -33,10 +33,10 @@ private:
 class EXPORT_DECL SyntaxException: public exception{
 public:
 	SyntaxException(const string& errMsg): errMsg_(errMsg){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~SyntaxException() throw(){}
+	~SyntaxException() throw() override{}
 
 private:
 	const string errMsg_;
@@ -45,10 +45,10 @@ private:
 class EXPORT_DECL IllegalArgumentException : public exception{
 public:
 	IllegalArgumentException(const string& functionName, const string& errMsg): functionName_(functionName), errMsg_(errMsg){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~IllegalArgumentException() throw(){}
+	~IllegalArgumentException() throw() override{}
 	const string& getFunctionName() const { return functionName_;}
 
 private:
@@ -59,10 +59,10 @@ private:
 class EXPORT_DECL RuntimeException: public exception{
 public:
 	RuntimeException(const string& errMsg):errMsg_(errMsg){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~RuntimeException() throw(){}
+	~RuntimeException() throw() override{}
 
 private:
 	const string errMsg_;
@@ -71,10 +71,10 @@ private:
 class EXPORT_DECL OperatorRuntimeException: public exception{
 public:
 	OperatorRuntimeException(const string& optr,const string& errMsg): operator_(optr),errMsg_(errMsg){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~OperatorRuntimeException() throw(){}
+	~OperatorRuntimeException() throw() override{}
 	const string& getOperatorName() const { return operator_;}
 
 private:
@@ -85,10 +85,10 @@ private:
 class EXPORT_DECL TableRuntimeException: public exception{
 public:
 	TableRuntimeException(const string& errMsg): errMsg_(errMsg){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~TableRuntimeException() throw(){}
+	~TableRuntimeException() throw() override{}
 
 private:
 	const string errMsg_;
@@ -97,10 +97,10 @@ private:
 class EXPORT_DECL MemoryException: public exception{
 public:
 	MemoryException():errMsg_("Out of memory"){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~MemoryException() throw(){}
+	~MemoryException() throw() override{}
 
 private:
 	const string errMsg_;
@@ -111,10 +111,10 @@ public:
 	IOException(const string& errMsg): errMsg_(errMsg), errCode_(OTHERERR){}
 	IOException(const string& errMsg, IO_ERR errCode): errMsg_(errMsg + ". " + getCodeDescription(errCode)), errCode_(errCode){}
 	IOException(IO_ERR errCode): errMsg_(getCodeDescription(errCode)), errCode_(errCode){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~IOException() throw(){}
+	~IOException() throw() override{}
 	IO_ERR getErrorCode() const {return errCode_;}
 private:
 	string getCodeDescription(IO_ERR errCode) const;
@@ -127,10 +127,10 @@ private:
 class EXPORT_DECL DataCorruptionException: public exception {
 public:
 	DataCorruptionException(const string& errMsg) : errMsg_("<DataCorruption>" + errMsg){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~DataCorruptionException() throw(){}
+	~DataCorruptionException() throw() override{}
 
 private:
 	const string errMsg_;
@@ -143,10 +143,10 @@ public:
 	//Use the new leader specified in the input argument. format: <host>:<port>:<alias>, e.g. 192.168.1.10:8801:nodeA
 	NotLeaderException(const string& newLeader) : errMsg_("<NotLeader>" + newLeader), newLeader_(newLeader){}
 	const string& getNewLeader() const {return newLeader_;}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~NotLeaderException() throw(){}
+	~NotLeaderException() throw() override{}
 
 private:
 	const string errMsg_;
@@ -156,10 +156,10 @@ private:
 class EXPORT_DECL MathException: public exception {
 public:
 	MathException(const string& errMsg) : errMsg_(errMsg){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
-	virtual ~MathException() throw(){}
+	~MathException() throw() override{}
 
 private:
 	const string errMsg_;
@@ -173,12 +173,12 @@ public:
 		else
 			errMsg_="Testing case "+name_+"_"+subName_+" failed";
 	}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return errMsg_.c_str();
 	}
 	const string& getCaseName() const {return name_;}
 	const string& getSubCaseName() const {return subName_;}
-	virtual ~TestingException() throw(){}
+	~TestingException() throw() override{}
 
 private:
 	const string name_;
@@ -190,12 +190,12 @@ private:
 class EXPORT_DECL UserException: public exception{
 public:
 	UserException(const string exceptionType, const string& msg) : exceptionType_(exceptionType), msg_(msg){}
-	virtual const char* what() const throw(){
+	const char* what() const throw() override{
 		return msg_.c_str();
 	}
 	const string& getExceptionType() const { return exceptionType_;}
 	const string& getMessage() const { return msg_;}
-	virtual ~UserException() throw(){}
+	~UserException() throw() override{}
 private:
 	string exceptionType_;
 	string msg_;

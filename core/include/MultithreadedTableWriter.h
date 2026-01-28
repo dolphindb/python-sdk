@@ -131,7 +131,7 @@ private:
 		SendExecutor(MultithreadedTableWriter &tableWriter,WriterThread &writeThread):
                         tableWriter_(tableWriter),
                         writeThread_(writeThread){};
-        virtual void run();
+        void run() override;
     private:
 		bool isExit() { return tableWriter_.hasError_.load() || writeThread_.exit; }
         bool init();
@@ -172,6 +172,6 @@ public:
     PytoDdbRowPool * getPytoDdb(){ return pytoDdb_;}
 };
 
-};
+}
 
 #endif //MUTITHREADEDTABLEWRITER_H_

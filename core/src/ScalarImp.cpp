@@ -54,139 +54,139 @@ inline long long countTemporalUnit(int days, long long multiplier, long long rem
 	return days == INT_MIN ? LLONG_MIN : days * multiplier + remainder;
 }
 
-bool Void::isNull(INDEX start, int len, char* buf) const {
+bool Void::isNull(INDEX  /*start*/, int len, char* buf) const {
 	memset(buf,1,len);
 	return true;
 }
 
-bool Void::isValid(INDEX start, int len, char* buf) const {
+bool Void::isValid(INDEX  /*start*/, int len, char* buf) const {
 	memset(buf,0,len);
 	return true;
 }
 
-bool Void::getBool(INDEX start, int len, char* buf) const {
+bool Void::getBool(INDEX  /*start*/, int len, char* buf) const {
 	for(int i=0;i<len;++i)
 		buf[i]=CHAR_MIN;
 	return true;
 }
 
-const char* Void::getBoolConst(INDEX start, int len, char* buf) const {
+const char* Void::getBoolConst(INDEX  /*start*/, int len, char* buf) const {
 	for(int i=0;i<len;++i)
 		buf[i]=CHAR_MIN;
 	return buf;
 }
 
-bool Void::getChar(INDEX start, int len, char* buf) const {
+bool Void::getChar(INDEX  /*start*/, int len, char* buf) const {
 	char tmp=CHAR_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const char* Void::getCharConst(INDEX start, int len, char* buf) const {
+const char* Void::getCharConst(INDEX  /*start*/, int len, char* buf) const {
 	char tmp=CHAR_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Void::getShort(INDEX start, int len, short* buf) const {
+bool Void::getShort(INDEX  /*start*/, int len, short* buf) const {
 	short tmp=SHRT_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const short* Void::getShortConst(INDEX start, int len, short* buf) const {
+const short* Void::getShortConst(INDEX  /*start*/, int len, short* buf) const {
 	short tmp=SHRT_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Void::getInt(INDEX start, int len, int* buf) const {
+bool Void::getInt(INDEX  /*start*/, int len, int* buf) const {
 	int tmp=INT_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const int* Void::getIntConst(INDEX start, int len, int* buf) const {
+const int* Void::getIntConst(INDEX  /*start*/, int len, int* buf) const {
 	int tmp=INT_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Void::getLong(INDEX start, int len, long long* buf) const {
+bool Void::getLong(INDEX  /*start*/, int len, long long* buf) const {
 	long long tmp=LLONG_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const long long* Void::getLongConst(INDEX start, int len, long long* buf) const {
+const long long* Void::getLongConst(INDEX  /*start*/, int len, long long* buf) const {
 	long long tmp=LLONG_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Void::getIndex(INDEX start, int len, INDEX* buf) const {
+bool Void::getIndex(INDEX  /*start*/, int len, INDEX* buf) const {
 	INDEX tmp=INDEX_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const INDEX* Void::getIndexConst(INDEX start, int len, INDEX* buf) const {
+const INDEX* Void::getIndexConst(INDEX  /*start*/, int len, INDEX* buf) const {
 	INDEX tmp=INDEX_MIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Void::getFloat(INDEX start, int len, float* buf) const {
+bool Void::getFloat(INDEX  /*start*/, int len, float* buf) const {
 	float tmp=FLT_NMIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const float* Void::getFloatConst(INDEX start, int len, float* buf) const {
+const float* Void::getFloatConst(INDEX  /*start*/, int len, float* buf) const {
 	float tmp=FLT_NMIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Void::getDouble(INDEX start, int len, double* buf) const {
+bool Void::getDouble(INDEX  /*start*/, int len, double* buf) const {
 	double tmp=DBL_NMIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const double* Void::getDoubleConst(INDEX start, int len, double* buf) const {
+const double* Void::getDoubleConst(INDEX  /*start*/, int len, double* buf) const {
 	double tmp=DBL_NMIN;
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Void::getString(INDEX start, int len, string** buf) const {
+bool Void::getString(INDEX  /*start*/, int len, string** buf) const {
 	for(int i=0;i<len;++i)
 		buf[i]=&Constant::EMPTY;
 	return true;
 }
 
-string** Void::getStringConst(INDEX start, int len, string** buf) const {
+string** Void::getStringConst(INDEX  /*start*/, int len, string** buf) const {
 	for(int i=0;i<len;++i)
 		buf[i]=&Constant::EMPTY;
 	return buf;
 }
 
-bool Void::getBinary(INDEX start, int len, int unitLength, unsigned char* buf) const {
+bool Void::getBinary(INDEX  /*start*/, int len, int unitLength, unsigned char* buf) const {
 	memset(buf, 0, unitLength * len);
 	return true;
 }
@@ -194,14 +194,14 @@ bool Void::getBinary(INDEX start, int len, int unitLength, unsigned char* buf) c
 long long Void::getAllocatedMemory() const {return sizeof(Void);}
 
 
-int Void::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int& numElement, int& partial) const {
+int Void::serialize(char* buf, int  /*bufSize*/, INDEX  /*indexStart*/, int  /*offset*/, int& numElement, int& partial) const {
 	buf[0] = isNothing() ? 0 : 1;
 	numElement = 1;
 	partial = 0;
 	return 1;
 }
 
-IO_ERR Void::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement) {
+IO_ERR Void::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement) {
 	bool explicitNull;
 	IO_ERR ret = in->readBool(explicitNull);
 	if(ret == OK)
@@ -210,7 +210,7 @@ IO_ERR Void::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumE
 	return ret;
 }
 
-int String::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int& numElement, int& partial) const {
+int String::serialize(char* buf, int bufSize, INDEX  /*indexStart*/, int offset, int& numElement, int& partial) const {
     int len = static_cast<int>(val_.size());
     if (!blob_) {
         if (len >= 262144) {
@@ -259,7 +259,7 @@ int String::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int&
     }
 }
 
-IO_ERR String::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
+IO_ERR String::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement){
     IO_ERR ret;
     if (blob_) {
         int len;
@@ -304,7 +304,7 @@ Bool* Bool::parseBool(const string& str){
 	return p;
 }
 
-IO_ERR Bool::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
+IO_ERR Bool::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement){
 	IO_ERR ret = in->readChar(val_);
 	if(ret == OK)
 		numElement = 1;
@@ -365,7 +365,7 @@ Char* Char::parseChar(const string& str){
 	return p;
 }
 
-IO_ERR Char::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
+IO_ERR Char::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement){
 	IO_ERR ret = in->readChar(val_);
 	if(ret == OK)
 		numElement = 1;
@@ -395,7 +395,7 @@ string Short::toString(short val){
 		return NumberFormat::toString(val);
 }
 
-IO_ERR Short::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
+IO_ERR Short::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement){
 	IO_ERR ret = in->readShort(val_);
 	if(ret == OK)
 		numElement = 1;
@@ -420,7 +420,7 @@ string Int::toString(int val){
 		return NumberFormat::toString(val);
 }
 
-IO_ERR Int::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
+IO_ERR Int::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement){
 	IO_ERR ret = in->readInt(val_);
 	if(ret == OK)
 		numElement = 1;
@@ -446,7 +446,7 @@ string Long::toString(long long val){
 		return NumberFormat::toString(val);
 }
 
-IO_ERR Long::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
+IO_ERR Long::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement){
 	IO_ERR ret = in->readLong(val_);
 	if(ret == OK)
 		numElement = 1;
@@ -461,7 +461,7 @@ Int128::Int128(const unsigned char* data){
 Int128::Int128(){
 }
 
-int Int128::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int& numElement, int& partial) const {
+int Int128::serialize(char* buf, int bufSize, INDEX  /*indexStart*/, int offset, int& numElement, int& partial) const {
 	int len = 16 - offset;
 	if(len < 0)
 		return -1;
@@ -480,7 +480,7 @@ int Int128::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int&
 	}
 }
 
-IO_ERR Int128::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement) {
+IO_ERR Int128::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement) {
 	IO_ERR ret = in->readBytes((char*)uuid_, 16, false);
 	if(ret == OK)
 		numElement = 1;
@@ -496,11 +496,11 @@ void Int128::setNull(){
 	memset((void*)uuid_, 0, 16);
 }
 
-void Int128::setBinary(const unsigned char* val, int unitLength){
+void Int128::setBinary(const unsigned char* val, int  /*unitLength*/){
 	memcpy(uuid_, val, 16);
 }
 
-bool Int128::getBinary(INDEX start, int len, int unitLength, unsigned char* buf) const{
+bool Int128::getBinary(INDEX  /*start*/, int len, int unitLength, unsigned char* buf) const{
 	if(unitLength != 16)
 		return false;
 	for(int i=0; i<len; ++i){
@@ -510,7 +510,7 @@ bool Int128::getBinary(INDEX start, int len, int unitLength, unsigned char* buf)
 	return true;
 }
 
-const unsigned char* Int128::getBinaryConst(INDEX start, int len, int unitLength, unsigned char* buf) const {
+const unsigned char* Int128::getBinaryConst(INDEX  /*start*/, int len, int  /*unitLength*/, unsigned char* buf) const {
 	unsigned char* original = buf;
 	for(int i=0; i<len; ++i){
 		memcpy(buf, uuid_, 16);
@@ -548,7 +548,7 @@ bool Int128::parseInt128(const char* str, size_t len, unsigned char *buf) {
 		return false;
 }
 
-int Int128::compare(INDEX index, const ConstantSP& target) const {
+int Int128::compare(INDEX  /*index*/, const ConstantSP& target) const {
 	return guid_.compare(target->getInt128());
 }
 
@@ -756,56 +756,56 @@ bool IPAddr::parseIP6(const char* str, size_t len, unsigned char* buf){
 	return byteIndex==16;
 }
 
-bool Float::getChar(INDEX start, int len, char* buf) const {
+bool Float::getChar(INDEX  /*start*/, int len, char* buf) const {
 	char tmp = isNull() ? CHAR_MIN : static_cast<char>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const char* Float::getCharConst(INDEX start, int len, char* buf) const {
+const char* Float::getCharConst(INDEX  /*start*/, int len, char* buf) const {
 	char tmp = isNull() ? CHAR_MIN : static_cast<char>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Float::getShort(INDEX start, int len, short* buf) const {
+bool Float::getShort(INDEX  /*start*/, int len, short* buf) const {
 	short tmp = isNull() ? SHRT_MIN : static_cast<short>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const short* Float::getShortConst(INDEX start, int len, short* buf) const {
+const short* Float::getShortConst(INDEX  /*start*/, int len, short* buf) const {
 	short tmp = isNull() ? SHRT_MIN : static_cast<short>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Float::getInt(INDEX start, int len, int* buf) const {
+bool Float::getInt(INDEX  /*start*/, int len, int* buf) const {
 	int tmp = isNull() ? INT_MIN : static_cast<int>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const int* Float::getIntConst(INDEX start, int len, int* buf) const {
+const int* Float::getIntConst(INDEX  /*start*/, int len, int* buf) const {
 	int tmp = isNull() ? INT_MIN : static_cast<int>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Float::getLong(INDEX start, int len, long long* buf) const {
+bool Float::getLong(INDEX  /*start*/, int len, long long* buf) const {
 	long long tmp = isNull() ? LLONG_MIN : static_cast<long long>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const long long* Float::getLongConst(INDEX start, int len, long long* buf) const {
+const long long* Float::getLongConst(INDEX  /*start*/, int len, long long* buf) const {
 	long long tmp = isNull() ? LLONG_MIN : static_cast<long long>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
@@ -840,62 +840,62 @@ Float* Float::parseFloat(const string& str){
 	return p;
 }
 
-IO_ERR Float::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
+IO_ERR Float::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement){
 	IO_ERR ret = in->readFloat(val_);
 	if(ret == OK)
 		numElement = 1;
 	return ret;
 }
 
-bool Double::getChar(INDEX start, int len, char* buf) const {
+bool Double::getChar(INDEX  /*start*/, int len, char* buf) const {
 	char tmp = isNull() ? CHAR_MIN : static_cast<char>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const char* Double::getCharConst(INDEX start, int len, char* buf) const {
+const char* Double::getCharConst(INDEX  /*start*/, int len, char* buf) const {
 	char tmp = isNull() ? CHAR_MIN : static_cast<char>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Double::getShort(INDEX start, int len, short* buf) const {
+bool Double::getShort(INDEX  /*start*/, int len, short* buf) const {
 	short tmp = isNull() ? SHRT_MIN : static_cast<short>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const short* Double::getShortConst(INDEX start, int len, short* buf) const {
+const short* Double::getShortConst(INDEX  /*start*/, int len, short* buf) const {
 	short tmp = isNull() ? SHRT_MIN : static_cast<short>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Double::getInt(INDEX start, int len, int* buf) const {
+bool Double::getInt(INDEX  /*start*/, int len, int* buf) const {
 	int tmp = isNull() ? INT_MIN : static_cast<int>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
 
-const int* Double::getIntConst(INDEX start, int len, int* buf) const {
+const int* Double::getIntConst(INDEX  /*start*/, int len, int* buf) const {
 	int tmp = isNull() ? INT_MIN : static_cast<int>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return buf;
 }
 
-bool Double::getLong(INDEX start, int len, long long* buf) const {
+bool Double::getLong(INDEX  /*start*/, int len, long long* buf) const {
 	long long tmp = isNull() ? LLONG_MIN : static_cast<long long>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
 	return true;
 }
-const long long* Double::getLongConst(INDEX start, int len, long long* buf) const {
+const long long* Double::getLongConst(INDEX  /*start*/, int len, long long* buf) const {
 	long long tmp = isNull() ? LLONG_MIN : static_cast<long long>(val_ < 0 ? (val_ - 0.5) : (val_ + 0.5));
 	for(int i=0;i<len;++i)
 		buf[i]=tmp;
@@ -930,7 +930,7 @@ Double* Double::parseDouble(const string& str){
 	return p;
 }
 
-IO_ERR Double::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement){
+IO_ERR Double::deserialize(DataInputStream* in, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX& numElement){
 	IO_ERR ret = in->readDouble(val_);
 	if(ret == OK)
 		numElement = 1;
@@ -1751,11 +1751,11 @@ ConstantSP NanoTimestamp::castTemporal(DATA_TYPE expectType) {
     template bool AbstractScalar<class_type_t>::getDecimal(INDEX, int, int, Decimal64::raw_data_t *) const; \
 	template bool AbstractScalar<class_type_t>::getDecimal(INDEX, int, int, Decimal128::raw_data_t *) const;
 
-INSTANTIATE(char);
-INSTANTIATE(short);
-INSTANTIATE(int);
+INSTANTIATE(char)
+INSTANTIATE(short)
+INSTANTIATE(int)
 INSTANTIATE(long long)
-INSTANTIATE(float);
-INSTANTIATE(double);
+INSTANTIATE(float)
+INSTANTIATE(double)
 
-};
+}

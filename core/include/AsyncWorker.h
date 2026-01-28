@@ -14,7 +14,7 @@ public:
             : pool_(pool), latch_(latch), conn_(conn), queue_(queue),taskStatus_(status),
               hostName_(hostName), port_(port), userId_(userId), password_(password){}
 protected:
-    virtual void run();
+    void run() override;
 
 private:
     DBConnectionPoolImpl& pool_;

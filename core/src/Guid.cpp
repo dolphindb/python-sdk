@@ -1,13 +1,19 @@
 #include "Guid.h"
 #include "Util.h"
 
-#ifdef WINDOWS
-    #include <objbase.h>
+#ifdef _WIN32
+#include "ComBaseapi.h"
 #else
-    #include <uuid/uuid.h>
+#include "uuid/uuid.h"
 #endif
 
+#include <cstdint>
+#include <cstring>
+#include <string>
+
 namespace dolphindb {
+
+// NOLINTBEGIN(*)
 
 uint32_t murmur32_16b(const unsigned char* key){
     const uint32_t m = 0x5bd1e995;
@@ -101,9 +107,9 @@ uint32_t murmur32(const char *key, size_t len){
 
     switch(len)
     {
-    case 3: h ^= data[2] << 16;
+    case 3: h ^= data[2] << 16;   //falls through
     /* no break */
-    case 2: h ^= data[1] << 8;
+    case 2: h ^= data[1] << 8;   //falls through
     /* no break */
     case 1: h ^= data[0];
             h *= m;
@@ -118,11 +124,14 @@ uint32_t murmur32(const char *key, size_t len){
 
     return h;
 }
+
+// NOLINTEND(*)
+
 Guid::Guid(bool newGuid) {
     if (!newGuid) {
         memset(uuid_, 0, 16);
     } else {
-#ifdef WINDOWS
+#ifdef _WIN32
         CoCreateGuid((GUID*)uuid_);
 #else
         uuid_generate(uuid_);
@@ -130,36 +139,23 @@ Guid::Guid(bool newGuid) {
     }
 }
 
-Guid::Guid(unsigned char* guid) {
-    memcpy(uuid_, guid, 16);
-}
-
-Guid::Guid(const std::string& guid) {
-    if(guid.size() != 36 || !Util::fromGuid(guid.c_str(), uuid_))
-        throw RuntimeException("Invalid UUID string");
-}
-
-Guid::Guid(const Guid& copy) {
-    memcpy(uuid_, copy.uuid_, 16);
-}
-
 bool Guid::isZero() const {
-    const unsigned char* a = (const unsigned char*)uuid_;
+    const auto* a = (const unsigned char*)uuid_;
     return (*(long long*)a) == 0 && (*(long long*)(a + 8)) == 0;
 }
 
-string Guid::getString() const {
+std::string Guid::getString() const {
     return getString(uuid_);
 }
 
-string Guid::getString(const unsigned char* uuid) {
+std::string Guid::getString(const unsigned char* guid) {
     char buf[36];
-    Util::toGuid(uuid, buf);
-    return string(buf, 36);
+    Util::toGuid(guid, buf);
+    return {buf, 36};
 }
 
 uint64_t GuidHash::operator()(const Guid& guid) const {
     return murmur32_16b(guid.bytes());
 }
 
-}
+} // namespace dolphindb

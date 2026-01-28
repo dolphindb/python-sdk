@@ -152,7 +152,7 @@ public:
 	void setTimeout(int readTimeout, int writeTimeout);
 	const string getSessionId() const;
 	const string getHostName() const;
-    const int getPort() const;
+    int getPort() const;
     const string getUserId() const;
     const string getPassword() const;
     bool isClosed() const;
@@ -215,15 +215,15 @@ private:
 class EXPORT_DECL BlockReader : public Constant{
 public:
     BlockReader(const DataInputStreamSP& in );
-	virtual ~BlockReader();
+	~BlockReader() override;
     ConstantSP read();
     void skipAll();
     bool hasNext() const {return currentIndex_ < total_;}
-    virtual DATA_TYPE getType() const {return DT_ANY;}
-    virtual DATA_TYPE getRawType() const {return DT_ANY;}
-    virtual DATA_CATEGORY getCategory() const {return MIXED;}
-    virtual ConstantSP getInstance() const {return nullptr;}
-    virtual ConstantSP getValue() const {return nullptr;}
+    DATA_TYPE getType() const override {return DT_ANY;}
+    DATA_TYPE getRawType() const override {return DT_ANY;}
+    DATA_CATEGORY getCategory() const override {return MIXED;}
+    ConstantSP getInstance() const override {return nullptr;}
+    ConstantSP getValue() const override {return nullptr;}
 private:
     DataInputStreamSP in_;
     int total_;

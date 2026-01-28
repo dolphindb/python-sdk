@@ -12,27 +12,244 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "absl/numeric/int128.h"
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
 
-#include <stddef.h>
+#include "FixSTL.h"
+
+#include "absl/int128.h"
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+#include <cstddef>
 
 #include <cassert>
+#include <cmath>
 #include <iomanip>
+#include <iostream>
 #include <ostream>  // NOLINT(readability/streams)
 #include <sstream>
 #include <string>
 #include <type_traits>
 
-#include "absl/base/optimization.h"
-#include "absl/numeric/bits.h"
+#include <cstdint>
+#include <limits>
+
+#if (defined(__cpp_lib_int_pow2) && __cpp_lib_int_pow2 >= 202002L) || \
+    (defined(__cpp_lib_bitops) && __cpp_lib_bitops >= 201907L)
+#include <bit>
+#endif
+
+// Clang on Windows has __builtin_clzll; otherwise we need to use the
+// windows intrinsic functions.
+#if defined(_MSC_VER) && !defined(__clang__)
+#include <intrin.h>
+#endif
+
+// NOLINTBEGIN(modernize-use-auto, hicpp-use-auto)
 
 namespace absl {
-ABSL_NAMESPACE_BEGIN
 
-ABSL_DLL const uint128 kuint128max = MakeUint128(
-    std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
+// ABSL_HAVE_ATTRIBUTE
+//
+// A function-like feature checking macro that is a wrapper around
+// `__has_attribute`, which is defined by GCC 5+ and Clang and evaluates to a
+// nonzero constant integer if the attribute is supported or 0 if not.
+//
+// It evaluates to zero if `__has_attribute` is not defined by the compiler.
+//
+// GCC: https://gcc.gnu.org/gcc-5/changes.html
+// Clang: https://clang.llvm.org/docs/LanguageExtensions.html
+#ifdef __has_attribute
+#define ABSL_HAVE_ATTRIBUTE(x) __has_attribute(x) // NOLINT(cppcoreguidelines-macro-usage)
+#else
+#define ABSL_HAVE_ATTRIBUTE(x) 0
+#endif
+
+// ABSL_ATTRIBUTE_ALWAYS_INLINE
+// ABSL_ATTRIBUTE_NOINLINE
+//
+// Forces functions to either inline or not inline. Introduced in gcc 3.1.
+#if ABSL_HAVE_ATTRIBUTE(always_inline) || \
+    (defined(__GNUC__) && !defined(__clang__))
+#define ABSL_ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
+#define ABSL_HAVE_ATTRIBUTE_ALWAYS_INLINE 1 // NOLINT(cppcoreguidelines-macro-usage)
+#else
+#define ABSL_ATTRIBUTE_ALWAYS_INLINE
+#endif
+
+// ABSL_HAVE_BUILTIN()
+//
+// Checks whether the compiler supports a Clang Feature Checking Macro, and if
+// so, checks whether it supports the provided builtin function "x" where x
+// is one of the functions noted in
+// https://clang.llvm.org/docs/LanguageExtensions.html
+//
+// Note: Use this macro to avoid an extra level of #ifdef __has_builtin check.
+// http://releases.llvm.org/3.3/tools/clang/docs/LanguageExtensions.html
+#ifdef __has_builtin
+#define ABSL_HAVE_BUILTIN(x) __has_builtin(x) // NOLINT(cppcoreguidelines-macro-usage)
+#else
+#define ABSL_HAVE_BUILTIN(x) 0
+#endif
 
 namespace {
+
+constexpr bool IsPowerOf2(unsigned int x) noexcept {
+  return x != 0 && (x & (x - 1)) == 0;
+}
+
+#if defined(__GNUC__) && !defined(__clang__)
+// GCC
+#define ABSL_NUMERIC_INTERNAL_HAVE_BUILTIN_OR_GCC(x) 1
+#else
+#define ABSL_NUMERIC_INTERNAL_HAVE_BUILTIN_OR_GCC(x) ABSL_HAVE_BUILTIN(x) // NOLINT(cppcoreguidelines-macro-usage)
+#endif
+
+#if ABSL_NUMERIC_INTERNAL_HAVE_BUILTIN_OR_GCC(__builtin_clz) && \
+    ABSL_NUMERIC_INTERNAL_HAVE_BUILTIN_OR_GCC(__builtin_clzll)
+#define ABSL_INTERNAL_CONSTEXPR_CLZ constexpr
+#define ABSL_INTERNAL_HAS_CONSTEXPR_CLZ 1 // NOLINT(cppcoreguidelines-macro-usage)
+#else
+#define ABSL_INTERNAL_CONSTEXPR_CLZ
+#define ABSL_INTERNAL_HAS_CONSTEXPR_CLZ 0
+#endif
+
+ABSL_ATTRIBUTE_ALWAYS_INLINE ABSL_INTERNAL_CONSTEXPR_CLZ int
+CountLeadingZeroes64(uint64_t x) { // NOLINT(clang-diagnostic-unneeded-internal-declaration)
+#if ABSL_NUMERIC_INTERNAL_HAVE_BUILTIN_OR_GCC(__builtin_clzll)
+  // Use __builtin_clzll, which uses the following instructions:
+  //  x86: bsr, lzcnt
+  //  ARM64: clz
+  //  PPC: cntlzd
+  static_assert(sizeof(unsigned long long) == sizeof(x),  // NOLINT(runtime/int)
+                "__builtin_clzll does not take 64-bit arg");
+
+  // Handle 0 as a special case because __builtin_clzll(0) is undefined.
+  return x == 0 ? 64 : __builtin_clzll(x);
+#elif defined(_MSC_VER) && !defined(__clang__) && \
+    (defined(_M_X64) || defined(_M_ARM64))
+  // MSVC does not have __buitin_clzll. Use _BitScanReverse64.
+  unsigned long result = 0;  // NOLINT(runtime/int)
+  if (_BitScanReverse64(&result, x)) {
+    return 63 - result;
+  }
+  return 64;
+#elif defined(_MSC_VER) && !defined(__clang__)
+  // MSVC does not have __buitin_clzll. Compose two calls to _BitScanReverse
+  unsigned long result = 0;  // NOLINT(runtime/int)
+  if ((x >> 32) &&
+      _BitScanReverse(&result, static_cast<unsigned long>(x >> 32))) {
+    return 31 - result;
+  }
+  if (_BitScanReverse(&result, static_cast<unsigned long>(x))) {
+    return 63 - result;
+  }
+  return 64;
+#else
+  int zeroes = 60;
+  if (x >> 32) {
+    zeroes -= 32;
+    x >>= 32;
+  }
+  if (x >> 16) {
+    zeroes -= 16;
+    x >>= 16;
+  }
+  if (x >> 8) {
+    zeroes -= 8;
+    x >>= 8;
+  }
+  if (x >> 4) {
+    zeroes -= 4;
+    x >>= 4;
+  }
+  return "\4\3\2\2\1\1\1\1\0\0\0\0\0\0\0"[x] + zeroes;
+#endif
+}
+
+template <typename T>
+std::enable_if_t<sizeof(T) == sizeof(uint64_t), int>
+    ABSL_ATTRIBUTE_ALWAYS_INLINE ABSL_INTERNAL_CONSTEXPR_CLZ CountLeadingZeroes(T x)
+{
+    static_assert(IsPowerOf2(std::numeric_limits<T>::digits), "T must have a power-of-2 size");
+    return CountLeadingZeroes64(x);
+}
+
+#if !(defined(__cpp_lib_bitops) && __cpp_lib_bitops >= 201907L)
+
+// Counting functions
+//
+// While these functions are typically constexpr, on some platforms, they may
+// not be marked as constexpr due to constraints of the compiler/available
+// intrinsics.
+template <class T>
+ABSL_INTERNAL_CONSTEXPR_CLZ inline
+#if __cplusplus >= 201402L
+    std::enable_if_t<std::is_unsigned_v<T>, int>
+#else
+    std::enable_if_t<std::is_unsigned<T>::value, int>
+#endif
+    countl_zero(T x) noexcept {
+  return CountLeadingZeroes(x);
+}
+
+#else  // defined(__cpp_lib_bitops) && __cpp_lib_bitops >= 201907L
+
+using std::countl_zero;
+
+#endif
+
+// ABSL_ASSUME(cond)
+//
+// Informs the compiler that a condition is always true and that it can assume
+// it to be true for optimization purposes.
+//
+// WARNING: If the condition is false, the program can produce undefined and
+// potentially dangerous behavior.
+//
+// In !NDEBUG mode, the condition is checked with an assert().
+//
+// NOTE: The expression must not have side effects, as it may only be evaluated
+// in some compilation modes and not others. Some compilers may issue a warning
+// if the compiler cannot prove the expression has no side effects. For example,
+// the expression should not use a function call since the compiler cannot prove
+// that a function call does not have side effects.
+//
+// Example:
+//
+//   int x = ...;
+//   ABSL_ASSUME(x >= 0);
+//   // The compiler can optimize the division to a simple right shift using the
+//   // assumption specified above.
+//   int y = x / 16;
+//
+#ifndef NDEBUG
+#define ABSL_ASSUME(cond) assert(cond) // NOLINT(cppcoreguidelines-macro-usage)
+#elif ABSL_HAVE_BUILTIN(__builtin_assume)
+#define ABSL_ASSUME(cond) __builtin_assume(cond)
+#elif defined(_MSC_VER)
+#define ABSL_ASSUME(cond) __assume(cond)
+#elif defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
+#define ABSL_ASSUME(cond)            \
+  do {                               \
+    if (!(cond)) std::unreachable(); \
+  } while (false)
+#elif defined(__GNUC__) || ABSL_HAVE_BUILTIN(__builtin_unreachable)
+#define ABSL_ASSUME(cond)                 \
+  do {                                    \
+    if (!(cond)) __builtin_unreachable(); \
+  } while (false)
+#else
+#define ABSL_ASSUME(cond)               \
+  do {                                  \
+    static_cast<void>(false && (cond)); \
+  } while (false)
+#endif
 
 // Returns the 0-based position of the last set bit (i.e., most significant bit)
 // in the given uint128. The argument is not 0.
@@ -41,7 +258,7 @@ namespace {
 //   Given: 5 (decimal) == 101 (binary)
 //   Returns: 2
 inline ABSL_ATTRIBUTE_ALWAYS_INLINE int Fls128(uint128 n) {
-  if (uint64_t hi = Uint128High64(n)) {
+  if (uint64_t const hi = Uint128High64(n)) {
     ABSL_ASSUME(hi != 0);
     return 127 - countl_zero(hi);
   }
@@ -93,8 +310,6 @@ inline void DivModImpl(uint128 dividend, uint128 divisor, uint128* quotient_ret,
 
 template <typename T>
 uint128 MakeUint128FromFloat(T v) {
-  static_assert(std::is_floating_point<T>::value, "");
-
   // Rounding behavior is towards zero, same as for built-in types.
 
   // Undefined behavior if v is NaN or cannot fit into uint128.
@@ -103,8 +318,8 @@ uint128 MakeUint128FromFloat(T v) {
           v < std::ldexp(static_cast<T>(1), 128)));
 
   if (v >= std::ldexp(static_cast<T>(1), 64)) {
-    uint64_t hi = static_cast<uint64_t>(std::ldexp(v, -64));
-    uint64_t lo = static_cast<uint64_t>(v - std::ldexp(static_cast<T>(hi), 64));
+    uint64_t const hi = static_cast<uint64_t>(std::ldexp(v, -64));
+    uint64_t const lo = static_cast<uint64_t>(v - std::ldexp(static_cast<T>(hi), 64));
     return MakeUint128(hi, lo);
   }
 
@@ -117,17 +332,15 @@ uint128 MakeUint128FromFloat(T v) {
 // It is more work, so only use when we need the workaround.
 uint128 MakeUint128FromFloat(long double v) {
   // Go 50 bits at a time, that fits in a double
-  static_assert(std::numeric_limits<double>::digits >= 50, "");
-  static_assert(std::numeric_limits<long double>::digits <= 150, "");
   // Undefined behavior if v is not finite or cannot fit into uint128.
   assert(std::isfinite(v) && v > -1 && v < std::ldexp(1.0L, 128));
 
   v = std::ldexp(v, -100);
-  uint64_t w0 = static_cast<uint64_t>(static_cast<double>(std::trunc(v)));
+  uint64_t const w0 = static_cast<uint64_t>(static_cast<double>(std::trunc(v)));
   v = std::ldexp(v - static_cast<double>(w0), 50);
-  uint64_t w1 = static_cast<uint64_t>(static_cast<double>(std::trunc(v)));
+  uint64_t const w1 = static_cast<uint64_t>(static_cast<double>(std::trunc(v)));
   v = std::ldexp(v - static_cast<double>(w1), 50);
-  uint64_t w2 = static_cast<uint64_t>(static_cast<double>(std::trunc(v)));
+  uint64_t const w2 = static_cast<uint64_t>(static_cast<double>(std::trunc(v)));
   return (static_cast<uint128>(w0) << 100) | (static_cast<uint128>(w1) << 50) |
          static_cast<uint128>(w2);
 }
@@ -138,7 +351,7 @@ uint128::uint128(float v) : uint128(MakeUint128FromFloat(v)) {}
 uint128::uint128(double v) : uint128(MakeUint128FromFloat(v)) {}
 uint128::uint128(long double v) : uint128(MakeUint128FromFloat(v)) {}
 
-#if !defined(ABSL_HAVE_INTRINSIC_INT128)
+#ifndef ABSL_HAVE_INTRINSIC_INT128
 uint128 operator/(uint128 lhs, uint128 rhs) {
   uint128 quotient = 0;
   uint128 remainder = 0;
@@ -170,7 +383,7 @@ std::string Uint128ToFormattedString(uint128 v, std::ios_base::fmtflags flags) {
       div_base_log = 21;
       break;
     default:  // std::ios::dec
-      div = 10000000000000000000u;  // 10^19
+      div = 10000000000000000000U;  // 10^19
       div_base_log = 19;
       break;
   }
@@ -179,7 +392,7 @@ std::string Uint128ToFormattedString(uint128 v, std::ios_base::fmtflags flags) {
   // original value, each less than "div" and therefore representable as a
   // uint64_t.
   std::ostringstream os;
-  std::ios_base::fmtflags copy_mask =
+  std::ios_base::fmtflags const copy_mask =
       std::ios::basefield | std::ios::showbase | std::ios::uppercase;
   os.setf(flags & copy_mask, copy_mask);
   uint128 high = v;
@@ -203,18 +416,18 @@ std::string Uint128ToFormattedString(uint128 v, std::ios_base::fmtflags flags) {
 }  // namespace
 
 std::ostream& operator<<(std::ostream& os, uint128 v) {
-  std::ios_base::fmtflags flags = os.flags();
+  std::ios_base::fmtflags const flags = os.flags();
   std::string rep = Uint128ToFormattedString(v, flags);
 
   // Add the requisite padding.
-  std::streamsize width = os.width(0);
+  std::streamsize const width = os.width(0);
   if (static_cast<size_t>(width) > rep.size()) {
     const size_t count = static_cast<size_t>(width) - rep.size();
-    std::ios::fmtflags adjustfield = flags & std::ios::adjustfield;
+    std::ios::fmtflags const adjustfield = flags & std::ios::adjustfield;
     if (adjustfield == std::ios::left) {
       rep.append(count, os.fill());
     } else if (adjustfield == std::ios::internal &&
-               (flags & std::ios::showbase) &&
+               ((flags & std::ios::showbase) != 0) &&
                (flags & std::ios::basefield) == std::ios::hex && v != 0) {
       rep.insert(2, count, os.fill());
     } else {
@@ -234,7 +447,7 @@ uint128 UnsignedAbsoluteValue(int128 v) {
 
 }  // namespace
 
-#if !defined(ABSL_HAVE_INTRINSIC_INT128)
+#ifndef ABSL_HAVE_INTRINSIC_INT128
 namespace {
 
 template <typename T>
@@ -286,17 +499,17 @@ int128 operator%(int128 lhs, int128 rhs) {
 #endif  // ABSL_HAVE_INTRINSIC_INT128
 
 std::ostream& operator<<(std::ostream& os, int128 v) {
-  std::ios_base::fmtflags flags = os.flags();
+  std::ios_base::fmtflags const flags = os.flags();
   std::string rep;
 
   // Add the sign if needed.
-  bool print_as_decimal =
+  bool const print_as_decimal =
       (flags & std::ios::basefield) == std::ios::dec ||
       (flags & std::ios::basefield) == std::ios_base::fmtflags();
   if (print_as_decimal) {
     if (Int128High64(v) < 0) {
       rep = "-";
-    } else if (flags & std::ios::showpos) {
+    } else if ((flags & std::ios::showpos) != 0) {
       rep = "+";
     }
   }
@@ -305,7 +518,7 @@ std::ostream& operator<<(std::ostream& os, int128 v) {
       print_as_decimal ? UnsignedAbsoluteValue(v) : uint128(v), os.flags()));
 
   // Add the requisite padding.
-  std::streamsize width = os.width(0);
+  std::streamsize const width = os.width(0);
   if (static_cast<size_t>(width) > rep.size()) {
     const size_t count = static_cast<size_t>(width) - rep.size();
     switch (flags & std::ios::adjustfield) {
@@ -316,7 +529,7 @@ std::ostream& operator<<(std::ostream& os, int128 v) {
         if (print_as_decimal && (rep[0] == '+' || rep[0] == '-')) {
           rep.insert(1, count, os.fill());
         } else if ((flags & std::ios::basefield) == std::ios::hex &&
-                   (flags & std::ios::showbase) && v != 0) {
+                   ((flags & std::ios::showbase) != 0) && v != 0) {
           rep.insert(2, count, os.fill());
         } else {
           rep.insert(0, count, os.fill());
@@ -331,8 +544,30 @@ std::ostream& operator<<(std::ostream& os, int128 v) {
   return os << rep;
 }
 
-ABSL_NAMESPACE_END
 }  // namespace absl
+
+// ABSL_INTERNAL_NEED_REDUNDANT_CONSTEXPR_DECL
+//
+// Prior to C++17, static constexpr variables defined in classes required a
+// separate definition outside of the class body, for example:
+//
+// class Foo {
+//   static constexpr int kBar = 0;
+// };
+// constexpr int Foo::kBar;
+//
+// In C++17, these variables defined in classes are considered inline variables,
+// and the extra declaration is redundant. Since some compilers warn on the
+// extra declarations, ABSL_INTERNAL_NEED_REDUNDANT_CONSTEXPR_DECL can be used
+// conditionally ignore them:
+//
+// #ifdef ABSL_INTERNAL_NEED_REDUNDANT_CONSTEXPR_DECL
+// constexpr int Foo::kBar;
+// #endif
+#if defined(ABSL_INTERNAL_CPLUSPLUS_LANG) && \
+    ABSL_INTERNAL_CPLUSPLUS_LANG < 201703L
+#define ABSL_INTERNAL_NEED_REDUNDANT_CONSTEXPR_DECL 1
+#endif
 
 #ifdef ABSL_INTERNAL_NEED_REDUNDANT_CONSTEXPR_DECL
 namespace std {
@@ -385,3 +620,5 @@ constexpr bool numeric_limits<absl::int128>::traps;
 constexpr bool numeric_limits<absl::int128>::tinyness_before;
 }  // namespace std
 #endif
+
+// NOLINTEND(modernize-use-auto, hicpp-use-auto)

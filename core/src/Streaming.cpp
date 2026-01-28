@@ -16,10 +16,17 @@
 #include <ws2tcpip.h>
 #endif
 
+constexpr bool LOGGING_ENABLED_STREAMING = false;
+
 #ifdef DLOG
     #undef DLOG
 #endif
-#define DLOG        // dolphindb::DLogger::Info
+#define DLOG(...) \
+    do { \
+        if constexpr (LOGGING_ENABLED_STREAMING) { \
+            dolphindb::DLogger::Debug(__VA_ARGS__); \
+        } \
+    } while(0)
 
 #ifdef WINDOWS
 namespace {
@@ -962,7 +969,7 @@ void StreamingClientImpl::reconnect() {
     DLOG("reconnect exit.");
 }
 
-void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP publisher) {
+void StreamingClientImpl::parseMessage(DataInputStreamSP in, ActivePublisherSP  /*publisher*/) {
 	DLOG("parseMessage start.");
     auto factory = ConstantUnmarshallFactory(in);
     ConstantUnmarshall *unmarshall = nullptr;
@@ -1507,7 +1514,7 @@ ThreadSP newHandleThread(const MessageHandler handler, MessageQueueSP queue, boo
 
 ThreadSP ThreadedClient::subscribe(string host, int port, const MessageHandler &handler, string tableName,
                                    string actionName, int64_t offset, bool resub, const VectorSP &filter,
-                                   bool msgAsTable, bool allowExists,
+                                   bool msgAsTable, bool  /*allowExists*/,
 									string userName, string password,
 									const StreamDeserializerSP &blobDeserializer,
 									const std::vector<std::string> &backupSites, int resubTimeout, bool subOnce) {

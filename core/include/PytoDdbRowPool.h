@@ -33,7 +33,7 @@ public:
     {
     public:
         ConvertExecutor(PytoDdbRowPool &rowPool) : rowPool_(rowPool){};
-        virtual void run(){ rowPool_.convertLoop(); }
+        void run() override{ rowPool_.convertLoop(); }
     private:
         PytoDdbRowPool &rowPool_;
     };

@@ -130,7 +130,7 @@ Constant* createValue(Type type, float val, bool checkDecimal=false);
 
 
 template <typename T>
-ConstantSP createObject(Type type, const char *name, T val, ConvertErrorInfo *error = NULL, bool isRaw = false) {
+ConstantSP createObject(Type type, const char * /*name*/, T  /*val*/, ConvertErrorInfo *error = NULL, bool  /*isRaw*/ = false) {
     SetOrThrowErrorInfo(error, ConvertErrorInfo::EC_InvalidData, "It cannot be converted to " + getDataTypeString(type));
     return NULL;
 }

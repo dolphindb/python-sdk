@@ -114,7 +114,7 @@ ConstantSP AbstractTable::get(INDEX col, INDEX row) const {
 	return getColumn(col)->get(row);
 }
 
-void AbstractTable::setColumnName(int index, const string& name){
+void AbstractTable::setColumnName(int  /*index*/, const string&  /*name*/){
 	throw TableRuntimeException(getTableTypeName() + " can't rename columns.");
 }
 
@@ -284,7 +284,7 @@ ConstantSP AbstractTable::getInternal(INDEX index) const {
 	return resultSP;
 }
 
-bool AbstractTable::set(INDEX index, const ConstantSP& value) {
+bool AbstractTable::set(INDEX  /*index*/, const ConstantSP&  /*value*/) {
 	throw TableRuntimeException(getTableClassName() + " does not support direct data update.");
 }
 
@@ -359,7 +359,7 @@ ConstantSP AbstractTable::getMemberInternal(const ConstantSP& key) const{
 	}
 }
 
-ConstantSP AbstractTable::getInstance(int size) const{
+ConstantSP AbstractTable::getInstance(int  /*size*/) const{
 	throw TableRuntimeException(getTableTypeName() + " can't be copied.");
 }
 
@@ -367,21 +367,21 @@ ConstantSP AbstractTable::getValue() const {
 	throw TableRuntimeException(getTableTypeName() + " can't be copied.");
 }
 
-ConstantSP AbstractTable::getValue(INDEX capacity) const{
+ConstantSP AbstractTable::getValue(INDEX  /*capacity*/) const{
 	throw TableRuntimeException(getTableTypeName() + " can't be copied.");
 }
 
-bool AbstractTable::append(vector<ConstantSP>& values, INDEX& insertedRows, string& errMsg){
+bool AbstractTable::append(vector<ConstantSP>&  /*values*/, INDEX&  /*insertedRows*/, string& errMsg){
 	errMsg = getTableTypeName() + " doesn't support data append.";
 	return false;
 }
 
-bool AbstractTable::update(vector<ConstantSP>& values, const ConstantSP& indexSP, vector<string>& colNames, string& errMsg){
+bool AbstractTable::update(vector<ConstantSP>&  /*values*/, const ConstantSP&  /*indexSP*/, vector<string>&  /*colNames*/, string& errMsg){
 	errMsg = getTableTypeName() + " doesn't support data update.";
 	return false;
 }
 
-bool AbstractTable::remove(const ConstantSP& indexSP, string& errMsg) {
+bool AbstractTable::remove(const ConstantSP&  /*indexSP*/, string& errMsg) {
 	errMsg = getTableTypeName() + " doesn't support data deletion.";
 	return false;
 }
@@ -390,7 +390,7 @@ BasicTable::BasicTable(const vector<ConstantSP>& cols, const vector<string>& col
 	initData(cols, colNames);
 }
 
-BasicTable::BasicTable(const vector<ConstantSP>& cols, const vector<string>& colNames, const vector<int>& keys) : AbstractTable(new vector<string>(colNames)){
+BasicTable::BasicTable(const vector<ConstantSP>& cols, const vector<string>& colNames, const vector<int>&  /*keys*/) : AbstractTable(new vector<string>(colNames)){
 	initData(cols, colNames);
 }
 
@@ -756,7 +756,7 @@ bool BasicTable::remove(const ConstantSP& indexSP, string& errMsg){
 	return internalRemove(indexSP, errMsg);
 }
 
-bool BasicTable::internalRemove(const ConstantSP& indexSP, string& errMsg){
+bool BasicTable::internalRemove(const ConstantSP& indexSP, string&  /*errMsg*/){
 	bool noIndex = indexSP.isNull() || indexSP->isNothing();
 	std::size_t colCount = cols_.size();
 
@@ -902,4 +902,4 @@ ConstantSP BasicTable::getSubTable(vector<int> indices) const{
 	}
 	return new BasicTable(cols, *colNames_.get());
 }
-};
+}

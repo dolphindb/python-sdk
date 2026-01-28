@@ -12,6 +12,8 @@
 
 namespace py = pybind11;
 
+constexpr bool LOGGING_ENABLED = false;
+
 namespace dolphindb {
 
 
@@ -205,7 +207,12 @@ public:
 };
 
 
-#define DLOG        // ddb::DLogger::Info
+#define DLOG(...)  \
+    do { \
+        if constexpr (LOGGING_ENABLED) { \
+            dolphindb::DLogger::Debug(__VA_ARGS__); \
+        } \
+    } while(0)
 
 #define LOG_DEBUG dolphindb::DLogger::Debug
 #define LOG_INFO dolphindb::DLogger::Info

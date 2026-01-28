@@ -389,6 +389,30 @@ class TestSubscribe:
         conn1.unsubscribe(HOST, PORT, func_name, "action")
         conn1.close()
 
+    def test_subscribe_userName_password_default(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn1 = ddb.session()
+        conn1.connect(HOST, PORT, USER, PASSWD)
+        listenPort = getListenPort()
+        conn1.enableStreaming(listenPort)
+        df = pd.DataFrame(columns=["time", "sym", "price"])
+        script = f"""
+            subscribers = select * from getStreamingStat().pubTables where tableName=`{func_name};
+            for(subscriber in subscribers){{
+                ip_port = subscriber.subscriber.split(":");
+                stopPublishTable(ip_port[0],int(ip_port[1]),subscriber.tableName,subscriber.actions);
+            }}
+            try{{dropStreamTable(`{func_name})}}catch(ex){{}}
+            share streamTable(10000:0,`time`sym`price, [TIMESTAMP,SYMBOL,DOUBLE]) as {func_name}
+            setStreamTableFilterColumn({func_name}, `sym)
+            insert into {func_name} values(take(now(), 10), take(`000905`600001`300201`000908`600002, 10), rand(1000,10)/10.0)
+        """
+        conn1.run(script)
+        counter = CountBatchDownLatch(1)
+        counter.reset(10)
+        with pytest.raises(RuntimeError, match="Login is required for script execution with client authentication enabled"):
+            conn1.subscribe(HOST, PORT, gethandler(df, counter), func_name, "action", 0, False)
+
     def test_subscribe_unsubscribe_resubscribe(self):
         func_name = inspect.currentframe().f_code.co_name
         for i in range(10):

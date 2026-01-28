@@ -26,18 +26,18 @@ public:
 		init();
 	}
 
-	virtual ~AbstractDictionary(){}
-	virtual DATA_TYPE getType() const {return type_;}
-	virtual DATA_TYPE getRawType() const {return internalType_ == DT_SYMBOL ? DT_INT : internalType_;}
-	virtual DATA_CATEGORY getCategory() const {return Util::getCategory(type_);}
-	virtual DATA_TYPE getKeyType() const {return keyType_;}
-	virtual DATA_CATEGORY getKeyCategory() const {return keyCategory_;}
-	virtual const string& getStringRef() const {throw RuntimeException("dictionary doesn't support random access.");}
-	virtual ConstantSP get(INDEX index) const {throw RuntimeException("dictionary doesn't support random access.");}
-	virtual ConstantSP get(INDEX column, INDEX row) const {throw RuntimeException("dictionary doesn't support random access.");}
-	virtual ConstantSP getColumn(INDEX index) const {throw RuntimeException("dictionary doesn't support random access.");}
-	virtual ConstantSP getRow(INDEX index) const {throw RuntimeException("dictionary doesn't support random access.");}
-	virtual ConstantSP getItem(INDEX index) const {throw RuntimeException("dictionary doesn't support random access.");}
+	~AbstractDictionary() override{}
+	DATA_TYPE getType() const override {return type_;}
+	DATA_TYPE getRawType() const override {return internalType_ == DT_SYMBOL ? DT_INT : internalType_;}
+	DATA_CATEGORY getCategory() const override {return Util::getCategory(type_);}
+	DATA_TYPE getKeyType() const override {return keyType_;}
+	DATA_CATEGORY getKeyCategory() const override {return keyCategory_;}
+	const string& getStringRef() const override {throw RuntimeException("dictionary doesn't support random access.");}
+	ConstantSP get(INDEX  /*index*/) const override {throw RuntimeException("dictionary doesn't support random access.");}
+	ConstantSP get(INDEX  /*column*/, INDEX  /*row*/) const override {throw RuntimeException("dictionary doesn't support random access.");}
+	ConstantSP getColumn(INDEX  /*index*/) const override {throw RuntimeException("dictionary doesn't support random access.");}
+	ConstantSP getRow(INDEX  /*index*/) const override {throw RuntimeException("dictionary doesn't support random access.");}
+	ConstantSP getItem(INDEX  /*index*/) const override {throw RuntimeException("dictionary doesn't support random access.");}
 
 protected:
 	void init();
@@ -59,20 +59,20 @@ class CharDictionary: public AbstractDictionary{
 public:
 	CharDictionary(DATA_TYPE keyType, DATA_TYPE type):AbstractDictionary(keyType,type){}
 	CharDictionary(const std::unordered_map<char,U8>& dict, DATA_TYPE keyType, DATA_TYPE type);
-	virtual ~CharDictionary();
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new CharDictionary(keyType_,type_);}
-	virtual ConstantSP getValue() const {return new CharDictionary(dict_,keyType_,type_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
+	~CharDictionary() override;
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new CharDictionary(keyType_,type_);}
+	ConstantSP getValue() const override {return new CharDictionary(dict_,keyType_,type_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
 private:
 	std::unordered_map<char,U8> dict_;
 };
@@ -81,20 +81,20 @@ class ShortDictionary: public AbstractDictionary{
 public:
 	ShortDictionary(DATA_TYPE keyType, DATA_TYPE type):AbstractDictionary(keyType,type){}
 	ShortDictionary(const std::unordered_map<short,U8>& dict, DATA_TYPE keyType, DATA_TYPE type);
-	virtual ~ShortDictionary();
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new ShortDictionary(keyType_,type_);}
-	virtual ConstantSP getValue() const {return new ShortDictionary(dict_,keyType_,type_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
+	~ShortDictionary() override;
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new ShortDictionary(keyType_,type_);}
+	ConstantSP getValue() const override {return new ShortDictionary(dict_,keyType_,type_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
 private:
 	std::unordered_map<short,U8> dict_;
 };
@@ -103,20 +103,20 @@ class IntDictionary: public AbstractDictionary{
 public:
 	IntDictionary(DATA_TYPE keyType, DATA_TYPE type):AbstractDictionary(keyType,type){}
 	IntDictionary(const std::unordered_map<int,U8>& dict, DATA_TYPE keyType, DATA_TYPE type);
-	virtual ~IntDictionary();
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new IntDictionary(keyType_,type_);}
-	virtual ConstantSP getValue() const {return new IntDictionary(dict_,keyType_,type_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
+	~IntDictionary() override;
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new IntDictionary(keyType_,type_);}
+	ConstantSP getValue() const override {return new IntDictionary(dict_,keyType_,type_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
 private:
 	std::unordered_map<int,U8> dict_;
 };
@@ -125,20 +125,20 @@ class LongDictionary: public AbstractDictionary{
 public:
 	LongDictionary(DATA_TYPE keyType, DATA_TYPE type):AbstractDictionary(keyType,type){}
 	LongDictionary(const std::unordered_map<long long,U8>& dict, DATA_TYPE keyType,DATA_TYPE type);
-	virtual ~LongDictionary();
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new LongDictionary(keyType_,type_);}
-	virtual ConstantSP getValue() const {return new LongDictionary(dict_,keyType_,type_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
+	~LongDictionary() override;
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new LongDictionary(keyType_,type_);}
+	ConstantSP getValue() const override {return new LongDictionary(dict_,keyType_,type_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
 private:
 	std::unordered_map<long long,U8> dict_;
 };
@@ -147,20 +147,20 @@ class FloatDictionary: public AbstractDictionary{
 public:
 	FloatDictionary(DATA_TYPE type):AbstractDictionary(DT_FLOAT,type){}
 	FloatDictionary(const std::unordered_map<float,U8>& dict, DATA_TYPE type);
-	virtual ~FloatDictionary();
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new FloatDictionary(type_);}
-	virtual ConstantSP getValue() const {return new FloatDictionary(dict_,type_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
+	~FloatDictionary() override;
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new FloatDictionary(type_);}
+	ConstantSP getValue() const override {return new FloatDictionary(dict_,type_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
 private:
 	std::unordered_map<float,U8> dict_;
 };
@@ -169,20 +169,20 @@ class DoubleDictionary: public AbstractDictionary{
 public:
 	DoubleDictionary(DATA_TYPE type):AbstractDictionary(DT_DOUBLE,type){}
 	DoubleDictionary(const std::unordered_map<double,U8>& dict, DATA_TYPE type);
-	virtual ~DoubleDictionary();
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new DoubleDictionary(type_);}
-	virtual ConstantSP getValue() const {return new DoubleDictionary(dict_,type_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
+	~DoubleDictionary() override;
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new DoubleDictionary(type_);}
+	ConstantSP getValue() const override {return new DoubleDictionary(dict_,type_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
 private:
 	std::unordered_map<double,U8> dict_;
 };
@@ -191,22 +191,22 @@ class StringDictionary: public AbstractDictionary{
 public:
 	StringDictionary(DATA_TYPE keyType, DATA_TYPE type):AbstractDictionary(keyType,type){}
 	StringDictionary(const std::unordered_map<string,U8>& dict, DATA_TYPE keyType,DATA_TYPE type);
-	virtual ~StringDictionary();
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new StringDictionary(keyType_,type_);}
-	virtual ConstantSP getValue() const {return new StringDictionary(dict_,keyType_,type_);}
-	virtual bool set(const string& key, const ConstantSP& value);
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP getMember(const string& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
+	~StringDictionary() override;
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new StringDictionary(keyType_,type_);}
+	ConstantSP getValue() const override {return new StringDictionary(dict_,keyType_,type_);}
+	bool set(const string& key, const ConstantSP& value) override;
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP getMember(const string& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
 private:
 	std::unordered_map<string,U8> dict_;
 };
@@ -216,20 +216,20 @@ public:
 	Int128Dictionary(DATA_TYPE keyType, DATA_TYPE type):AbstractDictionary(keyType,type){}
 	Int128Dictionary(const std::unordered_map<Guid,U8>& dict, DATA_TYPE keyType, DATA_TYPE type);
 	std::unordered_map<Guid,U8>& getInternalDict() { return dict_;}
-	virtual ~Int128Dictionary();
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new Int128Dictionary(keyType_,type_);}
-	virtual ConstantSP getValue() const {return new Int128Dictionary(dict_,keyType_,type_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
+	~Int128Dictionary() override;
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new Int128Dictionary(keyType_,type_);}
+	ConstantSP getValue() const override {return new Int128Dictionary(dict_,keyType_,type_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
 private:
 	std::unordered_map<Guid,U8> dict_;
 };
@@ -238,23 +238,23 @@ class AnyDictionary: public AbstractDictionary{
 public:
 	AnyDictionary():AbstractDictionary(DT_STRING,DT_ANY){}
 	AnyDictionary(const std::unordered_map<string,ConstantSP>& dict):AbstractDictionary(DT_STRING,DT_ANY),dict_(dict){}
-	virtual ~AnyDictionary(){};
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new AnyDictionary();}
-	virtual ConstantSP getValue() const {return new AnyDictionary(dict_);}
-	virtual bool set(const string& key, const ConstantSP& value);
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const string& key) const;
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
-	virtual bool containNotMarshallableObject() const;
+	~AnyDictionary() override{};
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new AnyDictionary();}
+	ConstantSP getValue() const override {return new AnyDictionary(dict_);}
+	bool set(const string& key, const ConstantSP& value) override;
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const string& key) const override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
+	bool containNotMarshallableObject() const override;
 private:
 	std::unordered_map<string,ConstantSP> dict_;
 };
@@ -263,22 +263,22 @@ class IntAnyDictionary: public AbstractDictionary{
 public:
 	IntAnyDictionary(DATA_TYPE keyType = DT_INT):AbstractDictionary(keyType,DT_ANY){}
 	IntAnyDictionary(const std::unordered_map<int,ConstantSP>& dict, DATA_TYPE keyType = DT_INT):AbstractDictionary(keyType,DT_ANY),dict_(dict){}
-	virtual ~IntAnyDictionary(){};
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new IntAnyDictionary(keyType_);}
-	virtual ConstantSP getValue() const {return new IntAnyDictionary(dict_, keyType_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool set(int key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
-	virtual bool containNotMarshallableObject() const;
+	~IntAnyDictionary() override{};
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new IntAnyDictionary(keyType_);}
+	ConstantSP getValue() const override {return new IntAnyDictionary(dict_, keyType_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool set(int key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
+	bool containNotMarshallableObject() const override;
 private:
 	std::unordered_map<int,ConstantSP> dict_;
 };
@@ -288,7 +288,7 @@ public:
     FloatAnyDictionary(DATA_TYPE keyType = DT_FLOAT):AbstractDictionary(keyType,DT_ANY){}
     FloatAnyDictionary(const std::unordered_map<float,ConstantSP>& dict, DATA_TYPE keyType = DT_FLOAT):AbstractDictionary(keyType,DT_ANY), dict_(dict){}
     std::unordered_map<float, ConstantSP>& getInternalDict() { return dict_;}
-    virtual ~FloatAnyDictionary(){};
+    ~FloatAnyDictionary() override{};
     void clear() override{dict_.clear();}
     INDEX size() const override {return (INDEX)dict_.size();}
     INDEX count() const override {return (INDEX)dict_.size();}
@@ -312,7 +312,7 @@ public:
     DoubleAnyDictionary(DATA_TYPE keyType = DT_DOUBLE):AbstractDictionary(keyType,DT_ANY){}
     DoubleAnyDictionary(const std::unordered_map<double,ConstantSP>& dict, DATA_TYPE keyType = DT_DOUBLE):AbstractDictionary(keyType,DT_ANY), dict_(dict){}
     std::unordered_map<double, ConstantSP>& getInternalDict() { return dict_;}
-    virtual ~DoubleAnyDictionary(){};
+    ~DoubleAnyDictionary() override{};
     void clear() override{dict_.clear();}
     INDEX size() const override {return (INDEX)dict_.size();}
     INDEX count() const override {return (INDEX)dict_.size();}
@@ -336,21 +336,21 @@ public:
 	LongAnyDictionary(DATA_TYPE keyType = DT_LONG):AbstractDictionary(keyType,DT_ANY){}
 	LongAnyDictionary(const std::unordered_map<long long,ConstantSP>& dict, DATA_TYPE keyType = DT_LONG):AbstractDictionary(keyType,DT_ANY), dict_(dict){}
 	std::unordered_map<long long,ConstantSP>& getInternalDict() { return dict_;}
-	virtual ~LongAnyDictionary(){};
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new LongAnyDictionary(keyType_);}
-	virtual ConstantSP getValue() const {return new LongAnyDictionary(dict_, keyType_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
-	virtual bool containNotMarshallableObject() const;
+	~LongAnyDictionary() override{};
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new LongAnyDictionary(keyType_);}
+	ConstantSP getValue() const override {return new LongAnyDictionary(dict_, keyType_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
+	bool containNotMarshallableObject() const override;
 private:
 	std::unordered_map<long long,ConstantSP> dict_;
 };
@@ -360,25 +360,25 @@ public:
 	Int128AnyDictionary(DATA_TYPE keyType = DT_INT128):AbstractDictionary(keyType,DT_ANY){}
 	Int128AnyDictionary(const std::unordered_map<Guid,ConstantSP>& dict, DATA_TYPE keyType = DT_INT128):AbstractDictionary(keyType,DT_ANY), dict_(dict){}
 	std::unordered_map<Guid,ConstantSP>& getInternalDict() { return dict_;}
-	virtual ~Int128AnyDictionary(){};
-	virtual void clear(){dict_.clear();}
-	virtual INDEX size() const {return (INDEX)dict_.size();}
-	virtual INDEX count() const {return (INDEX)dict_.size();}
-	virtual ConstantSP getInstance() const { return new Int128AnyDictionary(keyType_);}
-	virtual ConstantSP getValue() const {return new Int128AnyDictionary(dict_, keyType_);}
-	virtual bool set(const ConstantSP& key, const ConstantSP& value);
-	virtual bool remove(const ConstantSP& value);
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP keys() const;
-	virtual ConstantSP values() const;
-	virtual void contain(const ConstantSP& target, const ConstantSP& resultSP) const;
-	virtual string getString() const;
-	virtual long long getAllocatedMemory() const;
-	virtual bool containNotMarshallableObject() const;
+	~Int128AnyDictionary() override{};
+	void clear() override{dict_.clear();}
+	INDEX size() const override {return (INDEX)dict_.size();}
+	INDEX count() const override {return (INDEX)dict_.size();}
+	ConstantSP getInstance() const override { return new Int128AnyDictionary(keyType_);}
+	ConstantSP getValue() const override {return new Int128AnyDictionary(dict_, keyType_);}
+	bool set(const ConstantSP& key, const ConstantSP& value) override;
+	bool remove(const ConstantSP& value) override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP keys() const override;
+	ConstantSP values() const override;
+	void contain(const ConstantSP& target, const ConstantSP& resultSP) const override;
+	string getString() const override;
+	long long getAllocatedMemory() const override;
+	bool containNotMarshallableObject() const override;
 private:
 	std::unordered_map<Guid,ConstantSP> dict_;
 };
 
-};
+}
 
 #endif /* DICTIONARYIMP_H_ */

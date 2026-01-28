@@ -505,7 +505,7 @@ Constant* createValue(Type type, int val, bool isRaw) {
     }
 }
 
-Constant* createValue(Type type, short val, bool isRaw) {
+Constant* createValue(Type type, short val, bool  /*isRaw*/) {
     switch (type.first)
     {
     case HELPER_TYPE::HT_SHORT:
@@ -515,7 +515,7 @@ Constant* createValue(Type type, short val, bool isRaw) {
     }
 }
 
-Constant* createValue(Type type, char val, bool isRaw) {
+Constant* createValue(Type type, char val, bool  /*isRaw*/) {
     switch (type.first)
     {
     case HELPER_TYPE::HT_BOOL:
@@ -572,19 +572,19 @@ Constant* createValue(Type type, float val, bool checkDecimal) {
 }
 
 
-ConstantSP createObject(Type type, const char* name, std::nullptr_t val, ConvertErrorInfo *error, bool isRaw) {
+ConstantSP createObject(Type type, const char*  /*name*/, std::nullptr_t  /*val*/, ConvertErrorInfo * /*error*/, bool  /*isRaw*/) {
     return createNullConstant(type);
 }
 
-ConstantSP createObject(Type type, const char* name, Constant* val, ConvertErrorInfo *error, bool isRaw) {
+ConstantSP createObject(Type  /*type*/, const char*  /*name*/, Constant* val, ConvertErrorInfo * /*error*/, bool  /*isRaw*/) {
     return val;
 }
 
-ConstantSP createObject(Type type, const char* name, ConstantSP val, ConvertErrorInfo *error, bool isRaw) {
+ConstantSP createObject(Type  /*type*/, const char*  /*name*/, ConstantSP val, ConvertErrorInfo * /*error*/, bool  /*isRaw*/) {
     return val;
 }
 
-ConstantSP createObject(Type type, const char* name, bool val, ConvertErrorInfo *error, bool isRaw) {
+ConstantSP createObject(Type type, const char* name, bool val, ConvertErrorInfo *error, bool  /*isRaw*/) {
     switch (type.first)
     {
     case HELPER_TYPE::HT_BOOL:
@@ -658,10 +658,10 @@ ConstantSP createObject(Type type, const char* name, int val, ConvertErrorInfo *
 
     tmp = createValue(type, (long long)val, isRaw);
     if (tmp != nullptr) return tmp;
-    
+
     tmp = createValue(type, (int128)val, isRaw);
     if (tmp != nullptr) return tmp;
-    
+
     tmp = createValue(type, static_cast<float>(val));
     if (tmp != nullptr) return tmp;
 
@@ -691,7 +691,7 @@ ConstantSP createObject(Type type, const char* name, long long val, ConvertError
 
     tmp = createValue(type, (int128)val, isRaw);
     if (tmp != nullptr) return tmp;
-    
+
     tmp = createValue(type, static_cast<float>(val));
     if (tmp != nullptr) return tmp;
 
@@ -759,7 +759,7 @@ ConstantSP createObject(Type type, const char* name, int128 val, ConvertErrorInf
     return NULL;
 }
 
-ConstantSP createObject(Type type, const char* name, float val, ConvertErrorInfo *error, bool isRaw) {
+ConstantSP createObject(Type type, const char* name, float val, ConvertErrorInfo *error, bool  /*isRaw*/) {
     if (ISNUMPYNULL_FLOAT32(val)) {
         return createNullConstant(type);
     }
@@ -774,7 +774,7 @@ ConstantSP createObject(Type type, const char* name, float val, ConvertErrorInfo
     return NULL;
 }
 
-ConstantSP createObject(Type type, const char* name, double val, ConvertErrorInfo *error, bool isRaw) {
+ConstantSP createObject(Type type, const char* name, double val, ConvertErrorInfo *error, bool  /*isRaw*/) {
     if (ISNUMPYNULL_FLOAT64(val)) {
         return createNullConstant(type);
     }
@@ -789,7 +789,7 @@ ConstantSP createObject(Type type, const char* name, double val, ConvertErrorInf
     return NULL;
 }
 
-ConstantSP createObject(Type type, const char* name, const char * val, ConvertErrorInfo *error, bool isRaw) {
+ConstantSP createObject(Type type, const char* name, const char * val, ConvertErrorInfo *error, bool  /*isRaw*/) {
     if (val == (const char*) 0) {
         return createNullConstant(type);
     }
@@ -840,7 +840,7 @@ ConstantSP createObject(Type type, const char* name, const char * val, ConvertEr
     return NULL;
 }
 
-ConstantSP createObject(Type type, const char* name, const std::string & val, ConvertErrorInfo *error, bool isRaw) {
+ConstantSP createObject(Type type, const char* name, const std::string & val, ConvertErrorInfo *error, bool  /*isRaw*/) {
     return createObject(type, name, (const char *)val.data(), error);
 }
 
@@ -956,7 +956,7 @@ py::object convertTemporalToPython(const ConstantSP &obj) {
         long long milliseconds = obj->getLong();
         // long long seconds = milliseconds / 1000;
         // long long days = seconds / (24*60*60);
-        
+
         // if (days < -719162) return py::int_(seconds);
         // DATETIME: 4B INT
         return converter::PyObjs::cache_->py_datetime_(1970, 1, 1) + \
@@ -1131,7 +1131,7 @@ Vector* createVector(Type type, INDEX size, INDEX capacity) {
     return Util::createVector((DATA_TYPE)type.first, size, capacity, true, EXPARM_VALUE(type.second));
 }
 
-Vector* createArrayVector(Type type, INDEX size, INDEX valueSize, INDEX capacity, INDEX valueCapacity) {
+Vector* createArrayVector(Type type, INDEX size, INDEX  /*valueSize*/, INDEX capacity, INDEX  /*valueCapacity*/) {
     if (type.first == HT_UNK) throw ConversionException("ArrayVector creation requires a specific type.");
     return Util::createArrayVector((DATA_TYPE)type.first, size, capacity, true, EXPARM_VALUE(type.second));
 }
@@ -1216,7 +1216,7 @@ Dictionary* createDictionary(const ConstantSP& key, const ConstantSP& val, bool 
     return dict;
 }
 
-Dictionary* createDictionary(Type keyType, Type valType, bool isOrdered) {
+Dictionary* createDictionary(Type keyType, Type valType, bool  /*isOrdered*/) {
     if (keyType.first == HT_UNK || valType.first == HT_UNK)
         throw ConversionException("Cannot create a Dictionary with keys or values of unknown type.");
     return Util::createDictionary((DATA_TYPE)keyType.first, (DATA_TYPE)valType.first);
@@ -1305,19 +1305,19 @@ bool VectorAppendDouble(VectorSP &ddbVec, double *buf, int len) {
     ddbVec->setNullFlag(ddbVec->getNullFlag() || ddbVec->hasNull(oldLen, len));
     return true;
 }
-void VectorAppendDecimal32(VectorSP &ddbVec, int *buf, int len, int scale) {
+void VectorAppendDecimal32(VectorSP &ddbVec, int *buf, int len, int  /*scale*/) {
     INDEX start_p = ddbVec->size();
     ddbVec->resize(start_p + len);
     ddbVec->setInt(start_p, len, buf);
     ddbVec->setNullFlag(ddbVec->getNullFlag() || ddbVec->hasNull(start_p, len));
 }
-void VectorAppendDecimal64(VectorSP &ddbVec, long long *buf, int len, int scale) {
+void VectorAppendDecimal64(VectorSP &ddbVec, long long *buf, int len, int  /*scale*/) {
     INDEX start_p = ddbVec->size();
     ddbVec->resize(start_p + len);
     ddbVec->setLong(start_p, len, buf);
     ddbVec->setNullFlag(ddbVec->getNullFlag() || ddbVec->hasNull(start_p, len));
 }
-void VectorAppendDecimal128(VectorSP &ddbVec, int128 *buf, int len, int scale) {
+void VectorAppendDecimal128(VectorSP &ddbVec, int128 *buf, int len, int  /*scale*/) {
     INDEX start_p = ddbVec->size();
     ((dolphindb::FastDecimal128VectorSP)ddbVec)->appendInt128(buf, len);
     ddbVec->setNullFlag(ddbVec->getNullFlag() || ddbVec->hasNull(start_p, len));
@@ -1356,7 +1356,6 @@ void appendStringtoVector(VectorSP &ddbVec, const py::array &pyVec, size_t size,
     int addstrindex = 0;
     int addbatchindex = 0;
     INDEX ind = -1;
-    char *buffer;
     size_t i = 0;
     Py_ssize_t length;
     auto it = pyVec.begin();
@@ -1389,7 +1388,7 @@ void appendStringtoVector(VectorSP &ddbVec, const py::array &pyVec, size_t size,
                 strs[addstrindex].clear();
             }
             addstrindex++;
-            if(addstrindex >= strbufsize){  
+            if(addstrindex >= strbufsize){
                 if (!ddbVec->appendString(strs, addstrindex)) {
                     goto error;
                 }
@@ -1429,7 +1428,7 @@ error:
 }
 
 
-void setBlobVector(VectorSP &ddbVec, const py::array &pyVec, size_t size, ssize_t offset, const VectorInfo &info) {
+void setBlobVector(VectorSP &ddbVec, const py::array &pyVec, size_t  /*size*/, ssize_t offset, const VectorInfo &info) {
     int ni = 0;
     py::object tmpObj;
     DATA_TYPE type = ddbVec->getType();

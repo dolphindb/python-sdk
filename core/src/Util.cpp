@@ -5,6 +5,7 @@
  *      Author: dzhou
  */
 
+#include "Guid.h"
 #include <fstream>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -439,7 +440,7 @@ Vector* Util::createVector(DATA_TYPE type, INDEX size, INDEX capacity, bool fast
 		return createArrayVector(type, size, capacity, fast, extraParam);
 }
 
-Vector* Util::createArrayVector(DATA_TYPE type, INDEX size, INDEX capacity, bool fast, int extraParam, void* data, INDEX *pindex, bool containNull){
+Vector* Util::createArrayVector(DATA_TYPE type, INDEX size, INDEX capacity, bool  /*fast*/, int extraParam, void* data, INDEX *pindex, bool containNull){
 	return s_constFactory->createConstantArrayVector(type,size,capacity,true,extraParam, data, pindex, 0, 0, containNull);
 }
 
@@ -465,14 +466,14 @@ Vector* Util::createIndexVector(INDEX start, INDEX length){
 	Vector* index = Util::createVector(DT_INDEX, length);
 	if(index == NULL)
 		throw RuntimeException("Failed to create an index vector.");
-	
+
 	INDEX* indices = index->getIndexArray();
 	for(INDEX i=0;i<length;++i) indices[i]=start+i;
 
 	return index;
 }
 
-Vector* Util::createIndexVector(INDEX length, bool arrayOnly, INDEX capacity){
+Vector* Util::createIndexVector(INDEX length, bool  /*arrayOnly*/, INDEX capacity){
 	if (capacity < length) {
 		capacity = length;
 	}
@@ -552,39 +553,8 @@ void Util::toGuid(const unsigned char* data, char* str) {
 #endif
 }
 
-inline unsigned char hexPairToChar(char a, char b) {
-	return ((a >= 97 ? a -87 : (a >= 65 ? a -55 : a -48))<<4) + (b >= 97 ? b -87 : (b >= 65 ? b -55 : b -48));
-}
-
 bool Util::fromGuid(const char* str, unsigned char* data){
-	if(str[8] != '-' || str[13] != '-' || str[18] != '-' || str[23] != '-')
-		return false;
-#ifndef BIGENDIANNESS
-	for(int i=0; i<4; ++i)
-		data[15 - i] = hexPairToChar(str[2*i], str[2*i+1]);
-	data[11] = hexPairToChar(str[9], str[10]);
-	data[10] = hexPairToChar(str[11], str[12]);
-	data[9] = hexPairToChar(str[14], str[15]);
-	data[8] = hexPairToChar(str[16], str[17]);
-	data[7] = hexPairToChar(str[19], str[20]);
-	data[6] = hexPairToChar(str[21], str[22]);
-
-	for(int i=10; i<16; ++i)
-		data[15 - i] = hexPairToChar(str[2*i+4], str[2*i+5]);
-#else
-	for(int i=0; i<4; ++i)
-		data[i] = hexPairToChar(str[2*i], str[2*i+1]);
-	data[4] = hexPairToChar(str[9], str[10]);
-	data[5] = hexPairToChar(str[11], str[12]);
-	data[6] = hexPairToChar(str[14], str[15]);
-	data[7] = hexPairToChar(str[16], str[17]);
-	data[8] = hexPairToChar(str[19], str[20]);
-	data[9] = hexPairToChar(str[21], str[22]);
-
-	for(int i=10; i<16; ++i)
-		data[i] = hexPairToChar(str[2*i+4], str[2*i+5]);
-#endif
-	return true;
+	return dolphindb::fromGuid(str, data);
 }
 
 DATA_TYPE Util::getDataType(const string& typestr){
@@ -1309,10 +1279,12 @@ string Util::getErrorMessage(int errCode){
 
 #else
 #ifdef MAC
+    std::ignore = errCode; // suppress unused variable warning
 	char buf[256]={0};
 	strerror_r(errno, buf, 256);
 	return string(buf);
 #else
+    std::ignore = errCode; // suppress unused variable warning
 	char buf[256]={0};
 	char *msg=strerror_r(errno, buf, 256);
 	return string(msg);
@@ -1355,7 +1327,7 @@ Vector* Util::createSubVector(const VectorSP& source, vector<int> indices){
 	}
 	return result;
 }
-Vector* Util::createSymbolVector(const SymbolBaseSP& symbolBase, INDEX size, INDEX capacity, bool fast, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+Vector* Util::createSymbolVector(const SymbolBaseSP& symbolBase, INDEX size, INDEX capacity, bool  /*fast*/, void* data, void** dataSegment, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			try{
 				data = (void*)new int[std::max(size, capacity)];
@@ -1370,13 +1342,13 @@ Vector* Util::createSymbolVector(const SymbolBaseSP& symbolBase, INDEX size, IND
 			return NULL;
 }
 
-ConstantSP Util::createObject(DATA_TYPE dataType, std::nullptr_t val, ErrorCodeInfo *errorCodeInfo, int extraParam) {
+ConstantSP Util::createObject(DATA_TYPE dataType, std::nullptr_t  /*val*/, ErrorCodeInfo * /*errorCodeInfo*/, int  /*extraParam*/) {
 	return createNullConstant(dataType);
 }
-ConstantSP Util::createObject(DATA_TYPE dataType, Constant* val, ErrorCodeInfo *errorCodeInfo, int extraParam) {
+ConstantSP Util::createObject(DATA_TYPE  /*dataType*/, Constant* val, ErrorCodeInfo * /*errorCodeInfo*/, int  /*extraParam*/) {
 	return val;
 }
-ConstantSP Util::createObject(DATA_TYPE dataType, ConstantSP val, ErrorCodeInfo *errorCodeInfo, int extraParam) {
+ConstantSP Util::createObject(DATA_TYPE  /*dataType*/, ConstantSP val, ErrorCodeInfo * /*errorCodeInfo*/, int  /*extraParam*/) {
 	return val;
 }
 
@@ -1388,7 +1360,7 @@ void Util::SetOrThrowErrorInfo(ErrorCodeInfo *errorCodeInfo, int errorCode, cons
 	}
 }
 
-ConstantSP Util::createObject(DATA_TYPE dataType, bool val, ErrorCodeInfo *errorCodeInfo, int extraParam) {
+ConstantSP Util::createObject(DATA_TYPE dataType, bool val, ErrorCodeInfo *errorCodeInfo, int  /*extraParam*/) {
 	switch (dataType) {
 	case DATA_TYPE::DT_BOOL:
 		return createBool(val);
@@ -1457,7 +1429,7 @@ ConstantSP Util::createObject(DATA_TYPE dataType, char val, ErrorCodeInfo *error
 ConstantSP Util::createObject(DATA_TYPE dataType, short val, ErrorCodeInfo *errorCodeInfo, int extraParam) {
 	return createValue(dataType,(long long)val,"short", errorCodeInfo, extraParam);
 }
-ConstantSP Util::createObject(DATA_TYPE dataType, const char* val, ErrorCodeInfo *errorCodeInfo, int extraParam) {
+ConstantSP Util::createObject(DATA_TYPE dataType, const char* val, ErrorCodeInfo *errorCodeInfo, int  /*extraParam*/) {
 	if (val != (const void*)0) {
 		size_t valLen = strlen(val);
 		if (valLen == 0) return createNullConstant((DATA_TYPE)dataType);
@@ -1514,7 +1486,7 @@ ConstantSP Util::createObject(DATA_TYPE dataType, const char* val, ErrorCodeInfo
 	}
 	return NULL;
 }
-ConstantSP Util::createObject(DATA_TYPE dataType, const void* val, ErrorCodeInfo *errorCodeInfo, int extraParam) {
+ConstantSP Util::createObject(DATA_TYPE dataType, const void* val, ErrorCodeInfo *errorCodeInfo, int  /*extraParam*/) {
 	if (val != (const void*)0) {
 		switch (dataType) {
 		case DATA_TYPE::DT_INT128:
@@ -1807,11 +1779,11 @@ void Util::writeFile(const char *pfilepath, const void *pbytes, std::size_t byte
 	fopen_s(&pf, pfilepath, "ab");
 #else
 	pf = fopen(pfilepath,"ab");
-#endif	
+#endif
 	if(pf == NULL)
 		return;
 	fwrite(pbytes, bytelen, 1, pf);
 	fclose(pf);
 }
 
-};
+}

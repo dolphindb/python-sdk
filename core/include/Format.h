@@ -90,6 +90,6 @@ private:
 	NumberFormat* negFormat_;
 };
 
-};
+}
 
 #endif /* FORMAT_H_ */

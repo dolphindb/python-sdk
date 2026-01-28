@@ -3,13 +3,19 @@
 ///
 #pragma once
 #include <functional>
-#include <limits>
-#include <iosfwd>
 #include <type_traits>
 
-#include <stdint.h>
-#include "absl/numeric/int128.h"
+//elimitate compilation warning for ISO C++ does not support '__int128' for 'type name'
+#if defined (__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
 
+#include "absl/int128.h"
+
+#if defined (__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 namespace wide_integer {
 
 using int128 = absl::int128;
@@ -17,13 +23,13 @@ using uint128 = absl::uint128;
 
 template <class T>
 inline void hash_combine(std::size_t &seed, const T &v) {
-    std::hash<T> hasher;
+    std::hash<T> const hasher;
     seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
 }
 
 // Specialized std::hash for uint128 and int128.
 
-}
+} // namespace wide_integer
 
 
 namespace std {

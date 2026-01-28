@@ -72,7 +72,7 @@ vector<int> ListDomain::getPartitionKeys(const ConstantSP& partitionColTable) co
     }
     return keys;
 }
-	
+
 vector<int> ValueDomain::getPartitionKeys(const ConstantSP& partitionColTable) const {
     if(partitionColTable->getCategory() != partitionColCategory_)
         throw RuntimeException("Data category incompatible.");
@@ -121,4 +121,4 @@ vector<int> RangeDomain::getPartitionKeys(const ConstantSP& partitionColTable) c
     }
     return keys;
 }
-};
+}

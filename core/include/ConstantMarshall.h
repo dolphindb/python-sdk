@@ -43,7 +43,7 @@ public:
 	virtual bool start(short flag, bool blocking, IO_ERR& ret)=0;
 	virtual void reset() = 0;
 	ConstantSP getConstant(){return obj_;}
-	
+
 protected:
 	ConstantSP obj_;
 };
@@ -54,12 +54,12 @@ typedef SmartPointer<ConstantUnmarshall> ConstantUnmarshallSP;
 class EXPORT_DECL ConstantMarshallImp : public ConstantMarshall {
 public:
 	ConstantMarshallImp(const DataOutputStreamSP& out):out_(out), complete_(false){}
-	virtual ~ConstantMarshallImp(){}
-	virtual bool start(const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret){
+	~ConstantMarshallImp() override{}
+	bool start(const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override{
 		return start(0, 0, target, blocking, compress, ret);
 	}
-	virtual bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret)=0;
-	virtual IO_ERR flush();
+	bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override =0;
+	IO_ERR flush() override;
 
 protected:
 	short encodeFlag(const ConstantSP& target, bool compress = false);
@@ -73,7 +73,7 @@ protected:
 class EXPORT_DECL ConstantUnmarshallImp : public ConstantUnmarshall{
 public:
 	ConstantUnmarshallImp(const DataInputStreamSP& in):in_(in){}
-	virtual ~ConstantUnmarshallImp(){}
+	~ConstantUnmarshallImp() override{}
 
 protected:
 	void decodeFlag(short flag, DATA_FORM& form, DATA_TYPE& type);
@@ -101,9 +101,9 @@ private:
 class EXPORT_DECL ScalarMarshall: public ConstantMarshallImp{
 public:
 	ScalarMarshall(const DataOutputStreamSP& out):ConstantMarshallImp(out), partial_(0){}
-	virtual ~ScalarMarshall(){}
-	virtual bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret);
-	virtual void reset();
+	~ScalarMarshall() override{}
+	bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override;
+	void reset() override;
 private:
 	int partial_;
 };
@@ -111,10 +111,10 @@ private:
 class EXPORT_DECL VectorMarshall: public ConstantMarshallImp{
 public:
 	VectorMarshall(const DataOutputStreamSP& out):ConstantMarshallImp(out),nextStart_(0),partial_(0){}
-	virtual ~VectorMarshall(){}
-	virtual bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret);
-	virtual bool start(const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret);
-	virtual void reset();
+	~VectorMarshall() override{}
+	bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override;
+	bool start(const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override;
+	void reset() override;
 	void resetSymbolBaseMarshall(bool createIfNotExist);
 	COMPRESS_METHOD getCompressMethod() { return compressMethod_; }
 	void setCompressMethod(COMPRESS_METHOD method) { compressMethod_ = method; }
@@ -132,9 +132,9 @@ class EXPORT_DECL MatrixMarshall: public ConstantMarshallImp{
 public:
 	MatrixMarshall(const DataOutputStreamSP& out) : ConstantMarshallImp(out), rowLabelSent_(false),
 		columnLabelSent_(false), inProgress_(false), vectorMarshall_(out){}
-	virtual ~MatrixMarshall(){}
-	virtual bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret);
-	virtual void reset();
+	~MatrixMarshall() override{}
+	bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override;
+	void reset() override;
 private:
 	bool sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, IO_ERR& ret);
 
@@ -149,9 +149,9 @@ class EXPORT_DECL TableMarshall: public ConstantMarshallImp{
 public:
 	TableMarshall(const DataOutputStreamSP& out) : ConstantMarshallImp(out) ,columnNamesSent_(0), nextColumn_(0),
 		columnInProgress_(false), vectorMarshall_(out){}
-	virtual ~TableMarshall(){}
-	virtual bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret);
-	virtual void reset();
+	~TableMarshall() override{}
+	bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override;
+	void reset() override;
 private:
 	bool sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret);
 
@@ -165,9 +165,9 @@ private:
 class EXPORT_DECL SetMarshall: public ConstantMarshallImp{
 public:
 	SetMarshall(const DataOutputStreamSP& out):ConstantMarshallImp(out), vectorMarshall_(out){}
-	virtual ~SetMarshall(){}
-	virtual bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret);
-	virtual void reset();
+	~SetMarshall() override{}
+	bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override;
+	void reset() override;
 
 private:
 	bool sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, IO_ERR& ret);
@@ -180,9 +180,9 @@ class EXPORT_DECL DictionaryMarshall: public ConstantMarshallImp{
 public:
 	DictionaryMarshall(const DataOutputStreamSP& out):ConstantMarshallImp(out), keySent_(false),
 		inProgress_(false), vectorMarshall_(out){}
-	virtual ~DictionaryMarshall(){}
-	virtual bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret);
-	virtual void reset();
+	~DictionaryMarshall() override{}
+	bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override;
+	void reset() override;
 private:
 	bool sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, IO_ERR& ret);
 
@@ -195,17 +195,17 @@ private:
 class EXPORT_DECL ChunkMarshall: public ConstantMarshallImp{
 public:
 	ChunkMarshall(const DataOutputStreamSP& out):ConstantMarshallImp(out){}
-	virtual ~ChunkMarshall(){}
-	virtual bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret);
-	virtual void reset();
+	~ChunkMarshall() override{}
+	bool start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) override;
+	void reset() override;
 };
 
 class EXPORT_DECL ScalarUnmarshall: public ConstantUnmarshallImp{
 public:
 	ScalarUnmarshall(const DataInputStreamSP& in):ConstantUnmarshallImp(in), isCodeObject_(false), scale_(0), functionType_(-1){}
-	virtual ~ScalarUnmarshall(){}
-	virtual bool start(short flag, bool blocking, IO_ERR& ret);
-	virtual void reset();
+	~ScalarUnmarshall() override{}
+	bool start(short flag, bool blocking, IO_ERR& ret) override;
+	void reset() override;
 
 private:
 	bool isCodeObject_;
@@ -234,9 +234,9 @@ private:
 class EXPORT_DECL VectorUnmarshall: public ConstantUnmarshallImp{
 public:
 	VectorUnmarshall(const DataInputStreamSP& in):ConstantUnmarshallImp(in), flag_(0), rows_(0), columns_(0), nextStart_(0), unmarshall_(0), scale_(0){}
-	virtual ~VectorUnmarshall(){}
-	virtual bool start(short flag, bool blocking, IO_ERR& ret);
-	virtual void reset();
+	~VectorUnmarshall() override{}
+	bool start(short flag, bool blocking, IO_ERR& ret) override;
+	void reset() override;
 	void resetSymbolBaseUnmarshall(DataInputStreamSP in, bool createIfNotExist);
 private:
 	short flag_;
@@ -252,9 +252,9 @@ class EXPORT_DECL MatrixUnmarshall: public ConstantUnmarshallImp{
 public:
 	MatrixUnmarshall(const DataInputStreamSP& in):ConstantUnmarshallImp(in), labelFlag_(-1), rowLabelReceived_(false),
 		columnLabelReceived_(false), inProgress_(false), vectorUnmarshall_(in){}
-	virtual ~MatrixUnmarshall(){}
-	virtual bool start(short flag, bool blocking, IO_ERR& ret);
-	virtual void reset();
+	~MatrixUnmarshall() override{}
+	bool start(short flag, bool blocking, IO_ERR& ret) override;
+	void reset() override;
 private:
 	char labelFlag_;
 	bool rowLabelReceived_;
@@ -269,9 +269,9 @@ class EXPORT_DECL TableUnmarshall: public ConstantUnmarshallImp{
 public:
 	TableUnmarshall(const DataInputStreamSP& in):ConstantUnmarshallImp(in), type_(BASICTBL), tableNameReceived_(false), columnNameReceived_(false),
 		nextColumn_(0), inProgress_(false), rows_(0), columns_(0), vectorUnmarshall_(in){}
-	virtual ~TableUnmarshall(){}
-	virtual bool start(short flag, bool blocking, IO_ERR& ret);
-	virtual void reset();
+	~TableUnmarshall() override{}
+	bool start(short flag, bool blocking, IO_ERR& ret) override;
+	void reset() override;
 private:
 	TABLE_TYPE type_;
 	bool tableNameReceived_;
@@ -289,9 +289,9 @@ private:
 class EXPORT_DECL SetUnmarshall: public ConstantUnmarshallImp{
 public:
 	SetUnmarshall(const DataInputStreamSP& in):ConstantUnmarshallImp(in), inProgress_(false), vectorUnmarshall_(in) {}
-	virtual ~SetUnmarshall(){}
-	virtual bool start(short flag, bool blocking, IO_ERR& ret);
-	virtual void reset();
+	~SetUnmarshall() override{}
+	bool start(short flag, bool blocking, IO_ERR& ret) override;
+	void reset() override;
 private:
 	bool inProgress_;
 	VectorUnmarshall vectorUnmarshall_;
@@ -301,9 +301,9 @@ class EXPORT_DECL DictionaryUnmarshall: public ConstantUnmarshallImp{
 public:
 	DictionaryUnmarshall(const DataInputStreamSP& in):ConstantUnmarshallImp(in), keyReceived_(false),
 		inProgress_(false), vectorUnmarshall_(in) {}
-	virtual ~DictionaryUnmarshall(){}
-	virtual bool start(short flag, bool blocking, IO_ERR& ret);
-	virtual void reset();
+	~DictionaryUnmarshall() override{}
+	bool start(short flag, bool blocking, IO_ERR& ret) override;
+	void reset() override;
 private:
 	bool keyReceived_;
 	ConstantSP keyVector_;
@@ -314,9 +314,9 @@ private:
 class EXPORT_DECL ChunkUnmarshall: public ConstantUnmarshallImp{
 public:
 	ChunkUnmarshall(const DataInputStreamSP& in):ConstantUnmarshallImp(in), size_(-1){}
-	virtual ~ChunkUnmarshall(){}
-	virtual bool start(short flag, bool blocking, IO_ERR& ret);
-	virtual void reset();
+	~ChunkUnmarshall() override{}
+	bool start(short flag, bool blocking, IO_ERR& ret) override;
+	void reset() override;
 
 private:
 	IO_ERR parsing(const char* buf);
@@ -346,5 +346,5 @@ private:
 	ConstantUnmarshall* arrUnmarshall[9];
 };
 
-};
+}
 #endif /* CONSTANTMARSHALL_H_ */

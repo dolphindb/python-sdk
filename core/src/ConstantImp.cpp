@@ -44,7 +44,7 @@ IO_ERR StringVector::deserialize(DataInputStream* in, INDEX indexStart, INDEX ta
         value.append(buf.get(), len);
         return ret;
     };
-    
+
 	//read string
 	numElement = 0;
 	INDEX firstTarget = ((std::min))(size() - indexStart, targetNumElement);
@@ -2081,7 +2081,7 @@ ConstantSP FastTimestampVector::castTemporal(DATA_TYPE expectType){
 		ratio = -ratio;
 		for(int i = 0; i < size_; i++){
 			int tail = (data_[i] < 0) && (data_[i] % ratio);
-			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / ratio - tail);		
+			data_[i] == LLONG_MIN ? pbuf[i] = INT_MIN : pbuf[i] = static_cast<int>(data_[i] / ratio - tail);
 		}
 	}
 	else if(expectType == DT_MONTH){
@@ -2343,7 +2343,7 @@ ConstantSP FastArrayVector::getInstance(INDEX sz) const {
 	INDEX *pindex = index_->getIndexArray();
 	INDEX *indexArray = new INDEX[sz];
 	memcpy(indexArray, pindex, sz * sizeof(INDEX));
-	VectorSP index = Util::createVector(DT_INT, sz, sz, true, 0, indexArray); 
+	VectorSP index = Util::createVector(DT_INT, sz, sz, true, 0, indexArray);
 
 	INDEX valueSize = 0;
 	if(sz>0)
@@ -2355,7 +2355,7 @@ ConstantSP FastArrayVector::getInstance(INDEX sz) const {
 	return new FastArrayVector(index, value);
 }
 
-int FastArrayVector::serializeVariableLength(char* buf, int bufSize, INDEX indexStart, int offset, int targetNumElement, int& numElement, int& partial) const {
+int FastArrayVector::serializeVariableLength(char*  /*buf*/, int  /*bufSize*/, INDEX  /*indexStart*/, int  /*offset*/, int  /*targetNumElement*/, int&  /*numElement*/, int&  /*partial*/) const {
 	return 0;
 }
 
@@ -2628,7 +2628,7 @@ void FastArrayVector::fill(INDEX start, INDEX length, const ConstantSP& value) {
 IO_ERR FastArrayVector::deserializeFixedLength(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement) {
 	IO_ERR ret = OK;
 	numElement = 0;
-	
+
 	while(targetNumElement > 0){
 		/*
 		 * Read the row count, bytes of count and reserved byte
@@ -2695,7 +2695,7 @@ IO_ERR FastArrayVector::deserializeFixedLength(DataInputStream* in, INDEX indexS
 			// cell count of this row
 			int valueCellCount = pindex[indexStart + rowCount_ - rowsRead_ - 1] - prevStart;
 			int tmpNumElement;
-			// `value_` need expand 
+			// `value_` need expand
 			if(valueSize_ < prevStart + valueCellCount){
 				// change the size of value_
 				value_->resize(prevStart + valueCellCount);
@@ -2729,7 +2729,7 @@ IO_ERR FastArrayVector::deserializeFixedLength(DataInputStream* in, INDEX indexS
 	return OK;
 }
 
-IO_ERR FastArrayVector::deserializeVariableLength(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement) {
+IO_ERR FastArrayVector::deserializeVariableLength(DataInputStream*  /*in*/, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX&  /*numElement*/) {
 	return OK;
 }
 
@@ -2778,7 +2778,7 @@ std::string FastArrayVector::getString() const {
 	if (size_ > len)
 		str.append("...");
 	str.append("]");
-	
+
 	return str;
 }
 
@@ -4862,7 +4862,7 @@ long long FastFixedLengthVector::getAllocatedMemory() const {
 	return fixedLength_* (std::max)(capacity_, size_);
 }
 
-int FastFixedLengthVector::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int& numElement, int& partial) const {
+int FastFixedLengthVector::serialize(char* buf, int bufSize, INDEX indexStart, int  /*offset*/, int& numElement, int& partial) const {
 	//assume offset==0 and bufSize>=sizeof(T)
 	if(indexStart >= size_)
 		return -1;
@@ -4873,7 +4873,7 @@ int FastFixedLengthVector::serialize(char* buf, int bufSize, INDEX indexStart, i
 	return len * numElement;
 }
 
-int FastFixedLengthVector::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int cellCountToSerialize, int& numElement, int& partial) const {
+int FastFixedLengthVector::serialize(char* buf, int bufSize, INDEX indexStart, int  /*offset*/, int cellCountToSerialize, int& numElement, int& partial) const {
 	if (indexStart >= size_)
 		return -1;
 	int len = fixedLength_;
@@ -4912,28 +4912,28 @@ void FastFixedLengthVector::reverse(INDEX start, INDEX length){
 	}
 }
 
-bool FastFixedLengthVector::getBinary(INDEX start, int len, int unitLenght, unsigned char* buf) const {
+bool FastFixedLengthVector::getBinary(INDEX start, int len, int  /*unitLenght*/, unsigned char* buf) const {
 	memcpy(buf, data_ + start * fixedLength_, len * fixedLength_);
 	return true;
 }
 
-const unsigned char* FastFixedLengthVector::getBinaryConst(INDEX start, int len, int unitLength, unsigned char* buf) const {
+const unsigned char* FastFixedLengthVector::getBinaryConst(INDEX start, int  /*len*/, int  /*unitLength*/, unsigned char*  /*buf*/) const {
 	return data_ + start * fixedLength_;
 }
 
-unsigned char* FastFixedLengthVector::getBinaryBuffer(INDEX start, int len, int unitLength, unsigned char* buf) const {
+unsigned char* FastFixedLengthVector::getBinaryBuffer(INDEX start, int  /*len*/, int  /*unitLength*/, unsigned char*  /*buf*/) const {
 	return data_ + start * fixedLength_;
 }
 
-void* FastFixedLengthVector::getDataBuffer(INDEX start, int len, void* buf) const {
+void* FastFixedLengthVector::getDataBuffer(INDEX start, int  /*len*/, void*  /*buf*/) const {
 	return (void*)(data_ + start * fixedLength_);
 }
 
-void FastFixedLengthVector::setBinary(INDEX index, int unitLength, const unsigned char* val){
+void FastFixedLengthVector::setBinary(INDEX index, int  /*unitLength*/, const unsigned char* val){
 	memcpy(data_ + index * fixedLength_, val, fixedLength_);
 }
 
-bool FastFixedLengthVector::setBinary(INDEX start, int len, int unitLength, const unsigned char* buf){
+bool FastFixedLengthVector::setBinary(INDEX start, int len, int  /*unitLength*/, const unsigned char* buf){
 	if(buf == data_ + start*fixedLength_)
 		return true;
 	memcpy(data_ + start * fixedLength_, buf, fixedLength_ * len);
@@ -4950,7 +4950,7 @@ FastInt128Vector::FastInt128Vector(DATA_TYPE type, int sz, int capacity, unsigne
 
 }
 
-const Guid FastInt128Vector::getInt128() const {
+Guid FastInt128Vector::getInt128() const {
 	if(size_ == 1)
 		return Guid(data_);
 	else

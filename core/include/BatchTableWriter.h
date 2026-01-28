@@ -120,7 +120,7 @@ private:
         bool finished = false;
     };
 
-    void insertRecursive(std::vector<ConstantSP>* row, DestTable* destTable, int colIndex){
+    void insertRecursive(std::vector<ConstantSP>* row, DestTable* destTable, int  /*colIndex*/){
         assert(colIndex == destTable->columnNum);
         RWLockGuard<RWLock> _(&rwLock, false, acquireLock_);
         if(destTable->finished){
@@ -146,7 +146,7 @@ private:
     }
 
     template<typename T>
-    ConstantSP createObject(int dataType, T val){
+    ConstantSP createObject(int  /*dataType*/, T  /*val*/){
         throw RuntimeException("Failed to insert data, unsupported data type.");
     }
     ConstantSP createObject(int dataType, Constant* val);

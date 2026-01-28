@@ -1,0 +1,7 @@
+Checks: 'modernize-use-override,misc-unused-parameters'
+HeaderFilterRegex: 'core/include/.*'
+WarningsAsErrors: ''
+FormatStyle: file
+CheckOptions:
+  - key:             misc-unused-parameters.StrictMode
+    value:           'true'

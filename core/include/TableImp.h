@@ -17,48 +17,48 @@ class EXPORT_DECL AbstractTable : public Table {
 public:
 	AbstractTable(const SmartPointer<std::vector<string>>& colNames);
 	AbstractTable(const SmartPointer<std::vector<string>>& colNames, SmartPointer<std::unordered_map<string,int>> colMap);
-	virtual ~AbstractTable(){}
-	virtual ConstantSP getColumn(const string& name) const;
-	virtual ConstantSP getColumn(const string& qualifier, const string& name) const;
-	virtual ConstantSP getColumn(const string& name, const ConstantSP& rowFilter) const;
-	virtual ConstantSP getColumn(const string& qualifier, const string& name, const ConstantSP& rowFilter) const;
-	virtual ConstantSP getColumn(INDEX index, const ConstantSP& rowFilter) const;
-	virtual ConstantSP getColumn(INDEX index) const = 0;
-	virtual ConstantSP get(INDEX col, INDEX row) const = 0;
-	virtual INDEX columns() const {return static_cast<INDEX>(colNames_->size());}
-	virtual const string& getColumnName(int index) const {return colNames_->at(index);}
-	virtual const string& getColumnQualifier(int index) const {return name_;}
-	virtual void setColumnName(int index, const string& name);
-	virtual int getColumnIndex(const string& name) const;
-	virtual bool contain(const string& name) const;
-	virtual bool contain(const string& qualifier, const string& name) const;
-	virtual ConstantSP getColumnLabel() const;
-	virtual ConstantSP values() const;
-	virtual ConstantSP keys() const { return getColumnLabel();}
-	virtual void setName(const string& name){name_=name;}
-	virtual const string& getName() const { return name_;}
+	~AbstractTable() override{}
+	ConstantSP getColumn(const string& name) const override;
+	ConstantSP getColumn(const string& qualifier, const string& name) const override;
+	ConstantSP getColumn(const string& name, const ConstantSP& rowFilter) const override;
+	ConstantSP getColumn(const string& qualifier, const string& name, const ConstantSP& rowFilter) const override;
+	ConstantSP getColumn(INDEX index, const ConstantSP& rowFilter) const override;
+	ConstantSP getColumn(INDEX index) const override = 0;
+	ConstantSP get(INDEX col, INDEX row) const override = 0;
+	INDEX columns() const override {return static_cast<INDEX>(colNames_->size());}
+	const string& getColumnName(int index) const override {return colNames_->at(index);}
+	const string& getColumnQualifier(int  /*index*/) const override {return name_;}
+	void setColumnName(int index, const string& name) override;
+	int getColumnIndex(const string& name) const override;
+	bool contain(const string& name) const override;
+	bool contain(const string& qualifier, const string& name) const override;
+	ConstantSP getColumnLabel() const override;
+	ConstantSP values() const override;
+	ConstantSP keys() const override { return getColumnLabel();}
+	void setName(const string& name) override{name_=name;}
+	const string& getName() const override { return name_;}
 	virtual bool isTemporary() const {return false;}
-	virtual void setTemporary(bool temp){}
-	virtual bool sizeable() const {return false;}
-	virtual string getString(INDEX index) const;
-	virtual string getString() const;
-	virtual ConstantSP get(INDEX index) const { return getInternal(index);}
-	virtual bool set(INDEX index, const ConstantSP& value);
-	virtual ConstantSP get(const ConstantSP& index) const { return getInternal(index);}
-	virtual ConstantSP getWindow(int colStart, int colLength, int rowStart, int rowLength) const {return getWindowInternal(colStart, colLength, rowStart, rowLength);}
-	virtual ConstantSP getMember(const ConstantSP& key) const { return getMemberInternal(key);}
-	virtual ConstantSP getInstance() const {return getInstance(0);}
-	virtual ConstantSP getInstance(int size) const;
-	virtual ConstantSP getValue() const;
-	virtual ConstantSP getValue(INDEX capacity) const;
-	virtual bool append(std::vector<ConstantSP>& values, INDEX& insertedRows, string& errMsg);
-	virtual bool update(std::vector<ConstantSP>& values, const ConstantSP& indexSP, std::vector<string>& colNames, string& errMsg);
-	virtual bool remove(const ConstantSP& indexSP, string& errMsg);
-	virtual ConstantSP getSubTable(std::vector<int> indices) const = 0;
-	virtual COMPRESS_METHOD getColumnCompressMethod(INDEX index);
-	virtual void setColumnCompressMethods(const std::vector<COMPRESS_METHOD> &methods);
-	virtual bool clear()=0;
-	virtual void updateSize() = 0;
+    virtual void setTemporary(bool /*temp*/) {}
+    bool sizeable() const override {return false;}
+	string getString(INDEX index) const override;
+	string getString() const override;
+	ConstantSP get(INDEX index) const override { return getInternal(index);}
+	bool set(INDEX index, const ConstantSP& value) override;
+	ConstantSP get(const ConstantSP& index) const override { return getInternal(index);}
+	ConstantSP getWindow(int colStart, int colLength, int rowStart, int rowLength) const override {return getWindowInternal(colStart, colLength, rowStart, rowLength);}
+	ConstantSP getMember(const ConstantSP& key) const override { return getMemberInternal(key);}
+	ConstantSP getInstance() const override {return getInstance(0);}
+	ConstantSP getInstance(int size) const override;
+	ConstantSP getValue() const override;
+	ConstantSP getValue(INDEX capacity) const override;
+	bool append(std::vector<ConstantSP>& values, INDEX& insertedRows, string& errMsg) override;
+	bool update(std::vector<ConstantSP>& values, const ConstantSP& indexSP, std::vector<string>& colNames, string& errMsg) override;
+	bool remove(const ConstantSP& indexSP, string& errMsg) override;
+	ConstantSP getSubTable(std::vector<int> indices) const override = 0;
+	COMPRESS_METHOD getColumnCompressMethod(INDEX index) override;
+	void setColumnCompressMethods(const std::vector<COMPRESS_METHOD> &methods) override;
+	bool clear() override =0;
+	void updateSize() override = 0;
 protected:
 	ConstantSP getInternal(INDEX index) const;
 	ConstantSP getInternal(const ConstantSP& index) const;
@@ -81,32 +81,32 @@ class EXPORT_DECL BasicTable: public AbstractTable{
 public:
 	BasicTable(const std::vector<ConstantSP>& cols, const std::vector<string>& colNames, const std::vector<int>& keys);
 	BasicTable(const std::vector<ConstantSP>& cols, const std::vector<string>& colNames);
-	virtual ~BasicTable();
+	~BasicTable() override;
 	virtual bool isBasicTable() const {return true;}
-	virtual ConstantSP getColumn(INDEX index) const;
-	virtual ConstantSP get(INDEX col, INDEX row) const {return cols_[col]->get(row);}
-	virtual DATA_TYPE getColumnType(const int index) const { return cols_[index]->getType();}
-	virtual void setColumnName(int index, const string& name);
-	virtual INDEX size() const {return size_;}
-	virtual bool sizeable() const {return isReadOnly()==false;}
-	virtual bool set(INDEX index, const ConstantSP& value);
-	virtual ConstantSP get(INDEX index) const;
-	virtual ConstantSP get(const ConstantSP& index) const;
-	virtual ConstantSP getWindow(INDEX colStart, int colLength, INDEX rowStart, int rowLength) const;
-	virtual ConstantSP getMember(const ConstantSP& key) const;
-	virtual ConstantSP getInstance(int size) const;
-	virtual ConstantSP getValue() const;
-	virtual ConstantSP getValue(INDEX capacity) const;
-	virtual bool append(std::vector<ConstantSP>& values, INDEX& insertedRows, string& errMsg);
-	virtual bool update(std::vector<ConstantSP>& values, const ConstantSP& indexSP, std::vector<string>& colNames, string& errMsg);
-	virtual bool remove(const ConstantSP& indexSP, string& errMsg);
-	virtual long long getAllocatedMemory() const;
-	virtual TABLE_TYPE getTableType() const {return BASICTBL;}
-	virtual void drop(std::vector<int>& columns);
+	ConstantSP getColumn(INDEX index) const override;
+	ConstantSP get(INDEX col, INDEX row) const override {return cols_[col]->get(row);}
+	DATA_TYPE getColumnType(const int index) const override { return cols_[index]->getType();}
+	void setColumnName(int index, const string& name) override;
+	INDEX size() const override {return size_;}
+	bool sizeable() const override {return isReadOnly()==false;}
+	bool set(INDEX index, const ConstantSP& value) override;
+	ConstantSP get(INDEX index) const override;
+	ConstantSP get(const ConstantSP& index) const override;
+	ConstantSP getWindow(INDEX colStart, int colLength, INDEX rowStart, int rowLength) const override;
+	ConstantSP getMember(const ConstantSP& key) const override;
+	ConstantSP getInstance(int size) const override;
+	ConstantSP getValue() const override;
+	ConstantSP getValue(INDEX capacity) const override;
+	bool append(std::vector<ConstantSP>& values, INDEX& insertedRows, string& errMsg) override;
+	bool update(std::vector<ConstantSP>& values, const ConstantSP& indexSP, std::vector<string>& colNames, string& errMsg) override;
+	bool remove(const ConstantSP& indexSP, string& errMsg) override;
+	long long getAllocatedMemory() const override;
+	TABLE_TYPE getTableType() const override {return BASICTBL;}
+	void drop(std::vector<int>& columns) override;
 	bool join(std::vector<ConstantSP>& columns);
-	virtual bool clear();
-	virtual void updateSize();
-	virtual ConstantSP getSubTable(std::vector<int> indices) const;
+	bool clear() override;
+	void updateSize() override;
+	ConstantSP getSubTable(std::vector<int> indices) const override;
 
 private:
 	bool increaseCapacity(long long newCapacity, string& errMsg);
@@ -125,6 +125,6 @@ private:
 
 typedef SmartPointer<BasicTable> BasicTableSP;
 
-};
+}
 
 #endif /* TABLE_H_ */

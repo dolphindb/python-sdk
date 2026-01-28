@@ -293,7 +293,7 @@ Semaphore::Semaphore(int resources){
 		LockGuard<Mutex> guard(&globalIdMutex_);
 		sem_name_ = std::to_string((int)getpid()) + "_" + std::to_string(sem_id_++);
 	}
-	
+
 	sem_ = sem_open(sem_name_.c_str(), O_CREAT, 0666, resources);
 	if (sem_ == SEM_FAILED){
 		int err = errno;
@@ -332,7 +332,7 @@ void Semaphore::acquire(){
 		throw RuntimeException("Failed to acquire semaphore with error code " + std::to_string(err));
 	}
 #else
-	
+
 	int ret = sem_wait(&sem_);
 	if(ret != 0){
 		int err = errno;
@@ -507,6 +507,6 @@ int Thread::getID(){
 #endif
 }
 
-};
+}
 
 

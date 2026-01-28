@@ -199,10 +199,10 @@ public:
 			return arrCategoryTypeStr[type];
 		else
 			return "UnknowCategory"+std::to_string(type);
-	} 
+	}
 private:
 	template<typename Y>
-	void allocate(INDEX size, INDEX capacity, bool fastMode, int& segmentSizeInBit, void*& data, void**& dataSegment){
+	void allocate(INDEX size, INDEX capacity, bool  /*fastMode*/, int&  /*segmentSizeInBit*/, void*& data, void**&  /*dataSegment*/){
 		try{
 			data = (void*)new Y[(std::max)(size, capacity)];
 		}
@@ -223,7 +223,7 @@ private:
 		}
 	}
 
-	Constant* parseVoid(const string& word){return new Void(true);}
+	Constant* parseVoid(const string&  /*word*/){return new Void(true);}
 	Constant* parseBool(const string& word){return Bool::parseBool(word);}
 	Constant* parseChar(const string& word){return Char::parseChar(word);}
 	Constant* parseShort(const string& word){return Short::parseShort(word);}
@@ -253,44 +253,44 @@ private:
 			return new EnumDouble(word, MC_E);
 	}
 
-	Constant* createVoid(int extraParam){return new Void();}
-	Constant* createBool(int extraParam){return new Bool();}
-	Constant* createChar(int extraParam){return new Char();}
-	Constant* createShort(int extraParam){return new Short();}
-	Constant* createInt(int extraParam){return new Int();}
-	Constant* createLong(int extraParam){return new Long();}
-	Constant* createFloat(int extraParam){return new Float();}
-	Constant* createDouble(int extraParam){return new Double();}
-	Constant* createDate(int extraParam) {return new Date();}
-	Constant* createDateTime(int extraParam) {return new DateTime();}
-	Constant* createDateHour(int extraParam) {return new DateHour();}
-	Constant* createMonth(int extraParam) {return new Month();}
-	Constant* createTime(int extraParam) {return new Time();}
-	Constant* createNanoTime(int extraParam) {return new NanoTime();}
-	Constant* createTimestamp(int extraParam) {return new Timestamp();}
-	Constant* createNanoTimestamp(int extraParam) {return new NanoTimestamp();}
-	Constant* createMinute(int extraParam) {return new Minute();}
-	Constant* createSecond(int extraParam) {return new Second();}
-	Constant* createString(int extraParam){return new String();}
-    Constant* createBlob(int extraParam){return new String("", true);}
-	Constant* createFunctionDef(int extraParam){return new String();}
-	Constant* createHandle(int extraParam){return new String();}
-	Constant* createMetaCode(int extraParam){return new String();}
-	Constant* createDataSource(int extraParam){return new String();}
-	Constant* createResource(int extraParam){return new String();}
-	Constant* createInt128(int extraParam){return new Int128();}
-	Constant* createUuid(int extraParam){return new Uuid();}
-	Constant* createIPAddr(int extraParam){return new IPAddr();}
+	Constant* createVoid(int  /*extraParam*/){return new Void();}
+	Constant* createBool(int  /*extraParam*/){return new Bool();}
+	Constant* createChar(int  /*extraParam*/){return new Char();}
+	Constant* createShort(int  /*extraParam*/){return new Short();}
+	Constant* createInt(int  /*extraParam*/){return new Int();}
+	Constant* createLong(int  /*extraParam*/){return new Long();}
+	Constant* createFloat(int  /*extraParam*/){return new Float();}
+	Constant* createDouble(int  /*extraParam*/){return new Double();}
+	Constant* createDate(int  /*extraParam*/) {return new Date();}
+	Constant* createDateTime(int  /*extraParam*/) {return new DateTime();}
+	Constant* createDateHour(int  /*extraParam*/) {return new DateHour();}
+	Constant* createMonth(int  /*extraParam*/) {return new Month();}
+	Constant* createTime(int  /*extraParam*/) {return new Time();}
+	Constant* createNanoTime(int  /*extraParam*/) {return new NanoTime();}
+	Constant* createTimestamp(int  /*extraParam*/) {return new Timestamp();}
+	Constant* createNanoTimestamp(int  /*extraParam*/) {return new NanoTimestamp();}
+	Constant* createMinute(int  /*extraParam*/) {return new Minute();}
+	Constant* createSecond(int  /*extraParam*/) {return new Second();}
+	Constant* createString(int  /*extraParam*/){return new String();}
+    Constant* createBlob(int  /*extraParam*/){return new String("", true);}
+	Constant* createFunctionDef(int  /*extraParam*/){return new String();}
+	Constant* createHandle(int  /*extraParam*/){return new String();}
+	Constant* createMetaCode(int  /*extraParam*/){return new String();}
+	Constant* createDataSource(int  /*extraParam*/){return new String();}
+	Constant* createResource(int  /*extraParam*/){return new String();}
+	Constant* createInt128(int  /*extraParam*/){return new Int128();}
+	Constant* createUuid(int  /*extraParam*/){return new Uuid();}
+	Constant* createIPAddr(int  /*extraParam*/){return new IPAddr();}
 	Constant* createDecima32(int extraParam) { return new Decimal32(extraParam); }
 	Constant* createDecima64(int extraParam) { return new Decimal64(extraParam); }
 	Constant* createDecima128(int extraParam) { return new Decimal128(extraParam); }
 
-	Vector* createVoidVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createVoidVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		// throw RuntimeException("Not allowed to create void vector");
 		return new FastVoidVector(size, capacity, (char*)data, containNull);
 	}
 
-	Vector* createBoolVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createBoolVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<char>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -299,7 +299,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createCharVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createCharVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<char>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -308,7 +308,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createShortVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createShortVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<short>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -317,7 +317,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createIntVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createIntVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -326,7 +326,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createLongVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createLongVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -335,7 +335,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createFloatVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createFloatVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<float>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -344,7 +344,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createDoubleVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDoubleVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<double>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -353,7 +353,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createDateVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDateVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -362,7 +362,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createMonthVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createMonthVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -371,7 +371,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createDateTimeVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDateTimeVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -380,7 +380,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createDateHourVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDateHourVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
         if(data == NULL && dataSegment == NULL){
             allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
         }
@@ -389,7 +389,7 @@ private:
         else
             return NULL;
     }
-	Vector* createTimeVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createTimeVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -398,7 +398,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createNanoTimeVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createNanoTimeVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -407,7 +407,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createTimestampVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createTimestampVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -416,7 +416,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createNanoTimestampVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createNanoTimestampVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -425,7 +425,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createMinuteVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createMinuteVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -434,7 +434,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createSecondVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createSecondVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -443,10 +443,10 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createStringVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createStringVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void*  /*data*/, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool  /*containNull*/){
 		return new StringVector(size, capacity);
 	}
-	Vector* createSymbolVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createSymbolVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data){
 			throw RuntimeException("data must be null if create a symbol vector without a symbolbase. ");
 		}
@@ -459,13 +459,13 @@ private:
 		else
 			return NULL;
 	}
-    Vector* createBlobVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+    Vector* createBlobVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void*  /*data*/, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool  /*containNull*/){
         return new StringVector(size, capacity, true);
     }
-	Vector* createAnyVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createAnyVector(INDEX size, INDEX  /*capacity*/, bool  /*fastMode*/, int  /*extraParam*/, void*  /*data*/, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool  /*containNull*/){
 		return new AnyVector(size);
 	}
-	Vector* createInt128Vector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createInt128Vector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<Guid>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -474,7 +474,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createUuidVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createUuidVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<Guid>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -483,7 +483,7 @@ private:
 		else
 			return NULL;
 	}
-	Vector* createIPAddrVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createIPAddrVector(INDEX size, INDEX capacity, bool fastMode, int  /*extraParam*/, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
 		if(data == NULL && dataSegment == NULL){
 			allocate<Guid>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		}
@@ -521,258 +521,258 @@ private:
 			return NULL;
 	}
 
-	Vector* createBoolArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
+	Vector* createBoolArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull) {
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<char>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_BOOL + ARRAY_TYPE_BASE), (INDEX *)pindex);
 
 	}
-	Vector* createCharArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex,  void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createCharArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex,  void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<char>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_CHAR + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createShortArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createShortArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<short>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_SHORT + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createIntArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createIntArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_INT + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createLongArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createLongArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_LONG + ARRAY_TYPE_BASE), (INDEX *)pindex);
 
 	}
-	Vector* createFloatArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createFloatArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<float>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_FLOAT + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createDoubleArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDoubleArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<double>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DOUBLE + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createDateArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDateArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DATE + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createTimestampArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createTimestampArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_TIMESTAMP + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createDateHourArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDateHourArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DATEHOUR + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createDatetimeArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void *data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDatetimeArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void *data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DATETIME + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createTimeArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createTimeArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_TIME + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createMinuteArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createMinuteArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_MINUTE + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createMonthArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createMonthArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_MONTH + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createSecondArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createSecondArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<int>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_SECOND + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createNanotimeArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createNanotimeArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_NANOTIME + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createNanoTimestampArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createNanoTimestampArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		//if(data == NULL && dataSegment == NULL){
 		//	allocate<long long>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_NANOTIMESTAMP + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createUuidArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
+	Vector* createUuidArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull) {
 		//if (data == NULL && dataSegment == NULL) {
 		//	allocate<Guid>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_UUID + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createInt128ArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
+	Vector* createInt128ArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull) {
 		//if (data == NULL && dataSegment == NULL) {
 		//	allocate<Int128>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_INT128 + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
-	Vector* createIpArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
+	Vector* createIpArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int  /*extraParam*/, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull) {
 		//if (data == NULL && dataSegment == NULL) {
 		//	allocate<IPAddr>(size, capacity, fastMode, segmentSizeInBit, data, dataSegment);
 		//}
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_IP + ARRAY_TYPE_BASE), (INDEX *)pindex);
 	}
 
-	Vector* createDecimal32ArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
+	Vector* createDecimal32ArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int extraParam, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull) {
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DECIMAL32 + ARRAY_TYPE_BASE), (INDEX *)pindex, extraParam);
 	}
 
-	Vector* createDecimal64ArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
+	Vector* createDecimal64ArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int extraParam, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull) {
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DECIMAL64 + ARRAY_TYPE_BASE), (INDEX *)pindex, extraParam);
 	}
 
-	Vector* createDecimal128ArrayVector(INDEX size, INDEX capacity, bool fastMode, int extraParam, void* data, void *pindex, void** dataSegment, int segmentSizeInBit, bool containNull) {
+	Vector* createDecimal128ArrayVector(INDEX size, INDEX capacity, bool  /*fastMode*/, int extraParam, void* data, void *pindex, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull) {
 		return new FastArrayVector(size, capacity, (char*)data, containNull, DATA_TYPE(DT_DECIMAL128 + ARRAY_TYPE_BASE), (INDEX *)pindex, extraParam);
 	}
 
-	Vector* createVoidMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createVoidMatrix(int  /*cols*/, int  /*rows*/, int  /*colCapacity*/, int  /*extraParam*/, void*  /*data*/, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool  /*containNull*/){
 		throw RuntimeException("Not allowed to create a void matrix");
 	}
 
-	Vector* createBoolMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createBoolMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastBoolMatrix(cols, rows, colCapacity, allocateZero<char>(cols, rows, colCapacity), false);
 		else
 			return new FastBoolMatrix(cols, rows, colCapacity, (char*)data, containNull);
 	}
 
-	Vector* createCharMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createCharMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastCharMatrix(cols, rows, colCapacity, allocateZero<char>(cols, rows, colCapacity), false);
 		else
 			return new FastCharMatrix(cols, rows, colCapacity, (char*)data, containNull);
 	}
 
-	Vector* createShortMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createShortMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastShortMatrix(cols, rows, colCapacity, allocateZero<short>(cols, rows, colCapacity), false);
 		else
 			return new FastShortMatrix(cols, rows, colCapacity, (short*)data, containNull);
 	}
 
-	Vector* createIntMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createIntMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastIntMatrix(cols, rows, colCapacity, allocateZero<int>(cols, rows, colCapacity), false);
 		else
 			return new FastIntMatrix(cols, rows, colCapacity, (int*)data, containNull);
 	}
 
-	Vector* createLongMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createLongMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastLongMatrix(cols, rows, colCapacity, allocateZero<long long>(cols, rows, colCapacity), false);
 		else
 			return new FastLongMatrix(cols, rows, colCapacity, (long long*)data, containNull);
 	}
 
-	Vector* createFloatMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createFloatMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data ==0)
 			return new FastFloatMatrix(cols, rows, colCapacity, allocateZero<float>(cols, rows, colCapacity), false);
 		else
 			return new FastFloatMatrix(cols, rows, colCapacity, (float*)data, containNull);
 	}
 
-	Vector* createDoubleMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDoubleMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastDoubleMatrix(cols, rows, colCapacity, allocateZero<double>(cols, rows, colCapacity), false);
 		else
 			return new FastDoubleMatrix(cols, rows, colCapacity, (double*)data, containNull);
 	}
 
-	Vector* createDateMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDateMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastDateMatrix(cols, rows, colCapacity, allocateZero<int>(cols, rows, colCapacity), false);
 		else
 			return new FastDateMatrix(cols, rows, colCapacity, (int*)data, containNull);
 	}
 
-	Vector* createDateTimeMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDateTimeMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastDateTimeMatrix(cols, rows, colCapacity, allocateZero<int>(cols, rows, colCapacity), false);
 		else
 			return new FastDateTimeMatrix(cols, rows, colCapacity, (int*)data, containNull);
 	}
 
-	Vector* createDateHourMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createDateHourMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
         if(data == 0)
             return new FastDateHourMatrix(cols, rows, colCapacity, allocateZero<int>(cols, rows, colCapacity), false);
         else
             return new FastDateHourMatrix(cols, rows, colCapacity, (int*)data, containNull);
     }
 
-	Vector* createMonthMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createMonthMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastMonthMatrix(cols, rows, colCapacity, allocateZero<int>(cols, rows, colCapacity), false);
 		else
 			return new FastMonthMatrix(cols, rows, colCapacity, (int*)data, containNull);
 	}
 
-	Vector* createTimeMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createTimeMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastTimeMatrix(cols, rows, colCapacity, allocateZero<int>(cols, rows, colCapacity), false);
 		else
 			return new FastTimeMatrix(cols, rows, colCapacity, (int*)data, containNull);
 	}
 
-	Vector* createSecondMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createSecondMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastSecondMatrix(cols, rows, colCapacity, allocateZero<int>(cols, rows, colCapacity), false);
 		else
 			return new FastSecondMatrix(cols, rows, colCapacity, (int*)data, containNull);
 	}
 
-	Vector* createMinuteMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createMinuteMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastMinuteMatrix(cols, rows, colCapacity, allocateZero<int>(cols, rows, colCapacity), false);
 		else
 			return new FastMinuteMatrix(cols, rows, colCapacity, (int*)data, containNull);
 	}
 
-	Vector* createNanoTimeMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createNanoTimeMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastNanoTimeMatrix(cols, rows, colCapacity, allocateZero<long long>(cols, rows, colCapacity), false);
 		else
 			return new FastNanoTimeMatrix(cols, rows, colCapacity, (long long*)data, containNull);
 	}
 
-	Vector* createTimestampMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createTimestampMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastTimestampMatrix(cols, rows, colCapacity, allocateZero<long long>(cols, rows, colCapacity), false);
 		else
 			return new FastTimestampMatrix(cols, rows, colCapacity, (long long*)data, containNull);
 	}
 
-	Vector* createNanoTimestampMatrix(int cols, int rows, int colCapacity, int extraParam, void* data, void** dataSegment, int segmentSizeInBit, bool containNull){
+	Vector* createNanoTimestampMatrix(int cols, int rows, int colCapacity, int  /*extraParam*/, void* data, void**  /*dataSegment*/, int  /*segmentSizeInBit*/, bool containNull){
 		if(data == 0)
 			return new FastNanoTimestampMatrix(cols, rows, colCapacity, allocateZero<long long>(cols, rows, colCapacity), false);
 		else
@@ -1096,5 +1096,5 @@ private:
 	string arrCategoryTypeStr[12];
 };
 
-};
+}
 #endif /* CONSTANTFACTORY_H_ */

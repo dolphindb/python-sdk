@@ -348,7 +348,7 @@ IO_ERR Socket::connect(){
 			setReadTimeout(readTimeout_);
 		if (writeTimeout_ > 0)
 			setWriteTimeout(writeTimeout_);
-		
+
 		if(::connect(handle_, p->ai_addr, static_cast<int>(p->ai_addrlen)) == SOCKET_ERROR) {
 			if(!blocking_){
 #ifdef WINDOWS
@@ -587,7 +587,7 @@ SSL_CTX* Socket::initCTX(){
 
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
-	
+
 #if defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x10100000L
 	// Code for OpenSSL 1.1.0 and above
 	method = TLS_client_method();
@@ -773,7 +773,7 @@ DataInputStream::~DataInputStream(){
 	}
 }
 
-IO_ERR DataInputStream::internalStreamRead(char* buf, size_t length, size_t& actualLength){
+IO_ERR DataInputStream::internalStreamRead(char*  /*buf*/, size_t  /*length*/, size_t&  /*actualLength*/){
 	throw RuntimeException("DataInputStream::internalStreamRead not implemented yet.");
 }
 
@@ -1634,7 +1634,7 @@ IO_ERR DataOutputStream::flush(){
 	return OK;
 }
 
-IO_ERR DataOutputStream::internalFlush(size_t size){
+IO_ERR DataOutputStream::internalFlush(size_t  /*size*/){
 	throw RuntimeException("DataOutputStream::internalFlush not implemented yet.");
 }
 
@@ -1642,7 +1642,7 @@ IO_ERR DataOutputStream::internalClose(){
 	throw RuntimeException("DataOutputStream::internalClose not implemented yet.");
 }
 
-char* DataOutputStream::createBuffer(size_t& capacity){
+char* DataOutputStream::createBuffer(size_t&  /*capacity*/){
 	throw RuntimeException("DataOutputStream::createBuffer not implemented yet.");
 }
 
@@ -1848,4 +1848,4 @@ void Buffer::clear() {
 	size_ = 0;
 }
 
-};
+}

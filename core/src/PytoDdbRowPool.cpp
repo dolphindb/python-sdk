@@ -12,10 +12,6 @@
 using namespace pybind11::literals;
 
 namespace dolphindb {
-#ifdef DLOG
-    #undef DLOG
-#endif
-#define DLOG    //dolphindb::DLogger::Info
 
 
 PytoDdbRowPool::PytoDdbRowPool(MultithreadedTableWriter &writer)

@@ -348,7 +348,7 @@ class Session(DBConnection):
         self, host: str, port: int, handler: Callable, tableName: str, actionName: str = None,
         offset: int = -1, resub: bool = False, filter=None,
         msgAsTable: bool = False, batchSize: int = 0, throttle: float = 1.0,
-        userName: str = None, password: str = None, streamDeserializer: Optional["StreamDeserializer"] = None,
+        userName: str = "", password: str = "", streamDeserializer: Optional["StreamDeserializer"] = None,
         backupSites: List[str] = None, resubscribeInterval: int = 100, subOnce: bool = False,
         *, resubTimeout: Optional[int] = None,
     ) -> None:
@@ -371,8 +371,8 @@ class Session(DBConnection):
             msgAsTable : whether to convert the subscribed data to dataframe. If msgAsTable = True, the subscribed data is ingested into handler as a DataFrame. Defaults to False, which means the subscribed data is ingested into handler as a List of nparrays. This optional parameter has no effect if batchSize is not specified.
             batchSize : an integer indicating the number of unprocessed messages to trigger the handler. If it is positive, the handler does not process messages until the number of unprocessed messages reaches batchSize. If it is unspecified or non-positive, the handler processes incoming messages as soon as they come in. Defaults to 0.
             throttle : a float indicating the maximum waiting time (in seconds) before the handler processes the incoming messages. Defaults to 1. This optional parameter has no effect if batchSize is not specified.
-            userName : username. Defaults to None, indicating no login.
-            password : password. Defaults to None, indicating no login.
+            userName : username. Defaults to "", indicating no login.
+            password : password. Defaults to "", indicating no login.
             streamDeserializer : a deserializer of heterogeneous stream table. Defaults to None.
             backupSites : a list of strings indicating the host:port for each backup node, e.g. ["192.168.0.1:8848", "192.168.0.2:8849"]. If specified, the failover mechanism is automatically activated. Defaults to None.
             resubscribeInterval : a non-negative integer indicating the wait time (in milliseconds) between resubscription attempts when a disconnection is detected. Defaults to 100.

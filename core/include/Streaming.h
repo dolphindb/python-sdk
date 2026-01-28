@@ -42,9 +42,9 @@ private:
 
 class EXPORT_DECL MessageTableQueue {
 public:
-	MessageTableQueue(size_t maxItems, size_t batchSize_)
-		: capacity_(maxItems), batchSize_(batchSize_), size_(0), exitflag_(false) {}
-	~MessageTableQueue(){}
+    MessageTableQueue(size_t maxItems, size_t batchSize_)
+        : exitflag_(false), capacity_(maxItems), batchSize_(batchSize_), size_(0) {}
+    ~MessageTableQueue(){}
 	int size();
 	void setExitFlag();
 	bool getExitFlag();
@@ -121,50 +121,21 @@ struct EXPORT_DECL SubscribeInfo {
 			resubTimeout(100),
 			subOnce(false),
 			lastSiteIndex(-1) {}
-	explicit SubscribeInfo(const string					&id,
-						   const string 				&host,
-						   int 							port,
-						   const string 				&tableName,
-						   const string 				&actionName,
-						   long long 					offset,
-						   bool 						resub,
-						   const VectorSP 				&filter,
-						   bool 						msgAsTable,
-						   bool 						allowExists,
-						   int 							batchSize,
-						   const string 				&userName,
-						   const string 				&password,
-						   const StreamDeserializerSP 	&blobDeserializer,
-						   const bool 					istqueue,
-						   bool							isEvent,
-						   int							resubTimeout,
-						   bool							subOnce)
-		: 	ID(move(id)),
-			host(move(host)),
-			port(port),
-			tableName(move(tableName)),
-			actionName(move(actionName)),
-			offset(offset),
-			resub(resub),
-			filter(filter),
-			msgAsTable(msgAsTable),
-			allowExists(allowExists),
-			attributes(),
-			haSites(0),
-			queue(istqueue?nullptr:new MessageQueue(std::max(DEFAULT_QUEUE_CAPACITY, batchSize), batchSize)),
-			tqueue(istqueue?new MessageTableQueue(std::max(DEFAULT_QUEUE_CAPACITY, batchSize), batchSize):nullptr),
-			userName(move(userName)),
-			password(move(password)),
-			istqueue(istqueue),
-			streamDeserializer(blobDeserializer),
-			currentSiteIndex(-1),
-			isEvent_(isEvent),
-			resubTimeout(resubTimeout),
-			subOnce(subOnce),
-			lastSiteIndex(-1) {
-	}
+    explicit SubscribeInfo(const string &id, const string &host, int port, const string &tableName,
+                           const string &actionName, long long offset, bool resub, const VectorSP &filter,
+                           bool msgAsTable, bool allowExists, int batchSize, const string &userName,
+                           const string &password, const StreamDeserializerSP &blobDeserializer, const bool istqueue,
+                           bool isEvent, int resubTimeout, bool subOnce)
+        : ID(std::move(id)), host(std::move(host)), port(port), tableName(std::move(tableName)),
+          actionName(std::move(actionName)), offset(offset), resub(resub), filter(filter), msgAsTable(msgAsTable),
+          allowExists(allowExists), attributes(), haSites(0),
+          queue(istqueue ? nullptr : new MessageQueue(std::max(DEFAULT_QUEUE_CAPACITY, batchSize), batchSize)),
+          tqueue(istqueue ? new MessageTableQueue(std::max(DEFAULT_QUEUE_CAPACITY, batchSize), batchSize) : nullptr),
+          istqueue(istqueue), userName(std::move(userName)), password(std::move(password)),
+          streamDeserializer(blobDeserializer), currentSiteIndex(-1), isEvent_(isEvent), resubTimeout(resubTimeout),
+          subOnce(subOnce), lastSiteIndex(-1) {}
 
-	string ID;
+    string ID;
 	string host;
 	int port;
 	string tableName;
@@ -214,7 +185,7 @@ struct EXPORT_DECL SubscribeInfo {
 		handleThread.clear();
 	}
 
-	void updateByReconnect(int currentReconnSiteIndex, const std::string &topic) {
+	void updateByReconnect(int currentReconnSiteIndex, const std::string & /*topic*/) {
 		auto thisTopicLastSuccessfulNode = this->lastSiteIndex;
 		if (this->subOnce && thisTopicLastSuccessfulNode != currentReconnSiteIndex) {
 			// update currentSiteIndex

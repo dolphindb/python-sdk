@@ -227,7 +227,7 @@ public:
 
 	static void SetOrThrowErrorInfo(ErrorCodeInfo *errorCodeInfo, int errorCode, const string &errorInfo);
 	template<typename T>
-	static ConstantSP createObject(DATA_TYPE dataType, T val, ErrorCodeInfo *errorCodeInfo = NULL, int extraParam = 0) {
+	static ConstantSP createObject(DATA_TYPE dataType, T  /*val*/, ErrorCodeInfo *errorCodeInfo = NULL, int  /*extraParam*/ = 0) {
 		SetOrThrowErrorInfo(errorCodeInfo, ErrorCodeInfo::EC_InvalidObject, "It cannot be converted to " + getDataTypeString(dataType));
 		return NULL;
 	}
@@ -824,6 +824,6 @@ private:
 	bool dataNeedRelease_, containNull_;
 };
 
-};
+}
 
 #endif /* UTIL_H_ */

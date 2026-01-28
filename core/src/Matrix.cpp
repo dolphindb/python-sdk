@@ -49,7 +49,7 @@ bool Matrix::reshape(INDEX cols, INDEX rows) {
     return true;
 }
 
-void Matrix::calculateInvalidLength(INDEX colStart, int colLength,INDEX rowStart, int rowLength, int& invalidLenBeginning, int& invalidLenEnding) const{
+void Matrix::calculateInvalidLength(INDEX  /*colStart*/, int  /*colLength*/,INDEX rowStart, int rowLength, int& invalidLenBeginning, int& invalidLenEnding) const{
     invalidLenBeginning = 0;
     invalidLenEnding = 0;
 

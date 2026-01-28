@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.15.1)
 project(dolphindbcpp LANGUAGES CXX)
 
 set(MODULE_NAME _dolphindbcpp)
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -119,6 +117,8 @@ target_link_directories(${MODULE_NAME}
 )
 endif()
 
+target_compile_features(${MODULE_NAME} PRIVATE cxx_std_17)
+target_compile_features(${MODULE_NAME} PRIVATE c_std_99)
 
 
 
@@ -126,7 +126,7 @@ endif()
 # Platform-specific settings
 # ============================================================================
 if(WIN32)
-    target_compile_definitions(${MODULE_NAME} PRIVATE WINDOWS MS_WIN64)
+    target_compile_definitions(${MODULE_NAME} PRIVATE WINDOWS)
 
     if(MINGW)
         set(CMAKE_CXX_STANDARD_LIBRARIES "-static -static-libgcc -static-libstdc++ ${CMAKE_CXX_STANDARD_LIBRARIES}")

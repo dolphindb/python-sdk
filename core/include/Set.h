@@ -8,7 +8,7 @@ namespace dolphindb {
 class EXPORT_DECL Set: public Constant {
 public:
     Set() : Constant(1027){}
-    virtual ~Set() {}
+    ~Set() override {}
     virtual void clear()=0;
     virtual bool remove(const ConstantSP& value) = 0;
     virtual bool append(const ConstantSP& value) = 0;
@@ -17,8 +17,8 @@ public:
     virtual bool isSuperset(const ConstantSP& target) const = 0;
     virtual ConstantSP interaction(const ConstantSP& target) const = 0;
     virtual ConstantSP getSubVector(INDEX start, INDEX length) const = 0;
-    virtual string getScript() const {return "set()";}
-    virtual bool isLargeConstant() const {return true;}
+    string getScript() const override {return "set()";}
+    bool isLargeConstant() const override {return true;}
 };
 typedef SmartPointer<Set> SetSP;
 }

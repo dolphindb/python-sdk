@@ -121,7 +121,7 @@ class TestThreadedClient(object):
         conn = ddb.Session(host=HOST, port=PORT, userid=USER, password=PASSWD)
         conn.run(f"share streamTable(1..3 as id) as {func_name}_stream_table")
         client = ThreadedClient()
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Login is required for script execution with client authentication enabled"):
             client.subscribe(host=HOST, port=PORT, handler=print, table_name=f"{func_name}_stream_table",
                              action_name="same_name")
 

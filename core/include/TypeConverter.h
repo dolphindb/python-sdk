@@ -255,7 +255,7 @@ int getPyDecimalScale(PyObject* obj);
 
 
 template <typename T>
-T getPyDecimalData(const py::handle &data, bool &hasNull, int scale) {
+T getPyDecimalData(const py::handle & /*data*/, bool & /*hasNull*/, int  /*scale*/) {
     throw pybind_dolphindb::ConversionException("Only c++ int, long, or int128 types can be converted to python Decimal.");
 }
 

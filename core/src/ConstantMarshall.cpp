@@ -42,7 +42,7 @@ void ConstantUnmarshallImp::decodeFlag(short flag, DATA_FORM& form, DATA_TYPE& t
 	type = static_cast<DATA_TYPE>(flag & 0xff);
 }
 
-bool ScalarMarshall::start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret){
+bool ScalarMarshall::start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool  /*compress*/, IO_ERR& ret){
 	if(headerSize > 1024){
 		ret = INVALIDDATA;
 		return false;
@@ -90,7 +90,7 @@ bool ScalarMarshall::start(const char* requestHeader, size_t headerSize, const C
 		target_.clear();
 		partial_ = 0;
 	}
-	
+
 	complete_ = (ret == OK);
 	return complete_;
 }
@@ -103,7 +103,7 @@ bool VectorMarshall::start(const ConstantSP& target, bool blocking, bool compres
 	return start(0, 0, target, blocking, compress, ret);
 }
 
-bool VectorMarshall::writeMetaValues(BufferWriter<DataOutputStreamSP> &output, const ConstantSP& target, 
+bool VectorMarshall::writeMetaValues(BufferWriter<DataOutputStreamSP> &output, const ConstantSP& target,
 				bool includeMeta, size_t offset, bool blocking, IO_ERR& ret) {
 	target_.clear();
 	marshall_.clear();
@@ -237,7 +237,7 @@ void VectorMarshall::resetSymbolBaseMarshall(bool createIfNotExist){
 	}
 }
 
-bool MatrixMarshall::sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, IO_ERR& ret){
+bool MatrixMarshall::sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool  /*blocking*/, IO_ERR& ret){
 	if(headerSize > 1024){
 		ret = INVALIDDATA;
 		return false;
@@ -292,7 +292,7 @@ void MatrixMarshall::reset(){
 	vectorMarshall_.reset();
 }
 
-bool TableMarshall::sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret) {
+bool TableMarshall::sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool  /*blocking*/, bool compress, IO_ERR& ret) {
 	if(headerSize > 1024){
 		ret = INVALIDDATA;
 		return false;
@@ -338,7 +338,7 @@ bool TableMarshall::sendMeta(const char* requestHeader, size_t headerSize, const
 		else{
 			size_t totalLen = headerSize + strLen;
 			size_t nameIndex = 0;
-			while(totalLen > 0){	
+			while(totalLen > 0){
 				size_t nameLen = std::min(MARSHALL_BUFFER_SIZE - headerSize, totalLen);
 				memcpy(buf_ + headerSize, name.c_str() + nameIndex, nameLen);
 				headerSize += nameLen;
@@ -400,7 +400,7 @@ void TableMarshall::reset(){
 	vectorMarshall_.resetSymbolBaseMarshall(false);
 }
 
-bool SetMarshall::sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, IO_ERR& ret){
+bool SetMarshall::sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool  /*blocking*/, IO_ERR& ret){
 	if(headerSize > 1024){
 		ret = INVALIDDATA;
 		return false;
@@ -434,7 +434,7 @@ void SetMarshall::reset(){
 	vectorMarshall_.reset();
 }
 
-bool DictionaryMarshall::sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, IO_ERR& ret){
+bool DictionaryMarshall::sendMeta(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool  /*blocking*/, IO_ERR& ret){
 	if(headerSize > 1024){
 		ret = INVALIDDATA;
 		return false;
@@ -476,7 +476,7 @@ void DictionaryMarshall::reset(){
 	vectorMarshall_.reset();
 }
 
-bool ChunkMarshall::start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool blocking, bool compress, IO_ERR& ret){
+bool ChunkMarshall::start(const char* requestHeader, size_t headerSize, const ConstantSP& target, bool  /*blocking*/, bool  /*compress*/, IO_ERR& ret){
 	if(headerSize > 1024){
 		ret = INVALIDDATA;
 		return false;
@@ -576,7 +576,7 @@ void SymbolBaseMarshall::reset(){
 	partial_ = 0;
 }
 
-bool ScalarUnmarshall::start(short flag, bool blocking, IO_ERR& ret){
+bool ScalarUnmarshall::start(short flag, bool  /*blocking*/, IO_ERR& ret){
 	DATA_FORM form;
 	DATA_TYPE type;
 	decodeFlag(flag, form, type);
@@ -625,7 +625,7 @@ void ScalarUnmarshall::reset(){
 	obj_.clear();
 }
 
-bool SymbolBaseUnmarshall::start(bool blocking, IO_ERR& ret){
+bool SymbolBaseUnmarshall::start(bool  /*blocking*/, IO_ERR& ret){
 	symbaseId_ = -1;
 	size_ = -1;
 
@@ -666,7 +666,7 @@ bool VectorUnmarshall::start(short flag, bool blocking, IO_ERR& ret){
 	DATA_FORM form;
 	DATA_TYPE type;
 	decodeFlag(flag, form, type);
-	
+
 	DataQueueSP queue = new BlockingQueue<DataBlock>(1024);
 	DataInputStreamSP input = in_;
 	DataOutputStreamSP decompressOutput = new DataOutputStream(queue);
@@ -990,7 +990,7 @@ void DictionaryUnmarshall::reset(){
 	vectorUnmarshall_.reset();
 }
 
-bool ChunkUnmarshall::start(short flag, bool blocking, IO_ERR& ret){
+bool ChunkUnmarshall::start(short  /*flag*/, bool  /*blocking*/, IO_ERR& ret){
 	size_ = -1;
 	ret = in_->readShort(size_);
 	if(ret != OK)
@@ -1129,4 +1129,4 @@ ConstantUnmarshallFactory::~ConstantUnmarshallFactory(){
 	delete arrUnmarshall[DF_CHUNK];
 }
 
-};
+}

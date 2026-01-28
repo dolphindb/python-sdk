@@ -594,4 +594,4 @@ string TemporalFormat::format(long long nowtime, DATA_TYPE dtype) const{
 	}
 }
 
-};
+}

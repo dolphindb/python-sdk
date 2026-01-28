@@ -71,7 +71,7 @@ enum DATA_TYPE {DT_VOID,DT_BOOL,DT_CHAR,DT_SHORT,DT_INT,DT_LONG,DT_DATE,DT_MONTH
 	DT_DATEHOUR_ARRAY, DT_DATEMINUTE_ARRAY,DT_IP_ARRAY, DT_INT128_ARRAY, DT_BLOB_ARRAY, DT_DECIMAL32_ARRAY = 101, DT_DECIMAL64_ARRAY, DT_DECIMAL128_ARRAY, DT_OBJECT_ARRAY
 };
 
-const int TYPE_COUNT = DT_COUNT;
+constexpr int TYPE_COUNT = DT_COUNT;
 
 enum DATA_CATEGORY {NOTHING,LOGICAL,INTEGRAL,FLOATING,TEMPORAL,LITERAL,SYSTEM,MIXED,BINARY,COMPLEX,ARRAY,DENARY};
 
@@ -138,19 +138,12 @@ enum PROTOCOL {PROTOCOL_DDB = 1, PROTOCOL_PICKLE = 2, PROTOCOL_ARROW = 3};
 
 enum PARSER_TYPE {PARSER_DOLPHINDB = 1, PARSER_PYTHON = 2, PARSER_KDB = 3};
 
-#ifdef INDEX64
-	typedef long long INDEX;
-	typedef unsigned long long UINDEX;
-	#define DT_INDEX DT_LONG
-	const long long INDEX_MIN = LLONG_MIN;
-	const long long INDEX_MAX = LLONG_MAX;
-#else
-	typedef int INDEX;
-	typedef unsigned int UINDEX;
-	#define DT_INDEX DT_INT
-	const int INDEX_MIN = INT_MIN;
-	const int INDEX_MAX = INT_MAX;
-#endif
+using INDEX = int;
+using UINDEX = unsigned int;
+constexpr DATA_TYPE DT_INDEX{DT_INT};
+const int INDEX_MIN = INT_MIN;
+const int INDEX_MAX = INT_MAX;
+
 
 typedef union {
 	long long longVal;
@@ -163,5 +156,5 @@ typedef union {
 } U8;
 
 
-};
+}
 #endif /* TYPES_H_ */

@@ -20,7 +20,7 @@ public:
         buckets_ = partitionSchema->getInt();
     }
 
-	virtual vector<int> getPartitionKeys(const ConstantSP& partitionCol) const;
+	vector<int> getPartitionKeys(const ConstantSP& partitionCol) const override;
 
 private:
     int buckets_;
@@ -30,7 +30,7 @@ class EXPORT_DECL ListDomain : public Domain {
 public:
     ListDomain(DATA_TYPE partitionColType, ConstantSP partitionSchema);
 
-    virtual vector<int> getPartitionKeys(const ConstantSP& partitionCol) const;
+    vector<int> getPartitionKeys(const ConstantSP& partitionCol) const override;
 
 private:
 	DictionarySP dict_;
@@ -39,16 +39,16 @@ private:
 
 class EXPORT_DECL ValueDomain : public Domain{
 public:
-	ValueDomain(DATA_TYPE partitionColType, ConstantSP partitionSchema) : Domain(VALUE, partitionColType){}
+	ValueDomain(DATA_TYPE partitionColType, ConstantSP  /*partitionSchema*/) : Domain(VALUE, partitionColType){}
 
-	virtual vector<int> getPartitionKeys(const ConstantSP& partitionCol) const;
+	vector<int> getPartitionKeys(const ConstantSP& partitionCol) const override;
 };
 
 class EXPORT_DECL RangeDomain : public Domain{
 public:
     RangeDomain(DATA_TYPE partitionColType, ConstantSP partitionSchema) : Domain(RANGE, partitionColType), range_(partitionSchema){ }
 
-	virtual vector<int> getPartitionKeys(const ConstantSP& partitionCol) const;
+	vector<int> getPartitionKeys(const ConstantSP& partitionCol) const override;
 private:
     VectorSP range_;
 };

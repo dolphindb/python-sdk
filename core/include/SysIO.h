@@ -218,7 +218,7 @@ protected:
 	 */
 	virtual IO_ERR internalStreamRead(char* buf, size_t length, size_t& actualLength);
 	virtual IO_ERR internalClose();
-	virtual bool internalMoveToPosition(long long offset){return false;}
+	virtual bool internalMoveToPosition(long long  /*offset*/){return false;}
 
 
 private:
@@ -374,7 +374,7 @@ public:
 	DataStream(const char* data, int size) : DataInputStream(data, size), flag_(1), outBuf_(0), outSize_(0){}
 	DataStream(const SocketSP& socket) : DataInputStream(socket), flag_(3), outBuf_(new char[2048]), outSize_(2048){}
 	DataStream(FILE* file, bool readable, bool writable);
-	virtual ~DataStream();
+	~DataStream() override;
 	bool isReadable() const;
 	void isReadable(bool option);
 	bool isWritable() const;

@@ -1,3 +1,11 @@
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#endif
+
+
 #include "Python.h"
 
 #if (PY_MINOR_VERSION >= 6) && (PY_MINOR_VERSION <= 12)
@@ -7,10 +15,17 @@
 #include "ScalarImp.h"
 #include "Util.h"
 
+constexpr bool LOGGING_ENABLED_PICKLE = false;
+
 #ifdef DLOG
     #undef DLOG
 #endif
-#define DLOGPRINT true?dolphindb::DLogger::GetMinLevel():dolphindb::DLogger::Info
+#define DLOGPRINT(...) \
+    do { \
+        if constexpr (LOGGING_ENABLED_PICKLE) { \
+            dolphindb::DLogger::Debug(__VA_ARGS__); \
+        } \
+    } while(0)
 
 std::string PyType2String(PyObject *obj);
 std::string PyObject2String(PyObject *obj);
@@ -20,7 +35,7 @@ std::string PyObject2String(PyObject *obj);
 #define DLOGOP(text, op) DLOGPRINT(text,"pos",GETPOS(),"op",char(op),((int)op>=128)?((int)op-256):((int)op),"stack",Py_SIZE(unpickler_->stack) - unpickler_->stack->fence);
 #define DLOG(text) DLOGPRINT(text);
 
-void PYERR_SETSTRING(PyObject *pyObject,const string &text){
+void PYERR_SETSTRING(PyObject * /*pyObject*/,const string &text){
     LOG_ERR(text);
 }
 
@@ -81,8 +96,8 @@ int Ddb_PyArg_UnpackStackOrTuple(
     PyObject *const *args,
     Py_ssize_t nargs,
     const char *name,
-    Py_ssize_t min,
-    Py_ssize_t max,
+    Py_ssize_t  /*min*/,
+    Py_ssize_t  /*max*/,
     PyObject **pmodule_name,
     PyObject **pglobal_name){
     return _PyArg_UnpackStack(args, nargs, name,
@@ -3899,13 +3914,13 @@ namespace dolphindb
                     }
                     pyBytes=(PyBytesObject*)pyBytesObject;
                 }
-                
+
                 int lenByteSize=4;
                 if(op==Pickle::opcode::SHORT_BINBYTES)
                     lenByteSize=1;
                 else if(op==Pickle::opcode::BINBYTES8)
                     lenByteSize=8;
-                
+
                 size_t size=Py_SIZE(pyBytes);
                 DLOG2("load size",size);
                 PyObject *value;
@@ -4285,7 +4300,7 @@ namespace dolphindb
         }
         return false; /* and we are done! */
     }
-    bool PickleUnmarshall::start(short flag, bool blocking, IO_ERR &ret)
+    bool PickleUnmarshall::start(short  /*flag*/, bool  /*blocking*/, IO_ERR &ret)
     {
         //DLogger::SetLogFilePath("/tmp/ddb_python_api.log");
         if ((ret = in_->readBytes(shortBuf_, 2, false)) != OK)
@@ -4357,9 +4372,13 @@ namespace dolphindb
         Unpickler_clear(unpickler_);
         Py_DECREF(unpickler_);
     }
-};
+}
 #else
 /**
  * Unsupport PROTOCOL_PICKLE for Python 3.13 or newer
  */
+#endif
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif

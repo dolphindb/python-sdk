@@ -148,7 +148,7 @@ PyCache::PyCache() {
     if (has_arrow_) {
         pyarrow_ = py::module::import("pyarrow");
         pyarrow_import_ = true;
-        
+
         pa_boolean_ = pyarrow_.attr("bool_")();
         pa_int8_ = pyarrow_.attr("int8")();
         pa_int16_ = pyarrow_.attr("int16")();
@@ -705,7 +705,7 @@ getChildrenType(
 }
 
 
-bool checkInnerType(const py::handle &data, ConstantSP &constantsp) {
+bool checkInnerType(const py::handle & /*data*/, ConstantSP & /*constantsp*/) {
     return false;
 }
 
@@ -1085,7 +1085,7 @@ Converter::toDolphinDB_Scalar(
         constobj = converter::castTemporal(constobj, type);
         return constobj;
     }
-    
+
     if (CHECK_EQUAL(dtype, np_bool_)) {
         if (type.first == HT_UNK) type.first = HT_BOOL;
         auto result = data.cast<bool>();
@@ -1152,9 +1152,7 @@ _create_And_Indicate_As_Vector(
     VectorSP ddbVec;
     if (DATA_CATEGORY::DENARY == getCategory(type) && type.second == EXPARAM_DEFAULT) {
         size_t index = 0;
-        bool hasNull = false;
         // Need to Infer Exparam
-        int nullCount = 0;
         ConstantSP tmp;
         for (const auto &it : data) {
             try {
@@ -1162,7 +1160,6 @@ _create_And_Indicate_As_Vector(
                     if (tmp->getForm() != DATA_FORM::DF_SCALAR) throw ConversionException("");
                     if (tmp->getCategory() != DATA_CATEGORY::DENARY) throw ConversionException("");
                     if (tmp->isNull()) {
-                        ++nullCount;
                         ++index;
                         continue;
                     }
@@ -1170,14 +1167,12 @@ _create_And_Indicate_As_Vector(
                     break;
                 }
                 if (isNULL(it)) {
-                    ++nullCount;
                     ++index;
                     continue;
                 }
                 if (CHECK_INS(it, py_decimal_)) {
                     int exparam = getPyDecimalScale(it);
                     if (exparam == EXPARAM_DEFAULT) {
-                        ++nullCount;
                         ++index;
                         continue;
                     }
@@ -1398,7 +1393,7 @@ ConstantSP
 _create_And_Indicate_As_AnyVector(
     const py::handle            &data,
     size_t                      size,
-    VectorInfo                  info
+    VectorInfo                   /*info*/
 ) {
     DLOG("_create_And_Indicate_As_AnyVector");
     VectorSP ddbVec;
@@ -1449,7 +1444,7 @@ _create_And_Indicate_As_ArrayVector(
             else {
                 if (!isArrayLike(it))
                     throwExceptionAboutNumpyVersion(index, py2str(it), getDataTypeString(type), info);
-                typeExact = getChildrenType(it, CHILD_VECTOR_OPTION::NORMAL_VECTOR, elemIsArrayLike, allNull, nullpri, nullType); 
+                typeExact = getChildrenType(it, CHILD_VECTOR_OPTION::NORMAL_VECTOR, elemIsArrayLike, allNull, nullpri, nullType);
             }
             if (allNull) {
                 typeExact = {HT_UNK, EXPARAM_DEFAULT};
@@ -1476,7 +1471,7 @@ _create_And_Indicate_As_ArrayVector(
                 }
                 noneCounts.clear();
             }
-            
+
             pChildVector = createVector(elemType, 0, len);
             try {
                 for (const auto &item : it) {
@@ -1806,7 +1801,7 @@ ConstantSP _create_And_Indicate_As_Matrix(
     if (dim == 2) {
         rows = py::len(data[0]);
     }
-    
+
     if (dim == 1) {
         VectorSP v = Converter::toDolphinDB_Vector(data, type, CHILD_VECTOR_OPTION::NORMAL_VECTOR);
         ConstantSP matrix = createMatrixWithVector(v, cols, rows);
@@ -1903,15 +1898,15 @@ Converter::toDolphinDB_Matrix_fromTupleOrListOrNDArray(
     if (dim == 2) {
         rows = py::len(data[py::int_(0)]);
     }
-    
+
     if (dim == 1) {
         VectorSP v = Converter::toDolphinDB_Vector(data, type, CHILD_VECTOR_OPTION::NORMAL_VECTOR);
         ConstantSP matrix = createMatrixWithVector(v, rows, cols);
         return matrix;
     }
-    
+
     // dim == 2
-    return _create_And_Infer_As_2DMatrix(data, rows, cols);   
+    return _create_And_Infer_As_2DMatrix(data, rows, cols);
 }
 
 
@@ -2580,7 +2575,7 @@ _create_And_Append_Vector_With_PANDAS_EXTENSION(
 ) {
     VectorSP ddbVec;
     size_t size = py::len(data);
-    
+
     switch (type.first) {
         case HT_BOOL:
         case HT_CHAR: {
@@ -2861,8 +2856,7 @@ _toDolphinDB_Vector_fromNDArray(
     const CHILD_VECTOR_OPTION   &option
 ) {
     VectorInfo info;
-    
-    bool Is_ArrayVector = false;
+
     bool Is_DTypeObject = false;
     bool Is_ArrowDType = false;
     bool Is_ExtensionDType = false;
@@ -2903,16 +2897,12 @@ ConstantSP Converter::toDolphinDB_VectorOrMatrix_fromNDArray(
     Type                        type,
     const CHILD_VECTOR_OPTION   &option,
     const ARRAY_OPTION          &arrOption,
-    const VectorInfo            &info
+    const VectorInfo            & /*info*/
 ) {
-    int &exparam = type.second;
     int dim = data.ndim();
     int rows = dim == 1 ? 1 : data.shape(0);
     int cols = dim == 1 ? data.size() : data.shape(1);
     py::dtype dtype = data.dtype();
-    bool Is_ArrayVector = false;
-    bool Is_DTypeObject = false;
-    bool Is_ArrowDType = false;
 
     // TODO: need to support Tensor / NDMatrix
     if (dim > 2) {
@@ -3148,7 +3138,7 @@ Converter::toPython(const ConstantSP &data, const ToPythonOption &option) {
 
 
 py::object
-Converter::toPython_Scalar(const ConstantSP &data, const ToPythonOption &option) {
+Converter::toPython_Scalar(const ConstantSP &data, const ToPythonOption & /*option*/) {
     // if (data->isNull()) {
     //     return py::none();      // STRING ?     "" or None
     // }
@@ -3264,7 +3254,7 @@ Converter::toPyList_Matrix(const ConstantSP &data, const ToPythonOption &option)
 
 
 py::list
-Converter::toPyList_Table(const ConstantSP &data, const ToPythonOption &option) {
+Converter::toPyList_Table(const ConstantSP & /*data*/, const ToPythonOption & /*option*/) {
     /**
      * 'a': [1, 2, 3], 'b': [True, False, None]
      * ->
@@ -3744,8 +3734,8 @@ Converter::toPandas_Table(const ConstantSP &data, const ToPythonOption &option) 
 }
 
 void _toPython_Old_createPyVector(
-    const ConstantSP        &obj, 
-    py::object              &pyObject, 
+    const ConstantSP        &obj,
+    py::object              &pyObject,
     bool                    tableFlag,
     const ToPythonOption    &poption)
 {
@@ -3942,7 +3932,7 @@ void _toPython_Old_createPyVector(
 
 /*
     toPython_Old: used to convert ConstantSP -> py::object ()
-    
+
     tableFlag true: convert datetime to ns, like dataframe process numpy.array.
 */
 py::object

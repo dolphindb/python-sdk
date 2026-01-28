@@ -80,7 +80,7 @@ void BatchTableWriter::addTable(const string& dbName, const string& tableName, b
     destTable->columnNum = colDefs->size();
     destTable->colDefsTypeInt = colDefs->getColumn("typeInt");
     destTable->destroy = false;
-    
+
     std::vector<string> colNames;
     std::vector<DATA_TYPE> colTypes;
     ConstantSP colDefsName = colDefs->getColumn("name");
@@ -278,10 +278,10 @@ void BatchTableWriter::removeTable(const string& dbName, const string& tableName
     }
 }
 
-ConstantSP BatchTableWriter::createObject(int dataType, Constant* val){
+ConstantSP BatchTableWriter::createObject(int  /*dataType*/, Constant* val){
     return val;
 }
-ConstantSP BatchTableWriter::createObject(int dataType, ConstantSP val){
+ConstantSP BatchTableWriter::createObject(int  /*dataType*/, ConstantSP val){
     return val;
 }
 ConstantSP BatchTableWriter::createObject(int dataType, char val){
@@ -442,5 +442,5 @@ ConstantSP BatchTableWriter::createObject(int dataType, int val){
             break;
     }
 }
-};
+}
 

@@ -52,12 +52,6 @@ int min(INDEX a, int b) {
 #define RECORDTIME(name) //RecordTime _##name(name)
 
 
-#ifdef DLOG
-    #undef DLOG
-#endif
-#define DLOG        //dolphindb::DLogger::Info
-
-
 
 namespace dolphindb {
 
@@ -72,15 +66,15 @@ ConstantSP Constant::one_(new Int(1));
 
 
 
-int Constant::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int cellCountToSerialize, int& numElement, int& partial) const {
+int Constant::serialize(char*  /*buf*/, int  /*bufSize*/, INDEX  /*indexStart*/, int  /*offset*/, int  /*cellCountToSerialize*/, int&  /*numElement*/, int&  /*partial*/) const {
     throw RuntimeException(Util::getDataFormString(getForm())+"_"+Util::getDataTypeString(getType())+" serialize cell method not supported");
 }
 
-int Constant::serialize(char* buf, int bufSize, INDEX indexStart, int offset, int& numElement, int& partial) const {
+int Constant::serialize(char*  /*buf*/, int  /*bufSize*/, INDEX  /*indexStart*/, int  /*offset*/, int&  /*numElement*/, int&  /*partial*/) const {
     throw RuntimeException(Util::getDataFormString(getForm())+"_"+Util::getDataTypeString(getType())+" serialize method not supported");
 }
 
-IO_ERR Constant::deserialize(DataInputStream* in, INDEX indexStart, INDEX targetNumElement, INDEX& numElement) {
+IO_ERR Constant::deserialize(DataInputStream*  /*in*/, INDEX  /*indexStart*/, INDEX  /*targetNumElement*/, INDEX&  /*numElement*/) {
     throw RuntimeException(Util::getDataFormString(getForm())+"_"+Util::getDataTypeString(getType())+" deserialize method not supported");
 }
 
@@ -92,32 +86,25 @@ ConstantSP Constant::getColumnLabel() const {
     return void_;
 }
 
-
-
-
-
-
-
-
-
-DBConnection::DBConnection(bool enableSSL, bool asynTask, int keepAliveTime, bool compress, PARSER_TYPE parser, bool isReverseStreaming, int sqlStd) :
-	conn_(new DBConnectionImpl(enableSSL, asynTask, keepAliveTime, compress, parser, isReverseStreaming, sqlStd)), uid_(""), pwd_(""), ha_(false),
-		enableSSL_(enableSSL), asynTask_(asynTask), compress_(compress), parser_(parser), nodes_({}), protocol_(PROTOCOL_DDB),
-		lastConnNodeIndex_(0), reconnect_(false), closed_(true), msg_(true), tryReconnectNums_(-1) {
-}
+DBConnection::DBConnection(bool enableSSL, bool asynTask, int keepAliveTime, bool compress, PARSER_TYPE parser,
+                           bool isReverseStreaming, int sqlStd)
+    : conn_(new DBConnectionImpl(enableSSL, asynTask, keepAliveTime, compress, parser, isReverseStreaming, sqlStd)),
+      uid_(""), pwd_(""), ha_(false), enableSSL_(enableSSL), asynTask_(asynTask), compress_(compress), nodes_({}),
+      lastConnNodeIndex_(0), parser_(parser), protocol_(PROTOCOL_DDB), reconnect_(false), closed_(true), msg_(true),
+      tryReconnectNums_(-1) {}
 
 DBConnection::DBConnection(DBConnection&& oth) :
-		conn_(move(oth.conn_)), uid_(move(oth.uid_)), pwd_(move(oth.pwd_)),
-		initialScript_(move(oth.initialScript_)), ha_(oth.ha_), enableSSL_(oth.enableSSL_),
+		conn_(std::move(oth.conn_)), uid_(std::move(oth.uid_)), pwd_(std::move(oth.pwd_)),
+		initialScript_(std::move(oth.initialScript_)), ha_(oth.ha_), enableSSL_(oth.enableSSL_),
 		asynTask_(oth.asynTask_),compress_(oth.compress_),nodes_(oth.nodes_),lastConnNodeIndex_(0),
 		reconnect_(oth.reconnect_), closed_(oth.closed_), msg_(oth.msg_){}
 
 DBConnection& DBConnection::operator=(DBConnection&& oth) {
     if (this == &oth) { return *this; }
-    conn_ = move(oth.conn_);
-    uid_ = move(oth.uid_);
-    pwd_ = move(oth.pwd_);
-    initialScript_ = move(oth.initialScript_);
+    conn_ = std::move(oth.conn_);
+    uid_ = std::move(oth.uid_);
+    pwd_ = std::move(oth.pwd_);
+    initialScript_ = std::move(oth.initialScript_);
     ha_ = oth.ha_;
     nodes_ = oth.nodes_;
     oth.nodes_.clear();
@@ -355,6 +342,10 @@ bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
 DBConnection::ExceptionType DBConnection::parseException(const string &msg, string &host, int &port) {
     size_t index = msg.find("<NotLeader>");
     if (index != string::npos) {
+        if (index != 0) {
+            // throw as normal Server Response Exception
+            return ET_UNKNOW;
+        }
         index = msg.find(">");
         string ipport = msg.substr(index + 1);
         parseIpPort(ipport, host, port);
@@ -679,7 +670,7 @@ const string DBConnection::getHostName() const {
     return host;
 }
 
-const int DBConnection::getPort() const {
+int DBConnection::getPort() const {
     std::string host;
     int port;
     conn_->getHostPort(host, port);
@@ -1088,7 +1079,7 @@ void AutoFitTableAppender::checkColumnType(int col, DATA_CATEGORY category, DATA
 
 
 std::string defineInsertScript(
-    DBConnection &conn,
+    DBConnection & /*conn*/,
     const std::string &dbUrl,
     const std::string &tableName,
     bool ignoreNull=false,
@@ -1307,5 +1298,5 @@ void ErrorCodeInfo::set(const ErrorCodeInfo &src) {
 	set(src.errorCode, src.errorInfo);
 }
 
-};    // namespace dolphindb
+} // namespace dolphindb
 

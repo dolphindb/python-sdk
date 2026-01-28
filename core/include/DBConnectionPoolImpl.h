@@ -43,12 +43,12 @@ public:
             work->join();
         }
     }
-    void run(const string& script, int identity, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false){
+    void run(const string& script, int identity, int priority=4, int parallelism=64, int  /*fetchSize*/=0, bool clearMemory = false){
         queue_->push(Task(script, identity, priority, parallelism, clearMemory));
         taskStatus_.setResult(identity, TaskStatusMgmt::Result());
     }
 
-    void run(const string& functionName, const std::vector<ConstantSP>& args, int identity, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false){
+    void run(const string& functionName, const std::vector<ConstantSP>& args, int identity, int priority=4, int parallelism=64, int  /*fetchSize*/=0, bool clearMemory = false){
         queue_->push(Task(functionName, args, identity, priority, parallelism, clearMemory));
         taskStatus_.setResult(identity, TaskStatusMgmt::Result());
     }
@@ -78,7 +78,7 @@ public:
     void runPy(
         const string& script, int identity,
         int priority = 4, int parallelism = 64,
-        int fetchSize = 0, bool clearMemory = false,
+        int  /*fetchSize*/ = 0, bool clearMemory = false,
         bool pickleTableToList = false, bool disableDecimal = false
     ){
         queue_->push(Task(
@@ -91,7 +91,7 @@ public:
     void runPy(
         const string& functionName, const vector<ConstantSP>& args, int identity,
         int priority = 4, int parallelism = 64,
-        int fetchSize = 0, bool clearMemory = false,
+        int  /*fetchSize*/ = 0, bool clearMemory = false,
         bool pickleTableToList = false, bool disableDecimal = false
     ){
         queue_->push(Task(
