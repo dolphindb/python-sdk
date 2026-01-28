@@ -5,6 +5,7 @@
  *      Author: dzhou
  */
 
+#include <cstddef>
 #include <ctime>
 #include <exception>
 #include <fstream>
@@ -15,6 +16,7 @@
 #include <pybind11/gil.h>
 #include "Concurrent.h"
 #include "Constant.h"
+#include "Exceptions.h"
 #ifndef WINDOWS
 #include <uuid/uuid.h>
 #else
@@ -172,12 +174,12 @@ bool DBConnection::connect(const string &hostName, int port, const string &userI
 				table = conn_->run("rpc(getControllerAlias(), getClusterPerf)");
                 break;
 			}
-			catch (exception& e) {
+			catch (TagResponse& e) {
 				LOG_ERR("ERROR getting other data nodes, exception:", e.what());
 				string host;
 				int port = 0;
 				if (connected()) {
-					ExceptionType type = parseException(e.what(), host, port);
+					ExceptionType type = parseException(e, host, port);
 					if (type == ET_IGNORE)
 						continue;
 					else if (type == ET_NEWLEADER || type == ET_NODENOTAVAIL) {
@@ -185,10 +187,13 @@ bool DBConnection::connect(const string &hostName, int port, const string &userI
 					}
 				}
 				else {
-                    parseException(e.what(), host, port);
+                    parseException(e, host, port);
 					switchDataNode(host, port);
 				}
-			}
+            } catch (IOException &e) {
+                LOG_ERR("ERROR getting other data nodes, exception:", e.what());
+                switchDataNode("", 0);
+            }
 		}
         if(table->getForm() != DF_TABLE){
             throw IOException("Run getClusterPerf() failed.");
@@ -315,9 +320,10 @@ bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
                 inited = true;
             }
             return inited;
-        } catch (IOException &e) {
+        }
+        catch (TagResponse &e) {
             if (connected()) {
-                ExceptionType type = parseException(e.what(), hostName, port);
+                ExceptionType type = parseException(e, hostName, port);
                 if (type != ET_NEWLEADER) {
                     if (type == ET_IGNORE)
                         return true;
@@ -334,39 +340,43 @@ bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
                 return false;
             }
             Util::sleep(100);
+        } catch (IOException &e) {
+            if (connected()) {
+                LOG_ERR("Connect to", hostName, ":", port, "failed, exception message:", e.what());
+                return false;
+            } else {
+                LOG_ERR(e.what());
+                return false;
+            }
         }
     }
     return false;
 }
 
-DBConnection::ExceptionType DBConnection::parseException(const string &msg, string &host, int &port) {
-    size_t index = msg.find("<NotLeader>");
-    if (index != string::npos) {
-        if (index != 0) {
-            // throw as normal Server Response Exception
+DBConnection::ExceptionType DBConnection::parseException(const TagResponse &e, std::string &host, int &port) {
+    switch (e.getTagType()) {
+        case TagType::TT_NotLeader: {
+            const TagResponseNotLeader& nle = static_cast<const TagResponseNotLeader&>(e);
+            host = nle.host();
+            port = nle.port();
+            LOG_WARN("Got NotLeaderException, switch to leader node [", host, ":", port, "] to run script");
+            return ET_NEWLEADER;
+        }
+        case TagType::TT_ChunkInTransaction: {
+            Util::sleep(10000); // sleep for transaction timeout
+            host.clear();
+            return ET_NODENOTAVAIL;
+        }
+        case TagType::TT_DataNodeNotAvail:
+        case TagType::TT_DataNodeNotReady:
+        case TagType::TT_ControllerNotReady:
+        case TagType::TT_ControllerNotAvail:
+        case TagType::TT_DFSIsNotEnabled: {
+            host.clear();
+            return ET_NODENOTAVAIL;
+        }
+        default:
             return ET_UNKNOW;
-        }
-        index = msg.find(">");
-        string ipport = msg.substr(index + 1);
-        parseIpPort(ipport, host, port);
-        LOG_WARN("Got NotLeaderException, switch to leader node [", host, ":", port, "] to run script");
-        return ET_NEWLEADER;
-    } else {
-        static string ignoreMsgs[] = {"<ChunkInTransaction>", "<DataNodeNotAvail>",   "<DataNodeNotReady>",
-                                      "<ControllerNotReady>", "<ControllerNotAvail>", "DFS is not enabled"};
-        static int ignoreMsgSize = sizeof(ignoreMsgs) / sizeof(string);
-        for (int i = 0; i < ignoreMsgSize; i++) {
-            index = msg.find(ignoreMsgs[i]);
-            if (index != string::npos) {
-                if (i == 0) { // case ChunkInTransaction should sleep 1 minute for
-                              // transaction timeout
-                    Util::sleep(10000);
-                }
-                host.clear();
-                return ET_NODENOTAVAIL;
-            }
-        }
-        return ET_UNKNOW;
     }
 }
 
@@ -417,22 +427,26 @@ ConstantSP DBConnection::run(const string& script, int priority, int parallelism
 		while(closed_ == false){
 			try {
 				return conn_->run(script, priority, parallelism, fetchSize, clearMemory);
-			}
-			catch (IOException& e) {
-				string host;
-				int port = 0;
-				if (connected()) {
-					ExceptionType type = parseException(e.what(), host, port);
-					if (type == ET_IGNORE)
-						return new Void();
-					else if (type == ET_UNKNOW)
-						throw;
-				}
-				else {
-					parseException(e.what(), host, port);
-				}
-				switchDataNode(host, port);
-			}
+            } catch (TagResponse &e) {
+                std::string host;
+                int port = 0;
+                if (connected()) {
+                    ExceptionType type = parseException(e, host, port);
+                    if (type == ET_IGNORE)
+                        return new Void();
+                    else if (type == ET_UNKNOW)
+                        throw;
+                }
+                else {
+                    parseException(e, host, port);
+                }
+                switchDataNode(host, port);
+            } catch (IOException &e) {
+                if (connected()) {
+                    throw;
+                }
+                switchDataNode("", 0);
+            }
 		}
     } else {
         return conn_->run(script, priority, parallelism, fetchSize, clearMemory);
@@ -457,29 +471,36 @@ py::object DBConnection::runPy(
         while (closed_ == false) {
             try {
                 return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
-            } catch (IOException &e) {
+            } catch (TagResponse &e) {
                 py::gil_scoped_release release;
                 if (extractRefId(e.what()) == "S04009") {
                     throw;
                 }
-
-                string host;
+                std::string host;
                 int port = 0;
                 if (connected()) {
-                    ExceptionType type = parseException(e.what(), host, port);
+                    ExceptionType type = parseException(e, host, port);
                     if (type == ET_IGNORE)
                         return py::none();
                     else if (type == ET_UNKNOW)
                         throw;
                 }
-                else{
-                	parseException(e.what(), host, port);
+                else {
+                    parseException(e, host, port);
                 }
                 if (!ha_) {
                     switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
                 }
                 else {
                     switchDataNode(host, port, true);
+                }
+            } catch (IOException &e) {
+                if (connected()) throw;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
+                }
+                else {
+                    switchDataNode("", 0, true);
                 }
             }
         }
@@ -495,21 +516,26 @@ ConstantSP DBConnection::run(const string& funcName, vector<dolphindb::ConstantS
 			try {
 				return conn_->run(funcName, args, priority, parallelism, fetchSize, clearMemory);
 			}
-			catch (IOException& e) {
+			catch (TagResponse& e) {
 				string host;
 				int port = 0;
 				if (connected()) {
-					ExceptionType type = parseException(e.what(), host, port);
+					ExceptionType type = parseException(e, host, port);
 					if (type == ET_IGNORE)
 						return new Void();
 					else if (type == ET_UNKNOW)
 						throw;
 				}
 				else {
-					parseException(e.what(), host, port);
+					parseException(e, host, port);
 				}
 				switchDataNode(host, port);
-			}
+            } catch (IOException &e) {
+                if (connected()) {
+                    throw;
+                }
+                switchDataNode("", 0);
+            }
 		}
     } else {
         return conn_->run(funcName, args, priority, parallelism, fetchSize, clearMemory);
@@ -525,23 +551,25 @@ py::object DBConnection::runPy(
         while (closed_ == false) {
             try {
                 return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
-            } catch (IOException &e) {
+            } catch (TagResponse &e) {
                 py::gil_scoped_release release;
-                if (extractRefId(e.what()) == "S04009") {
-                    throw;
-                }
                 string host;
                 int port = 0;
                 if (connected()) {
-                    ExceptionType type = parseException(e.what(), host, port);
+                    ExceptionType type = parseException(e, host, port);
                     if (type == ET_IGNORE)
                         return py::none();
                     else if (type == ET_UNKNOW)
                         throw;
                 }else{
-                	parseException(e.what(), host, port);
+                	parseException(e, host, port);
                 }
                 switchDataNode(host, port);
+            } catch (IOException &e) {
+                if (connected()) {
+                    throw;
+                }
+                switchDataNode("", 0);
             }
         }
         return py::none();
@@ -556,21 +584,26 @@ ConstantSP DBConnection::upload(const string& name, const ConstantSP& obj) {
 			try {
 				return conn_->upload(name, obj);
 			}
-			catch (IOException& e) {
+			catch (TagResponse& e) {
 				string host;
 				int port = 0;
 				if (connected()) {
-					ExceptionType type = parseException(e.what(), host, port);
+					ExceptionType type = parseException(e, host, port);
 					if (type == ET_IGNORE)
 						return Constant::void_;
 					else if (type == ET_UNKNOW)
 						throw;
 				}
 				else {
-					parseException(e.what(), host, port);
+					parseException(e, host, port);
 				}
 				switchDataNode(host, port);
-			}
+            } catch (IOException &e) {
+                if (connected()) {
+                    throw;
+                }
+                switchDataNode("", 0);
+            }
 		}
     } else {
         return conn_->upload(name, obj);
@@ -584,21 +617,26 @@ ConstantSP DBConnection::upload(vector<string>& names, vector<ConstantSP>& objs)
 			try {
 				return conn_->upload(names, objs);
 			}
-			catch (IOException& e) {
+			catch (TagResponse& e) {
 				string host;
 				int port = 0;
 				if (connected()) {
-					ExceptionType type = parseException(e.what(), host, port);
+					ExceptionType type = parseException(e, host, port);
 					if (type == ET_IGNORE)
 						return Constant::void_;
 					else if (type == ET_UNKNOW)
 						throw;
 				}
 				else {
-					parseException(e.what(), host, port);
+					parseException(e, host, port);
 				}
 				switchDataNode(host, port);
-			}
+            } catch (IOException &e) {
+                if (connected()) {
+                    throw;
+                }
+                switchDataNode("", 0);
+            }
 		}
     } else {
         return conn_->upload(names, objs);
@@ -716,7 +754,7 @@ ConstantSP BlockReader::read(){
     IO_ERR ret;
     short flag;
     if ((ret = in_->readShort(flag)) != OK)
-        throw IOException("Failed to read object flag from the socket with IO error type " + std::to_string(ret));
+        throw IOException("Failed to read object flag from the socket with IO error type " + std::to_string(ret), ret);
 
     DATA_FORM form = static_cast<DATA_FORM>(flag >> 8);
     ConstantUnmarshallFactory factory(in_);
@@ -725,7 +763,7 @@ ConstantSP BlockReader::read(){
         throw IOException("Failed to parse the incoming object" + std::to_string(form));
     if (!unmarshall->start(flag, true, ret)) {
         unmarshall->reset();
-        throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret));
+        throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret), ret);
     }
     ConstantSP result = unmarshall->getConstant();
     unmarshall->reset();

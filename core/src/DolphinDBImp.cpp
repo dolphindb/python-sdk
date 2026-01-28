@@ -1,5 +1,6 @@
 #include "DolphinDBImp.h"
 #include "DolphinDB.h"
+#include "Exceptions.h"
 #include "Logger.h"
 #include "ConstantMarshall.h"
 #include "PytoDdbRowPool.h"
@@ -83,13 +84,13 @@ bool DBConnectionImpl::connect() {
     size_t actualLength;
     ret = conn->write(out.c_str(), out.size(), actualLength);
     if (ret != OK)
-        throw IOException("Couldn't send login message to the given host/port with IO error type " + std::to_string(ret));
+        throw IOException("Couldn't send login message to the given host/port with IO error type " + std::to_string(ret), ret);
 
     DataInputStreamSP in = new DataInputStream(conn);
     string line;
     ret = in->readLine(line);
     if (ret != OK)
-        throw IOException("Failed to read message from the socket with IO error type " + std::to_string(ret));
+        throw IOException("Failed to read message from the socket with IO error type " + std::to_string(ret), ret);
 
     vector<string> headers;
     Util::split(line.c_str(), ' ', headers);
@@ -100,28 +101,28 @@ bool DBConnectionImpl::connect() {
     bool remoteLittleEndian = (headers[2] != "0");
 
     if ((ret = in->readLine(line)) != OK)
-        throw IOException("Failed to read response message from the socket with IO error type " + std::to_string(ret));
+        throw IOException("Failed to read response message from the socket with IO error type " + std::to_string(ret), ret);
     if (line != "OK")
         throw IOException("Server connection response: '" + line);
 
     if (numObject == 1) {
         short flag;
         if ((ret = in->readShort(flag)) != OK)
-            throw IOException("Failed to read object flag from the socket with IO error type " + std::to_string(ret));
+            throw IOException("Failed to read object flag from the socket with IO error type " + std::to_string(ret), ret);
         DATA_FORM form = static_cast<DATA_FORM>(flag >> 8);
 
         ConstantUnmarshallFactory factory(in);
         ConstantUnmarshall* unmarshall = factory.getConstantUnmarshall(form);
         if(unmarshall==NULL)
-            throw IOException("Failed to parse the incoming object" + std::to_string(form));
+            throw IOException("Failed to parse the incoming object" + std::to_string(form), ret);
         if (!unmarshall->start(flag, true, ret)) {
             unmarshall->reset();
-            throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret));
+            throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret), ret);
         }
         ConstantSP result = unmarshall->getConstant();
         unmarshall->reset();
         if (!result->getBool())
-            throw IOException("Failed to authenticate the user");
+            throw IOException("Failed to authenticate the user", ret);
     }
 
     conn_ = conn;
@@ -337,13 +338,13 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
             marshall->reset();
             if (ret != OK) {
                 close();
-                throw IOException("Couldn't send function argument to the remote host with IO error type " + std::to_string(ret));
+                throw IOException("Couldn't send function argument to the remote host with IO error type " + std::to_string(ret), ret);
             }
         }
         ret = outStream->flush();
         if (ret != OK) {
             close();
-            throw IOException("Failed to marshall code with IO error type " + std::to_string(ret));
+            throw IOException("Failed to marshall code with IO error type " + std::to_string(ret), ret);
         }
     } else {
         size_t actualLength;
@@ -364,16 +365,16 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
     string line;
     if ((ret = inputStream_->readLine(line)) != OK) {
         close();
-        throw IOException("Failed to read response header from the socket with IO error type " + std::to_string(ret));
+        throw IOException("Failed to read response header from the socket with IO error type " + std::to_string(ret), ret);
     }
     while (line == "MSG") {
         if ((ret = inputStream_->readString(line)) != OK) {
             close();
-            throw IOException("Failed to read response msg from the socket with IO error type " + std::to_string(ret));
+            throw IOException("Failed to read response msg from the socket with IO error type " + std::to_string(ret), ret);
         }
         if ((ret = inputStream_->readLine(line)) != OK) {
             close();
-            throw IOException("Failed to read response header from the socket with IO error type " + std::to_string(ret));
+            throw IOException("Failed to read response header from the socket with IO error type " + std::to_string(ret), ret);
         }
     }
     vector<string> headers;
@@ -387,11 +388,11 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
 
     if ((ret = inputStream_->readLine(line)) != OK) {
         close();
-        throw IOException("Failed to read response message from the socket with IO error type " + std::to_string(ret));
+        throw IOException("Failed to read response message from the socket with IO error type " + std::to_string(ret), ret);
     }
 
     if (line != "OK") {
-        throw IOException(hostName_+":"+std::to_string(port_)+" Server response: '" + line + "' script: '" + script + "'");
+        ServerResponse::throwServerResponse(line, script);
     }
 
     if (numObject == 0) {
@@ -513,13 +514,13 @@ py::object DBConnectionImpl::runPy(
             marshall->reset();
             if (ret != OK) {
                 close();
-                throw IOException("Couldn't send function argument to the remote host with IO error type " + std::to_string(ret));
+                throw IOException("Couldn't send function argument to the remote host with IO error type " + std::to_string(ret), ret);
             }
         }
         ret = outStream->flush();
         if (ret != OK) {
             close();
-            throw IOException("Failed to marshall code with IO error type " + std::to_string(ret));
+            throw IOException("Failed to marshall code with IO error type " + std::to_string(ret), ret);
         }
     } else {
         size_t actualLength;
@@ -539,17 +540,17 @@ py::object DBConnectionImpl::runPy(
     string line;
     if ((ret = in->readLine(line)) != OK) {
         close();
-        throw IOException("Failed to read response header from the socket with IO error type " + std::to_string(ret));
+        throw IOException("Failed to read response header from the socket with IO error type " + std::to_string(ret), ret);
     }
     while(line == "MSG"){
         if ((ret = in->readString(line)) != OK) {
             close();
-            throw IOException("Failed to read response msg from the socket with IO error type " + std::to_string(ret));
+            throw IOException("Failed to read response msg from the socket with IO error type " + std::to_string(ret), ret);
         }
         if (msg_) { logger_->Info(line); }
         if ((ret = in->readLine(line)) != OK) {
             close();
-            throw IOException("Failed to read response header from the socket with IO error type " + std::to_string(ret));
+            throw IOException("Failed to read response header from the socket with IO error type " + std::to_string(ret), ret);
         }
     }
 
@@ -567,11 +568,11 @@ py::object DBConnectionImpl::runPy(
     DLOG("runPy OK?");
     if ((ret = in->readLine(line)) != OK) {
         close();
-        throw IOException("Failed to read response message from the socket with IO error type " + std::to_string(ret));
+        throw IOException("Failed to read response message from the socket with IO error type " + std::to_string(ret), ret);
     }
 
     if (line != "OK") {
-        throw IOException("Server response: '" + line + "' script: '" + script + "'");
+        ServerResponse::throwServerResponse(line, script);
     }
 
     if (numObject == 0) {
@@ -586,7 +587,7 @@ py::object DBConnectionImpl::runPy(
     short retFlag;
     if ((ret = in->readShort(retFlag)) != OK) {
         close();
-        throw IOException("Failed to read object flag from the socket with IO error type " + std::to_string(ret));
+        throw IOException("Failed to read object flag from the socket with IO error type " + std::to_string(ret), ret);
     }
 
     DATA_FORM form = static_cast<DATA_FORM>(retFlag >> 8);
@@ -610,7 +611,7 @@ py::object DBConnectionImpl::runPy(
                 unmarshall->reset();
                 close();
                 if(ret != OK)
-                    throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret));
+                    throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret), ret);
                 else
                     throw IOException("Received invalid serialized data during deserialization!");
             }
@@ -654,7 +655,7 @@ py::object DBConnectionImpl::runPy(
         unmarshall->reset();
         if (!unmarshallRet) {
             close();
-            throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret));
+            throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret), ret);
         }
     }
     py::gil_scoped_acquire pgil;

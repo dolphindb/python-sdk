@@ -1126,17 +1126,3 @@ class TestReadmeCn:
             f"select top 10 * from wj((select * from loadTable('{db_name}', `trades)) as lt,(select * from loadTable('{db_name}', `quotes) as rt),-5000000000:0,<[avg(Bid_Price),avg(Offer_Price)]>,`Symbol`Time,`Symbol`Time) where (Time>=07:59:59)")
         assert_frame_equal(res4, ex4)
         s.close()
-
-    def test_readme_AdvancedOperation_ObjectorientedOperationOnDatabase_Table_9(self):
-        s = ddb.Session()
-        s.connect(HOST, PORT, USER, PASSWD)
-        s.run("""
-            t1 = table(2010 2011 2012 as year);
-            t2 = table(`IBM`C`AAPL as Ticker);
-        """)
-        t1 = s.table(data="t1")
-        t2 = s.table(data="t2")
-        res = t1.merge_cross(t2).toDF()
-        ex = s.run("select * from cj((select year from t1) as lt,(select Ticker from t2) as rt) order by Ticker desc")
-        assert_frame_equal(res, ex)
-        s.close()

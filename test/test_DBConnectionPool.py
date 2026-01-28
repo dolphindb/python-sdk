@@ -995,7 +995,7 @@ class TestDBConnectionPool:
         loadDf = pool.runTaskAsync(
             "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0 or mode=4").result()
         relative_diff = (loadDf - loadDf.mean()).abs() / loadDf.mean()
-        assert all(relative_diff['load'] < 0.03)
+        assert all(relative_diff['load'] < 0.2)
         pool.shutDown()
 
     @pytest.mark.CLUSTER

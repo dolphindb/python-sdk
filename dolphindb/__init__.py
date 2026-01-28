@@ -76,7 +76,7 @@ from .writer import (
     MultithreadedTableWriterThreadStatus,
 )
 
-__version__ = "3.0.4.1"
+__version__ = "3.0.4.2"
 
 name = "dolphindb"
 

@@ -158,7 +158,7 @@ public:
     bool isClosed() const;
 	void setProtocol(PROTOCOL protocol);
 	void setShowOutput(bool flag);
-	std::shared_ptr<Logger> getMsgLogger();
+    std::shared_ptr<Logger> getMsgLogger();
 
 private:
     DBConnection(DBConnection& oth); // = delete
@@ -178,7 +178,7 @@ private:
 	//1 - throw exception;
 	//2 - new leader, host&port is valid
 	//3 - this data node not avail
-	ExceptionType parseException(const string &msg, string &host, int &port);
+	ExceptionType parseException(const TagResponse &e, std::string &host, int &port);
 
 private:
 	struct Node{
@@ -192,8 +192,10 @@ private:
 		Node(){}
 		Node(const string &hostName, int port, double load = DBL_MAX): hostName(hostName), port(port), load(load){}
 		Node(const string &ipport, double loadValue = DBL_MAX);
-	};
-	static void parseIpPort(const string &ipport, string &ip, int &port);
+    };
+    static void parseIpPort(const string &ipport, string &ip, int &port);
+    bool parseAsNotLeaderException(const string &msg, string &host, int &port, ExceptionType &type);
+    bool parseAsOtherException(const string &msg, string &host, int &port, ExceptionType &type);
 
     std::unique_ptr<DBConnectionImpl> conn_;
     string uid_;

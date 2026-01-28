@@ -13,7 +13,8 @@ from dolphindb import SubscriptionConfig, ThreadedStreamingClientConfig, ThreadP
 from dolphindb.streaming import SubscribeInfo
 
 from basic_testing.utils import equalPlus
-from setup.settings import HOST, PORT, USER, PASSWD
+from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, \
+    HA_STREAM_GROUP_ID, PORT_CNODE1, PORT_DNODE2, PORT_DNODE3
 
 
 class TestSubscribeInfo(object):
@@ -1020,6 +1021,93 @@ class TestThreadedClient(object):
         sleep(3)
         client.unsubscribe(subscribe_info=topic)
 
+    def test_threaded_client_orca_streaming_subscribe_on_leader(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn = ddb.DBConnection()
+        conn.connect(HOST, PORT, USER, PASSWD)
+        conn.exec(f"""
+            if (existsCatalog("{func_name}"))
+                dropCatalog("{func_name}")
+            createCatalog("{func_name}")
+            go
+            use catalog {func_name}
+            g=createStreamGraph("engine")
+            g.source("trades", ["time","sym","volume"], [TIMESTAMP, SYMBOL, INT])
+            .timeSeriesEngine(windowSize=60000, step=60000, metrics=<[sum(volume)]>, timeColumn="time", useSystemTime=false, keyColumn="sym", useWindowStartTime=false)
+            .sink("output")
+            g.submit()
+            times = [2018.10.08T01:01:01.785, 2018.10.08T01:01:02.125, 2018.10.08T01:01:10.263, 2018.10.08T01:01:12.457, 2018.10.08T01:02:10.789, 2018.10.08T01:02:12.005, 2018.10.08T01:02:30.021, 2018.10.08T01:04:02.236, 2018.10.08T01:04:04.412, 2018.10.08T01:04:05.152]
+            syms = [`A, `B, `B, `A, `A, `B, `A, `A, `B, `B]
+            volumes = [10, 26, 14, 28, 15, 9, 10, 29, 32, 23]
+            tmp = table(times as time, syms as sym, volumes as volume)
+            appendOrcaStreamTable("trades", tmp)
+        """)
+        df = conn.run(f"select * from {func_name}.orca_table.output where 1==0")
+
+        def handler(data):
+            nonlocal df
+            df = pd.concat([df, data], ignore_index=True)
+
+        def wait_until(len_, timeout=5):
+            for i in range(timeout):
+                if len(df) >= len_:
+                    break
+                sleep(1)
+            else:
+                return False
+            return True
+
+        client = ThreadedClient()
+        topic = client.subscribe(host=HOST, port=PORT, handler=handler, table_name=f"{func_name}.orca_table.output", msg_as_table=True, batch_size=4, offset=0, userid=USER, password=PASSWD)
+        wait_until(4)
+        client.unsubscribe(subscribe_info=topic)
+        assert equalPlus(df, conn.run(f"select * from {func_name}.orca_table.output"))
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_threaded_client_orca_streaming_subscribe_on_follower(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn = ddb.DBConnection()
+        conn.connect(HOST_CLUSTER, PORT_CNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        conn.exec(f"""
+            if (existsCatalog("{func_name}"))
+                dropCatalog("{func_name}")
+            createCatalog("{func_name}")
+            go
+            use catalog {func_name}
+            g=createStreamGraph("engine")
+            g.source("trades", ["time","sym","volume"], [TIMESTAMP, SYMBOL, INT])
+            .timeSeriesEngine(windowSize=60000, step=60000, metrics=<[sum(volume)]>, timeColumn="time", useSystemTime=false, keyColumn="sym", useWindowStartTime=false)
+            .sink("output")
+            g.submit()
+            times = [2018.10.08T01:01:01.785, 2018.10.08T01:01:02.125, 2018.10.08T01:01:10.263, 2018.10.08T01:01:12.457, 2018.10.08T01:02:10.789, 2018.10.08T01:02:12.005, 2018.10.08T01:02:30.021, 2018.10.08T01:04:02.236, 2018.10.08T01:04:04.412, 2018.10.08T01:04:05.152]
+            syms = [`A, `B, `B, `A, `A, `B, `A, `A, `B, `B]
+            volumes = [10, 26, 14, 28, 15, 9, 10, 29, 32, 23]
+            tmp = table(times as time, syms as sym, volumes as volume)
+            appendOrcaStreamTable("trades", tmp)
+        """)
+        df = conn.run(f"select * from {func_name}.orca_table.output where 1==0")
+
+        def handler(data):
+            nonlocal df
+            df = pd.concat([df, data], ignore_index=True)
+
+        def wait_until(len_, timeout=5):
+            for i in range(timeout):
+                if len(df) >= len_:
+                    break
+                sleep(1)
+            else:
+                return False
+            return True
+
+        port = conn.run(f"(exec port from getClusterPerf() where name != (exec site from getOrcaStreamTableMeta() where fqn = \"{func_name}.orca_table.output\") and mode = 0 limit 1)[0]")
+        client = ThreadedClient()
+        topic = client.subscribe(host=HOST_CLUSTER, port=port, handler=handler, table_name=f"{func_name}.orca_table.output", msg_as_table=True, batch_size=4, offset=0, userid=USER, password=PASSWD)
+        wait_until(4)
+        client.unsubscribe(subscribe_info=topic)
+        assert equalPlus(df, conn.run(f"select * from {func_name}.orca_table.output"))
+
 
 class TestThreadPooledClient(object):
 
@@ -2012,3 +2100,213 @@ class TestThreadPooledClient(object):
                                  userid=USER, password=PASSWD)
         sleep(3)
         client.unsubscribe(subscribe_info=topic)
+
+    def test_thread_pooled_client_orca_streaming_subscribe_on_leader(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn = ddb.DBConnection()
+        conn.connect(HOST, PORT, USER, PASSWD)
+        conn.exec(f"""
+            if (existsCatalog("{func_name}"))
+                dropCatalog("{func_name}")
+            createCatalog("{func_name}")
+            go
+            use catalog {func_name}
+            g=createStreamGraph("engine")
+            g.source("trades", ["time","sym","volume"], [TIMESTAMP, SYMBOL, INT])
+            .timeSeriesEngine(windowSize=60000, step=60000, metrics=<[sum(volume)]>, timeColumn="time", useSystemTime=false, keyColumn="sym", useWindowStartTime=false)
+            .sink("output")
+            g.submit()
+            times = [2018.10.08T01:01:01.785, 2018.10.08T01:01:02.125, 2018.10.08T01:01:10.263, 2018.10.08T01:01:12.457, 2018.10.08T01:02:10.789, 2018.10.08T01:02:12.005, 2018.10.08T01:02:30.021, 2018.10.08T01:04:02.236, 2018.10.08T01:04:04.412, 2018.10.08T01:04:05.152]
+            syms = [`A, `B, `B, `A, `A, `B, `A, `A, `B, `B]
+            volumes = [10, 26, 14, 28, 15, 9, 10, 29, 32, 23]
+            tmp = table(times as time, syms as sym, volumes as volume)
+            appendOrcaStreamTable("trades", tmp)
+        """)
+        df = conn.run(f"select * from {func_name}.orca_table.output where 1==0")
+        lock = Lock()
+
+        def handler(data):
+            nonlocal df
+            with lock:
+                df.loc[len(df)] = data
+
+        def wait_until(len_, timeout=5):
+            for i in range(timeout):
+                if len(df) >= len_:
+                    break
+                sleep(1)
+            else:
+                return False
+            return True
+
+        client = ThreadPooledClient(thread_count=2)
+        topic = client.subscribe(host=HOST, port=PORT, handler=handler, table_name=f"{func_name}.orca_table.output", offset=0, userid=USER,
+                                 password=PASSWD)
+        wait_until(4)
+        client.unsubscribe(subscribe_info=topic)
+        assert equalPlus(df.sort_values("time", ascending=True).sort_values("sym", ascending=True).reset_index(drop=True), conn.run(f"select * from {func_name}.orca_table.output").sort_values("time", ascending=True).sort_values("sym", ascending=True).reset_index(drop=True))
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_thread_pooled_client_orca_streaming_subscribe_on_follower(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn = ddb.DBConnection()
+        conn.connect(HOST_CLUSTER, PORT_CNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        conn.exec(f"""
+            if (existsCatalog("{func_name}"))
+                dropCatalog("{func_name}")
+            createCatalog("{func_name}")
+            go
+            use catalog {func_name}
+            g=createStreamGraph("engine")
+            g.source("trades", ["time","sym","volume"], [TIMESTAMP, SYMBOL, INT])
+            .timeSeriesEngine(windowSize=60000, step=60000, metrics=<[sum(volume)]>, timeColumn="time", useSystemTime=false, keyColumn="sym", useWindowStartTime=false)
+            .sink("output")
+            g.submit()
+            times = [2018.10.08T01:01:01.785, 2018.10.08T01:01:02.125, 2018.10.08T01:01:10.263, 2018.10.08T01:01:12.457, 2018.10.08T01:02:10.789, 2018.10.08T01:02:12.005, 2018.10.08T01:02:30.021, 2018.10.08T01:04:02.236, 2018.10.08T01:04:04.412, 2018.10.08T01:04:05.152]
+            syms = [`A, `B, `B, `A, `A, `B, `A, `A, `B, `B]
+            volumes = [10, 26, 14, 28, 15, 9, 10, 29, 32, 23]
+            tmp = table(times as time, syms as sym, volumes as volume)
+            appendOrcaStreamTable("trades", tmp)
+        """)
+        df = conn.run(f"select * from {func_name}.orca_table.output where 1==0")
+        lock = Lock()
+
+        def handler(data):
+            nonlocal df
+            with lock:
+                df.loc[len(df)] = data
+
+        def wait_until(len_, timeout=5):
+            for i in range(timeout):
+                if len(df) >= len_:
+                    break
+                sleep(1)
+            else:
+                return False
+            return True
+
+        port = conn.run(f"(exec port from getClusterPerf() where name != (exec site from getOrcaStreamTableMeta() where fqn = \"{func_name}.orca_table.output\") and mode = 0 limit 1)[0]")
+        client = ThreadPooledClient(thread_count=2)
+        topic = client.subscribe(host=HOST_CLUSTER, port=port, handler=handler, table_name=f"{func_name}.orca_table.output", offset=0, userid=USER,
+                                 password=PASSWD)
+        wait_until(4)
+        client.unsubscribe(subscribe_info=topic)
+        assert equalPlus(df.sort_values("time", ascending=True).sort_values("sym", ascending=True).reset_index(drop=True), conn.run(f"select * from {func_name}.orca_table.output").sort_values("time", ascending=True).sort_values("sym", ascending=True).reset_index(drop=True))
+
+class TestHaStreaming(object):
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_ha_streaming_subscribe_haStreamTable_on_leader(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn = ddb.DBConnection()
+        conn.connect(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        leader = conn.exec(f"""
+            rtn=""
+            for (i in 1:20){{
+                try{{
+                    rtn=getStreamingLeader({HA_STREAM_GROUP_ID})
+                }}catch(ex){{
+                    sleep(500)
+                    continue
+                }}
+                break
+            }}
+            rtn
+        """)
+        leader_port = conn.exec(f"exec port from rpc(getControllerAlias(), getClusterPerf) where name=\"{leader}\"")[0]
+        conn_leader = ddb.DBConnection()
+        conn_leader.connect(HOST_CLUSTER, leader_port, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_leader.run(f"""
+            try{{dropStreamTable("{func_name}")}}catch(ex){{}};
+            {func_name}_result = table(1000000:0, `permno`timestamp`ticker`price1`price2`price3`price4`price5`vol1`vol2`vol3`vol4`vol5, [INT, TIMESTAMP, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, INT, INT, INT, INT, INT]);
+            haStreamTable({HA_STREAM_GROUP_ID}, {func_name}_result, "{func_name}", 100000);
+            go;
+            batch = 1000;
+            tmp = table(batch:batch, `permno`timestamp`ticker`price1`price2`price3`price4`price5`vol1`vol2`vol3`vol4`vol5, [INT, TIMESTAMP, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, INT, INT, INT, INT, INT]);
+            tmp[`permno] = take(1..100, batch);
+            tmp[`timestamp] = take(now(), batch);
+            tmp[`ticker] = rand(\"A\" + string(1..100), batch);
+            tmp[`price1] = rand(100, batch);
+            tmp[`price2] = rand(100, batch);
+            tmp[`price3] = rand(100, batch);
+            tmp[`price4] = rand(100, batch);
+            tmp[`price5] = rand(100, batch);
+            tmp[`vol1] = rand(100, batch);
+            tmp[`vol2] = rand(100, batch);
+            tmp[`vol3] = rand(100, batch);
+            tmp[`vol4] = rand(100, batch);
+            tmp[`vol5] = rand(100, batch);
+            {func_name}.append!(tmp); 
+        """)
+
+        def my_handler(data):
+            conn_leader.call(f"tableInsert{{{func_name}_result}}",*data)
+
+        client = ThreadedClient()
+        topic = client.subscribe(host=HOST_CLUSTER, port=leader_port, handler=my_handler, table_name=func_name, offset=0, userid=USER, password=PASSWD)
+        while conn_leader.exec(f"exec count(*) from {func_name}_result") < 1000:
+            sleep(1)
+        assert conn_leader.exec(f"each(eqObj, {func_name}.values(), {func_name}_result.values()).all()")
+        client.unsubscribe(subscribe_info=topic)
+        conn_leader.exec(f"dropStreamTable(\"{func_name}\")")
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_ha_streaming_subscribe_haStreamTable_on_follower(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn = ddb.DBConnection()
+        conn.connect(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        leader = conn.exec(f"""
+            rtn=""
+            for (i in 1:20){{
+                try{{
+                    rtn=getStreamingLeader({HA_STREAM_GROUP_ID})
+                }}catch(ex){{
+                    sleep(500)
+                    continue
+                }}
+                break
+            }}
+            rtn
+        """)
+        follower_port = conn.exec(f"exec port from rpc(getControllerAlias(), getClusterPerf) where site in (exec sites[0] from getStreamingRaftGroups() where id=={HA_STREAM_GROUP_ID}).split(\",\") and name!=\"{leader}\"")[0]
+        conn_follower = ddb.DBConnection()
+        conn_follower.connect(HOST_CLUSTER, follower_port, USER_CLUSTER, PASSWD_CLUSTER, enable_high_availability=True, high_availability_sites=[f"{HOST_CLUSTER}:{PORT_DNODE1}",f"{HOST_CLUSTER}:{PORT_DNODE2}",f"{HOST_CLUSTER}:{PORT_DNODE3}"])
+        conn_follower.run(f"""
+            try{{dropStreamTable("{func_name}")}}catch(ex){{}};
+            {func_name}_result = table(1000:0, `permno`timestamp`ticker`price1`price2`price3`price4`price5`vol1`vol2`vol3`vol4`vol5, [INT, TIMESTAMP, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, INT, INT, INT, INT, INT]);
+            haStreamTable({HA_STREAM_GROUP_ID}, {func_name}_result, "{func_name}", 1000);
+            go;
+            do {{
+                sleep(500)
+            }} while((exec count(*) from objs(true) where name="{func_name}")<1)
+            batch = 1000;
+            tmp = table(batch:batch, `permno`timestamp`ticker`price1`price2`price3`price4`price5`vol1`vol2`vol3`vol4`vol5, [INT, TIMESTAMP, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, INT, INT, INT, INT, INT]);
+            tmp[`permno] = take(1..100, batch);
+            tmp[`timestamp] = take(now(), batch);
+            tmp[`ticker] = rand("A" + string(1..100), batch);
+            tmp[`price1] = rand(100, batch);
+            tmp[`price2] = rand(100, batch);
+            tmp[`price3] = rand(100, batch);
+            tmp[`price4] = rand(100, batch);
+            tmp[`price5] = rand(100, batch);
+            tmp[`vol1] = rand(100, batch);
+            tmp[`vol2] = rand(100, batch);
+            tmp[`vol3] = rand(100, batch);
+            tmp[`vol4] = rand(100, batch);
+            tmp[`vol5] = rand(100, batch);
+            objByName("{func_name}",true).append!(tmp);
+        """)
+
+        def my_handler(data):
+            conn_follower.call(f"tableInsert{{{func_name}_result}}",*data)
+
+        client = ThreadedClient()
+        topic = client.subscribe(host=HOST_CLUSTER, port=follower_port, handler=my_handler, table_name=func_name, offset=0, userid=USER, password=PASSWD)
+        while conn_follower.exec(f"exec count(*) from {func_name}_result") < 1000:
+            sleep(1)
+        assert conn_follower.exec(f"each(eqObj, {func_name}.values(), {func_name}_result.values()).all()")
+        client.unsubscribe(subscribe_info=topic)
+        conn_follower.exec(f"dropStreamTable(\"{func_name}\")")

@@ -22,7 +22,7 @@ public:
         size_t actual_len = -1;
         IO_ERR ret = _inputStream->readBytes(buf, size, actual_len);
         if (ret != IO_ERR::OK) {
-            throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret));
+            throw IOException("Failed to parse the incoming object with IO error type " + std::to_string(ret), ret);
         }
         return py::bytes(buf, actual_len);
     }

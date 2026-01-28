@@ -19,7 +19,8 @@ if REPORT:
 
     @pytest.fixture(scope="session", autouse=True)
     def create_share_table(request):
-        worker_id = request.config.workerinput['workerid'].lower()
+        worker_id = getattr(request.config, 'workerinput', {}).get('workerid',"gw0").lower()
+        worker_count = getattr(request.config, 'workerinput', {}).get('workercount', 1)
         conn.run(
             f"share table([]$STRING as worker_id,[]$STRING as case_name,[]$STRING as case_result,[]$BLOB as case_info,[]$BLOB as case_trace,[]$DOUBLE as case_time,[]$TIMESTAMP as run_time) as {SHARE_TABLE}_{worker_id}",
             priority=1)
@@ -57,6 +58,9 @@ if REPORT:
             conn.run(f"""
                 {SHARE_DICT}[`{worker_id}]=false
                 do {{
+                    sleep(500)
+                }} while({SHARE_DICT}.size()!={worker_count});
+                do {{
                     keys_={SHARE_DICT}.keys()
                     values_={SHARE_DICT}.values()
                     if (all(values_==true)){{
@@ -84,7 +88,7 @@ if REPORT:
 
 
     def pytest_runtest_makereport(item, call):
-        worker_id = getattr(item.config, 'workerinput', {}).get('workerid').lower()
+        worker_id = getattr(item.config, 'workerinput', {}).get('workerid', "gw0").lower()
         if call.when == "setup":
             if hasattr(call.excinfo, 'type') and call.excinfo.type is Skipped:
                 conn.run(

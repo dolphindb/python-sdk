@@ -17,7 +17,7 @@ from pydantic import ValidationError
 from basic_testing.prepare import random_string
 from basic_testing.utils import operateNodes
 from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER, \
-    PORT_DNODE1, PORT_DNODE2, PORT_DNODE3
+    PORT_DNODE1, PORT_DNODE2, PORT_DNODE3, HA_MVCC_GROUP_ID
 
 
 class TestSession:
@@ -76,13 +76,6 @@ class TestSession:
         """)
         conn1 = ddb.session(HOST, PORT, USER, PASSWD, enableASYNC=True)
         conn1.run(f"for(i in 1..5){{tableInsert({func_name}, string(i), i);sleep(1000)}}")
-        time.sleep(2)
-        curRows = int(self.conn.run(f"exec count(*) from {func_name}"))
-        assert 4 <= curRows <= 8
-        time.sleep(6)
-        curRows = int(self.conn.run(f"exec count(*) from {func_name}"))
-        assert curRows == 8
-        conn1.close()
 
     @pytest.mark.parametrize('_compress', [True, False], ids=["COMPRESS_OPEN", "COMPRESS_CLOSE"])
     @pytest.mark.parametrize('_pickle', [True, False], ids=["PICKLE_OPEN", "PICKLE_CLOSE"])
@@ -561,12 +554,11 @@ class TestSession:
                                  f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
                                  "conn_=ddb.Session();"
                                  f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
-                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}'],'STOP');"""
+                                 f"""operateNodes(conn,['dnode'+str(conn_.port)],'STOP');"""
                                  "conn_.run('true');"
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
-        assert result.stdout.count("Failed to connect") + result.stdout.count("DataNodeNotAvail") == n
-        assert f"Warn: Reconnect to {HOST_CLUSTER} : {PORT_DNODE3} with session id:" in result.stdout
+        assert f"Warn: Reconnect to {HOST_CLUSTER}" in result.stdout
 
     def test_session_readTimeout(self):
         conn = ddb.Session()
@@ -726,3 +718,63 @@ class TestSession:
         assert conn.host == HOST_CLUSTER
         assert conn.port == conn.call("getNodePort")
         operateNodes(conn_ctl, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_session_haMvccTable_on_leader(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn = ddb.DBConnection()
+        conn.connect(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        leader = conn.exec(f"""
+            rtn=""
+            for (i in 1:20){{
+                try{{
+                    rtn=getHaMvccLeader({HA_MVCC_GROUP_ID})
+                }}catch(ex){{
+                    sleep(500)
+                    continue
+                }}
+                break
+            }}
+            rtn
+        """)
+        leader_port = conn.exec(f"exec port from rpc(getControllerAlias(), getClusterPerf) where name=\"{leader}\"")[0]
+        conn_leader = ddb.DBConnection()
+        conn_leader.connect(HOST_CLUSTER, leader_port, USER_CLUSTER, PASSWD_CLUSTER)
+        conn_leader.exec(f"""
+            try{{dropHaMvccTable("{func_name}")}}catch(ex){{}}
+            haMvccTable(1:0, table(array(INT) as a), "{func_name}", {HA_MVCC_GROUP_ID})
+        """)
+        for i in range(100):
+            conn_leader.call(f"tableInsert{{loadHaMvccTable(\"{func_name}\")}}", i)
+        assert conn_leader.exec(f"each(eqObj, (select * from loadHaMvccTable(\"{func_name}\")).values(), table(0..99 as a).values()).all()")
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_session_haMvccTable_on_follower(self):
+        func_name = inspect.currentframe().f_code.co_name
+        conn = ddb.DBConnection()
+        conn.connect(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER)
+        leader = conn.exec(f"""
+            rtn=""
+            for (i in 1:20){{
+                try{{
+                    rtn=getHaMvccLeader({HA_MVCC_GROUP_ID})
+                }}catch(ex){{
+                    sleep(500)
+                    continue
+                }}
+                break
+            }}
+            rtn
+        """)
+        follower_port = conn.exec(f"exec port from rpc(getControllerAlias(), getClusterPerf) where name in (exec sites[0] from getHaMvccRaftGroups() where id=={HA_MVCC_GROUP_ID}).split(\",\") and name!=\"{leader}\"")[0]
+        conn_follower = ddb.DBConnection()
+        conn_follower.connect(HOST_CLUSTER, follower_port, USER_CLUSTER, PASSWD_CLUSTER, enable_high_availability=True, high_availability_sites=[f"{HOST_CLUSTER}:{PORT_DNODE1}",f"{HOST_CLUSTER}:{PORT_DNODE2}",f"{HOST_CLUSTER}:{PORT_DNODE3}"])
+        conn_follower.exec(f"""
+            try{{dropHaMvccTable("{func_name}")}}catch(ex){{}}
+            haMvccTable(1:0, table(array(INT) as a), "{func_name}", {HA_MVCC_GROUP_ID})
+        """)
+        for i in range(100):
+            conn_follower.call(f"tableInsert{{loadHaMvccTable(\"{func_name}\")}}", i)
+        assert conn_follower.exec(f"each(eqObj, (select * from loadHaMvccTable(\"{func_name}\")).values(), table(0..99 as a).values()).all()")

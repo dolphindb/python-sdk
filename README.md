@@ -11,7 +11,7 @@ To use DolphinDB Python SDK, you'll need:
 - DolphinDB Server
 - Packages:
   - NumPy: version 1.18 and newer
-  - pandas: version 1.0.0 and newer, but not version 1.3.0
+  - pandas: version 1.0 and newer, but earlier than 3.0, and not version 1.3.0
   - future
   - packaging
   - pydantic: version 2.0 and newer

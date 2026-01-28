@@ -511,3 +511,10 @@ class TestOther:
         assert result['datehour_av'] == ['DATEHOUR[]', None]
         assert result['ipaddr_av'] == ['IPADDR[]', None]
         assert result['int128_av'] == ['INT128[]', None]
+
+    def test_throw_not_leader(self):
+        conn = ddb.Session()
+        conn.connect(HOST, PORT, USER, PASSWD, reconnect=True)
+        with pytest.raises(RuntimeError, match="""Server Response: 'throw "<NotLeader>xxx" => <NotLeader>xxx' script: throw '<NotLeader>xxx'"""):
+            conn.run("throw '<NotLeader>xxx'")
+

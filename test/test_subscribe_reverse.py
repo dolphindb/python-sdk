@@ -118,12 +118,13 @@ class TestSubscribeReverse:
         result = subprocess.run([sys.executable, '-c',
                                  "import dolphindb as ddb;"
                                  "import pandas as pd;"
+                                 "import time;"
                                  f"conn=ddb.Session('{HOST}',{PORT},'{USER}','{PASSWD}');"
                                  "conn.enableStreaming(28852);"
                                  "df=pd.DataFrame(columns=['time', 'sym', 'price']);"
                                  f"conn.run(\"\"\"{script}\"\"\");"
                                  f"conn.subscribe('{HOST}',{PORT},print,'{func_name}','action',0,False, userName='{USER}', password='{PASSWD}');"
-                                 "conn.close();"
+                                 "time.sleep(3);" # APY-1920
                                  ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
         ex = "The server only supports transferring subscribed data using the connection initiated by the subsriber. The specified port will not take effect."
         assert ex in result.stdout

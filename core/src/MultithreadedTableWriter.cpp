@@ -1,4 +1,5 @@
 #include "MultithreadedTableWriter.h"
+#include "Exceptions.h"
 #include "ScalarImp.h"
 #include "Domain.h"
 #include "Logger.h"
@@ -13,7 +14,7 @@ bool checkSetStreamTableTimstamp(DBConnectionSP pConn, const std::string& dbName
     try {
         pConn->run("funcByName(\"getStreamTableTimestamp\");");
     }
-    catch (IOException &e) {
+    catch (ServerResponse &e) {
         return enableStreamTableTimestamp;
     }
     if (dbName.empty() && !tableName.empty()) {
@@ -22,7 +23,7 @@ bool checkSetStreamTableTimstamp(DBConnectionSP pConn, const std::string& dbName
             col = res->getString();
             return !col.empty();
         }
-        catch (IOException& e) {
+        catch (ServerResponse& e) {
             return false;
         }
     }

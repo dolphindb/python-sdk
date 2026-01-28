@@ -6,7 +6,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+option(ENABLE_COVERAGE "Enable coverage reporting" OFF)
+if(DEFINED ENV{ENABLE_COVERAGE})
+    set(ENABLE_COVERAGE $ENV{ENABLE_COVERAGE})
+endif()
 
+option(ENABLE_ASAN "Enable ASAN" OFF)
+if(DEFINED ENV{ENABLE_ASAN})
+    set(ENABLE_ASAN $ENV{ENABLE_ASAN})
+endif()
 
 # ============================================================================
 # Compiler Flags
@@ -17,6 +25,28 @@ if(MSVC)
 else()
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
     set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND ENABLE_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping -g")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping -g")
+        message(STATUS "Enabling coverage flags for Debug build [Clang]")
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -g")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -g")
+        set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} --coverage")
+        message(STATUS "Enabling coverage flags for Debug build [GNU]")
+    else()
+        message(STATUS "Using other compiler: ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+endif()
+
+if(ENABLE_ASAN)
+    message(STATUS "Enabling AddressSanitizer")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
 endif()
 
 

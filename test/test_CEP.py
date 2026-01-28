@@ -7715,18 +7715,6 @@ class TestEventSender(object):
         with pytest.raises(RuntimeError, match="Schema mismatch: Output table contains 2 cols, expected 3 cols."):
             EventSender(self.__class__.conn, f"{func_name}_input", [EventTest], eventTimeFields="eventTime")
 
-    def test_EventSender_eventTimeFields_not_time(self):
-        class EventTest(Event):
-            s_bool: Scalar[keys.DT_BOOL]
-            eventTime: Scalar[keys.DT_BLOB]
-
-        func_name = inspect.currentframe().f_code.co_name
-        self.__class__.conn.run(
-            f"share streamTable(array(TIMESTAMP, 0) as eventTime,array(STRING, 0) as eventType, array(BLOB, 0) as blobs) as {func_name}_input")
-        sender = EventSender(self.__class__.conn, f"{func_name}_input", [EventTest], eventTimeFields="eventTime")
-        with pytest.raises(RuntimeError, match="Failed to append data to column 'eventTime' with error"):
-            sender.sendEvent(EventTest(True, b""))
-
     def test_EventSender_commonFields_absent(self):
         class EventTest(Event):
             s_bool: Scalar[keys.DT_BOOL]

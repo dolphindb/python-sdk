@@ -848,7 +848,7 @@ class TestDatabase:
         dfsDBName = f"dfs://{func_name}"
         if conn1.existsDatabase(dfsDBName):
             conn1.dropDatabase(dfsDBName)
-        months = np.array(pd.date_range(start='2012-01', end='2012-10', freq="ME"), dtype="datetime64[M]")
+        months = np.array(pd.date_range(start='2012-01', end='2012-10', freq="M"), dtype="datetime64[M]")
         db = conn1.database('db', partitionType=keys.VALUE, partitions=months, dbPath=dfsDBName)
         assert conn1.existsDatabase(dfsDBName)
         dct = {
