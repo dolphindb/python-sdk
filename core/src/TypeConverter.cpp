@@ -5,6 +5,8 @@
 
 #include "TypeException.h"
 
+#include <cstring>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pytypes.h>
@@ -705,6 +707,110 @@ getChildrenType(
 }
 
 
+template <typename T, typename IsNull>
+bool ndarrayHasNonNull(const py::array &arr, IsNull isNull) {
+    const ssize_t n = arr.shape(0);
+    if (n <= 0) {
+        return false;
+    }
+    const char *base = static_cast<const char *>(arr.data());
+    const ssize_t stride = arr.strides(0);
+    if (stride == static_cast<ssize_t>(sizeof(T))) {
+        const T *data = reinterpret_cast<const T *>(base);
+        for (ssize_t i = 0; i < n; ++i) {
+            if (!isNull(data[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+    for (ssize_t i = 0; i < n; ++i) {
+        T value;
+        std::memcpy(&value, base + i * stride, sizeof(T));
+        if (!isNull(value)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+// 1-D native-endian bool/int/float ndarray: infer from dtype.
+// Float still scans ISNUMPYNULL; bool/int treat any non-empty row as typed.
+// Empty arrays do not contribute a type. Other inputs return false unchanged.
+bool tryInferNumericNdarrayChildrenType(
+    const py::handle            &children,
+    Type                        &type,
+    bool                        &allNull,
+    int                         &nullpri,
+    Type                        &nullType
+) {
+    if (!CHECK_INS(children, np_array_)) {
+        return false;
+    }
+    py::array arr = py::reinterpret_borrow<py::array>(children);
+    if (arr.ndim() != 1) {
+        return false;
+    }
+    py::dtype dtype = arr.dtype();
+    HELPER_TYPE helperType = HT_UNK;
+    int curNullpri = 0;
+    bool foundNonNull = false;
+    bool scanNulls = false;
+    if (CHECK_EQUAL(dtype, np_bool_)) {
+        helperType = HT_BOOL;
+    }
+    else if (CHECK_EQUAL(dtype, np_int8_)) {
+        helperType = HT_CHAR;
+    }
+    else if (CHECK_EQUAL(dtype, np_int16_)) {
+        helperType = HT_SHORT;
+    }
+    else if (CHECK_EQUAL(dtype, np_int32_)) {
+        helperType = HT_INT;
+    }
+    else if (CHECK_EQUAL(dtype, np_int64_)) {
+        helperType = HT_LONG;
+    }
+    else if (CHECK_EQUAL(dtype, np_float32_)) {
+        helperType = HT_FLOAT;
+        curNullpri = 2;
+        scanNulls = true;
+        foundNonNull = ndarrayHasNonNull<float>(arr, [](float value) {
+            return ISNUMPYNULL_FLOAT32(value);
+        });
+    }
+    else if (CHECK_EQUAL(dtype, np_float64_)) {
+        helperType = HT_DOUBLE;
+        curNullpri = 3;
+        scanNulls = true;
+        foundNonNull = ndarrayHasNonNull<double>(arr, [](double value) {
+            return ISNUMPYNULL_FLOAT64(value);
+        });
+    }
+    else {
+        return false;
+    }
+
+    const ssize_t n = arr.shape(0);
+    if (!scanNulls) {
+        foundNonNull = n > 0;
+    }
+    if (n == 0 || !foundNonNull) {
+        allNull = true;
+        if (n > 0 && curNullpri > nullpri) {
+            nullpri = curNullpri;
+            nullType = {helperType, EXPARAM_DEFAULT};
+        }
+        type = nullType;
+        return true;
+    }
+    allNull = false;
+    type = {helperType, EXPARAM_DEFAULT};
+    return true;
+}
+
+
 bool checkInnerType(const py::handle & /*data*/, ConstantSP & /*constantsp*/) {
     return false;
 }
@@ -769,7 +875,7 @@ Type InferDataTypeFromArrowType(const py::object &pyarrow_dtype) {
         }
         return {HT_SYMBOL, EXPARAM_DEFAULT};
     }
-    else if (CHECK_EQUAL(pyarrow_dtype, pa_utf8_)) {
+    else if (CHECK_EQUAL(pyarrow_dtype, pa_utf8_) || CHECK_EQUAL(pyarrow_dtype, pa_large_utf8_)) {
         return {HT_STRING, EXPARAM_DEFAULT};
     }
     else if (CHECK_EQUAL(pyarrow_dtype, pa_fixed_size_binary_16_)) {
@@ -1546,7 +1652,9 @@ _create_And_Infer_As_ArrayVector(
         else {
             if (!isArrayLike(it))
                 throwExceptionAboutNumpyVersion(index, py2str(it), getDataTypeString(type), info);
-            typeExact = getChildrenType(it, CHILD_VECTOR_OPTION::NORMAL_VECTOR, ElemIsArrayLike, all_Null, nullpri, nullType);
+            if (!tryInferNumericNdarrayChildrenType(it, typeExact, all_Null, nullpri, nullType)) {
+                typeExact = getChildrenType(it, CHILD_VECTOR_OPTION::NORMAL_VECTOR, ElemIsArrayLike, all_Null, nullpri, nullType);
+            }
         }
         DLOG("typeExact: ", getDataTypeString(typeExact), typeExact.second);
         DLOG("all_Null: ", all_Null);

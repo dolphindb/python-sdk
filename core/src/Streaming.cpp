@@ -1229,12 +1229,25 @@ string StreamingClientImpl::subscribeInternal(DBConnection &conn, SubscribeInfo 
 }
 
 void StreamingClientImpl::insertMeta(SubscribeInfo &info, const string &topic) {
-    topicSubInfos_.upsert(
-        topic, [&](SubscribeInfo &_info) { _info = info; }, info);
-    liveSubsOnSite_.upsert(getSite(topic), [&](set<string> &s) { s.insert(topic); }, {topic});
-    actionCntOnTable_.upsert(
-        stripActionName(topic), [&](int &cnt) { ++cnt; }, 1);
-    topics_[info.ID] = topic;
+    // Failed initial subscriptions have no server topic. Keep a separate record
+    // per subscription until retry succeeds, including handlers added later.
+    const string metaTopic = topic.empty() ? info.ID : topic;
+    topicSubInfos_.op([&](unordered_map<string, SubscribeInfo> &mp) {
+        if (!topic.empty()) {
+            auto pending = mp.find(info.ID);
+            if (pending != mp.end()) {
+                info.handleThread = std::move(pending->second.handleThread);
+                mp.erase(pending);
+            }
+        }
+        mp[metaTopic] = info;
+    });
+    if (!topic.empty()) {
+        liveSubsOnSite_.upsert(getSite(topic), [&](set<string> &s) { s.insert(topic); }, {topic});
+        actionCntOnTable_.upsert(
+            stripActionName(topic), [&](int &cnt) { ++cnt; }, 1);
+    }
+    topics_[info.ID] = metaTopic;
 }
 
 bool StreamingClientImpl::delMeta(const string &topic, bool exitFlag) {
@@ -1246,9 +1259,11 @@ bool StreamingClientImpl::delMeta(const string &topic, bool exitFlag) {
 		mp.erase(topic);
 	});
     topics_.erase(oldinfo.ID);
-    liveSubsOnSite_.upsert(getSite(topic), [&](set<string> &s) { s.erase(topic); }, {});
-    actionCntOnTable_.upsert(
-        stripActionName(topic), [&](int &cnt) { --cnt; }, 0);
+    if (topic != oldinfo.ID) {
+        liveSubsOnSite_.upsert(getSite(topic), [&](set<string> &s) { s.erase(topic); }, {});
+        actionCntOnTable_.upsert(
+            stripActionName(topic), [&](int &cnt) { --cnt; }, 0);
+    }
 	if(exitFlag)
 		oldinfo.exit();
 	return true;
@@ -1321,6 +1336,19 @@ void StreamingClientImpl::unsubscribeInternal(const string &host, int port, cons
     int port_ = port;
     string topic;
     string _id = host + std::to_string(port) + tableName + actionName;
+    {
+        // Wait for an in-flight initial retry, then cancel queued retries before
+        // looking up the final topic. Never hold mtx_ while joining handlers.
+        LockGuard<Mutex> lock(&mtx_);
+        std::queue<SubscribeInfo> remaining;
+        while (!initResub_.empty()) {
+            if (initResub_.front().ID != _id) {
+                remaining.push(std::move(initResub_.front()));
+            }
+            initResub_.pop();
+        }
+        initResub_.swap(remaining);
+    }
     DBConnection conn;
     auto iter = topics_.find(_id);
     if(iter != topics_.end()){

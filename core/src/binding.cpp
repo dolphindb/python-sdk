@@ -30,6 +30,7 @@
 #include <pybind11/detail/common.h>
 #include <pybind11/gil.h>
 #include <pybind11/pytypes.h>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -397,10 +398,10 @@ public:
                          const std::string &password = "", bool loadBalance = false, bool highAvailability = false,
                          bool compress = false, bool reConnect = false, int parser = ddb::PARSER_TYPE::PARSER_DOLPHINDB,
                          int protocol = ddb::PROTOCOL_PICKLE, bool show_output = true, int sqlStd = 0,
-                         int tryReconnectNums = -1, bool usePublicName = false)
+                         int tryReconnectNums = -1, bool usePublicName = false, int netTimeout = 3000)
         : dbConnectionPool_(hostName, port, threadNum, userId, password, loadBalance, highAvailability, compress,
                             reConnect, (ddb::PARSER_TYPE)parser, ddb::PROTOCOL(protocol), show_output, sqlStd,
-                            tryReconnectNums, usePublicName),
+                            tryReconnectNums, usePublicName, std::chrono::milliseconds{netTimeout}),
           host_(hostName), port_(port), threadNum_(threadNum), userId_(userId), password_(password) {}
     ~DBConnectionPoolImpl() {}
     py::object run(const std::string &script, int taskId, const py::args &args,
@@ -603,14 +604,14 @@ public:
         const int &keep_alive_time = config["keep_alive_time"].cast<int>();
         const bool &reconnect = config["reconnect"].cast<bool>();
         const int &try_reconnect_nums = config["try_reconnect_nums"].cast<int>();
-        const int &read_timeout = config["read_timeout"].cast<int>();
-        const int &write_timeout = config["write_timeout"].cast<int>();
+        const auto net_timeout = std::chrono::milliseconds(config["net_timeout"].cast<int>());
+        const auto timeout = std::chrono::milliseconds(config["timeout"].cast<int>());
         const bool &use_public_name = config["use_public_name"].cast<bool>();
         bool is_success = false;
         py::gil_scoped_release release;
         TRY is_success = dbConnection_.connect(host, port, user_id, password, startup, high_availabilty,
                                                high_availabilty_sites, keep_alive_time, reconnect, try_reconnect_nums,
-                                               read_timeout, write_timeout, use_public_name);
+                                               net_timeout, timeout, use_public_name);
         CATCH_EXCEPTION("<Exception> in connect: ")
         return is_success;
     }
@@ -989,11 +990,6 @@ public:
         } else {
             throw std::runtime_error("Job cancellation is already enabled");
         }
-    }
-
-    static void setTimeout(double timeout) {
-        unsigned int t = (unsigned int)(round(timeout*1000));
-        ddb::Socket::setTcpTimeout(t);
     }
 
     ~PyDBConnection() {}
@@ -1541,6 +1537,7 @@ public:
     virtual ~PyStreamingClient() {}
 public:
     py::list getSubscriptionTopics() {
+        collectRetiredSubscriptions();
         ddb::LockGuard<ddb::Mutex> LockGuard(&mutex_);
         py::list topics;
         for (auto &it : topicThread_) { topics.append(it.first); }
@@ -1558,23 +1555,40 @@ protected:
         if (!hasTopic(topic)) { throw std::runtime_error("subscription " + topic + " not exists"); }
         {
             TRY
-            ddb::SmartPointer<py::gil_scoped_release> pgilRelease;
-            if(PyGILState_Check() == 1)
-                pgilRelease = new py::gil_scoped_release;
+            py::gil_scoped_release release;
             unsubscribe(host, port, tableName, actionName);
             CATCH_EXCEPTION("<Exception> in unsubscribe: ")
         }
+        // Self-unsubscribe cannot join the current handler thread. Retain both
+        // its closure and Python owner until it has exited.
+        std::vector<ddb::ThreadSP> retiringThreads;
         vector<ddb::ThreadSP> &threads = topicThread_[topic];
-        for(auto thread : threads){
-            if(thread->isRunning()) {
-                gcThread_.push_back(thread);
-                auto it = std::remove_if(gcThread_.begin(), gcThread_.end(), [](const ddb::ThreadSP& th) {
-                    return th->isComplete();
-                });
-                gcThread_.erase(it, gcThread_.end());
-            }
+        for (auto &thread : threads) {
+            retiringThreads.push_back(std::move(thread));
         }
         topicThread_.erase(topic);
+        py::object retiringHandler;
+        auto handlerIt = handlerKeep_.find(topic);
+        if (handlerIt != handlerKeep_.end()) {
+            retiringHandler = std::move(handlerIt->second);
+            handlerKeep_.erase(handlerIt);
+        }
+        std::vector<ddb::ThreadSP> pendingThreads;
+        for (auto &thread : retiringThreads) {
+            // Native unsubscribe joins handlers other than the calling worker
+            // and removes their metadata. Retain a self-unsubscribing worker
+            // until it exits; only binding will join it afterwards.
+            if (!thread->isComplete()) {
+                pendingThreads.push_back(std::move(thread));
+            }
+        }
+        if (!pendingThreads.empty()) {
+            retiredSubscriptions_.push_back({std::move(retiringHandler), std::move(pendingThreads)});
+        }
+        lockGuard.unlock();
+        retiringThreads.clear();
+        retiringHandler = py::object();
+        collectRetiredSubscriptions();
     }
     void clearAllSubscribeImpl(std::function<void(std::string, int, std::string, std::string)> unsubscribe) {
         vector<std::string> topics;
@@ -1588,6 +1602,7 @@ protected:
             }
             catch (...) { }
         }
+        collectRetiredSubscriptions(true);
     }
     inline std::string concatTopic(
         const std::string   &host,
@@ -1600,9 +1615,49 @@ protected:
         return topicThread_.find(topic) != topicThread_.end();
     }
 protected:
+    struct RetiredSubscription {
+        py::object handler;
+        std::vector<ddb::ThreadSP> threads;
+    };
+    void collectRetiredSubscriptions(bool wait = false) {
+        std::vector<RetiredSubscription> finished;
+        {
+            ddb::LockGuard<ddb::Mutex> lockGuard(&mutex_);
+            auto it = retiredSubscriptions_.begin();
+            while (it != retiredSubscriptions_.end()) {
+                if (wait || std::all_of(it->threads.begin(), it->threads.end(),
+                                       [](const ddb::ThreadSP &thread) { return thread->isComplete(); })) {
+                    finished.push_back(std::move(*it));
+                    it = retiredSubscriptions_.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+        if (finished.empty()) {
+            return;
+        }
+        {
+            py::gil_scoped_release release;
+            for (auto &subscription : finished) {
+                for (auto &thread : subscription.threads) {
+                    thread->join();
+                }
+            }
+        }
+        // Workers can no longer invoke callbacks. Release Python owners with
+        // the GIL and without mutex_: finalizers may reenter public methods.
+    }
+    void keepHandler(const std::string &topic, py::object callback) {
+        handlerKeep_[topic] = std::move(callback);
+    }
+protected:
+    // Python entry points hold the GIL. Derived clients stop active workers and
+    // wait for retired workers before these Python callback owners are released.
     ddb::Mutex mutex_;
+    std::unordered_map<std::string, py::object> handlerKeep_;
     std::unordered_map<std::string, std::vector<ddb::ThreadSP>> topicThread_;
-    std::vector<ddb::ThreadSP> gcThread_;
+    std::vector<RetiredSubscription> retiredSubscriptions_;
 };
 
 
@@ -1622,6 +1677,7 @@ public:
         });
     }
     std::string subscribe(py::dict config) {
+        collectRetiredSubscriptions();
         ddb::LockGuard<ddb::Mutex> lockGuard(&mutex_);
         const std::string host = py::cast<std::string>(config["host"]);
         const int port = py::cast<int>(config["port"]);
@@ -1655,13 +1711,15 @@ public:
             ddb_filter = (ddb::VectorSP)ddb_str_filter;
         }
         if (hasTopic(topic)) { throw std::runtime_error("subscription " + topic + " already exists"); }
-        py::object handler = config["handler"];
+        py::object callback = py::cast<py::object>(config["handler"]);
+        PyObject *callbackPtr = callback.ptr();
 
         if (batch_size > 0) {
-            ddb::MessageBatchHandler ddbHanlder = [handler, msg_as_table,
+            ddb::MessageBatchHandler ddbHanlder = [callbackPtr, msg_as_table,
                                                    has_stream_deser](const std::vector<ddb::Message> &msgs) {
                 // handle GIL
                 py::gil_scoped_acquire acquire;
+                py::object handler = py::reinterpret_borrow<py::object>(callbackPtr);
                 size_t size = msgs.size();
                 py::list pyMsg(size);
                 if (has_stream_deser) {
@@ -1688,14 +1746,16 @@ public:
                 msg_as_table, userName, passWord, stream_deser_ptr, backup_sites, resub_timeout, sub_once);
             threads.push_back(thread);
             topicThread_[topic] = threads;
+            keepHandler(topic, std::move(callback));
             CATCH_EXCEPTION("<Exception> in subscribe: ")
         } else {
             if (msg_as_table) {
                 throw py::value_error("msg_as_table must be False when batch_size is 0");
             }
-            ddb::MessageHandler ddbHanlder = [handler, has_stream_deser](const ddb::Message &msg) {
+            ddb::MessageHandler ddbHanlder = [callbackPtr, has_stream_deser](const ddb::Message &msg) {
                 // handle GIL
                 py::gil_scoped_acquire acquire;
+                py::object handler = py::reinterpret_borrow<py::object>(callbackPtr);
                 py::list row = Converter::toPython_Old(msg);
                 if (has_stream_deser) {
                     row.append(msg.getSymbol());
@@ -1709,6 +1769,7 @@ public:
                                                     stream_deser_ptr, backup_sites, resub_timeout, sub_once);
             threads.push_back(thread);
             topicThread_[topic] = threads;
+            keepHandler(topic, std::move(callback));
             CATCH_EXCEPTION("<Exception> in subscribe: ")
         }
         return topic;
@@ -1742,6 +1803,7 @@ public:
         });
     }
     std::string subscribe(const py::dict &config) {
+        collectRetiredSubscriptions();
         ddb::LockGuard<ddb::Mutex> lockGuard(&mutex_);
         const std::string host = py::cast<std::string>(config["host"]);
         const int port = py::cast<int>(config["port"]);
@@ -1775,7 +1837,8 @@ public:
             ddb_filter = (ddb::VectorSP)ddb_str_filter;
         }
         if (hasTopic(topic)) { throw std::runtime_error("subscription " + topic + " already exists"); }
-        py::object handler = config["handler"];
+        py::object callback = py::cast<py::object>(config["handler"]);
+        PyObject *callbackPtr = callback.ptr();
 
         if (batch_size > 0) {
             throw std::runtime_error("Thread pool streaming doesn't support batch subscribe");
@@ -1784,9 +1847,10 @@ public:
         if (msg_as_table) {
             throw py::value_error("msg_as_table must be False when batch_size is 0");
         }
-        ddb::MessageHandler ddbHanlder = [handler, has_stream_deser](const ddb::Message &msg) {
+        ddb::MessageHandler ddbHanlder = [callbackPtr, has_stream_deser](const ddb::Message &msg) {
             // handle GIL
             py::gil_scoped_acquire acquire;
+            py::object handler = py::reinterpret_borrow<py::object>(callbackPtr);
             py::list row = Converter::toPython_Old(msg);
             if (has_stream_deser) {
                 row.append(msg.getSymbol());
@@ -1799,6 +1863,7 @@ public:
             client_->subscribe(host, port, ddbHanlder, tableName, actionName, offset, resub, ddb_filter, false, false,
                                userName, passWord, stream_deser_ptr, backup_sites, resub_timeout, sub_once);
         topicThread_[topic] = threads;
+        keepHandler(topic, std::move(callback));
         CATCH_EXCEPTION("<Exception> in subscribe: ")
         return topic;
     }
@@ -1843,19 +1908,23 @@ public:
         const bool &resub,
         const std::string &userName,
         const std::string &passWord) {
+        collectRetiredSubscriptions();
         ddb::LockGuard<ddb::Mutex> lockGuard(&mutex_);
         std::string topic = concatTopic(host, port, tableName, actionName);
         if (hasTopic(topic)) { throw std::runtime_error("subscription " + topic + " already exists"); }
-        ddb::EventMessageHandler ddbHanlder = [handler, this](const std::string &name, const std::vector<ddb::ConstantSP> &attributes) {
+        PyObject *callbackPtr = handler.ptr();
+        ddb::EventMessageHandler ddbHanlder = [callbackPtr, this](const std::string &name, const std::vector<ddb::ConstantSP> &attributes) {
             // handle GIL
             py::gil_scoped_acquire acquire;
+            py::object callback = py::reinterpret_borrow<py::object>(callbackPtr);
             ddb::SmartPointer<PyEventScheme> pyScheme = this->schemeMap_[name];
-            handler(pyScheme->createEvent(attributes));
+            callback(pyScheme->createEvent(attributes));
         };
         TRY
         std::vector<ddb::ThreadSP> threads;
         threads.push_back(client_->subscribe(host, port, ddbHanlder, tableName, actionName, offset, resub, userName, passWord));
         topicThread_[topic] = threads;
+        keepHandler(topic, std::move(handler));
         CATCH_EXCEPTION("<Exception> in subscribe: ")
     }
     void unsubscribe(
@@ -1951,7 +2020,13 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
 
     py::class_<DBConnectionPoolImpl>(m, "dbConnectionPoolImpl")
         .def(py::init<const std::string &, int, int, const std::string &, const std::string &, bool, bool, bool, bool,
-                      int, int, bool, int, int, bool>())
+                      int, int, bool, int, int, bool, int>(),
+             py::arg("hostName"), py::arg("port"), py::arg("threadNum"),
+             py::arg("userId"), py::arg("password"), py::arg("loadBalance"),
+             py::arg("highAvailability"), py::arg("compress"), py::arg("reConnect"),
+             py::arg("parser"), py::arg("protocol"), py::arg("show_output"),
+             py::arg("sqlStd"), py::arg("tryReconnectNums"), py::arg("usePublicName"),
+             py::arg("netTimeout") = 3000)
         .def("run", &DBConnectionPoolImpl::run,
             py::arg("script"),
             py::arg("taskId"),
@@ -1990,7 +2065,6 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
         .def("upload", &PyDBConnection::upload)
         // .def_static("disableJobCancellation", &SessionImpl::disableJobCancellation)
         .def_static("enableJobCancellation", &PyDBConnection::enableJobCancellation)
-        .def_static("setTimeout", &PyDBConnection::setTimeout)
         .def_property_readonly("msg_logger", &PyDBConnection::getMsgLogger)
         .def_property_readonly("session_id", &PyDBConnection::get_session_id)
         .def_property_readonly("host", &PyDBConnection::get_host_name)

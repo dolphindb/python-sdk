@@ -38,7 +38,8 @@ public:
                          const string &password = "", bool loadBalance = true, bool highAvailability = true,
                          bool compress = false, bool reConnect = false,
                          PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB, PROTOCOL protocol = PROTOCOL_DDB,
-                         bool show_output = true, int sqlStd = 0, int tryReconnectNums = -1, bool usePublicName = false);
+                         bool show_output = true, int sqlStd = 0, int tryReconnectNums = -1, bool usePublicName = false,
+                         std::chrono::milliseconds netTimeout = std::chrono::milliseconds{3000});
 
     ~DBConnectionPoolImpl(){
         shutDown();

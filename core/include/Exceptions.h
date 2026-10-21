@@ -286,6 +286,7 @@ protected:
 enum TagType : char {
     TT_Invalid,
     TT_NotLeader,
+    TT_UnknownLeader,
     TT_ChunkInTransaction,
     TT_DataNodeNotAvail,
     TT_DataNodeNotReady,

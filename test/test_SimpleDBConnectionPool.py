@@ -1128,7 +1128,7 @@ class TestConnectionConfig:
         assert config.startup == ""
         assert config.enable_high_availability is False
         assert config.high_availability_sites == []
-        assert config.keep_alive_time == 30
+        assert config.keep_alive_time == -1
         assert config.reconnect is False
         assert config.try_reconnect_nums == -1
         assert config.read_timeout == -1

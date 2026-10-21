@@ -76,7 +76,7 @@ using converter::CHILD_VECTOR_OPTION;
 
 class EXPORT_DECL DBConnection {
 public:
-	DBConnection(bool enableSSL = false, bool asyncTask = false, int keepAliveTime = 7200, bool compress = false, PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB, bool isReverseStreaming = false, int sqlStd = 0);
+	DBConnection(bool enableSSL = false, bool asyncTask = false, int keepAliveTime = -1, bool compress = false, PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB, bool isReverseStreaming = false, int sqlStd = 0);
 	virtual ~DBConnection();
 	DBConnection(DBConnection&& oth);
 	DBConnection& operator=(DBConnection&& oth);
@@ -88,8 +88,10 @@ public:
 	 */
     bool connect(const string &hostName, int port, const string &userId = "", const string &password = "",
                  const string &initialScript = "", bool highAvailability = false,
-                 const vector<string> &highAvailabilitySites = vector<string>(), int keepAliveTime = 7200,
-                 bool reconnect = false, int tryReconnectNums = -1, int readTimeout = -1, int writeTimeout = -1,
+                 const vector<string> &highAvailabilitySites = vector<string>(), int keepAliveTime = -1,
+                 bool reconnect = false, int tryReconnectNums = -1,
+                 std::chrono::milliseconds netTimeout = std::chrono::milliseconds{-1},
+                 std::chrono::milliseconds timeout = std::chrono::milliseconds{-1},
                  bool usePublicName = false);
 
 	/**
@@ -155,8 +157,7 @@ public:
 		bool pickleTableToList=false, bool disableDecimal=false, bool withTableSchema = false);
 	py::object uploadPy(vector<string>& names, vector<RequestArgument>& objs,
 		REQUEST_FORMAT requestFormat = REQUEST_FORMAT_AUTO);
-	void setKeepAliveTime(int keepAliveTime);
-	void setTimeout(int readTimeout, int writeTimeout);
+	void setTimeout(int netTimeout, int timeout);
 	const string getSessionId() const;
 	const string getHostName() const;
     int getPort() const;
@@ -180,8 +181,9 @@ private:
 		ET_NODENOTAVAIL = 3,
 	};
     void switchDataNode(const string &host = "", int port = -1, bool reconnect = false);
-	bool connectNode(string hostName, int port, int keepAliveTime = -1);
+	bool connectNode(string hostName, int port);
     bool connected();
+    long nextSeqNo();
 	//0 - ignored exception, eg : other data node not avail;
 	//1 - throw exception;
 	//2 - new leader, host&port is valid
@@ -194,18 +196,32 @@ private:
 		int port;
 		double load;//DBL_MAX : unknow
 
-		bool isEqual(const Node &node) {
+		bool isEqual(const Node &node) const {
 			return hostName.compare(node.hostName) == 0 && port == node.port;
 		}
 		Node(){}
 		Node(const string &hostName, int port, double load = DBL_MAX): hostName(hostName), port(port), load(load){}
 		Node(const string &ipport, double loadValue = DBL_MAX);
-    };
+	};
+	struct NodeHash {
+		std::size_t operator()(const Node &node) const {
+			const std::size_t hostHash = std::hash<string>{}(node.hostName);
+			const std::size_t portHash = std::hash<int>{}(node.port);
+			return hostHash ^ (portHash + 0x9e3779b9 + (hostHash << 6) + (hostHash >> 2));
+		}
+	};
+	struct NodeEqual {
+		bool operator()(const Node &lhs, const Node &rhs) const {
+			return lhs.isEqual(rhs);
+		}
+	};
     static void parseIpPort(const string &ipport, string &ip, int &port);
     bool parseAsNotLeaderException(const string &msg, string &host, int &port, ExceptionType &type);
     bool parseAsOtherException(const string &msg, string &host, int &port, ExceptionType &type);
 
     std::unique_ptr<DBConnectionImpl> conn_;
+    int netTimeout_;
+    int timeout_;
     string uid_;
     string pwd_;
     string initialScript_;
@@ -220,6 +236,8 @@ private:
 	bool reconnect_, closed_;
 	bool msg_;
 	int tryReconnectNums_;
+	long runSeqNo_;
+	std::unordered_map<Node, std::string, NodeHash, NodeEqual> nodeMap_;
 };
 
 class EXPORT_DECL BlockReader : public Constant{
@@ -245,7 +263,8 @@ class EXPORT_DECL DBConnectionPool{
 public:
     DBConnectionPool(const string& hostName, int port, int threadNum = 10, const string& userId = "", const string& password = "",
 		bool loadBalance = false, bool highAvailability = false, bool compress = false, bool reConnect = false, PARSER_TYPE parser = PARSER_TYPE::PARSER_DOLPHINDB,
-		PROTOCOL protocol = PROTOCOL_DDB, bool showOutput = true, int sqlStd = 0, int tryReconnectNums = -1, bool usePublicName = false);
+		PROTOCOL protocol = PROTOCOL_DDB, bool showOutput = true, int sqlStd = 0, int tryReconnectNums = -1, bool usePublicName = false,
+        std::chrono::milliseconds netTimeout = std::chrono::milliseconds{3000});
 	virtual ~DBConnectionPool();
 
 	void run(const string& script, int identity, int priority=4, int parallelism=64, int fetchSize=0, bool clearMemory = false);

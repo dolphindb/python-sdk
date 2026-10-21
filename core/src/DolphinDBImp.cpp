@@ -12,6 +12,12 @@
 
 namespace dolphindb {
 
+std::string formatSeqNoSuffix(const std::string& clientId, long seqNum) {
+    if (clientId.empty() || seqNum == 0)
+        return std::string();
+    return "__" + clientId + "_" + std::to_string(seqNum);
+}
+
 namespace {
 
 constexpr long long ARROW_UPLOAD_SINGLE_BATCH_THRESHOLD_BYTES = 64LL * 1024 * 1024;
@@ -161,11 +167,11 @@ void streamArrowTableArgument(const RequestArgument& arg,
 }  // namespace
 
 DdbInit DBConnectionImpl::ddbInit_;
-DBConnectionImpl::DBConnectionImpl(bool sslEnable, bool asynTask, int keepAliveTime, bool compress, PARSER_TYPE parser, bool isReverseStreaming, int sqlStd)
+DBConnectionImpl::DBConnectionImpl(bool sslEnable, bool asynTask, bool compress, PARSER_TYPE parser, bool isReverseStreaming, int sqlStd)
 		: port_(0), encrypted_(false), isConnected_(false), littleEndian_(Util::isLittleEndian()),
-		sslEnable_(sslEnable),asynTask_(asynTask), keepAliveTime_(keepAliveTime), compress_(compress),
+		sslEnable_(sslEnable),asynTask_(asynTask), compress_(compress),
 		parser_(parser), protocol_(PROTOCOL_DDB), msg_(true), isReverseStreaming_(isReverseStreaming),
-        sqlStd_(sqlStd), readTimeout_(-1), writeTimeout_(-1), logger_(std::make_shared<Logger>(Logger::Level::LevelInfo)) {
+	        sqlStd_(sqlStd), netTimeout_(-1), timeout_(-1), logger_(std::make_shared<Logger>(Logger::Level::LevelInfo)) {
     logger_->init(false);
 }
 
@@ -186,8 +192,8 @@ void DBConnectionImpl::close() {
 }
 
 bool DBConnectionImpl::connect(const string& hostName, int port, const string& userId,
-        const string& password, bool sslEnable,bool asynTask, int keepAliveTime, bool compress,
-        PARSER_TYPE parser, int readTimeout, int writeTimeout) {
+        const string& password, bool sslEnable,bool asynTask, bool compress,
+        PARSER_TYPE parser, int netTimeout, int timeout) {
     hostName_ = hostName;
     port_ = port;
     userId_ = userId;
@@ -195,17 +201,10 @@ bool DBConnectionImpl::connect(const string& hostName, int port, const string& u
     encrypted_ = false;
     sslEnable_ = sslEnable;
     asynTask_ = asynTask;
-    if(keepAliveTime > 0){
-        keepAliveTime_ = keepAliveTime;
-    }
     compress_ = compress;
     parser_ = parser;
-    if (readTimeout > 0) {
-        readTimeout_ = readTimeout ;
-    }
-    if (writeTimeout > 0) {
-        writeTimeout_ = writeTimeout;
-    }
+    netTimeout_ = netTimeout;
+    timeout_ = timeout;
     return connect();
 }
 
@@ -213,8 +212,8 @@ bool DBConnectionImpl::connect() {
     DLOG("Imp.connect start");
     close();
 
-    SocketSP conn = new Socket(hostName_, port_, true, keepAliveTime_, sslEnable_);
-    conn->setTimeout(readTimeout_, writeTimeout_);
+    SocketSP conn = new Socket(hostName_, port_, true, -1, sslEnable_);
+    conn->setTimeout(netTimeout_, timeout_);
     IO_ERR ret = conn->connect();
     if (ret != OK) {
         return false;
@@ -338,31 +337,31 @@ void DBConnectionImpl::login() {
         throw IOException("Failed to authenticate the user " + userId_);
 }
 
-ConstantSP DBConnectionImpl::run(const string& script, int priority, int parallelism, int fetchSize, bool clearMemory) {
+ConstantSP DBConnectionImpl::run(const string& script, int priority, int parallelism, int fetchSize, bool clearMemory, long seqNum) {
     vector<ConstantSP> args;
-    return run(script, "script", args, priority, parallelism, fetchSize, clearMemory);
+    return run(script, "script", args, priority, parallelism, fetchSize, clearMemory, seqNum);
 }
 
-ConstantSP DBConnectionImpl::run(const string& funcName, vector<ConstantSP>& args, int priority, int parallelism, int fetchSize, bool clearMemory) {
-    return run(funcName, "function", args, priority, parallelism, fetchSize, clearMemory);
+ConstantSP DBConnectionImpl::run(const string& funcName, vector<ConstantSP>& args, int priority, int parallelism, int fetchSize, bool clearMemory, long seqNum) {
+    return run(funcName, "function", args, priority, parallelism, fetchSize, clearMemory, seqNum);
 }
 
 py::object DBConnectionImpl::runPy(
     const string &script, int priority,
     int parallelism, int fetchSize, bool clearMemory,
-    bool pickleTableToList, bool disableDecimal, bool withTableSchema
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum
 ) {
     vector<RequestArgument> args;
     return runPy(
         script, "script", args, priority, parallelism,
-        fetchSize, clearMemory, REQUEST_FORMAT_AUTO, pickleTableToList, disableDecimal, withTableSchema
+        fetchSize, clearMemory, REQUEST_FORMAT_AUTO, pickleTableToList, disableDecimal, withTableSchema, seqNum
     );
 }
 
 py::object DBConnectionImpl::runPy(
     const string &funcName, vector<ConstantSP> &args, int priority,
     int parallelism, int fetchSize, bool clearMemory,
-    bool pickleTableToList, bool disableDecimal, bool withTableSchema
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum
 ) {
     vector<RequestArgument> requestArgs;
     requestArgs.reserve(args.size());
@@ -371,18 +370,18 @@ py::object DBConnectionImpl::runPy(
     }
     return runPy(
         funcName, "function", requestArgs, priority, parallelism,
-        fetchSize, clearMemory, REQUEST_FORMAT_AUTO, pickleTableToList, disableDecimal, withTableSchema
+        fetchSize, clearMemory, REQUEST_FORMAT_AUTO, pickleTableToList, disableDecimal, withTableSchema, seqNum
     );
 }
 
 py::object DBConnectionImpl::runPy(
     const string &funcName, vector<RequestArgument> &args, int priority,
     int parallelism, int fetchSize, bool clearMemory, REQUEST_FORMAT requestFormat,
-    bool pickleTableToList, bool disableDecimal, bool withTableSchema
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum
 ) {
     return runPy(
         funcName, "function", args, priority, parallelism, fetchSize, clearMemory,
-        requestFormat, pickleTableToList, disableDecimal, withTableSchema
+        requestFormat, pickleTableToList, disableDecimal, withTableSchema, seqNum
     );
 }
 
@@ -484,7 +483,7 @@ long DBConnectionImpl::generateRequestFlag(bool clearSessionMemory, REQUEST_FORM
 }
 
 ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType, vector<ConstantSP>& args,
-            int priority, int parallelism, int fetchSize, bool clearMemory) {
+            int priority, int parallelism, int fetchSize, bool clearMemory, long seqNum) {
     DLOG("run1",script,"start");
     if (!isConnected_)
         throw IOException("Couldn't send script/function to the remote host because the connection has been closed");
@@ -506,6 +505,7 @@ ConstantSP DBConnectionImpl::run(const string& script, const string& scriptType,
     out.append(Util::convert((int)body.size()));
     out.append(" / " + std::to_string(generateRequestFlag(clearMemory, REQUEST_FORMAT_DDB)) + "_1_" + std::to_string(priority) + "_" + std::to_string(parallelism));
     out.append("__" + std::to_string(fetchSize));
+    out.append(formatSeqNoSuffix(runClientId_, seqNum));
     out.append(1, '\n');
     out.append(body);
     DLOG("run1",script,"header",out);
@@ -653,7 +653,7 @@ py::dict getTableSchema(ConstantSP result)
 py::object DBConnectionImpl::runPy(
     const string &script, const string &scriptType, vector<RequestArgument> &args,
     int priority, int parallelism, int fetchSize, bool clearMemory,
-    REQUEST_FORMAT requestFormat, bool pickleTableToList, bool disableDecimal, bool withTableSchema
+    REQUEST_FORMAT requestFormat, bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum
 ) {
     //RecordTime record("Db.runPy"+script);
     DLOG("runPy",script,"start argsize",args.size());
@@ -680,8 +680,8 @@ py::object DBConnectionImpl::runPy(
     DLOG("protocol: ", protocol_, " pickleTableToList: ", pickleTableToList);
     DLOG("compress: ", compress_, " parser: ", parser_, " disableDecimal: ", disableDecimal);
     out.append(" / " + std::to_string(flag) + "_1_" + std::to_string(priority) + "_" + std::to_string(parallelism));
-    if(fetchSize > 0)
-        out.append("__" + std::to_string(fetchSize));
+    out.append("__" + std::to_string(fetchSize));
+    out.append(formatSeqNoSuffix(runClientId_, seqNum));
 
     out.append(1, '\n');
     out.append(body);

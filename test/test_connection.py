@@ -2,6 +2,14 @@ import pytest
 from threading import Thread
 from dolphindb import DBConnection, ConnectionSetting, ConnectionConfig
 from setup.settings import HOST, PORT, USER, PASSWD
+import time
+from datetime import timedelta
+import os
+import typing
+
+from dolphindb.config import ConnectionSetting as _ConnectionSetting
+from dolphindb.settings import SqlStd
+from pydantic import ValidationError
 
 
 class TestDBConnection(object):
@@ -182,3 +190,168 @@ class TestDBConnection(object):
         else:
             blockReader.skip_all()
         assert total == 10000 * 10
+
+    def test_DBConnection_netTimeout_default(self):
+        conn = DBConnection()
+        start = time.time()
+        conn.connect("192.168.0.55", 1234, USER, PASSWD)
+        assert 3 < time.time() - start < 3.5
+
+    def test_DBConnection_netTimeout_0(self):
+        conn = DBConnection()
+        start = time.time()
+        conn.connect("192.168.0.55", 1234, USER, PASSWD, net_timeout=timedelta())
+        assert 3 < time.time() - start < 3.5
+
+    def test_DBConnection_netTimeout_5(self):
+        conn = DBConnection()
+        start = time.time()
+        conn.connect("192.168.0.55", 1234, USER, PASSWD, net_timeout=timedelta(seconds=5))
+        assert 5 < time.time() - start < 5.5
+
+    def test_DBConnection_timeout_default(self):
+        conn = DBConnection()
+        conn.connect(HOST, PORT, USER, PASSWD)
+        conn.run("sleep(1000)")
+
+    def test_DBConnection_timeout_3(self):
+        conn = DBConnection()
+        conn.connect(HOST, PORT, USER, PASSWD, timeout=timedelta(seconds=3))
+        assert conn.run("sleep(1000);true")
+        start = time.time()
+        with pytest.raises(RuntimeError):
+            conn.run("sleep(5000)")
+        assert 3 < time.time() - start < 3.5
+
+    def test_DBConnection_read_timeout(self):
+        conn = DBConnection()
+        conn.connect(HOST, PORT, USER, PASSWD, read_timeout=3)
+        assert conn.run('true')
+        start = time.time()
+        with pytest.raises(RuntimeError):
+            conn.run('sleep(4000);true')
+        assert time.time() - start > 3
+
+    @pytest.mark.skip()
+    def test_DBConnection_write_timeout(self):
+        conn = DBConnection()
+        conn.connect(HOST, PORT, USER, PASSWD, write_timeout=1)
+        print(os.system("tc qdisc add dev eno1 root netem delay 1000ms 20ms"))
+        try:
+            start = time.time()
+            conn.run("all",conn.run("table(1..100000000 as a)"))
+        except Exception as e:
+            print(time.time()-start)
+        os.system("tc qdisc del dev eno1 root")
+        assert 1 < time.time() - start < 1.5
+
+
+def _sql_std_literal_values_from_overload():
+    """Extract the accepted string values of ``sql_std`` from the constructor overload.
+
+    Returns the ``Literal`` members declared in the keyword-only overload of
+    ``DBConnection.__init__``. This lets a test assert the public type hint stays
+    aligned with the values ``ConnectionSetting`` actually accepts.
+    """
+    overloads = typing.get_overloads(DBConnection.__init__)
+    assert overloads, "DBConnection.__init__ should expose at least one overload"
+
+    candidates = set()
+    for overload in overloads:
+        annotation = typing.get_type_hints(overload).get("sql_std")
+        if annotation is None:
+            continue
+        if typing.get_origin(annotation) is typing.Literal:
+            # sql_std: Literal["ddb", "mysql", "oracle"]
+            candidates.update(typing.get_args(annotation))
+        else:
+            # Widen-safe: unwrap Optional[...]/Union[...] if the hint ever changes.
+            candidates.update(
+                arg
+                for sub in typing.get_args(annotation)
+                if typing.get_origin(sub) is typing.Literal
+                for arg in typing.get_args(sub)
+            )
+    return candidates
+
+
+class TestDBConnectionSqlStd(object):
+    """Regression tests for APY-2069.
+
+    The keyword-only constructor overload used to advertise
+    ``sql_std: Literal["dolphindb", "oracle", "mysql"]`` while
+    ``ConnectionSetting`` only accepts ``"ddb"`` / ``"mysql"`` / ``"oracle"``.
+    Passing the advertised ``"dolphindb"`` therefore raised a ``ValidationError``
+    at runtime. These tests pin the aligned contract.
+    """
+
+    @pytest.mark.parametrize("sql_std", ["ddb", "mysql", "oracle"])
+    def test_DBConnection_accepts_advertised_sql_std_strings(self, sql_std):
+        conn = DBConnection(sql_std=sql_std)
+        try:
+            assert conn.cpp is not None
+        finally:
+            conn.close()
+
+    @pytest.mark.parametrize("sql_std", [SqlStd.DolphinDB, SqlStd.MySQL, SqlStd.Oracle])
+    def test_DBConnection_accepts_sql_std_enum(self, sql_std):
+        conn = DBConnection(sql_std=sql_std)
+        try:
+            assert conn.cpp is not None
+        finally:
+            conn.close()
+
+    @pytest.mark.parametrize("sql_std", [0, 1, 2])
+    def test_DBConnection_accepts_sql_std_int(self, sql_std):
+        conn = DBConnection(sql_std=sql_std)
+        try:
+            assert conn.cpp is not None
+        finally:
+            conn.close()
+
+    def test_DBConnection_sql_std_default(self):
+        conn = DBConnection()
+        try:
+            assert conn.cpp is not None
+        finally:
+            conn.close()
+        assert ConnectionSetting().sql_std == SqlStd.DolphinDB
+
+    @pytest.mark.parametrize("sql_std", ["dolphindb", "DolphinDB", "unknown_sql_std"])
+    def test_DBConnection_rejects_unaccepted_sql_std_string(self, sql_std):
+        # "dolphindb"/"DolphinDB" is exactly the value the old overload advertised.
+        with pytest.raises(ValidationError):
+            DBConnection(sql_std=sql_std)
+
+    def test_DBConnection_rejects_invalid_sql_std_int(self):
+        with pytest.raises(ValidationError):
+            DBConnection(sql_std=999)
+
+    def test_DBConnection_sql_std_accepted_by_config_setting(self):
+        # Every value the constructor overload advertises must be accepted by
+        # ConnectionSetting, otherwise the hint lies about runtime behaviour.
+        for value in ("ddb", "mysql", "oracle"):
+            setting = _ConnectionSetting(sql_std=value)
+            assert isinstance(setting.sql_std, SqlStd)
+
+    def test_sql_std_overload_hint_matches_accepted_values(self):
+        literal_values = _sql_std_literal_values_from_overload()
+        expected = {"ddb", "mysql", "oracle"}
+        assert literal_values == expected, (
+            "DBConnection.__init__ sql_std hint {!r} diverges from the values "
+            "ConnectionSetting accepts {!r}".format(literal_values, expected)
+        )
+        # The stale value from APY-2069 must never come back.
+        assert "dolphindb" not in literal_values
+
+    def test_sql_std_overload_default_matches_config_default(self):
+        overloads = typing.get_overloads(DBConnection.__init__)
+        defaults = next(
+            (o.__kwdefaults__ for o in overloads if o.__kwdefaults__ and "sql_std" in o.__kwdefaults__),
+            None,
+        )
+        assert defaults is not None, "could not locate the keyword-only overload default"
+        # The hint advertises "ddb", which must resolve to the same default the
+        # runtime uses (SqlStd.DolphinDB).
+        assert defaults["sql_std"] == "ddb"
+        assert ConnectionSetting().sql_std == SqlStd.DolphinDB

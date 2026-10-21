@@ -76,7 +76,8 @@ class TestConcurrent:
                 except RuntimeError:
                     await asyncio.sleep(1)
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        asyncio.set_event_loop(loop)
         loop.run_until_complete(asyncio.gather(*[insert_task() for _ in range(100)]))
         pool.shutDown()
         assert self.conn.run("exec count(*) from loadTable('dfs://test_concurrent', `pt)") == 100

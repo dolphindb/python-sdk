@@ -8,15 +8,17 @@ namespace dolphindb {
 DBConnectionPoolImpl::DBConnectionPoolImpl(const string &hostName, int port, int threadNum, const string &userId,
                                            const string &password, bool loadBalance, bool highAvailability,
                                            bool compress, bool reConnect, PARSER_TYPE parser, PROTOCOL protocol,
-                                           bool show_output, int sqlStd, int tryReconnectNums, bool usePublicName)
+                                           bool show_output, int sqlStd, int tryReconnectNums, bool usePublicName,
+                                           std::chrono::milliseconds netTimeout)
     : shutDownFlag_(false), queue_(new SynchronizedQueue<Task>), protocol_(protocol) {
     latch_ = new CountDownLatch(threadNum);
     if(!loadBalance){
         for(int i = 0 ;i < threadNum; i++){
-            SmartPointer<DBConnection> conn = new DBConnection(false, false, 7200, compress, parser, false, sqlStd);
+            SmartPointer<DBConnection> conn = new DBConnection(false, false, -1, compress, parser, false, sqlStd);
             conn->setProtocol(protocol);
             conn->setShowOutput(show_output);
-			bool ret = conn->connect(hostName, port, userId, password, "", highAvailability, {},7200, reConnect, tryReconnectNums, -1, -1, usePublicName);
+			bool ret = conn->connect(hostName, port, userId, password, "", highAvailability, {}, -1, reConnect, tryReconnectNums,
+			                         netTimeout, std::chrono::milliseconds{-1}, usePublicName);
             if(!ret)
                 throw IOException("Failed to connect to " + hostName + ":" + std::to_string(port));
             sessionIds_.push_back(conn->getSessionId());
@@ -26,8 +28,9 @@ DBConnectionPoolImpl::DBConnectionPoolImpl(const string &hostName, int port, int
         }
     }
     else{
-        SmartPointer<DBConnection> entryPoint = new DBConnection(false, false, 7200, compress, parser, false, sqlStd);
-        bool ret = entryPoint->connect(hostName, port, userId, password, "", highAvailability, {},7200, reConnect, tryReconnectNums, -1, -1, usePublicName);
+        SmartPointer<DBConnection> entryPoint = new DBConnection(false, false, -1, compress, parser, false, sqlStd);
+			bool ret = entryPoint->connect(hostName, port, userId, password, "", highAvailability, {}, -1, reConnect, tryReconnectNums,
+			                             netTimeout, std::chrono::milliseconds{-1}, usePublicName);
         if(!ret)
             throw IOException("Failed to connect to " + hostName + ":" + std::to_string(port));
         TableSP nodes = entryPoint->run("rpc(getControllerAlias(), getClusterPerf)");
@@ -63,12 +66,13 @@ DBConnectionPoolImpl::DBConnectionPoolImpl(const string &hostName, int port, int
             throw RuntimeException("No available data or compute nodes found in the cluster.");
         }
         for(int i = 0 ;i < threadNum; i++){
-            SmartPointer<DBConnection> conn = new DBConnection(false, false, 7200, compress, parser, false, sqlStd);
+            SmartPointer<DBConnection> conn = new DBConnection(false, false, -1, compress, parser, false, sqlStd);
             conn->setProtocol(protocol);
             conn->setShowOutput(show_output);
             string &curhost = hosts[i % nodeCount];
             int &curport = ports[i % nodeCount];
-            bool ret = conn->connect(curhost, curport, userId, password, "", highAvailability, {}, 7200, reConnect, tryReconnectNums, -1, -1, realUsePublicName);
+			bool ret = conn->connect(curhost, curport, userId, password, "", highAvailability, {}, -1, reConnect, tryReconnectNums,
+			                         netTimeout, std::chrono::milliseconds{-1}, realUsePublicName);
             if(!ret)
                 throw IOException("Failed to connect to " + curhost + ":" + std::to_string(curport));
             sessionIds_.push_back(conn->getSessionId());

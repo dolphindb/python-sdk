@@ -4,6 +4,7 @@ import sys
 import threading
 import time
 import warnings
+import os
 
 import dolphindb as ddb
 import dolphindb.settings as keys
@@ -13,6 +14,7 @@ import pytest
 from numpy.testing import assert_array_equal
 from pandas._testing import assert_frame_equal
 from pydantic import ValidationError
+from datetime import timedelta
 
 from basic_testing.prepare import random_string
 from basic_testing.utils import operateNodes
@@ -527,15 +529,80 @@ class TestSession:
         conn = ddb.Session()
         conn.connect(HOST, PORT, USER, PASSWD, readTimeout=3)
         assert conn.run('true')
+        start = time.time()
         with pytest.raises(RuntimeError):
-            conn.run('sleep(4000);true')
+            conn.run('sleep(5000);true')
+        assert time.time() - start > 3
 
+    @pytest.mark.skip()
     def test_session_writeTimeout(self):
         conn = ddb.Session()
-        conn.connect(HOST, PORT, USER, PASSWD, writeTimeout=3)
-        conn.upload({'a': True})
-        assert conn.run('a')
-        # set packet loss to test
+        conn.connect(HOST, PORT, USER, PASSWD, writeTimeout=1)
+        print(os.system("tc qdisc add dev eno1 root netem delay 1000ms 20ms"))
+        try:
+            start = time.time()
+            conn.run("all",conn.run("table(1..100000000 as a)"))
+        except Exception as e:
+            print(time.time()-start)
+        os.system("tc qdisc del dev eno1 root")
+        assert 1 < time.time() - start < 1.5
+
+    def test_session_netTimeout_default(self):
+        conn = ddb.Session()
+        start = time.time()
+        conn.connect("192.168.0.55", 1234, USER, PASSWD)
+        assert 3 < time.time() - start < 3.5
+
+    def test_session_netTimeout_0(self):
+        conn = ddb.Session()
+        start = time.time()
+        conn.connect("192.168.0.55", 1234, USER, PASSWD, netTimeout=timedelta(0))
+        assert 3 < time.time() - start < 3.5
+
+    @pytest.mark.skip()
+    def test_session_netTimeout_1(self):
+        conn = ddb.Session()
+        start = time.time()
+        conn.connect("192.168.0.69", 8800, USER, PASSWD, netTimeout=timedelta(seconds=1))
+        print(os.system("tc qdisc add dev eno1 root netem delay 1000ms 20ms"))
+        try:
+            start = time.time()
+            conn.run("all",conn.run("table(1..100000000 as a)"))
+        except Exception as e:
+            print(str(e))
+            print(time.time()-start)
+        os.system("tc qdisc del dev eno1 root")
+        assert 1 < time.time() - start < 1.5
+
+    @pytest.mark.skip()
+    def test_session_set_netTimeout_1(self):
+        conn = ddb.Session()
+        start = time.time()
+        conn.setTimeout(1)
+        conn.connect("192.168.0.69", 8800, USER, PASSWD)
+        print(os.system("tc qdisc add dev eno1 root netem delay 1000ms 20ms"))
+        try:
+            start = time.time()
+            conn.run("all",conn.run("table(1..100000000 as a)"))
+        except Exception as e:
+            print(str(e))
+            print(time.time()-start)
+        os.system("tc qdisc del dev eno1 root")
+        assert 1 < time.time() - start < 1.5
+
+    def test_session_timeout_default(self):
+        conn = ddb.Session()
+        conn.connect(HOST, PORT, USER, PASSWD)
+        conn.run("sleep(1000)")
+
+    def test_session_timeout_3(self):
+        conn = ddb.Session()
+        conn.connect(HOST, PORT, USER, PASSWD, timeout=timedelta(seconds=3))
+        assert conn.run("sleep(1000);true")
+        start = time.time()
+        with pytest.raises(RuntimeError):
+            conn.run("sleep(5000)")
+        assert 3 < time.time() - start < 3.5
 
     @pytest.mark.parametrize("script", ["1", "[1]", "1..6$2:3", "set(1..3)", "dict(1..3,1..3)", "x=1"],
                              ids=["scalar", "vector", "matrix", "set", "dictionary", "no_return"])

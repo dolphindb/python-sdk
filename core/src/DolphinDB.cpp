@@ -10,6 +10,7 @@
 #include <exception>
 #include <fstream>
 #include <istream>
+#include <limits>
 #include <stack>
 #include <regex>
 #include <vector>
@@ -57,6 +58,30 @@ int min(INDEX a, int b) {
 
 namespace dolphindb {
 
+#ifdef WINDOWS
+constexpr int KEEP_ALIVE_CNT = 10;
+#else
+constexpr int KEEP_ALIVE_CNT = 3;
+#endif
+
+std::chrono::milliseconds keepAliveTimeToNetTimeout(int keepAliveTime) {
+    return std::chrono::milliseconds(static_cast<long long>(keepAliveTime) * KEEP_ALIVE_CNT * 1000);
+}
+
+std::chrono::milliseconds minPositiveTimeout(std::chrono::milliseconds lhs, std::chrono::milliseconds rhs) {
+    if (lhs.count() <= 0)
+        return rhs;
+    if (rhs.count() <= 0)
+        return lhs;
+    return std::min(lhs, rhs);
+}
+
+int timeoutToInt(std::chrono::milliseconds timeout) {
+    if (timeout.count() > std::numeric_limits<int>::max())
+        throw RuntimeException("The timeout value is too large.");
+    return static_cast<int>(timeout.count());
+}
+
 
 string Constant::EMPTY("");
 string Constant::NULL_STR("NULL");
@@ -88,34 +113,45 @@ ConstantSP Constant::getColumnLabel() const {
     return void_;
 }
 
+// keepAliveTime is unused; retained for existing callers.
+// Network settings are applied by connect().
 DBConnection::DBConnection(bool enableSSL, bool asynTask, int keepAliveTime, bool compress, PARSER_TYPE parser,
                            bool isReverseStreaming, int sqlStd)
-    : conn_(new DBConnectionImpl(enableSSL, asynTask, keepAliveTime, compress, parser, isReverseStreaming, sqlStd)),
-      uid_(""), pwd_(""), ha_(false), enableSSL_(enableSSL), asynTask_(asynTask), compress_(compress), nodes_({}),
+    : conn_(new DBConnectionImpl(enableSSL, asynTask, compress, parser, isReverseStreaming, sqlStd)),
+      netTimeout_(-1), timeout_(-1), uid_(""), pwd_(""), ha_(false), enableSSL_(enableSSL), asynTask_(asynTask), compress_(compress), nodes_({}),
       lastConnNodeIndex_(0), parser_(parser), protocol_(PROTOCOL_DDB), reconnect_(false), closed_(true), msg_(true),
-      tryReconnectNums_(-1) {}
+      tryReconnectNums_(-1), runSeqNo_(0), nodeMap_({}) {}
 
 DBConnection::DBConnection(DBConnection&& oth) :
-		conn_(std::move(oth.conn_)), uid_(std::move(oth.uid_)), pwd_(std::move(oth.pwd_)),
+		conn_(std::move(oth.conn_)), netTimeout_(oth.netTimeout_), timeout_(oth.timeout_), uid_(std::move(oth.uid_)), pwd_(std::move(oth.pwd_)),
 		initialScript_(std::move(oth.initialScript_)), ha_(oth.ha_), enableSSL_(oth.enableSSL_),
-		asynTask_(oth.asynTask_),compress_(oth.compress_),nodes_(oth.nodes_),lastConnNodeIndex_(0),
-		reconnect_(oth.reconnect_), closed_(oth.closed_), msg_(oth.msg_){}
+		asynTask_(oth.asynTask_), compress_(oth.compress_), nodes_(std::move(oth.nodes_)),
+		lastConnNodeIndex_(oth.lastConnNodeIndex_), parser_(oth.parser_), protocol_(oth.protocol_),
+		reconnect_(oth.reconnect_), closed_(oth.closed_), msg_(oth.msg_),
+		tryReconnectNums_(oth.tryReconnectNums_), runSeqNo_(oth.runSeqNo_), nodeMap_(std::move(oth.nodeMap_)) {}
 
 DBConnection& DBConnection::operator=(DBConnection&& oth) {
     if (this == &oth) { return *this; }
     conn_ = std::move(oth.conn_);
+    netTimeout_ = oth.netTimeout_;
+    timeout_ = oth.timeout_;
     uid_ = std::move(oth.uid_);
-    pwd_ = std::move(oth.pwd_);
-    initialScript_ = std::move(oth.initialScript_);
-    ha_ = oth.ha_;
-    nodes_ = oth.nodes_;
-    oth.nodes_.clear();
-    enableSSL_ = oth.enableSSL_;
-    asynTask_ = oth.asynTask_;
+	pwd_ = std::move(oth.pwd_);
+	initialScript_ = std::move(oth.initialScript_);
+	ha_ = oth.ha_;
+	nodes_ = std::move(oth.nodes_);
+	enableSSL_ = oth.enableSSL_;
+	asynTask_ = oth.asynTask_;
 	compress_ = oth.compress_;
 	lastConnNodeIndex_ = oth.lastConnNodeIndex_;
+	parser_ = oth.parser_;
+	protocol_ = oth.protocol_;
 	reconnect_ = oth.reconnect_;
 	closed_ = oth.closed_;
+	msg_ = oth.msg_;
+	tryReconnectNums_ = oth.tryReconnectNums_;
+	runSeqNo_ = oth.runSeqNo_;
+    nodeMap_ = std::move(oth.nodeMap_);
     return *this;
 }
 
@@ -125,7 +161,8 @@ DBConnection::~DBConnection() {
 
 bool DBConnection::connect(const string &hostName, int port, const string &userId, const string &password,
                            const string &startup, bool ha, const vector<string> &highAvailabilitySites,
-                           int keepAliveTime, bool reconnect, int tryReconnectNums, int readTimeout, int writeTimeout,
+                           int keepAliveTime, bool reconnect, int tryReconnectNums,
+                           std::chrono::milliseconds netTimeout, std::chrono::milliseconds timeout,
                            bool usePublicName) {
     ha_ = ha;
 	uid_ = userId;
@@ -133,8 +170,12 @@ bool DBConnection::connect(const string &hostName, int port, const string &userI
     initialScript_ = startup;
 	reconnect_ = reconnect;
 	closed_ = false;
-    setKeepAliveTime(keepAliveTime);
-    setTimeout(readTimeout * 1000, writeTimeout * 1000);
+	nodes_.clear();
+	lastConnNodeIndex_ = 0;
+    nodeMap_.clear();
+    if (keepAliveTime > 0)
+        netTimeout = minPositiveTimeout(netTimeout, keepAliveTimeToNetTimeout(keepAliveTime));
+    setTimeout(timeoutToInt(netTimeout), timeoutToInt(timeout));
 
     tryReconnectNums_ = (tryReconnectNums <= 0) ? -1 : tryReconnectNums;
 
@@ -163,7 +204,7 @@ bool DBConnection::connect(const string &hostName, int port, const string &userI
                     return false;
                 }
                 for (auto &one : nodes_) {
-					if (connectNode(one.hostName, one.port, keepAliveTime)) {
+					if (connectNode(one.hostName, one.port)) {
 						connectedNode = one;
 						break;
 					}
@@ -203,55 +244,50 @@ bool DBConnection::connect(const string &hostName, int port, const string &userI
 		VectorSP colMode = table->getColumn("mode");
 		VectorSP colmaxConnections = table->getColumn("maxConnections");
 		VectorSP colconnectionNum = table->getColumn("connectionNum");
-		VectorSP colworkerNum = table->getColumn("workerNum");
+        VectorSP colworkerNum = table->getColumn("workerNum");
         VectorSP colexecutorNum = table->getColumn("executorNum");
         VectorSP colPublicName;
         bool realUsePublicName = false;
-        if (usePublicName && table->contain("publicName")) {
+        bool hasPublicName = table->contain("publicName");
+        if (hasPublicName) {
             colPublicName = table->getColumn("publicName");
-            realUsePublicName = true;
+            realUsePublicName = usePublicName;
         }
-		double load;
-		for (int i = 0; i < colMode->rows(); i++) {
+        vector<Node> clusterNodes;
+        std::unordered_set<Node, NodeHash, NodeEqual> clusterNodeSet;
+        for (int i = 0; i < colMode->rows(); i++) {
             if (colMode->getInt(i) == 0) {
-                std::string nodeHost;
-                if (realUsePublicName) {
-                    nodeHost = colPublicName->getString(i);
-                    nodeHost = Util::split(nodeHost, ';')[0];
-                }
-                else {
-                    nodeHost = colHost->getString(i);
-                }
 				int nodePort = colPort->getInt(i);
-				Node *pexistNode = NULL;
-				if (!highAvailabilitySites.empty()) {
-					for (auto &node : nodes_) {
-						if (node.hostName.compare(nodeHost) == 0 &&
-							node.port == nodePort) {
-							pexistNode = &node;
-							break;
-						}
-					}
-					//node is out of highAvailabilitySites
-					if (pexistNode == NULL) {
-						LOG_WARN("Site", nodeHost, ":", nodePort,"is not in cluster.");
-						continue;
-					}
-				}
+				double load;
 				if (colconnectionNum->getInt(i) < colmaxConnections->getInt(i)) {
 					load = (colconnectionNum->getInt(i) + colworkerNum->getInt(i) + colexecutorNum->getInt(i)) / 3.0;
 				}
 				else {
 					load = DBL_MAX;
 				}
-				if (pexistNode != NULL) {
-					pexistNode->load = load;
+				Node clusterNode(colHost->getString(i), nodePort, load);
+				clusterNodeSet.insert(clusterNode);
+				if (hasPublicName) {
+					std::string publicName = colPublicName->getString(i);
+					auto allHost = Util::split(publicName, ';');
+					if (allHost.size() == 1 && !allHost[0].empty()) {
+						clusterNodeSet.insert(Node(allHost[0], nodePort));
+						if (realUsePublicName) {
+							nodeMap_[Node(clusterNode.hostName, clusterNode.port)] = allHost[0];
+							clusterNode.hostName = allHost[0];
+						}
+					}
 				}
-				else {
-					nodes_.push_back(Node(nodeHost, nodePort, load));
-				}
+				clusterNodes.push_back(clusterNode);
 			}
 		}
+		for (const auto &site : highAvailabilitySites) {
+			Node haNode(site);
+			if (clusterNodeSet.find(haNode) == clusterNodeSet.end())
+				LOG_WARN("High availability site", site, "is not in cluster.");
+		}
+		for (const auto &clusterNode : clusterNodes)
+			nodes_.push_back(clusterNode);
 		Node *pMinNode=NULL;
 		for (auto &one : nodes_) {
 			if (pMinNode == NULL ||
@@ -263,7 +299,7 @@ bool DBConnection::connect(const string &hostName, int port, const string &userI
         if (!pMinNode->isEqual(connectedNode)) {
 			conn_->close();
 			switchDataNode(pMinNode->hostName, pMinNode->port);
-			return true;
+			goto success;
 		}
     } else {
 		if (reconnect_) {
@@ -277,10 +313,15 @@ bool DBConnection::connect(const string &hostName, int port, const string &userI
             }
 		}
 		else {
-			if (!connectNode(hostName, port, keepAliveTime))
+			if (!connectNode(hostName, port))
 				return false;
 		}
     }
+success:
+	if (!nodes_.empty()) {
+		Guid uuid(true);
+		conn_->setClientId(uuid.getString());
+	}
 	if (!initialScript_.empty()) {
 		run(initialScript_);
 	}
@@ -297,13 +338,14 @@ bool DBConnection::connected() {
     }
 }
 
-bool DBConnection::connectNode(string hostName, int port, int keepAliveTime) {
+bool DBConnection::connectNode(string hostName, int port) {
     LOG_DEBUG("Attempting to connect to", hostName, ":", port);
     // int attempt = 0;
     while (closed_ == false) {
         try {
             bool online =
-                conn_->connect(hostName, port, uid_, pwd_, enableSSL_, asynTask_, keepAliveTime, compress_, parser_);
+                conn_->connect(hostName, port, uid_, pwd_, enableSSL_, asynTask_, compress_, parser_,
+                               netTimeout_, timeout_);
             if (!online) {
                 LOG_ERR("Connect to", hostName, ":", port, "failed.");
                 return false;
@@ -359,6 +401,11 @@ DBConnection::ExceptionType DBConnection::parseException(const TagResponse &e, s
             const TagResponseNotLeader& nle = static_cast<const TagResponseNotLeader&>(e);
             host = nle.host();
             port = nle.port();
+			Node node(host, port);
+			auto it = nodeMap_.find(node);
+			if (it != nodeMap_.end()) {
+				host = it->second;
+            }
             LOG_WARN("Got NotLeaderException, switch to leader node [", host, ":", port, "] to run script");
             return ET_NEWLEADER;
         }
@@ -367,6 +414,7 @@ DBConnection::ExceptionType DBConnection::parseException(const TagResponse &e, s
             host.clear();
             return ET_NODENOTAVAIL;
         }
+        case TagType::TT_UnknownLeader:
         case TagType::TT_DataNodeNotAvail:
         case TagType::TT_DataNodeNotReady:
         case TagType::TT_ControllerNotReady:
@@ -403,6 +451,7 @@ void DBConnection::switchDataNode(const string &host, int port, bool reconnect) 
                 break;
             }
         }
+        if (connected) break;
         Thread::sleep(1000);
         ++attempt;
     }
@@ -422,12 +471,32 @@ void DBConnection::login(const string& userId, const string& password, bool enab
     pwd_ = password;
 }
 
+std::string extractRefId(const std::string& errorMsg) {
+    std::regex refIdRegex(R"(RefId:\s*(\w+))");
+    std::smatch match;
+    if (std::regex_search(errorMsg, match, refIdRegex)) {
+        return match[1];
+    }
+    return "";
+}
+
+long DBConnection::nextSeqNo() {
+    ++runSeqNo_;
+    if (runSeqNo_ <= 0)
+        runSeqNo_ = 1;
+    return runSeqNo_;
+}
+
 ConstantSP DBConnection::run(const string& script, int priority, int parallelism, int fetchSize, bool clearMemory) {
     if (nodes_.empty()==false) {
+		long seqNo = nextSeqNo();
 		while(closed_ == false){
 			try {
-				return conn_->run(script, priority, parallelism, fetchSize, clearMemory);
+				return conn_->run(script, priority, parallelism, fetchSize, clearMemory, seqNo);
             } catch (TagResponse &e) {
+                if (extractRefId(e.what()) == "S04009") {
+                    throw;
+                }
                 std::string host;
                 int port = 0;
                 if (connected()) {
@@ -440,12 +509,24 @@ ConstantSP DBConnection::run(const string& script, int priority, int parallelism
                 else {
                     parseException(e, host, port);
                 }
-                switchDataNode(host, port);
-            } catch (IOException &e) {
-                if (connected()) {
-                    throw;
+				if (seqNo > 0)
+					seqNo = -seqNo;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
                 }
-                switchDataNode("", 0);
+                else {
+                    switchDataNode(host, port, true);
+                }
+            } catch (IOException &e) {
+                if (connected()) throw;
+				if (seqNo > 0)
+					seqNo = -seqNo;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
+                }
+                else {
+                    switchDataNode("", 0, true);
+                }
             }
 		}
     } else {
@@ -454,23 +535,15 @@ ConstantSP DBConnection::run(const string& script, int priority, int parallelism
     return NULL;
 }
 
-std::string extractRefId(const std::string& errorMsg) {
-    std::regex refIdRegex(R"(RefId:\s*(\w+))");
-    std::smatch match;
-    if (std::regex_search(errorMsg, match, refIdRegex)) {
-        return match[1];
-    }
-    return "";
-}
-
 py::object DBConnection::runPy(
     const string &script, int priority, int parallelism,
     int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal, bool withTableSchema
 ) {
     if (nodes_.empty() == false) {
+		long seqNo = nextSeqNo();
         while (closed_ == false) {
             try {
-                return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
+                return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema, seqNo);
             } catch (TagResponse &e) {
                 py::gil_scoped_release release;
                 if (extractRefId(e.what()) == "S04009") {
@@ -488,6 +561,8 @@ py::object DBConnection::runPy(
                 else {
                     parseException(e, host, port);
                 }
+				if (seqNo > 0)
+					seqNo = -seqNo;
                 if (!ha_) {
                     switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
                 }
@@ -496,6 +571,8 @@ py::object DBConnection::runPy(
                 }
             } catch (IOException &e) {
                 if (connected()) throw;
+				if (seqNo > 0)
+					seqNo = -seqNo;
                 if (!ha_) {
                     switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
                 }
@@ -512,11 +589,15 @@ py::object DBConnection::runPy(
 
 ConstantSP DBConnection::run(const string& funcName, vector<dolphindb::ConstantSP>& args, int priority, int parallelism, int fetchSize, bool clearMemory) {
     if (nodes_.empty() == false) {
+		long seqNo = nextSeqNo();
         while (closed_ == false) {
 			try {
-				return conn_->run(funcName, args, priority, parallelism, fetchSize, clearMemory);
+				return conn_->run(funcName, args, priority, parallelism, fetchSize, clearMemory, seqNo);
 			}
 			catch (TagResponse& e) {
+                if (extractRefId(e.what()) == "S04009") {
+                    throw;
+                }
 				string host;
 				int port = 0;
 				if (connected()) {
@@ -529,12 +610,24 @@ ConstantSP DBConnection::run(const string& funcName, vector<dolphindb::ConstantS
 				else {
 					parseException(e, host, port);
 				}
-				switchDataNode(host, port);
-            } catch (IOException &e) {
-                if (connected()) {
-                    throw;
+				if (seqNo > 0)
+					seqNo = -seqNo;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
                 }
-                switchDataNode("", 0);
+                else {
+                    switchDataNode(host, port, true);
+                }
+            } catch (IOException &e) {
+                if (connected()) throw;
+				if (seqNo > 0)
+					seqNo = -seqNo;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
+                }
+                else {
+                    switchDataNode("", 0, true);
+                }
             }
 		}
     } else {
@@ -548,11 +641,15 @@ py::object DBConnection::runPy(
     int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal, bool withTableSchema
 ) {
     if (nodes_.empty() == false) {
+		long seqNo = nextSeqNo();
         while (closed_ == false) {
             try {
-                return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
+                return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema, seqNo);
             } catch (TagResponse &e) {
                 py::gil_scoped_release release;
+                if (extractRefId(e.what()) == "S04009") {
+                    throw;
+                }
                 string host;
                 int port = 0;
                 if (connected()) {
@@ -562,14 +659,26 @@ py::object DBConnection::runPy(
                     else if (type == ET_UNKNOW)
                         throw;
                 }else{
-                	parseException(e, host, port);
+                parseException(e, host, port);
                 }
-                switchDataNode(host, port);
+				if (seqNo > 0)
+					seqNo = -seqNo;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
+                }
+                else {
+                    switchDataNode(host, port, true);
+                }
             } catch (IOException &e) {
-                if (connected()) {
-                    throw;
+                if (connected()) throw;
+				if (seqNo > 0)
+					seqNo = -seqNo;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
                 }
-                switchDataNode("", 0);
+                else {
+                    switchDataNode("", 0, true);
+                }
             }
         }
         return py::none();
@@ -584,10 +693,11 @@ py::object DBConnection::runPy(
     bool pickleTableToList, bool disableDecimal, bool withTableSchema
 ) {
     if (nodes_.empty() == false) {
+		long seqNo = nextSeqNo();
         while (closed_ == false) {
             try {
                 return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory,
-                                    requestFormat, pickleTableToList, disableDecimal, withTableSchema);
+                                    requestFormat, pickleTableToList, disableDecimal, withTableSchema, seqNo);
             } catch (TagResponse &e) {
                 py::gil_scoped_release release;
                 string host;
@@ -601,11 +711,15 @@ py::object DBConnection::runPy(
                 } else {
                     parseException(e, host, port);
                 }
+				if (seqNo > 0)
+					seqNo = -seqNo;
                 switchDataNode(host, port);
             } catch (IOException &e) {
                 if (connected()) {
                     throw;
                 }
+				if (seqNo > 0)
+					seqNo = -seqNo;
                 switchDataNode("", 0);
             }
         }
@@ -668,12 +782,20 @@ ConstantSP DBConnection::upload(const string& name, const ConstantSP& obj) {
 				else {
 					parseException(e, host, port);
 				}
-				switchDataNode(host, port);
-            } catch (IOException &e) {
-                if (connected()) {
-                    throw;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
                 }
-                switchDataNode("", 0);
+                else {
+				    switchDataNode(host, port, true);
+                }
+            } catch (IOException &e) {
+                if (connected()) throw;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
+                }
+                else {
+                    switchDataNode("", 0, true);
+                }
             }
 		}
     } else {
@@ -701,12 +823,20 @@ ConstantSP DBConnection::upload(vector<string>& names, vector<ConstantSP>& objs)
 				else {
 					parseException(e, host, port);
 				}
-				switchDataNode(host, port);
-            } catch (IOException &e) {
-                if (connected()) {
-                    throw;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
                 }
-                switchDataNode("", 0);
+                else {
+				    switchDataNode(host, port, true);
+                }
+            } catch (IOException &e) {
+                if (connected()) throw;
+                if (!ha_) {
+                    switchDataNode(nodes_.back().hostName, nodes_.back().port, true);
+                }
+                else {
+                    switchDataNode("", 0, true);
+                }
             }
 		}
     } else {
@@ -752,12 +882,10 @@ void DBConnection::setInitScript(const std::string & script) {
     initialScript_ = script;
 }
 
-void DBConnection::setKeepAliveTime(int keepAliveTime){
-    conn_->setkeepAliveTime(keepAliveTime);
-}
-
-void DBConnection::setTimeout(int readTimeout, int writeTimeout) {
-    conn_->setTimeout(readTimeout, writeTimeout);
+void DBConnection::setTimeout(int netTimeout, int timeout) {
+    netTimeout_ = netTimeout;
+    timeout_ = timeout;
+    conn_->setTimeout(netTimeout, timeout);
 }
 
 void DBConnection::setProtocol(PROTOCOL protocol) {
@@ -854,10 +982,11 @@ void BlockReader::skipAll(){
 DBConnectionPool::DBConnectionPool(const string &hostName, int port, int threadNum, const string &userId,
                                    const string &password, bool loadBalance, bool highAvailability, bool compress,
                                    bool reConnect, PARSER_TYPE parser, PROTOCOL protocol, bool showOutput, int sqlStd,
-                                   int tryReconnectNums, bool usePublicName)
+                                   int tryReconnectNums, bool usePublicName,
+                                   std::chrono::milliseconds netTimeout)
     : pool_(new DBConnectionPoolImpl(hostName, port, threadNum, userId, password, loadBalance, highAvailability,
                                      compress, reConnect, parser, protocol, showOutput, sqlStd, tryReconnectNums,
-                                     usePublicName)) {}
+                                     usePublicName, netTimeout)) {}
 
 DBConnectionPool::~DBConnectionPool(){}
 

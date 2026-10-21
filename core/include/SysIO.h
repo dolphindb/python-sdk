@@ -19,11 +19,13 @@
 #ifdef WINDOWS
 	#include <winsock2.h>
 	#include <windows.h>
+	typedef int socket_len_t;
 #else
 	#include <netinet/in.h>
     #include <netinet/tcp.h>
     #include <sys/socket.h>
 	typedef int SOCKET;
+	typedef socklen_t socket_len_t;
 	#define INVALID_SOCKET -1
 	#define SOCKET_ERROR   -1
 #endif
@@ -70,18 +72,17 @@ public:
 	bool isBlockingMode() const {return blocking_;}
 	bool isValid();
 	void setAutoClose(bool option) { autoClose_ = option;}
-	void setTimeout(int readTimeout, int writeTimeout);
+	void setTimeout(int netTimeout, int timeout);
 	static void enableTcpNoDelay(bool enable);
 	static bool ENABLE_TCP_NODELAY;
-	static void setTcpTimeout(unsigned int timeout);
-	static unsigned int TcpTimeout;
 	bool skipAll();
 
 private:
-	void getReadTimeout(int &timeoutMs);
-	void getWriteTimeout(int &timeoutMs);
-	void setReadTimeout(int timeoutMs);
-	void setWriteTimeout(int timeoutMs);
+	int timedConnect(const struct sockaddr *addr, socket_len_t addrlen, int timeoutMs);
+	void getRecvTimeout(int &timeoutMs);
+	void getSendTimeout(int &timeoutMs);
+	void setRecvTimeout(int timeoutMs);
+	void setSendTimeout(int timeoutMs);
 	bool setNonBlocking();
 	bool setBlocking();
 	bool setTcpNoDelay();
@@ -100,9 +101,8 @@ private:
 	bool enableSSL_;
 	SSL_CTX* ctx_;
 	SSL* ssl_;
-	int keepAliveTime_;
-	int readTimeout_;
-	int writeTimeout_;
+	int netTimeout_;
+	int timeout_;
 };
 
 class EXPORT_DECL UdpSocket{

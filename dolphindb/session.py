@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import numpy as np
 from ._hints import (
@@ -51,7 +51,7 @@ class Session(DBConnection):
         Please use enableASYNC instead of enableASYN.
 
     Args:
-        keepAliveTime : the duration between two keepalive transmissions to detect the TCP connection status. Defaults to 30 (seconds). Set the parameter to release half-open TCP connections timely when the network is unstable.
+        keepAliveTime : legacy TCP detection interval in seconds. It is converted internally to ``netTimeout = keepAliveTime * keepalive_count`` when explicitly set. Defaults to None as a compatibility placeholder, meaning the global ``netTimeout`` default is used.
         enableChunkGranularityConfig : whether to enable chunk granularity configuration. Defaults to False.
         compress : whether to enable compressed communication. Defaults to False.
         enablePickle : whether to enable the Pickle protocol. Defaults to True.
@@ -73,7 +73,7 @@ class Session(DBConnection):
     def __init__(
         self, host: Optional[str] = None, port: Optional[int] = None,
         userid: Optional[str] = "", password: Optional[str] = "", enableSSL: bool = False,
-        enableASYNC: bool = False, keepAliveTime: int = 30, enableChunkGranularityConfig: bool = False,
+        enableASYNC: bool = False, keepAliveTime: Optional[int] = None, enableChunkGranularityConfig: bool = False,
         compress: bool = False, enablePickle: Optional[bool] = None, protocol: int = PROTOCOL_DEFAULT,
         python: bool = False,
         *,
@@ -113,8 +113,11 @@ class Session(DBConnection):
         keepAliveTime: Optional[int] = None, reconnect: bool = False,
         *,
         tryReconnectNums: Optional[int] = None,
+        netTimeout: Optional[timedelta] = None,
+        timeout: Optional[timedelta] = None,
         readTimeout: Optional[int] = None,
         writeTimeout: Optional[int] = None,
+        usePublicName: bool = False,
     ) -> bool:
         """Establish connection, including initialization script, high availability, TCP detection.
 
@@ -126,19 +129,21 @@ class Session(DBConnection):
             startup : the startup script to execute the preloaded tasks immediately after the connection is established. Defaults to None.
             highAvailability : whether to enable high availability. True means enabled, otherwise False. Defaults to False.
             highAvailabilitySites : a list of high-availability nodes. Defaults to None.
-            keepAliveTime : the duration between two keepalive transmissions to detect the TCP connection status. Defaults to None, meaning keepAliveTime = 30 (seconds). Set the parameter to release half-open TCP connections timely when the network is unstable.
+            keepAliveTime : legacy TCP detection interval in seconds. If set explicitly, it is converted internally to `netTimeout = keepAliveTime * keepalive_count`. Defaults to None, meaning the global `netTimeout` is used.
             reconnect : whether to enable reconnection. True means enabled, otherwise False. Defaults to False.
 
         Kwargs:
             tryReconnectNums ：the number of reconnection attempts when reconnection is enabled. If high availability mode is on, it will retry tryReconnectNums times for each node. None means unlimited reconnection attempts. Defaults to None.
-            readTimeout : the read timeout in seconds. If None, no timeout is set. Corresponds to the `SO_RCVTIMEO` socket option. Defaults to None.
-            writeTimeout : the write timeout in seconds. If None, no timeout is set. Corresponds to the `SO_SNDTIMEO` socket option. Defaults to None.
+            netTimeout : the network timeout as a `datetime.timedelta`. It controls the initial TCP connect timeout and the network write/keepalive timeout. Defaults to None.
+            timeout : the response wait timeout as a `datetime.timedelta`. It corresponds to the socket receive timeout. Defaults to None.
+            readTimeout : legacy alias of `timeout`. Defaults to None.
+            writeTimeout : legacy alias of `netTimeout`. Defaults to None.
 
         Returns:
             whether the connection is established. True if established, otherwise False.
         """
         if keepAliveTime is None:
-            keepAliveTime = self.keep_alive_time
+            keepAliveTime = self.keep_alive_time if self.keep_alive_time is not None else -1
         if userid is None:
             userid = ""
         if password is None:
@@ -157,8 +162,11 @@ class Session(DBConnection):
             'keep_alive_time': keepAliveTime,
             'reconnect': reconnect,
             'try_reconnect_nums': tryReconnectNums,
+            'net_timeout': netTimeout,
+            'timeout': timeout,
             'read_timeout': readTimeout,
             'write_timeout': writeTimeout,
+            'use_public_name': usePublicName,
         })
 
     def login(self, userid: str, password: str, enableEncryption: bool = True):
@@ -841,10 +849,10 @@ class Session(DBConnection):
 
     @classmethod
     def setTimeout(cls, timeout: float) -> None:
-        """Set the TCP timeout.
+        """Set the default network timeout.
 
         Args:
-            timeout : corresponds to the TCP_USER_TIMEOUT option. Specify the value in units of seconds.
+            timeout : the global default value of `net_timeout` in seconds.
         """
         tcp.set_timeout(timeout)
 

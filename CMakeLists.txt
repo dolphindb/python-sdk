@@ -84,24 +84,29 @@ set(OPENSSL_USE_STATIC_LIBS TRUE)
 # ============================================================================
 # Dependencies: Python + pybind11
 # ============================================================================
-if(WIN32)
-    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
-        set (Python3_FIND_ABI "OFF" "ANY" "OFF" "ANY")
-    endif()
-    find_package(Python REQUIRED COMPONENTS Interpreter Development)
-else()
-    execute_process(COMMAND which python3 OUTPUT_VARIABLE PYTHON_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(Python_EXECUTABLE ${PYTHON_PATH})
+
+if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
+    set(Python3_FIND_ABI "OFF" "ANY" "OFF" "ANY")
 endif()
+
+set(PYBIND11_FINDPYTHON ON)
+
+find_package(Python REQUIRED COMPONENTS
+    Interpreter
+    Development.Module
+)
 
 message(STATUS "Python: ${Python_EXECUTABLE}")
 message(STATUS "Python include: ${Python_INCLUDE_DIRS}")
 message(STATUS "Python libraries: ${Python_LIBRARIES}")
 
-
-# pybind11 from config mode
-execute_process(COMMAND pybind11-config --cmakedir OUTPUT_VARIABLE pybind11_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(
+    COMMAND pybind11-config --cmakedir
+    OUTPUT_VARIABLE pybind11_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 file(TO_CMAKE_PATH "${pybind11_DIR}" pybind11_DIR)
+
 find_package(pybind11 CONFIG REQUIRED)
 message(STATUS "pybind11 version: ${pybind11_VERSION}")
 

@@ -1322,6 +1322,12 @@ class DataUtils(object):
                 'expect_typestr': "'STRING VECTOR'",
                 'expect_value': "'abc!@#中文 123'",
             },
+            'data_arrow_large_string': {
+                'value': 'abc!@#中文 123',
+                'dtype_arrow': pa.large_utf8(),
+                'expect_typestr': "'STRING VECTOR'",
+                'expect_value': "'abc!@#中文 123'",
+            },
             'data_arrow_bytes_utf8': {
                 'value': 'abc!@#中文 123'.encode(),
                 'dtype_arrow': pa.large_binary(),
@@ -12633,6 +12639,7 @@ class DataUtils(object):
                     } for k, v in cls.DATA_UPLOAD_ARROW.items()
                         if k not in (
                             'data_arrow_string',
+                            'data_arrow_large_string',
                             'data_arrow_bytes_utf8',
                             'data_arrow_bytes_gbk',
                             'data_arrow_symbol',
@@ -12664,6 +12671,7 @@ class DataUtils(object):
                     } for k, v in cls.DATA_UPLOAD_ARROW.items()
                         if k not in (
                             'data_arrow_string',
+                            'data_arrow_large_string',
                             'data_arrow_bytes_utf8',
                             'data_arrow_bytes_gbk',
                             'data_arrow_symbol',
@@ -12698,6 +12706,7 @@ class DataUtils(object):
                     } for k, v in cls.DATA_UPLOAD_ARROW.items()
                         if k not in (
                             'data_arrow_string',
+                            'data_arrow_large_string',
                             'data_arrow_bytes_utf8',
                             'data_arrow_bytes_gbk',
                             'data_arrow_symbol',

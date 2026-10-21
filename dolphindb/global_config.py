@@ -1,8 +1,15 @@
 import platform
+from datetime import timedelta
 
 from ._core import DolphinDBRuntime
 
 ddbcpp = DolphinDBRuntime()._ddbcpp
+
+_default_net_timeout = timedelta(seconds=3)
+
+
+def _get_default_net_timeout() -> timedelta:
+    return _default_net_timeout
 
 
 def enable_job_cancellation() -> None:
@@ -22,9 +29,15 @@ def enable_job_cancellation() -> None:
 class tcp:
     @classmethod
     def set_timeout(cls, timeout: float) -> None:
-        """Set the TCP timeout.
+        """Set the default network timeout.
 
         Args:
-            timeout : corresponds to the TCP_USER_TIMEOUT option. Specify the value in units of seconds.
+            timeout : the global default value of ``net_timeout`` in seconds.
+                Used by new connections and DBConnectionPool instances. Defaults to
+                3 seconds; zero uses system defaults. Existing connections retain
+                their configured timeout.
         """
-        ddbcpp.sessionimpl.setTimeout(timeout)
+        if timeout < 0:
+            raise ValueError("The parameter timeout must be non-negative.")
+        global _default_net_timeout
+        _default_net_timeout = timedelta(seconds=timeout)

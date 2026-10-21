@@ -1,0 +1,6 @@
+# Match the Python tools in cibuildwheel 4.2.0's CPython 3.14 constraints.
+pip==26.2.1
+build==1.5.0
+virtualenv==21.7.1
+auditwheel==6.7.0
+patchelf==0.17.2.4

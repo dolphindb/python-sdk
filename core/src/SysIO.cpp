@@ -32,6 +32,7 @@
 	#include <mstcpip.h>
 #endif
 #include <string.h>
+#include <algorithm>
 #include <iostream>
 
 #include "SysIO.h"
@@ -49,10 +50,27 @@ namespace dolphindb {
 #define RECORD_WRITE(pbytes, bytelen) //Util::writeFile("/tmp/ddb_write.bin", pbytes, bytelen);
 
 bool Socket::ENABLE_TCP_NODELAY = true;
-unsigned int Socket::TcpTimeout = 30000;
+
+namespace {
+
+#ifdef WINDOWS
+constexpr int KEEP_ALIVE_CNT = 10;
+#else
+constexpr int KEEP_ALIVE_CNT = 3;
+#endif
+
+int keepAliveIntervalMs(int netTimeoutMs) {
+    return std::max(netTimeoutMs / KEEP_ALIVE_CNT, 1);
+}
+
+int keepAliveIntervalSeconds(int netTimeoutMs) {
+    return std::max(netTimeoutMs / 1000 / KEEP_ALIVE_CNT, 1);
+}
+
+}
 
 Socket::Socket():host_(""), port_(-1), blocking_(true), autoClose_(true), enableSSL_(false), ctx_(nullptr),
-	ssl_(nullptr), keepAliveTime_(30), readTimeout_(-1), writeTimeout_(-1) {
+	ssl_(nullptr), netTimeout_(-1), timeout_(-1) {
     handle_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(INVALID_SOCKET == handle_) {
         throw IOException("Couldn't create a socket with error code " + std::to_string(getErrorCode()));
@@ -66,7 +84,7 @@ Socket::Socket():host_(""), port_(-1), blocking_(true), autoClose_(true), enable
 
 Socket::Socket(const string& host, int port, bool blocking, int keepAliveTime, bool enableSSL)
 	: host_(host), port_(port), blocking_(blocking), autoClose_(true), enableSSL_(enableSSL), ctx_(nullptr),
-		ssl_(nullptr), keepAliveTime_(keepAliveTime), readTimeout_(-1), writeTimeout_(-1) {
+		ssl_(nullptr), netTimeout_(-1), timeout_(-1) {
     if(host.empty() && port > 0){
         //server mode
         handle_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -89,7 +107,7 @@ Socket::Socket(const string& host, int port, bool blocking, int keepAliveTime, b
 
 Socket::Socket(SOCKET handle, bool blocking, int keepAliveTime)
 	: host_(""), port_(-1), handle_(handle), blocking_(blocking), autoClose_(true), enableSSL_(false), ctx_(nullptr),
-		ssl_(nullptr), keepAliveTime_(keepAliveTime), readTimeout_(-1), writeTimeout_(-1) {
+		ssl_(nullptr), netTimeout_(-1), timeout_(-1) {
     if(INVALID_SOCKET == handle_) {
         throw IOException("The given socket is invalid.");
     }
@@ -262,17 +280,88 @@ void Socket::enableTcpNoDelay(bool enable){
 	ENABLE_TCP_NODELAY = enable;
 }
 
-void Socket::setTcpTimeout(unsigned int timeout) {
-	Socket::TcpTimeout = timeout;
-}
-
-IO_ERR Socket::connect(const string& host, int port, bool blocking, int keepAliveTime, bool sslEnable){
+IO_ERR Socket::connect(const string& host, int port, bool blocking, int, bool sslEnable){
 	host_ = host;
 	port_ = port;
 	blocking_ = blocking;
 	enableSSL_ = sslEnable;
-	keepAliveTime_ = keepAliveTime;
 	return connect();
+}
+
+int Socket::timedConnect(const struct sockaddr *addr, socket_len_t addrlen, int timeoutMs) {
+    bool restoreBlocking = blocking_;
+    if (restoreBlocking && !setNonBlocking())
+        return getErrorCode();
+
+    int ret = ::connect(handle_, addr, static_cast<int>(addrlen));
+    if (ret == 0) {
+        if (restoreBlocking)
+            setBlocking();
+        return 0;
+    }
+
+#ifdef WINDOWS
+    int err = WSAGetLastError();
+    if (err != WSAEWOULDBLOCK) {
+        if (restoreBlocking)
+            setBlocking();
+        return err;
+    }
+#else
+    int err = errno;
+    if (err != EINPROGRESS) {
+        if (restoreBlocking)
+            setBlocking();
+        return err;
+    }
+#endif
+
+    fd_set wset;
+    FD_ZERO(&wset);
+    FD_SET(handle_, &wset);
+#ifdef WINDOWS
+    fd_set eset;
+    FD_ZERO(&eset);
+    FD_SET(handle_, &eset);
+#endif
+    struct timeval tv;
+    tv.tv_sec = timeoutMs / 1000;
+    tv.tv_usec = (timeoutMs % 1000) * 1000;
+    do {
+#ifdef WINDOWS
+        ret = select(0, nullptr, &wset, &eset, &tv);
+#else
+        ret = select(handle_ + 1, nullptr, &wset, nullptr, &tv);
+#endif
+    }
+#ifndef WINDOWS
+    while (ret < 0 && errno == EINTR);
+#else
+    while (false);
+#endif
+
+    if (restoreBlocking)
+        setBlocking();
+
+    if (ret == 0) {
+#ifdef WINDOWS
+        return WSAETIMEDOUT;
+#else
+        return ETIMEDOUT;
+#endif
+    }
+    if (ret < 0)
+        return getErrorCode();
+
+    int socketError = 0;
+#ifdef WINDOWS
+    int len = sizeof(socketError);
+#else
+    socklen_t len = sizeof(socketError);
+#endif
+    if (getsockopt(handle_, SOL_SOCKET, SO_ERROR, (char*)&socketError, &len) != 0)
+        return getErrorCode();
+    return socketError;
 }
 
 IO_ERR Socket::connect(){
@@ -303,34 +392,48 @@ IO_ERR Socket::connect(){
 	    }
 
         int enabled = 1;
+        int effectiveNetTimeout = netTimeout_;
 #ifdef WINDOWS
         if(::setsockopt(handle_, SOL_SOCKET, SO_KEEPALIVE, (const char*)&enabled, sizeof(int)) != 0)
             LOG_ERR("Subscription socket failed to enable TCP_KEEPALIVE with error: " +  std::to_string(getErrorCode()));
 
+        if(effectiveNetTimeout > 0)
+            setSendTimeout(effectiveNetTimeout);
+
 		struct tcp_keepalive kavars;
 		kavars.onoff = TRUE;
-		kavars.keepalivetime = keepAliveTime_ * 1000;
-		kavars.keepaliveinterval = 5 * 1000;
+		if(effectiveNetTimeout > 0){
+			kavars.keepalivetime = keepAliveIntervalMs(effectiveNetTimeout);
+			kavars.keepaliveinterval = keepAliveIntervalMs(effectiveNetTimeout);
 
-		unsigned long ulBytesReturn = 0;
-		WSAIoctl(handle_, SIO_KEEPALIVE_VALS, &kavars, sizeof(kavars), NULL, 0, &ulBytesReturn, NULL, NULL);
+			unsigned long ulBytesReturn = 0;
+			WSAIoctl(handle_, SIO_KEEPALIVE_VALS, &kavars, sizeof(kavars), NULL, 0, &ulBytesReturn, NULL, NULL);
+		}
+
 #elif defined MAC
 		if(::setsockopt(handle_, SOL_SOCKET, SO_KEEPALIVE, (const char*)&enabled, sizeof(int)) != 0)
             LOG_ERR("Subscription socket failed to enable TCP_KEEPALIVE with error: " +  std::to_string(getErrorCode()));
+#ifdef TCP_KEEPALIVE
+        int keepAliveSeconds = keepAliveIntervalSeconds(effectiveNetTimeout);
+        if(effectiveNetTimeout > 0 && ::setsockopt(handle_, IPPROTO_TCP, TCP_KEEPALIVE, (const char*)&keepAliveSeconds, sizeof(keepAliveSeconds)) != 0)
+            LOG_ERR("Failed to enable TCP_KEEPALIVE with error: " +  std::to_string(getErrorCode()));
+#endif
+        if(effectiveNetTimeout > 0)
+            setSendTimeout(effectiveNetTimeout);
 #else
-        int idleTime = keepAliveTime_;
-        int interval = 5;
+        int idleTime = keepAliveIntervalSeconds(effectiveNetTimeout);
+        int interval = keepAliveIntervalSeconds(effectiveNetTimeout);
         int count = 3;
-        unsigned int timeout = Socket::TcpTimeout;
+        unsigned int netTimeout = static_cast<unsigned int>(effectiveNetTimeout);
         if(::setsockopt(handle_, SOL_SOCKET, SO_KEEPALIVE, &enabled, sizeof(enabled)) != 0)
             LOG_ERR("Failed to enable SO_KEEPALIVE with error: " +  std::to_string(getErrorCode()));
-        if(::setsockopt(handle_, SOL_TCP, TCP_KEEPIDLE, &idleTime, sizeof(idleTime)) != 0)
+        if(effectiveNetTimeout > 0 && ::setsockopt(handle_, SOL_TCP, TCP_KEEPIDLE, &idleTime, sizeof(idleTime)) != 0)
             LOG_ERR("Failed to enable TCP_KEEPIDLE with error: " +  std::to_string(getErrorCode()));
-        if(::setsockopt(handle_, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) != 0)
+        if(effectiveNetTimeout > 0 && ::setsockopt(handle_, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) != 0)
             LOG_ERR("Failed to enable TCP_KEEPINTVL with error: " +  std::to_string(getErrorCode()));
-        if(::setsockopt(handle_, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)) != 0)
+        if(effectiveNetTimeout > 0 && ::setsockopt(handle_, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)) != 0)
             LOG_ERR("Failed to enable TCP_KEEPCNT with error: " +  std::to_string(getErrorCode()));
-        if(::setsockopt(handle_, IPPROTO_TCP, TCP_USER_TIMEOUT, &timeout, sizeof(timeout)) != 0)
+        if(effectiveNetTimeout > 0 && ::setsockopt(handle_, IPPROTO_TCP, TCP_USER_TIMEOUT, &netTimeout, sizeof(netTimeout)) != 0)
             LOG_ERR("Failed to enable TCP_USER_TIMEOUT with error: " +  std::to_string(getErrorCode()));
 #endif
 
@@ -344,26 +447,32 @@ IO_ERR Socket::connect(){
 			LOG_ERR("Failed to set SO_REUSEADDR with error: " + std::to_string(getErrorCode()));
 		}
 
-		if (readTimeout_ > 0)
-			setReadTimeout(readTimeout_);
-		if (writeTimeout_ > 0)
-			setWriteTimeout(writeTimeout_);
 
-		if(::connect(handle_, p->ai_addr, static_cast<int>(p->ai_addrlen)) == SOCKET_ERROR) {
+        if (timeout_ > 0)
+			setRecvTimeout(timeout_);
+		int connectError = 0;
+        if (blocking_ && effectiveNetTimeout > 0) {
+            connectError = timedConnect(p->ai_addr, static_cast<socket_len_t>(p->ai_addrlen), effectiveNetTimeout);
+        }
+        else if(::connect(handle_, p->ai_addr, static_cast<int>(p->ai_addrlen)) == SOCKET_ERROR) {
+			connectError = getErrorCode();
 			if(!blocking_){
 #ifdef WINDOWS
-				if(WSAGetLastError () == WSAEWOULDBLOCK){
+				if(connectError == WSAEWOULDBLOCK || connectError == WSAEINPROGRESS){
 					freeaddrinfo(servinfo);
 					return INPROGRESS;
 				}
 #else
-				if(errno == EINPROGRESS){
+				if(connectError == EINPROGRESS){
 					freeaddrinfo(servinfo);
 					return INPROGRESS;
 				}
 #endif
 			}
-			LOG_ERR("Failed to connect to host = " + host_ + " port = " + portStr + " with error code " + std::to_string(getErrorCode()));
+		}
+
+        if(connectError != 0) {
+			LOG_ERR("Failed to connect to host = " + host_ + " port = " + portStr + " with error code " + std::to_string(connectError));
 			closesocket(handle_);
 			handle_=INVALID_SOCKET;
 			continue;
@@ -431,7 +540,7 @@ Socket* Socket::accept(){
 		return NULL;
 	}
 	else
-		return new Socket(t, blocking_, keepAliveTime_);
+		return new Socket(t, blocking_, -1);
 }
 
 SOCKET Socket::getHandle(){
@@ -439,15 +548,13 @@ SOCKET Socket::getHandle(){
 }
 
 
-void Socket::setTimeout(int readTimeout, int writeTimeout) {
-	if (readTimeout > 0)
-		readTimeout_ = readTimeout;
-	if (writeTimeout > 0)
-		writeTimeout_ = writeTimeout;
+void Socket::setTimeout(int netTimeout, int timeout) {
+	netTimeout_ = netTimeout;
+	timeout_ = timeout;
 }
 
 
-void Socket::setReadTimeout(int timeoutMs){
+void Socket::setRecvTimeout(int timeoutMs){
 #ifdef WINDOWS
 	int iTimeOut = timeoutMs;
     setsockopt(handle_, SOL_SOCKET, SO_RCVTIMEO,(char*)&iTimeOut,sizeof(iTimeOut));
@@ -459,7 +566,7 @@ void Socket::setReadTimeout(int timeoutMs){
 #endif
 }
 
-void Socket::setWriteTimeout(int timeoutMs){
+void Socket::setSendTimeout(int timeoutMs){
 #ifdef WINDOWS
 	int iTimeOut = timeoutMs;
     setsockopt(handle_, SOL_SOCKET, SO_SNDTIMEO,(char*)&iTimeOut,sizeof(iTimeOut));
@@ -471,7 +578,7 @@ void Socket::setWriteTimeout(int timeoutMs){
 #endif
 }
 
-void Socket::getReadTimeout(int &timeoutMs){
+void Socket::getRecvTimeout(int &timeoutMs){
 #ifdef WINDOWS
 	int iTimeOut;
 	socklen_t readlen=sizeof(iTimeOut);
@@ -486,7 +593,7 @@ void Socket::getReadTimeout(int &timeoutMs){
 }
 
 
-void Socket::getWriteTimeout(int &timeoutMs){
+void Socket::getSendTimeout(int &timeoutMs){
 #ifdef WINDOWS
 	int iTimeOut;
 	socklen_t readlen=sizeof(iTimeOut);
@@ -528,14 +635,14 @@ bool Socket::setBlocking(){
 }
 
 bool Socket::skipAll(){
-	int oldReadTimeout=-2;
-	int oldWriteTimeout=-2;
+	int oldRecvTimeout=-2;
+	int oldSendTimeout=-2;
 	if(blocking_ == false){
 		if(setBlocking() == false)
 			return false;
 	}else{
-		getReadTimeout(oldReadTimeout);
-		getWriteTimeout(oldWriteTimeout);
+		getRecvTimeout(oldRecvTimeout);
+		getSendTimeout(oldSendTimeout);
 	}
 	setTimeout(50, 50);
 	const int bufsize=256;
@@ -548,10 +655,10 @@ bool Socket::skipAll(){
 	if(blocking_ == false){
 		setNonBlocking();
 	}else{
-		if(oldReadTimeout != -2)
-			setReadTimeout(oldReadTimeout);
-		if(oldWriteTimeout != -2)
-			setWriteTimeout(oldWriteTimeout);
+		if(oldRecvTimeout != -2)
+			setRecvTimeout(oldRecvTimeout);
+		if(oldSendTimeout != -2)
+			setSendTimeout(oldSendTimeout);
 	}
 	return true;
 }

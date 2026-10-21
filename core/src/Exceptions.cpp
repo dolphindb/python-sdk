@@ -18,6 +18,7 @@ using namespace dolphindb;
 
 const static std::unordered_map<TagType, std::string> tagTypeToStringMap = {
     {TagType::TT_NotLeader, "<NotLeader>"},
+    {TagType::TT_UnknownLeader, "<UnknownLeader>"},
     {TagType::TT_ChunkInTransaction, "<ChunkInTransaction>"},
     {TagType::TT_DataNodeNotAvail, "<DataNodeNotAvail>"},
     {TagType::TT_DataNodeNotReady, "<DataNodeNotReady>"},
@@ -33,6 +34,8 @@ namespace dolphindb {
 TagType parseEnumTagType(const string &msg) {
     if (msg == "<NotLeader>") {
         return TagType::TT_NotLeader;
+    } else if (msg == "<UnknownLeader>") {
+        return TagType::TT_UnknownLeader;
     } else if (msg == "<ChunkInTransaction>") {
         return TagType::TT_ChunkInTransaction;
     } else if (msg == "<DataNodeNotAvail>") {
@@ -65,7 +68,11 @@ static inline bool parseSite(const std::string &s, std::string &ip, int &port, s
     size_t second_last_colon = s.rfind(':', last_colon - 1);
     if (second_last_colon == std::string::npos) {
         ip = s.substr(0, last_colon);
-        port = std::stoi(s.substr(last_colon + 1));
+        try {
+            port = std::stoi(s.substr(last_colon + 1));
+        } catch (...) {
+            return false;
+        }
         alias = "";
     } else {
         ip = s.substr(0, second_last_colon);

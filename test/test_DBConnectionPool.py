@@ -493,7 +493,8 @@ class TestDBConnectionPool:
                                  "import dolphindb as ddb;"
                                  "import asyncio;"
                                  f"pool=ddb.DBConnectionPool('{HOST}', {PORT}, 10, '{USER}', '{PASSWD}');"
-                                 "loop=asyncio.get_event_loop();"
+                                 "loop=asyncio.get_event_loop_policy().new_event_loop();"
+                                 "asyncio.set_event_loop(loop);"
                                  f"task=pool.run(\"\"\"{script}\"\"\");"
                                  "loop.run_until_complete(asyncio.wait([loop.create_task(task)]));"
                                  "loop.close();"
@@ -529,7 +530,8 @@ class TestDBConnectionPool:
                                  "import dolphindb as ddb;"
                                  "import asyncio;"
                                  f"pool=ddb.DBConnectionPool('{HOST}', {PORT}, 10, '{USER}', '{PASSWD}',show_output=False);"
-                                 "loop=asyncio.get_event_loop();"
+                                 "loop=asyncio.get_event_loop_policy().new_event_loop();"
+                                 "asyncio.set_event_loop(loop);"
                                  f"task=pool.run(\"\"\"{script}\"\"\");"
                                  "loop.run_until_complete(asyncio.wait([loop.create_task(task)]));"
                                  "loop.close();"
@@ -943,7 +945,8 @@ class TestDBConnectionPool:
 
     def test_DBConnectionPool_scalar_over_length(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        asyncio.set_event_loop(loop)
         with pytest.raises(RuntimeError,
                            match="String too long, Serialization failed, length must be less than 256K bytes"):
             loop.run_until_complete(asyncio.gather(*[pool.run('print', '0' * 256 * 1024)]))
@@ -951,7 +954,8 @@ class TestDBConnectionPool:
 
     def test_DBConnectionPool_vector_over_length(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        asyncio.set_event_loop(loop)
         with pytest.raises(RuntimeError,
                            match="String too long, Serialization failed, length must be less than 256K bytes"):
             loop.run_until_complete(asyncio.gather(*[pool.run('print', ['0' * 256 * 1024])]))
@@ -959,7 +963,8 @@ class TestDBConnectionPool:
 
     def test_DBConnectionPool_set_over_length(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        asyncio.set_event_loop(loop)
         with pytest.raises(RuntimeError,
                            match="String too long, Serialization failed, length must be less than 256K bytes"):
             loop.run_until_complete(asyncio.gather(*[pool.run('print', {'0' * 256 * 1024})]))
@@ -967,7 +972,8 @@ class TestDBConnectionPool:
 
     def test_DBConnectionPool_dictionary_over_length(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER, PASSWD)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        asyncio.set_event_loop(loop)
         with pytest.raises(RuntimeError,
                            match="String too long, Serialization failed, length must be less than 256K bytes"):
             loop.run_until_complete(asyncio.gather(*[pool.run('print', {'a': '0' * 256 * 1024})]))
@@ -975,7 +981,8 @@ class TestDBConnectionPool:
 
     def test_DBConnectionPool_table_over_length(self):
         pool = ddb.DBConnectionPool(HOST, PORT, 1, USER_CLUSTER, PASSWD_CLUSTER)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        asyncio.set_event_loop(loop)
         with pytest.raises(RuntimeError,
                            match="String too long, Serialization failed, length must be less than 256K bytes"):
             loop.run_until_complete(asyncio.gather(*[pool.run('print', pd.DataFrame({'a': ['1' * 256 * 1024]}))]))

@@ -289,7 +289,7 @@ class MultithreadedTableWriter(object):
         mode : the write mode. It can be Append (default) or Upsert. Defaults to "".
         modeOption : the parameters of function upsert!. It only takes effect when mode is Upsert. Defaults to [].
         reconnect : whether to enable reconnection. True means enabled, otherwise False. Defaults to True.
-        tryReconnectNums ：the number of reconnection attempts when reconnection is enabled. If high availability mode is on, it will retry tryReconnectNums times for each node. None means unlimited reconnection attempts. Defaults to None.
+        tryReconnectNums : the number of reconnection attempts when reconnection is enabled. If high availability mode is on, it will retry tryReconnectNums times for each node. None means unlimited reconnection attempts. Defaults to None.
         enableStreamTableTimestamp: whether to insert data into a stream table with timestamp attached by `setStreamTableTimestamp` function. True means enabled, otherwise False. Defaults to False.
     """
 

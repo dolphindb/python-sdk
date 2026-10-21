@@ -1,4 +1,5 @@
 from threading import RLock
+from datetime import timedelta
 from typing import overload
 
 from ._hints import (
@@ -6,6 +7,7 @@ from ._hints import (
 )
 from ._core import DolphinDBRuntime
 from .config import ConnectionConfig, ConnectionSetting, organize_config
+from .global_config import _get_default_net_timeout
 
 ddbcpp = DolphinDBRuntime()._ddbcpp
 
@@ -29,7 +31,7 @@ class DBConnection:
         parser: Literal["dolphindb", "python", "kdb"] = "dolphindb",
         protocol: Literal["default", "pickle", "ddb", "arrow"] = "default",
         show_output: bool = True,
-        sql_std: Literal["dolphindb", "oracle", "mysql"] = "dolphindb",
+        sql_std: Literal["ddb", "mysql", "oracle"] = "ddb",
     ): ...
 
     @overload
@@ -131,9 +133,11 @@ class DBConnection:
         startup: str = None,
         enable_high_availability: bool = False,
         high_availability_sites: Optional[List[str]] = None,
-        keep_alive_time: int = 30,
+        keep_alive_time: int = -1,
         reconnect: bool = False,
         try_reconnect_nums: Optional[int] = -1,
+        net_timeout: Optional[timedelta] = None,
+        timeout: Optional[timedelta] = None,
         read_timeout: Optional[int] = -1,
         write_timeout: Optional[int] = -1,
         use_public_name: bool = False,
@@ -175,6 +179,8 @@ class DBConnection:
         if password is not None:
             kwargs['password'] = password
         config = organize_config(ConnectionConfig, config, kwargs)
+        if config.net_timeout is None and config.keep_alive_time <= 0:
+            config.net_timeout = _get_default_net_timeout()
         res = self.cpp.connect(config.model_dump())
         if res:
             self._is_closed = False

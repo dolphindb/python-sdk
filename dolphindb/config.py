@@ -1,13 +1,15 @@
 import sys
 import operator
+from datetime import timedelta
 
 import numpy as np
 
 import pydantic
-from pydantic import BaseModel, Field, GetCoreSchemaHandler, model_validator, ConfigDict
+from pydantic import BaseModel, Field, GetCoreSchemaHandler, model_validator, field_serializer, field_validator, ConfigDict
 from pydantic_core import core_schema
 
 from ._core import DolphinDBRuntime
+
 from ._hints import (
     Generic,
     List,
@@ -137,12 +139,24 @@ class ConnectionConfig(CustomBaseModel):
     startup: str = ""
     enable_high_availability: bool = False
     high_availability_sites: Optional[List[str]] = Field(default_factory=list)
-    keep_alive_time: int = 30
+    keep_alive_time: int = -1
     reconnect: bool = False
     try_reconnect_nums: Optional[int] = -1
-    read_timeout: Optional[int] = -1
-    write_timeout: Optional[int] = -1
+    net_timeout: Optional[timedelta] = None
+    timeout: Optional[timedelta] = None
+    read_timeout: Optional[float] = -1
+    write_timeout: Optional[float] = -1
     use_public_name: bool = False
+
+    @model_validator(mode='before')
+    @classmethod
+    def omit_unspecified_timeouts(cls, values):
+        if isinstance(values, dict):
+            values = {
+                key: value for key, value in values.items()
+                if key not in ("timeout", "net_timeout") or value is not None
+            }
+        return values
 
     @model_validator(mode='after')
     def check_high_availability_sites(self):
@@ -156,6 +170,25 @@ class ConnectionConfig(CustomBaseModel):
             self.try_reconnect_nums = -1
         return self
 
+    @field_validator("net_timeout", "timeout", mode="before")
+    @classmethod
+    def check_duration_timeout_fields(cls, value, info):
+        if value is None:
+            return None
+        if not isinstance(value, timedelta):
+            raise TypeError(f"The parameter '{info.field_name}' must be datetime.timedelta.")
+        if value.total_seconds() < 0:
+            raise ValueError(f"The parameter '{info.field_name}' must be non-negative.")
+        if value == timedelta(0):
+            return None
+        return value
+
+    @field_serializer("net_timeout", "timeout")
+    def serialize_duration_timeout_fields(self, value: Optional[timedelta]):
+        if value is None:
+            return -1
+        return round(value.total_seconds() * 1000)
+
     @model_validator(mode='after')
     def check_read_timeout(self):
         if self.read_timeout is None:
@@ -168,6 +201,35 @@ class ConnectionConfig(CustomBaseModel):
             self.write_timeout = -1
         return self
 
+    @model_validator(mode='after')
+    def normalize_legacy_timeout_fields(self):
+        explicit_fields = self.model_fields_set.copy()
+        timeout_is_explicit = "timeout" in self.model_fields_set
+        if timeout_is_explicit and self.timeout is not None:
+            self.read_timeout = self.timeout.total_seconds()
+        elif timeout_is_explicit:
+            self.read_timeout = -1
+        elif self.read_timeout >= 0:
+            self.timeout = None if self.read_timeout == 0 else timedelta(seconds=self.read_timeout)
+
+        net_timeout_candidates = []
+        net_timeout_is_explicit = "net_timeout" in self.model_fields_set
+        if net_timeout_is_explicit and self.net_timeout is not None:
+            net_timeout_candidates.append(round(self.net_timeout.total_seconds() * 1000))
+        elif net_timeout_is_explicit:
+            self.write_timeout = -1
+        if self.write_timeout > 0 and (not net_timeout_is_explicit or self.net_timeout is not None):
+            net_timeout_candidates.append(self.write_timeout * 1000)
+        if net_timeout_candidates:
+            net_timeout = min(net_timeout_candidates)
+            self.net_timeout = timedelta(milliseconds=net_timeout)
+            self.write_timeout = self.net_timeout.total_seconds()
+        elif self.write_timeout == 0:
+            self.net_timeout = None
+        # Derived aliases must not become explicit inputs when a config is reused.
+        self.__pydantic_fields_set__ = explicit_fields
+        return self
+
 
 def organize_config(config_type: type, config, kwargs: dict) -> BaseModel:
     if config is None:
@@ -175,7 +237,25 @@ def organize_config(config_type: type, config, kwargs: dict) -> BaseModel:
     elif isinstance(config, dict):
         config = config_type(**config, **kwargs)
     elif isinstance(config, config_type):
-        config = config.model_copy(update=kwargs)
+        if kwargs:
+            # Include current values: mutable defaults can change without entering model_fields_set.
+            fields = type(config).model_fields
+            overridden = {
+                name for name, field in fields.items()
+                if name in kwargs or (field.alias is not None and field.alias in kwargs)
+            }
+            explicit_fields = config.model_fields_set | overridden
+            # Read Python values directly: model_dump serializes durations to milliseconds.
+            values = {name: getattr(config, name) for name in fields if name not in overridden}
+            if isinstance(config, ConnectionConfig):
+                for name in ("timeout", "net_timeout", "read_timeout", "write_timeout"):
+                    if name not in explicit_fields:
+                        values.pop(name, None)
+            values.update(kwargs)
+            config = type(config)(**values)
+            config.__pydantic_fields_set__ = explicit_fields
+        else:
+            config = config.model_copy()
     else:
         raise TypeError(
             f"config should be None, dict or {config_type.__name__} instance"

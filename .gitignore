@@ -9,5 +9,6 @@
 /.python-version
 **/__pycache__/*
 /.cache/
+/.offline/
 
 compile_commands.json

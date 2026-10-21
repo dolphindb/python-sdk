@@ -22,6 +22,7 @@ from .settings import (
 from .utils import _helper_check_parser, standard_deprecated, deprecated
 from .connection import DBConnection
 from .config import ConnectionConfig, ConnectionSetting, organize_config
+from .global_config import _get_default_net_timeout
 
 
 ddbcpp = DolphinDBRuntime()._ddbcpp
@@ -54,6 +55,9 @@ class DBConnectionPool(object):
 
     Note:
         If the parameter python is True, the script is parsed in Python rather than DolphinDB language.
+        New pools use the default network timeout configured by global_config.tcp.set_timeout(),
+        initially 3 seconds. It controls TCP connection establishment, sending and
+        keepalive settings. Zero uses system defaults. It does not limit query execution time.
     """
     def __init__(
         self,
@@ -103,6 +107,7 @@ class DBConnectionPool(object):
             tryReconnectNums = -1
 
         parser = _helper_check_parser(parser, python)
+        net_timeout_ms = round(_get_default_net_timeout().total_seconds() * 1000)
 
         self.mutex = Lock()
         self.pool = ddbcpp.dbConnectionPoolImpl(
@@ -121,6 +126,7 @@ class DBConnectionPool(object):
             sqlStd.value,
             tryReconnectNums,
             usePublicName,
+            net_timeout_ms,
         )
         self.host = host
         self.port = port

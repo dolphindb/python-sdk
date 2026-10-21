@@ -4641,7 +4641,7 @@ def get_Table(*args, n=100, typeTable="table", isShare=False, **kwargs):
         "download": [],
     }, DATATYPE.DT_BOOL: {
 
-        # 分类：table_0:正常值， 部分空值， 全部空值 , table_1:只有一列, table_2:只有一行， table_3:空表
+        # 分类: table_0:正常值， 部分空值， 全部空值 , table_1:只有一列, table_2:只有一行， table_3:空表
         "scripts": """
             table_bool_0 = table(1..v_n as index, v_bool_0 as bool_0, v_bool_1 as bool_1, take([s_bool_n, s_bool_n, s_bool_n], v_n) as bool_2)
             table_bool_1 = table(1..v_n as index, v_bool_0 as bool_0)

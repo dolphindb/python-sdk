@@ -1,4 +1,4 @@
-FROM quay.io/pypa/manylinux_2_28_aarch64:2026.01.16-1
+FROM quay.io/pypa/manylinux_2_28_aarch64:2026.08.29-2
 WORKDIR /root
 RUN yum update -y
 RUN yum install gdb -y
