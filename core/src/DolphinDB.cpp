@@ -5,6 +5,7 @@
  *      Author: dzhou
  */
 
+#include <algorithm>
 #include <cstddef>
 #include <ctime>
 #include <exception>
@@ -180,8 +181,12 @@ bool DBConnection::connect(const string &hostName, int port, const string &userI
     tryReconnectNums_ = (tryReconnectNums <= 0) ? -1 : tryReconnectNums;
 
     if (ha_) {
-		for (auto &one : highAvailabilitySites)
-			nodes_.push_back(Node(one));
+		for (const auto &site : highAvailabilitySites) {
+			Node node(site);
+			if (std::none_of(nodes_.begin(), nodes_.end(),
+			                 [&node](const Node &existing) { return existing.isEqual(node); }))
+				nodes_.push_back(node);
+		}
 		{
 			bool foundfirst = false;
 			Node firstnode(hostName, port);
@@ -286,8 +291,37 @@ bool DBConnection::connect(const string &hostName, int port, const string &userI
 			if (clusterNodeSet.find(haNode) == clusterNodeSet.end())
 				LOG_WARN("High availability site", site, "is not in cluster.");
 		}
-		for (const auto &clusterNode : clusterNodes)
-			nodes_.push_back(clusterNode);
+		// Compare internal/public addresses using the mapping learned from the cluster.
+		auto canonicalNode = [this](Node node) {
+			auto it = nodeMap_.find(node);
+			if (it != nodeMap_.end())
+				node.hostName = it->second;
+			return node;
+		};
+		vector<Node> mergedNodes;
+		for (const auto &node : nodes_) {
+			Node canonical = canonicalNode(node);
+			auto existing = std::find_if(mergedNodes.begin(), mergedNodes.end(), [&](const Node &candidate) {
+				return canonicalNode(candidate).isEqual(canonical);
+			});
+			if (existing == mergedNodes.end())
+				mergedNodes.push_back(node);
+			else if (node.isEqual(connectedNode))
+				*existing = node; // Keep the address that actually connected, even if its alias came first.
+		}
+		for (const auto &clusterNode : clusterNodes) {
+			auto existing = std::find_if(mergedNodes.begin(), mergedNodes.end(), [&](const Node &node) {
+				return canonicalNode(node).isEqual(clusterNode);
+			});
+			if (existing != mergedNodes.end()) {
+				existing->load = clusterNode.load;
+				// Discovery updates load without replacing an existing connection address.
+			} else if (highAvailabilitySites.empty()) {
+				// Explicit sites restrict failover; discovery expands only an automatic group.
+				mergedNodes.push_back(clusterNode);
+			}
+		}
+		nodes_ = std::move(mergedNodes);
 		Node *pMinNode=NULL;
 		for (auto &one : nodes_) {
 			if (pMinNode == NULL ||
@@ -357,6 +391,11 @@ bool DBConnection::connectNode(string hostName, int port) {
                 if (inited) {
                     LOG_INFO("Connect to", hostName, ":", port, "with session id:", conn_->getSessionId());
                 }
+            } catch (IOException &) {
+                // A transport failure (timeout/disconnect) already closed the connection
+                // inside run(); it is not the "old server" case. Fail the attempt so the
+                // caller can fall back to another candidate.
+                throw;
             } catch (std::exception &) {
                 LOG_INFO("Initialization checks are available in the latest server version. You may upgrade to enable this feature.");
                 inited = true;
@@ -537,13 +576,14 @@ ConstantSP DBConnection::run(const string& script, int priority, int parallelism
 
 py::object DBConnection::runPy(
     const string &script, int priority, int parallelism,
-    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal, bool withTableSchema
+    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal, bool withTableSchema,
+    const converter::ArrayVectorToColumns &arrayVectorToColumns
 ) {
     if (nodes_.empty() == false) {
 		long seqNo = nextSeqNo();
         while (closed_ == false) {
             try {
-                return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema, seqNo);
+                return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema, seqNo, arrayVectorToColumns);
             } catch (TagResponse &e) {
                 py::gil_scoped_release release;
                 if (extractRefId(e.what()) == "S04009") {
@@ -583,7 +623,7 @@ py::object DBConnection::runPy(
         }
         return py::none();
     } else {
-        return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
+        return conn_->runPy(script, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema, 0, arrayVectorToColumns);
     }
 }
 
@@ -638,13 +678,14 @@ ConstantSP DBConnection::run(const string& funcName, vector<dolphindb::ConstantS
 
 py::object DBConnection::runPy(
     const string &funcName, vector<ConstantSP> &args, int priority, int parallelism,
-    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal, bool withTableSchema
+    int fetchSize, bool clearMemory, bool pickleTableToList, bool disableDecimal, bool withTableSchema,
+    const converter::ArrayVectorToColumns &arrayVectorToColumns
 ) {
     if (nodes_.empty() == false) {
 		long seqNo = nextSeqNo();
         while (closed_ == false) {
             try {
-                return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema, seqNo);
+                return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema, seqNo, arrayVectorToColumns);
             } catch (TagResponse &e) {
                 py::gil_scoped_release release;
                 if (extractRefId(e.what()) == "S04009") {
@@ -683,21 +724,22 @@ py::object DBConnection::runPy(
         }
         return py::none();
     } else {
-        return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema);
+        return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory, pickleTableToList, disableDecimal, withTableSchema, 0, arrayVectorToColumns);
     }
 }
 
 py::object DBConnection::runPy(
     const string &funcName, vector<RequestArgument> &args, int priority, int parallelism,
     int fetchSize, bool clearMemory, REQUEST_FORMAT requestFormat,
-    bool pickleTableToList, bool disableDecimal, bool withTableSchema
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema,
+    const converter::ArrayVectorToColumns &arrayVectorToColumns
 ) {
     if (nodes_.empty() == false) {
 		long seqNo = nextSeqNo();
         while (closed_ == false) {
             try {
                 return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory,
-                                    requestFormat, pickleTableToList, disableDecimal, withTableSchema, seqNo);
+                                    requestFormat, pickleTableToList, disableDecimal, withTableSchema, seqNo, arrayVectorToColumns);
             } catch (TagResponse &e) {
                 py::gil_scoped_release release;
                 string host;
@@ -726,7 +768,7 @@ py::object DBConnection::runPy(
         return py::none();
     } else {
         return conn_->runPy(funcName, args, priority, parallelism, fetchSize, clearMemory,
-                            requestFormat, pickleTableToList, disableDecimal, withTableSchema);
+                            requestFormat, pickleTableToList, disableDecimal, withTableSchema, 0, arrayVectorToColumns);
     }
 }
 

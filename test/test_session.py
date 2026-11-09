@@ -14,6 +14,7 @@ import pytest
 from numpy.testing import assert_array_equal
 from pandas._testing import assert_frame_equal
 from pydantic import ValidationError
+from basic_testing.utils import equalPlus
 from datetime import timedelta
 
 from basic_testing.prepare import random_string
@@ -419,11 +420,13 @@ class TestSession:
         loadDf = conn.run(
             "select (connectionNum + workerNum + executorNum)/3.0 as load from rpc(getControllerAlias(), getClusterPerf) where mode=0")
         assert all(((loadDf - loadDf.mean()).abs() < 0.7)['load'])
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
-        for i in connList:
-            time.sleep(0.5)
-            assert i.run("true")
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
+        try:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+            for i in connList:
+                time.sleep(0.5)
+                assert i.run("true")
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         # print(conn.run("select site,(connectionNum + workerNum + executorNum)/3.0 as load,connectionNum,workerNum,executorNum from rpc(getControllerAlias(), getClusterPerf) where mode=0"))
         # conn.run(f"stopDataNode(['dnode{PORT_DNODE2}'])")
         # for i in connList:
@@ -479,14 +482,16 @@ class TestSession:
     @pytest.mark.xdist_group(name='cluster_test')
     def test_session_highAvailability_tryReconnectNums_conn(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "STOP")
         n = 3
-        result = subprocess.run([sys.executable, '-c',
-                                 "import dolphindb as ddb;"
-                                 "conn_=ddb.Session();"
-                                 f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
-                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+        try:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "STOP")
+            result = subprocess.run([sys.executable, '-c',
+                                     "import dolphindb as ddb;"
+                                     "conn_=ddb.Session();"
+                                     f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
+                                     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
         assert result.stdout.count("Failed to connect") + result.stdout.count("DataNodeNotAvail") == n * 3
         assert f"Connect failed after {n} reconnect attempts for every node in high availability sites." in result.stdout
 
@@ -495,16 +500,18 @@ class TestSession:
     def test_session_highAvailability_tryReconnectNums_run(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
         n = 3
-        result = subprocess.run([sys.executable, '-c',
-                                 "import dolphindb as ddb;"
-                                 "from basic_testing.utils import operateNodes;"
-                                 f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
-                                 "conn_=ddb.Session();"
-                                 f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
-                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'],'STOP');"""
-                                 "conn_.run('true');"
-                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+        try:
+            result = subprocess.run([sys.executable, '-c',
+                                     "import dolphindb as ddb;"
+                                     "from basic_testing.utils import operateNodes;"
+                                     f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
+                                     "conn_=ddb.Session();"
+                                     f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
+                                     f"""operateNodes(conn,['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'],'STOP');"""
+                                     "conn_.run('true');"
+                                     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
         assert result.stdout.count("Failed to connect") + result.stdout.count("DataNodeNotAvail") == n * 3
         assert f"Connect to nodes failed after {n} reconnect attempts." in result.stderr
 
@@ -513,16 +520,18 @@ class TestSession:
     def test_session_highAvailability_tryReconnectSuccess(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
         n = 1
-        result = subprocess.run([sys.executable, '-c',
-                                 "import dolphindb as ddb;"
-                                 "from basic_testing.utils import operateNodes;"
-                                 f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
-                                 "conn_=ddb.Session();"
-                                 f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
-                                 f"""operateNodes(conn,['dnode'+str(conn_.port)],'STOP');"""
-                                 "conn_.run('true');"
-                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+        try:
+            result = subprocess.run([sys.executable, '-c',
+                                     "import dolphindb as ddb;"
+                                     "from basic_testing.utils import operateNodes;"
+                                     f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
+                                     "conn_=ddb.Session();"
+                                     f"conn_.connect('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}', highAvailability=True, highAvailabilitySites=['{HOST_CLUSTER}:{PORT_DNODE1}','{HOST_CLUSTER}:{PORT_DNODE2}','{HOST_CLUSTER}:{PORT_DNODE3}'], tryReconnectNums={n});"
+                                     f"""operateNodes(conn,['dnode'+str(conn_.port)],'STOP');"""
+                                     "conn_.run('true');"
+                                     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
         assert f"Warn: Reconnect to {HOST_CLUSTER}" in result.stdout
 
     def test_session_readTimeout(self):
@@ -737,17 +746,19 @@ class TestSession:
         assert conn.session_id == str(conn.call("getCurrentSessionAndUser")[0])
         assert conn.host == HOST_CLUSTER
         assert conn.port == conn.call("getNodePort")
-        operateNodes(conn_ctl, [f"{conn.host}:{conn.port}"], "STOP")
-        assert conn.run("true")
-        assert conn.session_id == str(conn.call("getCurrentSessionAndUser")[0])
-        assert conn.host == HOST_CLUSTER
-        assert conn.port == conn.call("getNodePort")
-        operateNodes(conn_ctl, [f"{conn.host}:{conn.port}"], "STOP")
-        assert conn.run("true")
-        assert conn.session_id == str(conn.call("getCurrentSessionAndUser")[0])
-        assert conn.host == HOST_CLUSTER
-        assert conn.port == conn.call("getNodePort")
-        operateNodes(conn_ctl, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+        try:
+            operateNodes(conn_ctl, [f"{conn.host}:{conn.port}"], "STOP")
+            assert conn.run("true")
+            assert conn.session_id == str(conn.call("getCurrentSessionAndUser")[0])
+            assert conn.host == HOST_CLUSTER
+            assert conn.port == conn.call("getNodePort")
+            operateNodes(conn_ctl, [f"{conn.host}:{conn.port}"], "STOP")
+            assert conn.run("true")
+            assert conn.session_id == str(conn.call("getCurrentSessionAndUser")[0])
+            assert conn.host == HOST_CLUSTER
+            assert conn.port == conn.call("getNodePort")
+        finally:
+            operateNodes(conn_ctl, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
 
     @pytest.mark.CLUSTER
     @pytest.mark.xdist_group(name='cluster_test')
@@ -808,3 +819,9 @@ class TestSession:
         for i in range(100):
             conn_follower.call(f"tableInsert{{loadHaMvccTable(\"{func_name}\")}}", i)
         assert conn_follower.exec(f"each(eqObj, (select * from loadHaMvccTable(\"{func_name}\")).values(), table(0..99 as a).values()).all()")
+
+    def test_session_run_arrayVectorToColumns(self):
+        conn=ddb.Session(HOST,PORT,USER,PASSWD)
+        result = conn.run("table(1..3 as a,array(INT[]).append!([[1,2,3],[4,5,6],[7,8,9]]) as b)", arrayVectorToColumns=True)
+        except_ = conn.run("table(1..3 as a,[1,4,7] as b1,[2,5,8] as b2,[3,6,9] as b3)")
+        assert equalPlus(result,except_)

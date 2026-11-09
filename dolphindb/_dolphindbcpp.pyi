@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, Dict, List, Union
 from enum import Enum
 
 
@@ -37,6 +37,16 @@ default_logger: Logger
 
 class sessionimpl:
     msg_logger: Logger
+
+    def run(self, script: str, *args: Any, clearMemory=None, pickleTableToList=None,
+            priority=None, parallelism=None, disableDecimal=None, withTableSchema=None,
+            arrayVectorToColumns: Union[bool, Dict[str, int]] = False) -> Any: ...
+    def exec(self, script: str, *, clearMemory=None, pickleTableToList=None,
+             priority=None, parallelism=None, disableDecimal=None, withTableSchema=None,
+             arrayVectorToColumns: Union[bool, Dict[str, int]] = False) -> Any: ...
+    def call(self, script: str, *args: Any, clearMemory=None, pickleTableToList=None,
+             priority=None, parallelism=None, disableDecimal=None, withTableSchema=None,
+             arrayVectorToColumns: Union[bool, Dict[str, int]] = False) -> Any: ...
 
 
 def dump(obj: Any, file, *, types=None) -> None: ...

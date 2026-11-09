@@ -2,6 +2,9 @@ import pytest
 from threading import Thread
 from dolphindb import DBConnection, ConnectionSetting, ConnectionConfig
 from setup.settings import HOST, PORT, USER, PASSWD
+from basic_testing.utils import equalPlus
+import ast
+import inspect
 import time
 from datetime import timedelta
 import os
@@ -246,6 +249,68 @@ class TestDBConnection(object):
         assert 1 < time.time() - start < 1.5
 
 
+class _OverloadStub(object):
+
+    def __init__(self, annotations, kwdefaults):
+        self.annotations = annotations
+        self.kwdefaults = kwdefaults
+
+
+def _decorator_name(node):
+    if isinstance(node, ast.Call):
+        node = node.func
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    if isinstance(node, ast.Name):
+        return node.id
+    return None
+
+
+def _overload_stubs_from_source(func):
+    path = inspect.getsourcefile(func)
+    assert path, f"cannot locate source file of {func!r}, failed to inspect @overload hints"
+    with open(path, encoding="utf-8") as f:
+        source = f.read()
+    tree = ast.parse(source)
+
+    module = inspect.getmodule(func)
+    namespace = vars(module) if module is not None else {}
+
+    owner, _, name = func.__qualname__.rpartition(".")
+    stubs = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef) or (owner and node.name != owner):
+            continue
+        for item in node.body:
+            if not isinstance(item, ast.FunctionDef) or item.name != name:
+                continue
+            if not any(_decorator_name(dec) == "overload" for dec in item.decorator_list):
+                continue
+            annotations = {}
+            for arg in list(item.args.args) + list(item.args.kwonlyargs):
+                if arg.annotation is None:
+                    continue
+                expr = ast.get_source_segment(source, arg.annotation)
+                annotations[arg.arg] = eval(expr, dict(namespace))
+            kwdefaults = {}
+            for arg, default in zip(item.args.kwonlyargs, item.args.kw_defaults):
+                if default is None:
+                    continue
+                kwdefaults[arg.arg] = ast.literal_eval(default)
+            stubs.append(_OverloadStub(annotations, kwdefaults))
+    return stubs
+
+
+def _overload_stubs(func):
+    getter = getattr(typing, "get_overloads", None)
+    if getter is not None:
+        return [
+            _OverloadStub(typing.get_type_hints(stub), stub.__kwdefaults__ or {})
+            for stub in getter(func)
+        ]
+    return _overload_stubs_from_source(func)
+
+
 def _sql_std_literal_values_from_overload():
     """Extract the accepted string values of ``sql_std`` from the constructor overload.
 
@@ -253,16 +318,15 @@ def _sql_std_literal_values_from_overload():
     ``DBConnection.__init__``. This lets a test assert the public type hint stays
     aligned with the values ``ConnectionSetting`` actually accepts.
     """
-    overloads = typing.get_overloads(DBConnection.__init__)
+    overloads = _overload_stubs(DBConnection.__init__)
     assert overloads, "DBConnection.__init__ should expose at least one overload"
 
     candidates = set()
-    for overload in overloads:
-        annotation = typing.get_type_hints(overload).get("sql_std")
+    for stub in overloads:
+        annotation = stub.annotations.get("sql_std")
         if annotation is None:
             continue
         if typing.get_origin(annotation) is typing.Literal:
-            # sql_std: Literal["ddb", "mysql", "oracle"]
             candidates.update(typing.get_args(annotation))
         else:
             # Widen-safe: unwrap Optional[...]/Union[...] if the hint ever changes.
@@ -341,17 +405,22 @@ class TestDBConnectionSqlStd(object):
             "DBConnection.__init__ sql_std hint {!r} diverges from the values "
             "ConnectionSetting accepts {!r}".format(literal_values, expected)
         )
-        # The stale value from APY-2069 must never come back.
         assert "dolphindb" not in literal_values
 
     def test_sql_std_overload_default_matches_config_default(self):
-        overloads = typing.get_overloads(DBConnection.__init__)
+        overloads = _overload_stubs(DBConnection.__init__)
         defaults = next(
-            (o.__kwdefaults__ for o in overloads if o.__kwdefaults__ and "sql_std" in o.__kwdefaults__),
+            (stub.kwdefaults for stub in overloads if "sql_std" in stub.kwdefaults),
             None,
         )
         assert defaults is not None, "could not locate the keyword-only overload default"
-        # The hint advertises "ddb", which must resolve to the same default the
-        # runtime uses (SqlStd.DolphinDB).
+
         assert defaults["sql_std"] == "ddb"
         assert ConnectionSetting().sql_std == SqlStd.DolphinDB
+
+    def test_DBConnection_run_array_vector_to_columns(self):
+        conn=DBConnection()
+        conn.connect(HOST, PORT, USER, PASSWD)
+        result = conn.run("table(1..3 as a,array(INT[]).append!([[1,2,3],[4,5,6],[7,8,9]]) as b)", array_vector_to_columns=True)
+        except_ = conn.run("table(1..3 as a,[1,4,7] as b1,[2,5,8] as b2,[3,6,9] as b3)")
+        assert equalPlus(result,except_)

@@ -389,6 +389,29 @@ private:
     std::function<void()> code;
 };
 
+converter::ArrayVectorToColumns parseArrayVectorToColumns(const py::handle &value) {
+    converter::ArrayVectorToColumns result;
+    if (PyBool_Check(value.ptr())) {
+        result.all = value.cast<bool>();
+        return result;
+    }
+    if (!py::isinstance<py::dict>(value)) {
+        throw py::type_error("arrayVectorToColumns must be a bool or a dict of column names to positive integers.");
+    }
+    for (auto item : py::reinterpret_borrow<py::dict>(value)) {
+        if (!py::isinstance<py::str>(item.first) || !PyLong_Check(item.second.ptr()) ||
+            PyBool_Check(item.second.ptr())) {
+            throw py::type_error("arrayVectorToColumns requires string column names and positive integer widths.");
+        }
+        auto width = item.second.cast<ddb::INDEX>();
+        if (width <= 0) {
+            throw py::value_error("arrayVectorToColumns widths must be positive integers.");
+        }
+        result.widths.emplace(item.first.cast<std::string>(), width);
+    }
+    return result;
+}
+
 class PyDBConnection;
 void signal_handler_fun(int signum);
 
@@ -670,7 +693,9 @@ public:
 
     py::object run(const std::string &script, const py::args &args, const py::handle &clearMemory = py::none(),
                    const py::handle &pickleTableToList = py::none(), const py::handle &priority = py::none(),
-                   const py::handle &parallelism = py::none(), const py::handle &disableDecimal = py::none(), const py::handle &withTableSchema = py::none()) {
+                   const py::handle &parallelism = py::none(), const py::handle &disableDecimal = py::none(), const py::handle &withTableSchema = py::none(),
+                   const py::handle &arrayVectorToColumns = py::bool_(false)) {
+        auto arrayColumns = parseArrayVectorToColumns(arrayVectorToColumns);
         if (enableJobCancellation_) {
             ddb::LockGuard<ddb::Mutex> LockGuard(&PyDBConnection::mapMutex_);
             if (PyDBConnection::runningMap_.count(this) == 0) {
@@ -752,14 +777,14 @@ public:
         if (args.empty()) {
             // script mode
             TRY result = dbConnection_.runPy(script, priority_, parallelism_, 0, clearMemory_, pickleTableToList_,
-                                             disableDecimal_, withTableSchema_);
+                                             disableDecimal_, withTableSchema_, arrayColumns);
             CATCH_EXCEPTION("<Exception> in run: ")
         } else {
             // function mode
             TRY std::vector<ddb::RequestArgument> requestArgs =
                     makeRequestArguments(args, isArrowProtocol(dbConnection_));
             result = dbConnection_.runPy(script, requestArgs, priority_, parallelism_, 0, clearMemory_,
-                                         ddb::REQUEST_FORMAT_AUTO, pickleTableToList_, disableDecimal_, withTableSchema_);
+                                         ddb::REQUEST_FORMAT_AUTO, pickleTableToList_, disableDecimal_, withTableSchema_, arrayColumns);
             CATCH_EXCEPTION("<Exception> in run: ")
         }
         return result;
@@ -767,7 +792,9 @@ public:
 
     py::object exec(const std::string &script, const py::handle &clearMemory = py::none(),
                    const py::handle &pickleTableToList = py::none(), const py::handle &priority = py::none(),
-                   const py::handle &parallelism = py::none(), const py::handle &disableDecimal = py::none(), const py::handle &withTableSchema = py::none()) {
+                   const py::handle &parallelism = py::none(), const py::handle &disableDecimal = py::none(), const py::handle &withTableSchema = py::none(),
+                   const py::handle &arrayVectorToColumns = py::bool_(false)) {
+        auto arrayColumns = parseArrayVectorToColumns(arrayVectorToColumns);
         if (enableJobCancellation_) {
             ddb::LockGuard<ddb::Mutex> LockGuard(&PyDBConnection::mapMutex_);
             if (PyDBConnection::runningMap_.count(this) == 0) {
@@ -848,14 +875,16 @@ public:
         py::object result;
         // script mode
         TRY result = dbConnection_.runPy(script, priority_, parallelism_, 0, clearMemory_, pickleTableToList_,
-                                            disableDecimal_, withTableSchema_);
+                                            disableDecimal_, withTableSchema_, arrayColumns);
         CATCH_EXCEPTION("<Exception> in exec: ")
         return result;
     }
 
     py::object call(const std::string &func, const py::args &args, const py::handle &clearMemory = py::none(),
                    const py::handle &pickleTableToList = py::none(), const py::handle &priority = py::none(),
-                   const py::handle &parallelism = py::none(), const py::handle &disableDecimal = py::none(), const py::handle &withTableSchema = py::none()) {
+                   const py::handle &parallelism = py::none(), const py::handle &disableDecimal = py::none(), const py::handle &withTableSchema = py::none(),
+                   const py::handle &arrayVectorToColumns = py::bool_(false)) {
+        auto arrayColumns = parseArrayVectorToColumns(arrayVectorToColumns);
         if (enableJobCancellation_) {
             ddb::LockGuard<ddb::Mutex> LockGuard(&PyDBConnection::mapMutex_);
             if (PyDBConnection::runningMap_.count(this) == 0) {
@@ -938,7 +967,7 @@ public:
         TRY std::vector<ddb::RequestArgument> requestArgs =
                 makeRequestArguments(args, isArrowProtocol(dbConnection_));
         result = dbConnection_.runPy(func, requestArgs, priority_, parallelism_, 0, clearMemory_,
-                                     ddb::REQUEST_FORMAT_AUTO, pickleTableToList_, disableDecimal_, withTableSchema_);
+                                     ddb::REQUEST_FORMAT_AUTO, pickleTableToList_, disableDecimal_, withTableSchema_, arrayColumns);
         CATCH_EXCEPTION("<Exception> in call: ")
         return result;
     }
@@ -2050,15 +2079,15 @@ PYBIND11_MODULE(_dolphindbcpp, m) {
         .def("run", &PyDBConnection::run, py::arg("script"), py::kw_only(), py::arg("clearMemory") = py::none(),
              py::arg("pickleTableToList") = py::none(), py::arg("priority") = py::none(),
              py::arg("parallelism") = py::none(), py::arg("disableDecimal") = py::none(),
-             py::arg("withTableSchema") = py::none())
+             py::arg("withTableSchema") = py::none(), py::arg("arrayVectorToColumns") = false)
         .def("exec", &PyDBConnection::exec, py::arg("script"), py::kw_only(), py::arg("clearMemory") = py::none(),
              py::arg("pickleTableToList") = py::none(), py::arg("priority") = py::none(),
              py::arg("parallelism") = py::none(), py::arg("disableDecimal") = py::none(),
-             py::arg("withTableSchema") = py::none())
+             py::arg("withTableSchema") = py::none(), py::arg("arrayVectorToColumns") = false)
         .def("call", &PyDBConnection::call, py::arg("script"), py::kw_only(), py::arg("clearMemory") = py::none(),
              py::arg("pickleTableToList") = py::none(), py::arg("priority") = py::none(),
              py::arg("parallelism") = py::none(), py::arg("disableDecimal") = py::none(),
-             py::arg("withTableSchema") = py::none())
+             py::arg("withTableSchema") = py::none(), py::arg("arrayVectorToColumns") = false)
         .def("runBlock", &PyDBConnection::runBlock, py::arg("script"), py::kw_only(),
              py::arg("clearMemory") = py::none(), py::arg("fetchSize") = py::none(), py::arg("priority") = py::none(),
              py::arg("parallelism") = py::none())

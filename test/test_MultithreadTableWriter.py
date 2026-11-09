@@ -3478,10 +3478,12 @@ class TestMultithreadTableWriter:
         conn_.run(f"share streamTable(100:0,[`str],[BLOB]) as {func_name}")
         mtw = ddb.MultithreadedTableWriter(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, '', func_name,
                                            threadCount=1, reconnect=False)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
-        mtw.insert(data)
-        mtw.waitForThreadCompletion()
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
+        try:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+            mtw.insert(data)
+            mtw.waitForThreadCompletion()
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         status = mtw.getStatus()
         assert status.hasError()
 
@@ -3503,9 +3505,11 @@ class TestMultithreadTableWriter:
         """)
         mtw = ddb.MultithreadedTableWriter(HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, db_name, func_name,
                                            threadCount=1)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
-        mtw.insert(data, data)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
+        try:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+            mtw.insert(data, data)
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         mtw.waitForThreadCompletion()
         status = mtw.getStatus()
         assert not status.hasError()
@@ -3527,9 +3531,11 @@ class TestMultithreadTableWriter:
             usePublicName=True,
             tryReconnectNums=1
         )
-        operateNodes(conn, [f'dnode{PORT_DNODE2}',f'dnode{PORT_DNODE3}'], "STOP")
-        mtw.insert("test")
-        operateNodes(conn, [f'dnode{PORT_DNODE2}',f'dnode{PORT_DNODE3}'], "START")
+        try:
+            operateNodes(conn, [f'dnode{PORT_DNODE2}',f'dnode{PORT_DNODE3}'], "STOP")
+            mtw.insert("test")
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE2}',f'dnode{PORT_DNODE3}'], "START")
         mtw.waitForThreadCompletion()
         status = mtw.getStatus()
         assert not status.hasError()
@@ -3550,16 +3556,19 @@ class TestMultithreadTableWriter:
             db=database("{db_name}",VALUE,["0","1","2"],engine=`TSDB)
             tb=db.createPartitionedTable(tab,"{func_name}",`test,sortColumns=`test)
         """)
-        result = subprocess.run([sys.executable, '-c',
-                                 "import dolphindb as ddb;"
-                                 "from basic_testing.utils import operateNodes;"
-                                 "from time import sleep;"
-                                 f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
-                                 f"mtw=ddb.MultithreadedTableWriter('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}','{db_name}','{func_name}',tryReconnectNums={n});"
-                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}'],'STOP');"""
-                                 "mtw.insert('test','test');"
-                                 "mtw.waitForThreadCompletion()"
-                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        try:
+            result = subprocess.run([sys.executable, '-c',
+                                     "import dolphindb as ddb;"
+                                     "from basic_testing.utils import operateNodes;"
+                                     "from time import sleep;"
+                                     f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
+                                     f"mtw=ddb.MultithreadedTableWriter('{HOST_CLUSTER}',{PORT_DNODE1},'{USER_CLUSTER}','{PASSWD_CLUSTER}','{db_name}','{func_name}',tryReconnectNums={n});"
+                                     f"""operateNodes(conn,['dnode{PORT_DNODE1}'],'STOP');"""
+                                     "mtw.insert('test','test');"
+                                     "mtw.waitForThreadCompletion()"
+                                     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], 'START')
+
         assert result.stdout.count("Failed to connect") + result.stdout.count("DataNodeNotAvail") == n
-        assert f"Connect to nodes failed after {n} reconnect attempts." in result.stdout
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], 'START')
+        assert f"Connect to {HOST_CLUSTER}:{PORT_DNODE1} failed after {n} reconnect attempts." in result.stdout

@@ -1,11 +1,10 @@
 # Linux ARM64 / Python 3.14 离线打包
 
-范围：修复日志中失败的 `linux:arm64:v3`，并增加独立的 `linux:arm64:v3:verify` 手动验证任务。其他平台、ARM64 v1/v2、FTP 上传任务保留原有配置。
+范围：使用离线依赖构建 `linux:arm64:v3`。ARM64 v1/v2 的离线构建见对应说明。
 
 ## 改动
 
 - `.gitlab-ci.yml`：该任务改用 `build_arm64_v3.sh`；保留构建目标、Runner 标签、触发规则和 `wheelhouse/` 构建产物。
-- `linux:arm64:v3:verify`：继承相同构建配置，始终手动启动，生成独立构建产物，没有关联的 FTP 上传任务。首次使用该任务验证，成功后再运行正式构建发布任务。
 - `prepare_arm64_v3.py`：在联网机器解析、下载两组 ARM64 wheel，并打成离线包；只下载，不编译 SDK。
 - `*.in` / `*.txt`：工具直接依赖与生成的完整版本清单。SDK 构建、运行依赖从 `pyproject.toml` 读取；uv 按目标 Python/平台解析，避免本机环境标记影响依赖选择。
 - `cibuildwheel-4.2.0-cp314-constraints.txt`：随版本保存的官方工具约束，包括测试环境安装 virtualenv 时会使用的间接依赖版本。
@@ -70,7 +69,7 @@ docker run --rm --network=none manylinux_2_28_aarch64:dolphindb_v3 \
 
 ## 服务器验证
 
-首次在 GitLab 启动 `linux:arm64:v3:verify`。它与正式 ARM v3 使用相同脚本及依赖目录，由有权限的 Runner 运行，并不会触发 FTP 上传。无需给上传材料的个人账号增加 Docker 或 Conda 访问权限。
+在 GitLab 启动 `linux:arm64:v3`。无需给上传材料的个人账号增加 Docker 或 Conda 访问权限。该任务成功后，现有上传任务会自动清理对应 FTP 发布目录并上传。
 
 如果已有直接运行构建所需的权限，也可在源码目录设置与 GitLab 相同的 `CI_CUS_LINUX_ARM_PYTHON_PATH_V2`、`DOCKER_TAG_V3` 后执行：
 
@@ -79,7 +78,7 @@ DDB_ARM64_V3_OFFLINE_DIR=/hdd/hdd5/gitlab-runner/offline/arm64-v3 \
   bash scripts/offline/build_arm64_v3.sh
 ```
 
-脚本固定构建 `cp314-manylinux_aarch64`，手动执行也不会意外构建其他 Python 版本。脚本本身不上传 FTP。验证任务中观察：
+脚本固定构建 `cp314-manylinux_aarch64`，手动执行也不会意外构建其他 Python 版本。脚本本身不上传 FTP。构建任务中观察：
 
 1. 版本清单匹配、镜像架构检查通过，宿主机工具安装日志只出现本地离线目录。
 2. 容器以 `--network=none` 运行；pip 不访问外部包源。
@@ -89,9 +88,7 @@ DDB_ARM64_V3_OFFLINE_DIR=/hdd/hdd5/gitlab-runner/offline/arm64-v3 \
 
 没有材料、版本清单不匹配或镜像缺失时立即退出，不在线补装。上述完整链路尚需在真实 ARM Runner 验证；本机不运行 SDK 原生编译或 cibuildwheel。
 
-验证通过后，需要发布时再启动 `linux:arm64:v3`。现有上传任务只依赖这个正式任务，成功后会自动清理对应 FTP 发布目录并上传；不会因 `linux:arm64:v3:verify` 成功而启动。
-
-其他平台的阻塞式手动任务可能让整个 Pipeline 显示 blocked，先以 ARM verify 任务及其构建产物判断本次验证结果。连库验证另在允许访问内网 DolphinDB 的环境执行。上传任务仍在 `Linux-x86_64` Runner 上执行，需要它能访问 GitLab 构建产物和 FTP。
+其他平台的阻塞式手动任务可能让整个 Pipeline 显示 blocked，先以 ARM 构建任务及其构建产物判断结果。连库验证另在允许访问内网 DolphinDB 的环境执行。上传任务仍在 `Linux-x86_64` Runner 上执行，需要它能访问 GitLab 构建产物和 FTP。
 
 ## 本次本地验证（2026-10-19）
 
@@ -101,7 +98,7 @@ DDB_ARM64_V3_OFFLINE_DIR=/hdd/hdd5/gitlab-runner/offline/arm64-v3 \
 - CPython 3.14 / ARM64 依赖使用真实 pip 做 `--dry-run --ignore-installed --no-index --no-cache-dir` 检查，通过；未在 x86 本机安装或执行 ARM 扩展。
 - 移除 pybind11 wheel 后，真实 pip 检查明确失败，未访问在线包源或退回源码编译。
 - 通过实际 cibuildwheel 4.2.0 的配置解析器确认网络禁用、只读挂载、本地包源、hook 覆盖、构建目标和 import 冒烟配置生效；仅解析配置，未启动构建。
-- CI YAML 结构、Bash/Python 语法检查通过；对比确认原有其他 23 个任务配置保持不变，新增的手动验证任务没有 FTP 依赖。
+- 当时 CI YAML 结构、Bash/Python 语法检查通过。
 - 尚未执行真实 ARM64 C++ 编译、动态库处理、成品导入或 FTP 上传；以上仍需服务器验证。
 
 ## 本次服务器材料核对（2026-10-19）
@@ -109,13 +106,13 @@ DDB_ARM64_V3_OFFLINE_DIR=/hdd/hdd5/gitlab-runner/offline/arm64-v3 \
 - 已将离线包上传并解压到 `armserver` 的 `/hdd/hdd5/gitlab-runner/offline/arm64-v3`。
 - 在服务器核对两组 wheel 的文件名、数量及 requirements 内容，均与本地版本清单一致；全部 wheel 的 ZIP 完整性检查通过。
 - 路径各级目录可遍历，依赖文件有读取权限，可供 Runner 使用；不需要个人账号访问 Docker。
-- 个人账号不能读取构建 Conda 环境或访问 Docker，实际 Python 3.11、镜像及 SDK 编译/导入验证仍由首次 `linux:arm64:v3:verify` 完成。
+- 个人账号不能读取构建 Conda 环境或访问 Docker，实际 Python 3.11、镜像及 SDK 编译/导入验证需由 GitLab 构建任务完成。
 
 ## APY-2070 启动检查修正
 
 - 修正必填参数提示中的单引号，避免 Bash 对后续初始化代码产生错误解析。
 - 已用真实 Bash 执行检查必填变量缺失、正常初始化及 Python 版本校验；并在 `armserver` 的 Bash 5.0.17 上确认路径、版本清单比较及镜像变量初始化正常。
-- 本次修正不改变离线依赖，服务器无需重新上传依赖包；完整 ARM 构建仍在 GitLab 的 `linux:arm64:v3:verify` 中验证。
+- 本次修正不改变离线依赖，服务器无需重新上传依赖包；完整 ARM 构建需在 GitLab 构建任务中验证。
 
 ## 官方依据
 

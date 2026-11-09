@@ -122,6 +122,19 @@ class DBConnection:
         with self._mutex:
             self._in_block_reading = False
 
+    @staticmethod
+    def _check_array_columns_fetch(option, fetch_size):
+        if not isinstance(option, (bool, dict)):
+            raise TypeError("array_vector_to_columns must be a bool or a dict.")
+        if isinstance(option, dict):
+            for name, width in option.items():
+                if not isinstance(name, str) or type(width) is not int:
+                    raise TypeError("Array column names must be strings and widths must be integers.")
+                if width <= 0:
+                    raise ValueError("Array column widths must be positive integers.")
+        if option and fetch_size is not None:
+            raise ValueError("array_vector_to_columns does not support fetch_size.")
+
     @overload
     def connect(
         self,
@@ -234,6 +247,7 @@ class DBConnection:
         parallelism: int = 64,
         fetch_size: Optional[int] = None,
         disable_decimal: bool = False,
+        array_vector_to_columns: Union[bool, Dict[str, int]] = False,
     ) -> Any:
         """Execute script.
 
@@ -243,6 +257,16 @@ class DBConnection:
         Kwargs:
             clear_memory : whether to release variables after queries.
                 True means to release, otherwise False. Defaults to False.
+            array_vector_to_columns : False preserves array cells; True expands all
+                fixed-width ArrayVector columns; a dict maps selected result column
+                names to positive widths, including for empty tables. Columns are
+                named name1, name2, ... at the original position. True cannot infer
+                widths for empty tables; declare widths for queries that may return
+                no rows. Non-table results are returned normally without expansion.
+                Requires synchronous DDB without table_to_list or fetch_size.
+                NULL follows scalar-column rules: integers become float64 with NaN,
+                bool becomes object with None. LONG with NULL has float64 precision
+                limits; other levels without NULL retain their original dtype.
             table_to_list : whether to convert table to list or DataFrame.
                 True: to list, False: to DataFrame.  Defaults to False.
             priority : a job priority system with 10 priority levels (0 to 9),
@@ -269,6 +293,7 @@ class DBConnection:
             table contains array vectors, it will be converted to a NumPy 2d array.
             If the length of each row is different, the execution fails.
         """
+        self._check_array_columns_fetch(array_vector_to_columns, fetch_size)
         if priority is not None:
             if not isinstance(priority, int) or priority > 9 or priority < 0:
                 raise RuntimeError("priority must be an integer from 0 to 9")
@@ -294,6 +319,7 @@ class DBConnection:
             priority=priority,
             parallelism=parallelism,
             disableDecimal=disable_decimal,
+            arrayVectorToColumns=array_vector_to_columns,
         )
 
     def _exec_with_table_schema(
@@ -333,6 +359,7 @@ class DBConnection:
         priority: int = 4,
         parallelism: int = 64,
         disable_decimal: bool = False,
+        array_vector_to_columns: Union[bool, Dict[str, int]] = False,
     ) -> Any:
         """Execute function.
 
@@ -343,6 +370,16 @@ class DBConnection:
         Kwargs:
             clear_memory : whether to release variables after queries.
                 True means to release, otherwise False. Defaults to False.
+            array_vector_to_columns : False preserves array cells; True expands all
+                fixed-width ArrayVector columns; a dict maps selected result column
+                names to positive widths, including for empty tables. Columns are
+                named name1, name2, ... at the original position. True cannot infer
+                widths for empty tables; declare widths for queries that may return
+                no rows. Non-table results are returned normally without expansion.
+                Requires synchronous DDB without table_to_list or fetch_size.
+                NULL follows scalar-column rules: integers become float64 with NaN,
+                bool becomes object with None. LONG with NULL has float64 precision
+                limits; other levels without NULL retain their original dtype.
             table_to_list : whether to convert table to list or DataFrame.
                 True: to list, False: to DataFrame.  Defaults to False.
             priority : a job priority system with 10 priority levels (0 to 9),
@@ -383,6 +420,7 @@ class DBConnection:
             priority=priority,
             parallelism=parallelism,
             disableDecimal=disable_decimal,
+            arrayVectorToColumns=array_vector_to_columns,
         )
 
     def _call_with_table_schema(

@@ -8,8 +8,10 @@
 #include "ScalarImp.h"
 #include "Logger.h"
 #include "DolphinDB.h"
+#include <chrono>
 #include <list>
 #include <map>
+#include <stdexcept>
 #ifndef WINDOWS
 #include <arpa/inet.h>
 #else
@@ -69,6 +71,13 @@ private:
 };
 
 namespace dolphindb {
+
+// Bound for control-plane connect/RPC calls (connect, login, getSubscriptionTopic,
+// publishTable, stopPublishTable) on subscription connections, so that a node
+// which accepts TCP but never responds cannot stall (re)subscription or
+// unsubscribe indefinitely. The streaming data socket's response timeout is
+// cleared once the subscription is established; see subscribeInternal.
+constexpr std::chrono::milliseconds kStreamingControlTimeout{30000};
 
 template <typename T>
 ConstantSP arg(SmartPointer<T> v) {
@@ -646,7 +655,8 @@ private:
     inline string getSite(string topic) { return topic.substr(0, topic.find_first_of('/')); }
     DBConnection buildConn(string host, int port) {
         DBConnection conn;
-        if (!conn.connect(host, port)) {
+        if (!conn.connect(host, port, "", "", "", false, vector<string>(), -1, false, -1,
+                          kStreamingControlTimeout, kStreamingControlTimeout)) {
             throw RuntimeException("Failed to connect to server: " + host + " " + std::to_string(port));
         }
 
@@ -674,19 +684,27 @@ private:
         string msg{s};
 		size_t index = msg.find("<NotLeader>");
 		if (index != string::npos) {
-			index = msg.find(">");
+			index = msg.find(">", index);
 			string ipport = msg.substr(index + 1);
 
 			auto v = Util::split(ipport, ':');
 			if (v.size() < 2) {
 				return false;
 			}
-			host = v[0];
-			port = std::stoi(v[1]);
-			if (port <= 0 || port > 65535) {
-				return false;
-			}
-			return true;
+            int newPort;
+            try {
+                newPort = std::stoi(v[1]);
+            } catch (const std::invalid_argument&) {
+                return false;
+            } catch (const std::out_of_range&) {
+                return false;
+            }
+            if (v[0].empty() || newPort <= 0 || newPort > 65535) {
+                return false;
+            }
+            host = v[0];
+            port = newPort;
+            return true;
 		}
 		return false;
     }
@@ -705,7 +723,7 @@ private:
     Hashmap<string, pair<long long, long long>> topicReconn_;
 	BlockingQueue<ActivePublisherSP> publishers_;
     Mutex mtx_;
-    std::queue<SubscribeInfo> initResub_;
+    std::queue<std::pair<SubscribeInfo, long long>> initResub_; // subscription, last failed attempt (ms)
 	bool exit_;
 	Mutex readyMutex_;
     std::list<HAStreamTableInfo> haStreamTableInfo_;
@@ -742,11 +760,15 @@ void StreamingClientImpl::init(){
 }
 
 void StreamingClientImpl::checkServerVersion(std::string host, int port, const std::vector<std::string>& backupSites){
-    DBConnection conn;
     unsigned index = 0;
+    string versionStr;
     while(true){
         try{
-            conn = buildConn(host, port);
+            DBConnection conn = buildConn(host, port);
+            vector<ConstantSP> args;
+            // Both connect and this RPC must be inside the candidate loop:
+            // a node that accepts TCP but stalls RPCs must not skip backups.
+            versionStr = conn.run("version", args)->getString();
             break;
         }
         catch(const std::exception& e){
@@ -758,8 +780,6 @@ void StreamingClientImpl::checkServerVersion(std::string host, int port, const s
         }
     }
 
-    vector<ConstantSP> args;
-    auto versionStr = conn.run("version", args)->getString();
     auto _ = Util::split(Util::split(versionStr, ' ')[0], '.');
     auto v0 = std::stoi(_[0]);
     auto v1 = std::stoi(_[1]);
@@ -921,36 +941,51 @@ void StreamingClientImpl::reconnect() {
         // if init unsuccessfully
         {
             LockGuard<Mutex> _(&mtx_);
-            vector<SubscribeInfo> v;
+            vector<std::pair<SubscribeInfo, long long>> v;
             while (!initResub_.empty() && isExit()==false) {
-                auto info = initResub_.front();
+                auto pending = initResub_.front();
                 string _host;
                 int _port = 0;
                 initResub_.pop();
-                try {
-                    if(!info.availableSites.empty()){
-                        info.currentSiteIndex = (info.currentSiteIndex + 1) % info.availableSites.size();
-                        info.host = info.availableSites[info.currentSiteIndex].first;
-                        info.port = info.availableSites[info.currentSiteIndex].second;
+                // Try each candidate before waiting between failed rounds.
+                const bool roundComplete = pending.first.availableSites.empty() ||
+                    pending.first.currentSiteIndex == static_cast<int>(pending.first.availableSites.size()) - 1;
+                if (roundComplete && Util::getEpochTime() - pending.second <= pending.first.resubTimeout) {
+                    v.emplace_back(std::move(pending));
+                    continue;
+                }
+                auto info = std::move(pending.first);
+                if (!info.availableSites.empty()) {
+                    info.currentSiteIndex = (info.currentSiteIndex + 1) % info.availableSites.size();
+                    info.host = info.availableSites[info.currentSiteIndex].first;
+                    info.port = info.availableSites[info.currentSiteIndex].second;
+                }
+                int leaderRedirects = 0;
+                while (!isExit()) {
+                    try {
+                        DBConnection conn = buildConn(info.host, info.port);
+                        LockGuard<Mutex> lock(&readyMutex_);
+                        auto topic = subscribeInternal(conn, info);
+                        insertMeta(info, topic);
+                        break;
+                    } catch (exception &e) {
+                        if (info.availableSites.empty() && getNewLeader(e.what(), _host, _port)) {
+                            LOG_ERR("when handle initResub_, Got NotLeaderException, switch to leader node [", _host, ":", _port, "] for subscription");
+                            HAStreamTableInfo haInfo{info.host, info.port, info.tableName, info.actionName, _host, _port};
+                            haStreamTableInfo_.push_back(haInfo);
+                            info.host = _host;
+                            info.port = _port;
+                            // Follow known leaders in this attempt; bound redirect loops.
+                            if (leaderRedirects < 10) {
+                                ++leaderRedirects;
+                                continue;
+                            }
+                        } else {
+                            LOG_ERR("Failed to resubscribe with exception:", e.what());
+                        }
+                        v.emplace_back(std::move(info), Util::getEpochTime());
+                        break;
                     }
-                    DBConnection conn = buildConn(info.host, info.port);
-                    LockGuard<Mutex> lock(&readyMutex_);
-                    auto topic = subscribeInternal(conn, info);
-                    insertMeta(info, topic);
-                } catch (exception &e) {
-                    if (!info.availableSites.empty()){
-                        LOG_ERR("Failed to resubscribe with exception:", e.what());
-                    }
-                    else if (getNewLeader(e.what(), _host, _port)) {
-                        LOG_ERR("when handle initResub_, Got NotLeaderException, switch to leader node [", _host, ":", _port, "] for subscription");
-                        HAStreamTableInfo haInfo{info.host, info.port, info.tableName, info.actionName, _host, _port};
-                        haStreamTableInfo_.push_back(haInfo);
-                        info.host = _host;
-                        info.port = _port;
-                    }else {
-                        LOG_ERR("Failed to resubscribe with exception:", e.what());
-                    }
-                    v.emplace_back(info);
                 }
             }
             if (isExit()) {
@@ -959,7 +994,7 @@ void StreamingClientImpl::reconnect() {
             }
 
             for (auto &i : v) {
-                initResub_.push(i);
+                initResub_.push(std::move(i));
             }
         }
 
@@ -1214,12 +1249,16 @@ string StreamingClientImpl::subscribeInternal(DBConnection &conn, SubscribeInfo 
 
 	if (isListenMode() == false) {
 		std::shared_ptr<DBConnection> activeConn = std::make_shared<DBConnection>(false, false, 30, false, PARSER_TYPE::PARSER_DOLPHINDB, true);
-		if (!activeConn->connect(info.host, info.port, "", "", "", false, vector<string>(), 30)) {
+		if (!activeConn->connect(info.host, info.port, "", "", "", false, vector<string>(), 30, false, -1,
+		                         std::chrono::milliseconds{-1}, kStreamingControlTimeout)) {
 			throw RuntimeException("Failed to connect to server: " + info.host + " " + std::to_string(info.port));
 		}
 		sendPublishRequest(*activeConn, info);
 		ActivePublisherSP publisher = new ActivePublisher(activeConn);
 		info.socket = publisher->getDataInputStream()->getSocket();
+		// Handshake is done; this socket now carries the data stream, where reads
+		// must block without a response deadline while no messages arrive.
+		info.socket->setRecvTimeout(0);
 		publishers_.push(publisher);
 	}
 	else {
@@ -1309,7 +1348,7 @@ SubscribeInfo StreamingClientImpl::subscribeInternal(const string &host, int por
         } catch (exception &e) {
             if(!backupSites.empty()){
                 LockGuard<Mutex> _(&mtx_);
-                initResub_.push(info);
+                initResub_.emplace(info, Util::getEpochTime());
                 insertMeta(info, topic);
                 return info;
             }
@@ -1319,7 +1358,7 @@ SubscribeInfo StreamingClientImpl::subscribeInternal(const string &host, int por
                 haStreamTableInfo_.push_back(info);
             } else if (resubscribe) {
                 LockGuard<Mutex> _(&mtx_);
-                initResub_.push(info);
+                initResub_.emplace(info, Util::getEpochTime());
                 insertMeta(info, topic);
                 return info;
             } else {
@@ -1339,10 +1378,11 @@ void StreamingClientImpl::unsubscribeInternal(const string &host, int port, cons
     {
         // Wait for an in-flight initial retry, then cancel queued retries before
         // looking up the final topic. Never hold mtx_ while joining handlers.
+        // Other queued subscriptions keep their last-failure timestamps.
         LockGuard<Mutex> lock(&mtx_);
-        std::queue<SubscribeInfo> remaining;
+        std::queue<std::pair<SubscribeInfo, long long>> remaining;
         while (!initResub_.empty()) {
-            if (initResub_.front().ID != _id) {
+            if (initResub_.front().first.ID != _id) {
                 remaining.push(std::move(initResub_.front()));
             }
             initResub_.pop();

@@ -70,7 +70,7 @@ MultithreadedTableWriter::MultithreadedTableWriter(
         highAvailabilitySites.assign(pHighAvailabilitySites->begin(), pHighAvailabilitySites->end());
     }
     bool ret = pConn->connect(hostName, port, userId, password, "", enableHighAvailability, highAvailabilitySites, 30,
-                              false, -1, std::chrono::milliseconds{-1}, std::chrono::milliseconds{-1}, usePublicName);
+                              false, tryReconnectNums, std::chrono::milliseconds{-1}, std::chrono::milliseconds{-1}, usePublicName);
     if (!ret) {
         throw RuntimeException("Failed to connect to server " + hostName + ":" + std::to_string(port));
     }

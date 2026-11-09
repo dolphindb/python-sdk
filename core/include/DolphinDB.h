@@ -146,15 +146,18 @@ public:
 	py::object runPy(
 		const string& script, int priority=4, int parallelism=64,
 		int fetchSize=0, bool clearMemory=false,
-		bool pickleTableToList=false, bool disableDecimal=false, bool withTableSchema = false);
+		bool pickleTableToList=false, bool disableDecimal=false, bool withTableSchema = false,
+        const converter::ArrayVectorToColumns &arrayVectorToColumns = {});
 	py::object runPy(
 		const string& funcName, vector<ConstantSP>& args, int priority=4, int parallelism=64,
 		int fetchSize=0, bool clearMemory=false,
-		bool pickleTableToList=false, bool disableDecimal=false, bool withTableSchema = false);
+		bool pickleTableToList=false, bool disableDecimal=false, bool withTableSchema = false,
+        const converter::ArrayVectorToColumns &arrayVectorToColumns = {});
 	py::object runPy(
 		const string& funcName, vector<RequestArgument>& args, int priority=4, int parallelism=64,
 		int fetchSize=0, bool clearMemory=false, REQUEST_FORMAT requestFormat = REQUEST_FORMAT_AUTO,
-		bool pickleTableToList=false, bool disableDecimal=false, bool withTableSchema = false);
+		bool pickleTableToList=false, bool disableDecimal=false, bool withTableSchema = false,
+        const converter::ArrayVectorToColumns &arrayVectorToColumns = {});
 	py::object uploadPy(vector<string>& names, vector<RequestArgument>& objs,
 		REQUEST_FORMAT requestFormat = REQUEST_FORMAT_AUTO);
 	void setTimeout(int netTimeout, int timeout);

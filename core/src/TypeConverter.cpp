@@ -6,6 +6,8 @@
 #include "TypeException.h"
 
 #include <cstring>
+#include <limits>
+#include <set>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -4050,6 +4052,121 @@ void _toPython_Old_createPyVector(
     }
 }
 
+namespace {
+
+const char *arrayNumericDtype(DATA_TYPE type) {
+    switch (type) {
+    case dolphindb::DT_BOOL: return "bool";
+    case dolphindb::DT_CHAR: return "int8";
+    case dolphindb::DT_SHORT: return "int16";
+    case dolphindb::DT_INT: return "int32";
+    case dolphindb::DT_LONG: return "int64";
+    case dolphindb::DT_FLOAT: return "float32";
+    case dolphindb::DT_DOUBLE: return "float64";
+    default: return nullptr;
+    }
+}
+
+py::object convertArrayColumn(const VectorSP &values, INDEX rows, INDEX width, INDEX level) {
+    // Gather one level so NULL handling is identical to a server-projected scalar column.
+    VectorSP indices = Util::createIndexVector(rows, true);
+    INDEX *index = indices->getIndexArray();
+    for (INDEX row = 0; row < rows; ++row) {
+        index[row] = row * width + level;
+    }
+    ConstantSP source = values;
+    VectorSP column = source->get(indices);
+    column->setNullFlag(column->hasNull());
+    py::object result;
+    _toPython_Old_createPyVector(column, result, true, ToPythonOption());
+    return result;
+}
+
+template <typename T, typename Output = T>
+py::object expandNumericColumn(const VectorSP &values, INDEX rows, INDEX width, INDEX level,
+                               const char *dtype, T nullValue) {
+    py::array data(py::dtype(dtype), {rows}, {});
+    auto *target = static_cast<Output *>(data.mutable_data());
+    const auto *source = static_cast<const T *>(values->getDataArray());
+    for (INDEX row = 0; row < rows; ++row) {
+        T value = source[row * width + level];
+        if (values->getNullFlag() && value == nullValue) {
+            return convertArrayColumn(values, rows, width, level);
+        }
+        target[row] = static_cast<Output>(value);
+    }
+    return data;
+}
+
+py::object expandArrayColumn(const VectorSP &values, INDEX rows, INDEX width, INDEX level) {
+    if (values->isFastMode()) {
+        switch (values->getType()) {
+        case dolphindb::DT_BOOL:
+            return expandNumericColumn<char, bool>(values, rows, width, level, "bool", CHAR_MIN);
+        case dolphindb::DT_CHAR:
+            return expandNumericColumn<char>(values, rows, width, level, "int8", CHAR_MIN);
+        case dolphindb::DT_SHORT:
+            return expandNumericColumn<short>(values, rows, width, level, "int16", SHRT_MIN);
+        case dolphindb::DT_INT:
+            return expandNumericColumn<int>(values, rows, width, level, "int32", INT_MIN);
+        case dolphindb::DT_LONG:
+            return expandNumericColumn<long long>(values, rows, width, level, "int64", LLONG_MIN);
+        case dolphindb::DT_FLOAT:
+            return expandNumericColumn<float>(values, rows, width, level, "float32", FLT_NMIN);
+        case dolphindb::DT_DOUBLE:
+            return expandNumericColumn<double>(values, rows, width, level, "float64", DBL_NMIN);
+        default: break;
+        }
+    }
+    return convertArrayColumn(values, rows, width, level);
+}
+
+std::vector<INDEX> expandedWidths(const TableSP &table, const ArrayVectorToColumns &selection) {
+    std::vector<INDEX> widths(table->columns(), 0);
+    std::set<std::string> selected;
+    std::set<std::string> outputNames;
+    for (INDEX col = 0; col < table->columns(); ++col) {
+        const std::string &name = table->getColumnName(col);
+        auto declared = selection.widths.find(name);
+        auto column = table->getColumn(col);
+        bool isArray = column->getType() >= ARRAY_TYPE_BASE;
+        bool expand = declared != selection.widths.end() || (selection.all && isArray);
+        if (expand) {
+            if (!isArray) {
+                throw ConversionException("arrayVectorToColumns: column '" + name + "' is not an ArrayVector.");
+            }
+            auto *array = static_cast<dolphindb::FastArrayVector *>(column.get());
+            // Keep INDEX signed: checkVectorSize returns -1 for ragged arrays.
+            INDEX width = array->checkVectorSize();
+            if (table->rows() == 0 && declared != selection.widths.end()) {
+                width = declared->second;
+            }
+            if (width <= 0 || (declared != selection.widths.end() && width != declared->second)) {
+                throw ConversionException("arrayVectorToColumns: column '" + name +
+                    "' must have a positive, constant width matching its declaration; "
+                    "use a width dictionary for empty tables.");
+            }
+            widths[col] = width;
+            selected.insert(name);
+        }
+        INDEX count = expand ? widths[col] : 1;
+        for (INDEX level = 0; level < count; ++level) {
+            std::string output = expand ? name + std::to_string(level + 1) : name;
+            if (!outputNames.insert(output).second) {
+                throw ConversionException("arrayVectorToColumns: duplicate output column '" + output + "'.");
+            }
+        }
+    }
+    for (const auto &entry : selection.widths) {
+        if (!selected.count(entry.first)) {
+            throw ConversionException("arrayVectorToColumns: result column '" + entry.first + "' does not exist.");
+        }
+    }
+    return widths;
+}
+
+} // namespace
+
 /*
     toPython_Old: used to convert ConstantSP -> py::object ()
 
@@ -4084,7 +4201,31 @@ _toPython_Old(ConstantSP obj, bool tableFlag, const ToPythonOption &option) {
             if (option.table2List_ == false) {
                 size_t size = arrayVector->size();
                 py::array pyVec(py::dtype("object"), {size}, {});
+                VectorSP values = arrayVector->getSourceValue();
+                const char *numpyType = arrayNumericDtype(values->getType());
+                const char *rawValues = numpyType && values->isFastMode()
+                    ? static_cast<const char *>(values->getDataArray()) : nullptr;
+                py::dtype rowDtype;
+                if (rawValues) {
+                    rowDtype = py::dtype(numpyType);
+                }
+                INDEX *ends = arrayVector->getSourceIndex()->getIndexArray();
+                INDEX start = 0;
                 for (size_t i = 0; i < size; ++i) {
+                    INDEX length = ends[i] - start;
+                    // Each cell keeps its own writable allocation, including empty cells.
+                    if (rawValues && !(values->getNullFlag() && values->hasNull(start, length))) {
+                        py::array pySubVec(rowDtype, {length}, {});
+                        if (length > 0) {
+                            memcpy(pySubVec.mutable_data(), rawValues + start * values->getUnitLength(),
+                                   length * values->getUnitLength());
+                        }
+                        Py_IncRef(pySubVec.ptr());
+                        memcpy(pyVec.mutable_data(i), &pySubVec, sizeof(py::object));
+                        start = ends[i];
+                        continue;
+                    }
+                    start = ends[i];
                     VectorSP subArray = arrayVector->get(i);
                     if (subArray->getNullFlag()) {
                         subArray->setNullFlag(subArray->hasNull());
@@ -4119,11 +4260,25 @@ _toPython_Old(ConstantSP obj, bool tableFlag, const ToPythonOption &option) {
         TableSP ddbTbl = obj;
         if(option.table2List_==false) {
             size_t columnSize = ddbTbl->columns();
+            std::vector<INDEX> widths;
+            if (option.arrayVectorToColumns_.enabled()) {
+                widths = expandedWidths(ddbTbl, option.arrayVectorToColumns_);
+            }
             using namespace py::literals;
             py::object dataframe;
             auto dict = py::dict();
             for(size_t i = 0; i < columnSize; ++i) {
-                dict[ddbTbl->getColumnName(i).data()] = _toPython_Old(ddbTbl->getColumn(i), true, option);
+                auto column = ddbTbl->getColumn(i);
+                const auto &name = ddbTbl->getColumnName(i);
+                if (!widths.empty() && widths[i] > 0) {
+                    auto *array = static_cast<dolphindb::FastArrayVector *>(column.get());
+                    for (INDEX level = 0; level < widths[i]; ++level) {
+                        dict[py::str(name + std::to_string(level + 1))] =
+                            expandArrayColumn(array->getSourceValue(), ddbTbl->rows(), widths[i], level);
+                    }
+                } else {
+                    dict[py::str(name)] = _toPython_Old(column, true, ToPythonOption());
+                }
             }
             dataframe = PyObjs::cache_->pandas_.attr("DataFrame")(dict);
             pyObject=std::move(dataframe);

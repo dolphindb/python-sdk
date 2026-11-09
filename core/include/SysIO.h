@@ -73,6 +73,7 @@ public:
 	bool isValid();
 	void setAutoClose(bool option) { autoClose_ = option;}
 	void setTimeout(int netTimeout, int timeout);
+	void setRecvTimeout(int timeoutMs);
 	static void enableTcpNoDelay(bool enable);
 	static bool ENABLE_TCP_NODELAY;
 	bool skipAll();
@@ -81,7 +82,6 @@ private:
 	int timedConnect(const struct sockaddr *addr, socket_len_t addrlen, int timeoutMs);
 	void getRecvTimeout(int &timeoutMs);
 	void getSendTimeout(int &timeoutMs);
-	void setRecvTimeout(int timeoutMs);
 	void setSendTimeout(int timeoutMs);
 	bool setNonBlocking();
 	bool setBlocking();

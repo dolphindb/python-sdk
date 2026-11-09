@@ -174,9 +174,17 @@ public:
 };
 
 
+struct EXPORT_DECL ArrayVectorToColumns {
+    bool all = false;
+    std::map<std::string, dolphindb::INDEX> widths;
+
+    bool enabled() const { return all || !widths.empty(); }
+};
+
 struct EXPORT_DECL ToPythonOption {
 public:
     bool        table2List_;    // if object is table, false: convert to pandas, true: convert to list[numpy]
+    ArrayVectorToColumns arrayVectorToColumns_;
 public:
     ToPythonOption(): table2List_(false) {}
     ToPythonOption(bool table2List): table2List_(table2List) {}

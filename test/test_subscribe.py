@@ -1,8 +1,11 @@
 import inspect
+import json
 import random
 import re
 import subprocess
 import sys
+import threading
+import time
 from itertools import chain
 from time import sleep
 
@@ -10,6 +13,7 @@ import dolphindb as ddb
 import numpy as np
 import pandas as pd
 import pytest
+from dolphindb.logger import Sink
 from pandas._testing import assert_frame_equal
 from pydantic import ValidationError
 
@@ -19,6 +23,53 @@ from basic_testing.utils import operateNodes
 from setup.prepare import CountBatchDownLatch
 from setup.settings import HOST, PORT, USER, PASSWD, HOST_CLUSTER, PORT_DNODE1, USER_CLUSTER, PASSWD_CLUSTER, \
     PORT_CONTROLLER, PORT_DNODE2, PORT_DNODE3
+
+
+class ResubscribeRecorder(Sink):
+    def __init__(self, keyword="Failed to resubscribe"):
+        self.name_ = f"apy2063_resubscribe_recorder_{id(self)}"
+        super().__init__(self.name_)
+        self._keyword = keyword
+        self._times = []
+        self._lock = threading.Lock()
+
+    def handle(self, msg):
+        if self._keyword in msg.log:
+            with self._lock:
+                self._times.append(time.monotonic())
+
+    def times(self):
+        with self._lock:
+            return list(self._times)
+
+
+def resubscribe_intervals_ms(times):
+    return [(times[i + 1] - times[i]) * 1000 for i in range(len(times) - 1)]
+
+
+def get_cluster_data_nodes():
+    for entry_port in [PORT_CONTROLLER, PORT_DNODE1, PORT_DNODE2, PORT_DNODE3]:
+        conn = ddb.Session()
+        try:
+            conn.connect(HOST_CLUSTER, entry_port, USER_CLUSTER, PASSWD_CLUSTER)
+            perf = conn.run("rpc(getControllerAlias(), getClusterPerf)")
+        except Exception as e:
+            print(f"connect {HOST_CLUSTER}:{entry_port} as controller entry failed: {e}")
+            continue
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        nodes = []
+        for _, row in perf.iterrows():
+            if int(row["mode"]) != 0:
+                continue
+            nodes.append((row["host"], int(row["port"])))
+        print(f"cluster {HOST_CLUSTER}:{entry_port} data nodes: {nodes}")
+        if len(nodes) >= 3:
+            return nodes
+    return []
 
 
 def gethandler(df, counter):
@@ -1499,30 +1550,33 @@ class TestSubscribe:
         for sql in conn3_insert:
             conn3.run(sql)
         wait_until(10)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
-        wait_until(20)
-        operateNodes(conn, [f'dnode{PORT_DNODE2}'], "STOP")
-        wait_until(30)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}'], "START")
-        df_expect = pd.DataFrame({
-            'a': [i for i in range(1, 31)],
-            'b': ["DataNode1"] * 10 + ["DataNode2"] * 10 + ["DataNode3"] * 10,
-        })
-        assert_frame_equal(df, df_expect, check_dtype=False)
-        conn1.run(script)
-        conn1_insert = [f'insert into {func_name} values({i},"DataNode1")' for i in range(1, 41)]
-        for sql in conn1_insert:
-            conn1.run(sql)
-        operateNodes(conn, [f'dnode{PORT_DNODE3}'], "STOP")
-        wait_until(40)
-        operateNodes(conn, [f'dnode{PORT_DNODE3}'], "START")
-        conn2.run(script)
-        conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 51)]
-        for sql in conn2_insert:
-            conn2.run(sql)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
-        wait_until(50)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
+        try:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+            wait_until(20)
+            operateNodes(conn, [f'dnode{PORT_DNODE2}'], "STOP")
+            wait_until(30)
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}'], "START")
+            df_expect = pd.DataFrame({
+                'a': [i for i in range(1, 31)],
+                'b': ["DataNode1"] * 10 + ["DataNode2"] * 10 + ["DataNode3"] * 10,
+            })
+            assert_frame_equal(df, df_expect, check_dtype=False)
+            conn1.run(script)
+            conn1_insert = [f'insert into {func_name} values({i},"DataNode1")' for i in range(1, 41)]
+            for sql in conn1_insert:
+                conn1.run(sql)
+            operateNodes(conn, [f'dnode{PORT_DNODE3}'], "STOP")
+            wait_until(40)
+            operateNodes(conn, [f'dnode{PORT_DNODE3}'], "START")
+            conn2.run(script)
+            conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 51)]
+            for sql in conn2_insert:
+                conn2.run(sql)
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+            wait_until(50)
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
         conn.unsubscribe(HOST_CLUSTER, PORT_DNODE1, func_name, "test")
         df_expect = pd.DataFrame({
             'a': [i for i in range(1, 51)],
@@ -1580,31 +1634,34 @@ class TestSubscribe:
         for sql in conn3_insert:
             conn3.run(sql)
         wait_until(10)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
-        wait_until(20)
-        operateNodes(conn, [f'dnode{PORT_DNODE2}'], "STOP")
-        wait_until(30)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}'], "START")
-        conn1.run(script)
-        conn2.run(script)
-        df_expect = pd.DataFrame({
-            'a': [i for i in range(1, 31)],
-            'b': ["DataNode1"] * 10 + ["DataNode2"] * 10 + ["DataNode3"] * 10,
-        })
-        assert_frame_equal(df, df_expect, check_dtype=False)
-        conn1_insert = [f'insert into {func_name} values({i},"DataNode1")' for i in range(1, 41)]
-        for sql in conn1_insert:
-            conn1.run(sql)
-        operateNodes(conn, [f'dnode{PORT_DNODE3}'], "STOP")
-        wait_until(30)
-        operateNodes(conn, [f'dnode{PORT_DNODE3}'], "START")
-        conn3.run(script)
-        conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 51)]
-        for sql in conn2_insert:
-            conn2.run(sql)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
-        wait_until(30)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
+        try:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+            wait_until(20)
+            operateNodes(conn, [f'dnode{PORT_DNODE2}'], "STOP")
+            wait_until(30)
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}'], "START")
+            conn1.run(script)
+            conn2.run(script)
+            df_expect = pd.DataFrame({
+                'a': [i for i in range(1, 31)],
+                'b': ["DataNode1"] * 10 + ["DataNode2"] * 10 + ["DataNode3"] * 10,
+            })
+            assert_frame_equal(df, df_expect, check_dtype=False)
+            conn1_insert = [f'insert into {func_name} values({i},"DataNode1")' for i in range(1, 41)]
+            for sql in conn1_insert:
+                conn1.run(sql)
+            operateNodes(conn, [f'dnode{PORT_DNODE3}'], "STOP")
+            wait_until(30)
+            operateNodes(conn, [f'dnode{PORT_DNODE3}'], "START")
+            conn3.run(script)
+            conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 51)]
+            for sql in conn2_insert:
+                conn2.run(sql)
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+            wait_until(30)
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
         conn.unsubscribe(HOST_CLUSTER, PORT_DNODE1, func_name, "test")
         assert_frame_equal(df, df_expect, check_dtype=False)
 
@@ -1638,21 +1695,24 @@ class TestSubscribe:
                     break
 
         df = pd.DataFrame(columns=['a', 'b'])
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
-        conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), func_name, "test", resub=True,
-                       backupSites=[f"{HOST_CLUSTER}:{PORT_DNODE2}", f"{HOST_CLUSTER}:{PORT_DNODE3}"], userName=USER,
-                       password=PASSWD)
-        sleep(3)
-        conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 11)]
-        conn3_insert = [f'insert into {func_name} values({i},"DataNode3")' for i in range(1, 21)]
-        for sql in conn2_insert:
-            conn2.run(sql)
-        for sql in conn3_insert:
-            conn3.run(sql)
-        wait_until(10)
-        operateNodes(conn, [f'dnode{PORT_DNODE2}'], "STOP")
-        wait_until(20)
-        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}'], "START")
+        try:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "STOP")
+            conn.subscribe(HOST_CLUSTER, PORT_DNODE1, handler(df), func_name, "test", resub=True,
+                           backupSites=[f"{HOST_CLUSTER}:{PORT_DNODE2}", f"{HOST_CLUSTER}:{PORT_DNODE3}"], userName=USER,
+                           password=PASSWD)
+            sleep(3)
+            conn2_insert = [f'insert into {func_name} values({i},"DataNode2")' for i in range(1, 11)]
+            conn3_insert = [f'insert into {func_name} values({i},"DataNode3")' for i in range(1, 21)]
+            for sql in conn2_insert:
+                conn2.run(sql)
+            for sql in conn3_insert:
+                conn3.run(sql)
+            wait_until(10)
+            operateNodes(conn, [f'dnode{PORT_DNODE2}'], "STOP")
+            wait_until(20)
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}'], "START")
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
         conn.unsubscribe(HOST_CLUSTER, PORT_DNODE1, func_name, "test")
         df_expect = pd.DataFrame({
             'a': [i for i in range(1, 21)],
@@ -1726,3 +1786,230 @@ class TestSubscribe:
         conn = ddb.Session(HOST, PORT, USER, PASSWD)
         with pytest.raises(ValueError, match="Please use resubscibeInterval instead of resubTimeout"):
             conn.subscribe(HOST, PORT, print, "test", "test", resubTimeout=20, userName=USER, password=PASSWD)
+
+    def test_subscribe_resubscribeInterval_table_not_exist(self):
+        table_name = "non_existent_table_2063"
+        action_name = "test_2063_resub"
+
+        script = f"""
+import json, time
+import dolphindb as ddb
+from dolphindb.logger import Sink, LogMessage
+
+records = []
+
+class ResubSink(Sink):
+    def handle(self, msg: LogMessage):
+        if "Failed to resubscribe" in msg.log:
+            records.append(time.time())
+
+ddb.logger.default_logger.add_sink(ResubSink("ResubSink"))
+
+s = ddb.Session('{HOST}', {PORT}, '{USER}', '{PASSWD}')
+s.enableStreaming()
+s.subscribe(
+    host='{HOST}', port={PORT}, handler=lambda msg: None,
+    tableName='{table_name}', actionName='{action_name}',
+    offset=0, resub=True, resubscribeInterval=3000,
+)
+time.sleep(9)
+try:
+    s.unsubscribe('{HOST}', {PORT}, '{table_name}', '{action_name}')
+except Exception:
+    pass
+s.close()
+print(json.dumps(records))
+"""
+
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+        assert result.returncode == 0, (
+            f"子进程执行失败，stderr: {result.stderr}"
+        )
+
+        lines = [ln for ln in result.stdout.strip().splitlines() if ln.strip()]
+        assert lines, f"子进程无 stdout 输出，stderr: {result.stderr}"
+        try:
+            timestamps = json.loads(lines[-1])
+        except json.JSONDecodeError:
+            raise AssertionError(
+                f"无法解析子进程输出为 JSON: {lines[-1]!r}，stderr: {result.stderr}"
+            )
+
+        assert len(timestamps) <= 4, (
+            f"9s 内 Failed to resubscribe 出现 {len(timestamps)} 次，"
+            f"远超预期（<=4），resubscribeInterval=3000 未生效。"
+        )
+
+        assert len(timestamps) >= 2, (
+            f"9s 内仅 {len(timestamps)} 次记录，不足以判断间隔。"
+        )
+
+        intervals_ms = [
+            (timestamps[i + 1] - timestamps[i]) * 1000
+            for i in range(len(timestamps) - 1)
+        ]
+        min_interval = min(intervals_ms)
+        assert min_interval >= 3000, (
+            f"最小相邻重试间隔 {min_interval:.0f}ms，小于 resubscribeInterval=3000ms。"
+            f"完整间隔(ms): {[round(x, 1) for x in intervals_ms]}"
+        )
+
+    @pytest.mark.CLUSTER
+    @pytest.mark.xdist_group(name='cluster_test')
+    def test_subscribe_resubscribeInterval_backupSites_table_not_exist(self):
+        table_name = "non_existent_table_2063_backup"
+        action_name = "test_2063_backup"
+        interval_ms = 3000
+        observe_seconds = 9
+
+        nodes = get_cluster_data_nodes()
+        assert len(nodes) >= 3, (
+            f"集群 {HOST_CLUSTER} 上可用的数据节点不足 3 个（实际 {nodes}），无法构造 backupSites 场景"
+        )
+        primary, backup_sites = nodes[0], nodes[1:3]
+
+        for host, port in nodes[:3]:
+            node_conn = ddb.Session(host, port, USER_CLUSTER, PASSWD_CLUSTER)
+            try:
+                node_conn.run(
+                    f"if(`{table_name} in objs(true)['name']){{undef(`{table_name}, SHARED)}}")
+            finally:
+                node_conn.close()
+
+        recorder = ResubscribeRecorder()
+        ddb.logger.default_logger.add_sink(recorder)
+
+        sub_conn = ddb.Session(primary[0], primary[1], USER_CLUSTER, PASSWD_CLUSTER)
+        sub_conn.enableStreaming()
+        try:
+            sub_conn.subscribe(
+                host=primary[0], port=primary[1],
+                handler=lambda msg: None,
+                tableName=table_name, actionName=action_name,
+                resub=True,
+                backupSites=[f"{h}:{p}" for h, p in backup_sites],
+                resubscribeInterval=interval_ms,
+                userName=USER_CLUSTER, password=PASSWD_CLUSTER,
+            )
+            time.sleep(observe_seconds)
+            try:
+                sub_conn.unsubscribe(primary[0], primary[1], table_name, action_name)
+            except Exception:
+                pass
+        finally:
+            sub_conn.close()
+            ddb.logger.default_logger.remove_sink(recorder.name_)
+
+        times = recorder.times()
+        intervals_ms = resubscribe_intervals_ms(times)
+
+        assert 3 <= len(times) <= 12, (
+            f"{observe_seconds}s 内重试 {len(times)} 次，超出预期区间 [3, 12]。"
+            f"次数过多说明 resubscribeInterval={interval_ms} 未生效（缺陷态约 10ms/次）；"
+            f"次数过少说明备份站点没有被重试到。"
+        )
+
+        assert min(intervals_ms) <= interval_ms / 2, (
+            f"同一轮内相邻重试的最小间隔为 {min(intervals_ms):.0f}ms，"
+            f"说明备份站点切换也被 resubscribeInterval={interval_ms} 拖慢了。"
+            f"完整间隔(ms): {[round(x) for x in intervals_ms]}"
+        )
+
+        assert max(intervals_ms) >= interval_ms - 500, (
+            f"相邻重试的最大间隔仅 {max(intervals_ms):.0f}ms，小于 resubscribeInterval={interval_ms}ms，"
+            f"说明一轮（主站 + 全部备份站）失败后没有按 interval 等待。"
+            f"完整间隔(ms): {[round(x) for x in intervals_ms]}"
+        )
+
+    def test_subscribe_resubscribeInterval_table_recreated(self):
+        table_name = "table_recreated_2063"
+        action_name = "test_recreated"
+
+        admin_conn = ddb.Session(HOST, PORT, USER, PASSWD)
+        try:
+            admin_conn.run(
+                f"if(`{table_name} in objs(true)['name']){{undef(`{table_name}, SHARED)}}")
+
+            received = []
+            lock = threading.Lock()
+
+            def handler(data):
+                with lock:
+                    received.append(data)
+
+            sub_conn = ddb.Session(HOST, PORT, USER, PASSWD)
+            sub_conn.enableStreaming()
+            try:
+                sub_conn.subscribe(
+                    host=HOST, port=PORT, handler=handler,
+                    tableName=table_name, actionName=action_name,
+                    offset=0, resub=True, resubscribeInterval=3000,
+                    userName=USER, password=PASSWD,
+                )
+                time.sleep(3)
+                with lock:
+                    assert len(received) == 0, f"表尚不存在却收到了数据: {received}"
+
+                admin_conn.run(f"""
+                    t = streamTable(100:0, [`a, `b], [INT, STRING])
+                    share t as `{table_name}
+                    insert into {table_name} values(1, "row1")
+                    insert into {table_name} values(2, "row2")
+                    insert into {table_name} values(3, "row3")
+                """)
+
+                deadline = time.time() + 10
+                while time.time() < deadline:
+                    with lock:
+                        if len(received) >= 3:
+                            break
+                    time.sleep(0.2)
+
+                with lock:
+                    rows = list(received)
+                assert len(rows) >= 3, (
+                    f"表恢复后未在一个重试周期内收到数据，实际收到: {rows}"
+                )
+                values = [row[0] for row in rows if isinstance(row, (list, tuple)) and row]
+                assert values[:3] == [1, 2, 3], f"收到的数据不符合预期: {rows}"
+            finally:
+                try:
+                    sub_conn.unsubscribe(HOST, PORT, table_name, action_name)
+                except Exception:
+                    pass
+                sub_conn.close()
+        finally:
+            try:
+                admin_conn.run(
+                    f"if(`{table_name} in objs(true)['name']){{undef(`{table_name}, SHARED)}}")
+            finally:
+                admin_conn.close()
+
+    def test_unsubscribe_during_init_retry(self):
+        table_name = "table_for_unsubscribe_2063"
+        action_name = "test_unsub"
+
+        conn = ddb.Session(HOST, PORT, USER, PASSWD)
+        conn.enableStreaming()
+
+        try:
+            conn.subscribe(
+                host=HOST, port=PORT, handler=lambda x: None,
+                tableName=table_name, actionName=action_name,
+                resub=True, resubscribeInterval=30000
+            )
+
+            time.sleep(2)
+
+            start_time = time.time()
+            conn.unsubscribe(HOST, PORT, table_name, action_name)
+            cost = time.time() - start_time
+            assert cost < 2.0, f"unsubscribe 耗时 {cost:.2f}s，说明重试等待期调用 unsubscribe 发生了阻塞或死锁"
+
+        finally:
+            conn.close()

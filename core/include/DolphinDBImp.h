@@ -5,6 +5,7 @@
 #include "RequestArgument.h"
 #include "pybind11/pybind11.h"
 #include "PytoDdbRowPool.h"
+#include "TypeConverter.h"
 
 namespace py = pybind11;
 
@@ -63,17 +64,17 @@ public:
         const string& script, int priority = 4, int parallelism = 64,
         int fetchSize = 0, bool clearMemory = false,
         bool pickleTableToList = false, bool disableDecimal = false, bool withTableSchema = false,
-        long seqNum = 0);
+        long seqNum = 0, const converter::ArrayVectorToColumns &arrayVectorToColumns = {});
     py::object runPy(
         const string& funcName, vector<ConstantSP>& args, int priority = 4, int parallelism = 64,
         int fetchSize = 0, bool clearMemory = false,
         bool pickleTableToList = false, bool disableDecimal = false, bool withTableSchema = false,
-        long seqNum = 0);
+        long seqNum = 0, const converter::ArrayVectorToColumns &arrayVectorToColumns = {});
     py::object runPy(
         const string& funcName, vector<RequestArgument>& args, int priority = 4, int parallelism = 64,
         int fetchSize = 0, bool clearMemory = false, REQUEST_FORMAT requestFormat = REQUEST_FORMAT_AUTO,
         bool pickleTableToList = false, bool disableDecimal = false, bool withTableSchema = false,
-        long seqNum = 0);
+        long seqNum = 0, const converter::ArrayVectorToColumns &arrayVectorToColumns = {});
     py::object uploadPy(vector<string>& names, vector<RequestArgument>& objs,
                         REQUEST_FORMAT requestFormat = REQUEST_FORMAT_AUTO);
     void setTimeout(int netTimeout, int timeout) {
@@ -96,13 +97,13 @@ private:
         const string& script, const string& scriptType, vector<ConstantSP>& args,
         int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false,
         bool pickleTableToList = false, bool disableDecimal = false, bool withTableSchema = false,
-        long seqNum = 0);
+        long seqNum = 0, const converter::ArrayVectorToColumns &arrayVectorToColumns = {});
     py::object runPy(
         const string& script, const string& scriptType, vector<RequestArgument>& args,
         int priority = 4, int parallelism = 64, int fetchSize = 0, bool clearMemory = false,
         REQUEST_FORMAT requestFormat = REQUEST_FORMAT_AUTO,
         bool pickleTableToList = false, bool disableDecimal = false, bool withTableSchema = false,
-        long seqNum = 0);
+        long seqNum = 0, const converter::ArrayVectorToColumns &arrayVectorToColumns = {});
     bool connect();
     void login();
 

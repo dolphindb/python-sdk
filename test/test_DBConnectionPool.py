@@ -1049,15 +1049,17 @@ class TestDBConnectionPool:
     def test_DBConnectionPool_tryReconnectNums_run(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
         n = 3
-        result = subprocess.run([sys.executable, '-c',
-                                 "import dolphindb as ddb;"
-                                 "from basic_testing.utils import operateNodes;"
-                                 f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
-                                 f"pool=ddb.DBConnectionPool('{HOST_CLUSTER}', {PORT_DNODE1}, 3, '{USER_CLUSTER}', '{PASSWD_CLUSTER}', reConnect=True, tryReconnectNums={n});"
-                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}'],'STOP');"""
-                                 "pool.runTaskAsync('1+1').result();"
-                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
+        try:
+            result = subprocess.run([sys.executable, '-c',
+                                     "import dolphindb as ddb;"
+                                     "from basic_testing.utils import operateNodes;"
+                                     f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
+                                     f"pool=ddb.DBConnectionPool('{HOST_CLUSTER}', {PORT_DNODE1}, 3, '{USER_CLUSTER}', '{PASSWD_CLUSTER}', reConnect=True, tryReconnectNums={n});"
+                                     f"""operateNodes(conn,['dnode{PORT_DNODE1}'],'STOP');"""
+                                     "pool.runTaskAsync('1+1').result();"
+                                     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}'], "START")
         assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n
         assert f"Connect to {HOST_CLUSTER}:{PORT_DNODE1} failed after {n} reconnect attempts." in result.stdout
 
@@ -1066,16 +1068,18 @@ class TestDBConnectionPool:
     def test_DBConnectionPool_highAvailability_tryReconnectNums(self):
         conn = ddb.Session(HOST_CLUSTER, PORT_CONTROLLER, USER_CLUSTER, PASSWD_CLUSTER)
         n = 3
-        result = subprocess.run([sys.executable, '-c',
-                                 "import dolphindb as ddb;"
-                                 "from basic_testing.utils import operateNodes;"
-                                 f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
-                                 f"pool=ddb.DBConnectionPool('{HOST_CLUSTER}', {PORT_DNODE1}, 1, '{USER_CLUSTER}', '{PASSWD_CLUSTER}', reConnect=True, highAvailability=True, tryReconnectNums={n});"
-                                 f"""operateNodes(conn,['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'],'STOP');"""
-                                 "pool.runTaskAsync('1+1').result();"
-                                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-        operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
-        assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n * 4
+        try:
+            result = subprocess.run([sys.executable, '-c',
+                                     "import dolphindb as ddb;"
+                                     "from basic_testing.utils import operateNodes;"
+                                     f"conn=ddb.Session('{HOST_CLUSTER}',{PORT_CONTROLLER},'{USER_CLUSTER}','{PASSWD_CLUSTER}');"
+                                     f"pool=ddb.DBConnectionPool('{HOST_CLUSTER}', {PORT_DNODE1}, 1, '{USER_CLUSTER}', '{PASSWD_CLUSTER}', reConnect=True, highAvailability=True, tryReconnectNums={n});"
+                                     f"""operateNodes(conn,['dnode{PORT_DNODE1}','dnode{PORT_DNODE2}','dnode{PORT_DNODE3}'],'STOP');"""
+                                     "pool.runTaskAsync('1+1').result();"
+                                     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+        finally:
+            operateNodes(conn, [f'dnode{PORT_DNODE1}', f'dnode{PORT_DNODE2}', f'dnode{PORT_DNODE3}'], "START")
+        assert result.stdout.count("Failed") + result.stdout.count("DataNodeNotAvail") == n * 3
         assert f"Connect to nodes failed after {n} reconnect attempts." in result.stdout
 
     @pytest.mark.CLUSTER

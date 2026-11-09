@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 
 import numpy as np
 from ._hints import (
-    Callable, List, Literal, Optional, Union, ParserType, SqlStd
+    Callable, Dict, List, Literal, Optional, Union, ParserType, SqlStd
 )
 from ._core import DolphinDBRuntime
 from .database import Database
@@ -214,6 +214,7 @@ class Session(DBConnection):
         parallelism: Optional[int] = None,
         fetchSize: Optional[int] = None,
         disableDecimal: Optional[bool] = None,
+        arrayVectorToColumns: Union[bool, Dict[str, int]] = False,
     ):
         """Execute script.
 
@@ -226,6 +227,16 @@ class Session(DBConnection):
 
         Kwargs:
             clearMemory : whether to release variables after queries. True means to release, otherwise False. Defaults to False.
+            arrayVectorToColumns : False preserves array cells; True expands all
+                fixed-width ArrayVector columns; a dict maps selected result column
+                names to positive widths, including for empty tables. Columns are
+                named name1, name2, ... at the original position. True cannot infer
+                widths for empty tables; declare widths for queries that may return
+                no rows. Non-table results are returned normally without expansion.
+                Requires synchronous DDB without pickleTableToList or fetchSize.
+                NULL follows scalar-column rules: integers become float64 with NaN,
+                bool becomes object with None. LONG with NULL has float64 precision
+                limits; other levels without NULL retain their original dtype.
             pickleTableToList : whether to convert table to list or DataFrame. True: to list, False: to DataFrame.  Defaults to False.
             priority : a job priority system with 10 priority levels (0 to 9), allocating thread resources to high-priority jobs and using round-robin allocation for jobs of the same priority. Defaults to 4.
             parallelism : parallelism determines the maximum number of threads to execute a job's tasks simultaneously on a data node; the system optimizes resource utilization by allocating all available threads to a job if there's only one job running and multiple local executors are available. Defaults to 64.
@@ -241,6 +252,8 @@ class Session(DBConnection):
         Note:
             When setting pickleTableToList=True and enablePickle=True, if the table contains array vectors, it will be converted to a NumPy 2d array. If the length of each row is different, the execution fails.
         """
+        if fetchSize is not None:
+            self._check_array_columns_fetch(arrayVectorToColumns, fetchSize)
         if args:
             return self.call(
                 script,
@@ -250,6 +263,7 @@ class Session(DBConnection):
                 priority=priority,
                 parallelism=parallelism,
                 disable_decimal=disableDecimal,
+                array_vector_to_columns=arrayVectorToColumns,
             )
         else:
             return self.exec(
@@ -260,6 +274,7 @@ class Session(DBConnection):
                 parallelism=parallelism,
                 fetch_size=fetchSize,
                 disable_decimal=disableDecimal,
+                array_vector_to_columns=arrayVectorToColumns,
             )
 
     def _run_with_table_schema(

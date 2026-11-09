@@ -349,19 +349,21 @@ ConstantSP DBConnectionImpl::run(const string& funcName, vector<ConstantSP>& arg
 py::object DBConnectionImpl::runPy(
     const string &script, int priority,
     int parallelism, int fetchSize, bool clearMemory,
-    bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum,
+    const converter::ArrayVectorToColumns &arrayVectorToColumns
 ) {
     vector<RequestArgument> args;
     return runPy(
         script, "script", args, priority, parallelism,
-        fetchSize, clearMemory, REQUEST_FORMAT_AUTO, pickleTableToList, disableDecimal, withTableSchema, seqNum
+        fetchSize, clearMemory, REQUEST_FORMAT_AUTO, pickleTableToList, disableDecimal, withTableSchema, seqNum, arrayVectorToColumns
     );
 }
 
 py::object DBConnectionImpl::runPy(
     const string &funcName, vector<ConstantSP> &args, int priority,
     int parallelism, int fetchSize, bool clearMemory,
-    bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum,
+    const converter::ArrayVectorToColumns &arrayVectorToColumns
 ) {
     vector<RequestArgument> requestArgs;
     requestArgs.reserve(args.size());
@@ -370,18 +372,19 @@ py::object DBConnectionImpl::runPy(
     }
     return runPy(
         funcName, "function", requestArgs, priority, parallelism,
-        fetchSize, clearMemory, REQUEST_FORMAT_AUTO, pickleTableToList, disableDecimal, withTableSchema, seqNum
+        fetchSize, clearMemory, REQUEST_FORMAT_AUTO, pickleTableToList, disableDecimal, withTableSchema, seqNum, arrayVectorToColumns
     );
 }
 
 py::object DBConnectionImpl::runPy(
     const string &funcName, vector<RequestArgument> &args, int priority,
     int parallelism, int fetchSize, bool clearMemory, REQUEST_FORMAT requestFormat,
-    bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum
+    bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum,
+    const converter::ArrayVectorToColumns &arrayVectorToColumns
 ) {
     return runPy(
         funcName, "function", args, priority, parallelism, fetchSize, clearMemory,
-        requestFormat, pickleTableToList, disableDecimal, withTableSchema, seqNum
+        requestFormat, pickleTableToList, disableDecimal, withTableSchema, seqNum, arrayVectorToColumns
     );
 }
 
@@ -653,8 +656,16 @@ py::dict getTableSchema(ConstantSP result)
 py::object DBConnectionImpl::runPy(
     const string &script, const string &scriptType, vector<RequestArgument> &args,
     int priority, int parallelism, int fetchSize, bool clearMemory,
-    REQUEST_FORMAT requestFormat, bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum
+    REQUEST_FORMAT requestFormat, bool pickleTableToList, bool disableDecimal, bool withTableSchema, long seqNum,
+    const converter::ArrayVectorToColumns &arrayVectorToColumns
 ) {
+    if (arrayVectorToColumns.enabled()) {
+        if (protocol_ != PROTOCOL_DDB || asynTask_ || fetchSize != 0 || pickleTableToList ||
+            resolveRequestFormat(protocol_, requestFormat) != REQUEST_FORMAT_DDB || withTableSchema) {
+            throw RuntimeException("arrayVectorToColumns requires synchronous DDB table results without "
+                                   "fetchSize, pickleTableToList or withTableSchema.");
+        }
+    }
     //RecordTime record("Db.runPy"+script);
     DLOG("runPy",script,"start argsize",args.size());
     //force Python release GIL
@@ -868,6 +879,9 @@ py::object DBConnectionImpl::runPy(
     py::gil_scoped_acquire pgil;
 
     converter::ToPythonOption option(pickleTableToList);
+    if (result->getForm() == DATA_FORM::DF_TABLE) {
+        option.arrayVectorToColumns_ = arrayVectorToColumns;
+    }
 
     if (withTableSchema) {
         py::object dataframe = converter::Converter::toPython_Old(result, option);
